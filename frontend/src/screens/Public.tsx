@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { MapPin, Briefcase, Nfc, KeyRound, ShieldCheck, Users, FileSignature, ArrowRight, ArrowLeft, Link2, CheckCircle2, MailCheck, Eye, EyeOff } from 'lucide-react'
 import { useL, useLang, bi, fmtDate } from '../lib/store'
 import { api, ApiError } from '../lib/api'
@@ -7,18 +7,13 @@ import { useRoute, go, href } from '../lib/router'
 import { useLogin } from '../lib/session'
 import { Btn, Field, Badge, Empty, toast } from '../ui/kit'
 import { Logo, LangToggle, ThemeToggle } from '../ui/brand'
-import type { Bi } from '../lib/types'
+import { PasswordFields, passwordOk } from '../ui/password'
+import { useSite, useJobs, useJob, type PublicJob } from '../lib/public'
+import { Apply } from './apply/Apply'
+import { Applied } from './apply/Applied'
 
-/* ---------- البيانات العامة ---------- */
-export interface PublicJob {
-  code: string; title: Bi; summary: Bi; dept: Bi & { code: string }; city: Bi; type: Bi; posted_at: string
-  requirements?: Bi[]; openings?: number; min_years?: number; degree?: number
-}
-interface Site { company: { name: Bi; short: Bi; brand_latin: string }; hero: { title: Bi; text: Bi } }
-
-export const useSite = () => useQuery({ queryKey: ['public', 'site'], queryFn: () => api<Site>('/public/site'), staleTime: 5 * 60_000 })
-export const useJobs = () => useQuery({ queryKey: ['public', 'jobs'], queryFn: () => api<{ data: PublicJob[] }>('/public/jobs').then(r => r.data) })
-const useJob = (code: string) => useQuery({ queryKey: ['public', 'job', code], queryFn: () => api<{ data: PublicJob }>(`/public/jobs/${encodeURIComponent(code)}`).then(r => r.data), retry: false })
+/** رمز الإحالة من الرابط (?ref=UHR1007-J1) ينتقل مع المتقدم إلى المعالج */
+const refQuery = (): Record<string, string> | undefined => { const r = new URLSearchParams(location.hash.split('?')[1] ?? '').get('ref'); return r ? { ref: r } : undefined }
 
 /** جهاز حضور مسجّل على هذا المتصفح (يُسجَّل من M16 — أجهزة الحضور) */
 const isAttendanceDevice = () => { try { return !!localStorage.getItem('uhr-device') } catch { return false } }
@@ -34,7 +29,8 @@ export function Public() {
     </header>
     <main className="flex-1">
       {page === 'jobs' && route.id ? <JobPage code={route.id} />
-        : page === 'apply' && route.id ? <JobPage code={route.id} />
+        : page === 'apply' && route.id ? <Apply code={route.id} refCode={route.query.ref} />
+        : page === 'applied' ? <Applied />
         : page === 'jobs' ? <JobsBoard full />
         : page === 'forgot' ? <Forgot />
         : page === 'reset' ? <Reset token={route.query.token ?? ''} email={route.query.email ?? ''} />
@@ -113,7 +109,7 @@ export function JobsBoard({ full }: { full?: boolean }) {
           <p className="text-[13px] text-ink-2 mt-1 max-w-[62ch]">{bi(j.summary, lang)}</p>
           <JobMeta j={j} />
         </div>
-        <Btn kind="primary" onClick={() => go('apply', j.code)}>{L('قدّم على الوظيفة', 'Apply for this role')}</Btn>
+        <Btn kind="primary" onClick={() => go('apply', j.code, refQuery())}>{L('قدّم على الوظيفة', 'Apply for this role')}</Btn>
       </article>)}
     </div>
   </section>
@@ -157,7 +153,11 @@ function JobPage({ code }: { code: string }) {
           {j.min_years !== undefined && <Badge>{j.min_years ? L(`خبرة ${j.min_years}+ سنوات`, `${j.min_years}+ years experience`) : L('بدون خبرة سابقة', 'No prior experience')}</Badge>}
         </div>
       </article>
-      <section className="rounded-2xl border border-dashed border-line bg-surface/60"><Empty title={L('نموذج طلب التوظيف F-28', 'Application form F-28')}>{L('معالج التقديم بأربع خطوات — المهمة 04.', 'Four-step application wizard — task 04.')}</Empty></section>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-surface p-5">
+        <div><div className="font-semibold">{L('نموذج طلب التوظيف', 'Employment application form')} <span className="ltr text-ink-3 text-[13px]">HR-01-F-28</span></div>
+          <p className="text-[13px] text-ink-2">{L('أربع خطوات قصيرة، وتتابع حالة طلبك من حسابك بعد الإرسال.', 'Four short steps — then follow your application from your account.')}</p></div>
+        <Btn kind="primary" size="lg" onClick={() => go('apply', j.code, refQuery())}>{L('قدّم على الوظيفة', 'Apply for this role')}</Btn>
+      </div>
     </>}
   </div>
 }
@@ -193,18 +193,6 @@ function Forgot() {
 }
 
 /* ---------- تعيين كلمة مرور جديدة (من رابط البريد) ---------- */
-export function PasswordFields({ v, set, errs }: { v: { password: string; password_confirmation: string }; set: (k: 'password' | 'password_confirmation', x: string) => void; errs: Record<string, string | undefined> }) {
-  const L = useL()
-  const rules = [[v.password.length >= 8, L('8 أحرف على الأقل', 'At least 8 characters')], [/[A-Za-z؀-ۿ]/.test(v.password), L('حرف واحد على الأقل', 'At least one letter')], [/\d/.test(v.password), L('رقم واحد على الأقل', 'At least one number')]] as const
-  return <>
-    <Field label={L('كلمة المرور الجديدة', 'New password')} req error={errs.password}><input className="field ltr text-start" type="password" value={v.password} onChange={e => set('password', e.target.value)} autoComplete="new-password" /></Field>
-    <ul className="text-[12px] space-y-0.5 -mt-2">{rules.map(([ok, t]) => <li key={t} className={`flex items-center gap-1.5 ${ok ? 'text-brand' : 'text-ink-3'}`}><CheckCircle2 size={13} />{t}</li>)}</ul>
-    <Field label={L('تأكيد كلمة المرور', 'Confirm password')} req error={errs.password_confirmation ?? (v.password_confirmation && v.password_confirmation !== v.password ? L('كلمتا المرور غير متطابقتين', 'Passwords do not match') : undefined)}>
-      <input className="field ltr text-start" type="password" value={v.password_confirmation} onChange={e => set('password_confirmation', e.target.value)} autoComplete="new-password" /></Field>
-  </>
-}
-export const passwordOk = (v: { password: string; password_confirmation: string }) => v.password.length >= 8 && /[A-Za-z؀-ۿ]/.test(v.password) && /\d/.test(v.password) && v.password === v.password_confirmation
-
 function Reset({ token, email }: { token: string; email: string }) {
   const L = useL()
   const [v, setV] = useState({ password: '', password_confirmation: '' })

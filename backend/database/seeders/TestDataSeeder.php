@@ -244,6 +244,7 @@ class TestDataSeeder extends Seeder
             // ملف السيرة: الاسم والحجم فقط (لا محتوى في بيانات الاختبار)
             $file = StoredFile::updateOrCreate(['path' => 'cv/test/'.$cvs[$i].'_CV.pdf'], ['disk' => 'local', 'name' => $cvs[$i].'_CV.pdf', 'size' => $cvSize, 'mime' => 'application/pdf']);
             $cand->update(['cv_file_id' => $file->id]);
+            $cand->update(['match_score' => \App\Services\Recruitment\MatchScore::total($cand, $job)]);
 
             if (in_array($c[3], ['interview', 'technical', 'offer'], true)) $cand->log('اجتياز الفرز الأولي', 'Passed screening', 'ok', null, $this->addDays($this->today, -$c[4] - 2).' 11:00:00');
             if (in_array($c[3], ['technical', 'offer'], true)) {

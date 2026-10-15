@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { LogOut, ShieldAlert, LayoutDashboard, UserRound, FileSearch } from 'lucide-react'
+import { LogOut, ShieldAlert, LayoutDashboard, UserRound } from 'lucide-react'
 import { useL, useLang, bi } from '../lib/store'
 import { ApiError } from '../lib/api'
 import { useChangePassword, useLogout, type SessionUser } from '../lib/session'
 import { Btn, Field, Badge, Avatar, Empty } from '../ui/kit'
 import { Logo, LangToggle, ThemeToggle } from '../ui/brand'
-import { PasswordFields, passwordOk } from './Public'
+import { PasswordFields, passwordOk } from '../ui/password'
 
 function Bar({ user }: { user: SessionUser }) {
   const L = useL(); const lang = useLang(); const logout = useLogout()
@@ -44,12 +44,11 @@ export function ForceChangePassword({ user }: { user: SessionUser }) {
   </div>
 }
 
-/** واجهة كل دور بعد الدخول — تُستبدل بالإطار الكامل: HR (المهمة 05)، المتقدم (04)، الموظف (07) */
+/** واجهة مؤقتة بعد الدخول — تُستبدل بالإطار الكامل: HR (المهمة 05)، الموظف (07). المتقدم: screens/candidate */
 export function PortalHome({ user }: { user: SessionUser }) {
   const L = useL(); const lang = useLang()
   const meta = user.portal === 'hr' ? { icon: <LayoutDashboard />, t: L('لوحة الموارد البشرية', 'HR console'), task: '05' }
-    : user.portal === 'employee' ? { icon: <UserRound />, t: L('بوابة الموظف', 'Employee portal'), task: '07' }
-    : { icon: <FileSearch />, t: L('بوابة المتقدم', 'Applicant portal'), task: '04' }
+    : { icon: <UserRound />, t: L('بوابة الموظف', 'Employee portal'), task: '07' }
   return <div className="min-h-full flex flex-col app-glow">
     <Bar user={user} />
     <main className="flex-1 max-w-3xl w-full mx-auto px-5 py-10 space-y-4">

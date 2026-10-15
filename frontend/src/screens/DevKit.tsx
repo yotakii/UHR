@@ -5,7 +5,8 @@ import { Btn, Badge, Panel, PageHead, Field, Seg, Avatar, Modal, Drawer, Tabs, E
 import { Paper, SigBox, Timeline, Lifecycle, OfferDoc, DecisionDoc } from '../ui/docs'
 import { CountUp, Sparkline, Bars, Radar, Ring, Donut, Heatmap } from '../ui/viz'
 import { Logo, LangToggle, ThemeToggle } from '../ui/brand'
-import type { Candidate, Offer, Appointment, LogEvent } from '../lib/types'
+import type { LogEvent } from '../lib/types'
+import type { MyOffer, MyAppointment } from '../lib/recruitment'
 
 /**
  * مكتبة المكونات — المهمة 01.
@@ -13,12 +14,12 @@ import type { Candidate, Offer, Appointment, LogEvent } from '../lib/types'
  * للمقارنة البصرية مع ديمو v26 بالثيمات الثلاثة واللغتين. لا تظهر للمستخدمين النهائيين.
  */
 const today = todayISO()
-const offer: Offer = { title: 'محاسب', contract: 'fixed', currency: 'USD', basic: 650, housing: 80, transport: 40, fuel: 30, leaveDays: 14, startDate: addDays(today, 10), issuedAt: addDays(today, -1) + 'T13:00:00', status: 'sent' }
-const appointment: Appointment = { decisionNo: 'QR-2026-417', issuedAt: today + 'T09:00:00', approvals: [
+const offer: MyOffer = { title: 'محاسب', contract: 'fixed', currency: 'USD', basic: 650, housing: 80, transport: 40, fuel: 30, total: 800, leave_days: 14, start_date: addDays(today, 10), issued_at: addDays(today, -1) + 'T13:00:00', status: 'sent', responded_at: null, note: null, signature: null }
+const appointment: MyAppointment = { decision_no: 'QR-2026-417', issued_at: today + 'T09:00:00', complete: false, approvals: [
   { level: 1, role: { ar: 'الموارد البشرية', en: 'Human Resources' }, name: 'رشا الخطيب', status: 'approved', at: today + 'T09:10:00' },
   { level: 2, role: { ar: 'الإدارة المالية', en: 'Finance' }, name: 'باسل الأتاسي', status: 'approved', at: today + 'T10:25:00' },
-  { level: 3, role: { ar: 'المدير التنفيذي', en: 'Executive Director' }, name: 'مازن الدروبي', status: 'pending' },
-  { level: 4, role: { ar: 'الرئيس التنفيذي', en: 'CEO' }, name: 'هاني السمان', status: 'pending' }] }
+  { level: 3, role: { ar: 'المدير التنفيذي', en: 'Executive Director' }, name: 'مازن الدروبي', status: 'pending', at: null },
+  { level: 4, role: { ar: 'الرئيس التنفيذي', en: 'CEO' }, name: 'هاني السمان', status: 'pending', at: null }] }
 const log: LogEvent[] = [
   { at: addDays(today, -4) + 'T10:20:00', ar: 'استلام طلب التوظيف عبر البوابة', en: 'Application received via portal', kind: 'info', form: 'F-28' },
   { at: addDays(today, -3) + 'T11:00:00', ar: 'اجتياز الفرز الأولي', en: 'Passed screening', kind: 'ok' },
@@ -26,7 +27,7 @@ const log: LogEvent[] = [
   { at: addDays(today, -1) + 'T13:00:00', ar: 'طلب تعديل بنود العرض: زيادة بدل المواصلات', en: 'Requested changes: transport allowance', kind: 'warn', form: 'F-29' },
   { at: today + 'T08:40:00', ar: 'نقل من «فرز أولي» إلى «غير مقبول»', en: 'Moved from "Screening" to "Not selected"', kind: 'danger' },
 ]
-const cand = { id: 'c9', ref: 'UNQ-2026-APP-48506', name: 'لين العلي', nameEn: 'Leen Al-Ali', log } as unknown as Candidate
+const cand = { name: 'لين العلي', nameEn: 'Leen Al-Ali' }
 
 export function DevKit() {
   const L = useL(); const lang = useLang(); const P = lang === 'ar' ? '٪' : '%'

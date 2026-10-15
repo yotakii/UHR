@@ -10,6 +10,7 @@ import { Public } from './screens/Public'
 import { ForceChangePassword, PortalHome } from './screens/Account'
 import SystemStatus from './screens/SystemStatus'
 import { DevKit } from './screens/DevKit'
+import { CandidateHome } from './screens/candidate/CandidateHome'
 
 function Splash() {
   return <div className="min-h-full grid place-items-center app-glow"><div className="flex flex-col items-center gap-4"><Logo h={34} /><Loader2 className="animate-spin text-brand" size={22} /></div></div>
@@ -26,6 +27,7 @@ function Root() {
   const user = me.data
   if (!user) return <Public />
   if (user.must_change_password) return <ForceChangePassword user={user} />
+  if (user.portal === 'candidate') return <CandidateHome user={user} />
   return <PortalHome user={user} />
 }
 

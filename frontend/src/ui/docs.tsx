@@ -1,7 +1,12 @@
 import type { ReactNode } from 'react'
 import { Printer, CheckCircle2, Circle, AlertTriangle, XCircle, Info } from 'lucide-react'
 import { useL, useLang, fmtDate, fmtDateTime, money } from '../lib/store'
-import type { LogEvent, Offer, Appointment, Candidate } from '../lib/types'
+import type { LogEvent } from '../lib/types'
+import type { MyOffer, MyAppointment } from '../lib/recruitment'
+
+/** ما تحتاجه الوثائق فقط (بشكل بيانات الـ API) */
+type Person = { name: string; nameEn?: string }
+type OfferTerms = Pick<MyOffer, 'title' | 'contract' | 'currency' | 'basic' | 'housing' | 'transport' | 'fuel' | 'leave_days' | 'start_date'>
 import { Btn } from './kit'
 
 export function Paper({ code, title, sub, children, actions }: { code: string; title: string; sub?: string; children: ReactNode; actions?: ReactNode }) {
@@ -9,7 +14,7 @@ export function Paper({ code, title, sub, children, actions }: { code: string; t
   return <div className="print-root">
     <div className="flex justify-end gap-2 mb-2" data-noprint>{actions}<Btn size="sm" icon={<Printer size={15} />} onClick={() => window.print()}>{L('طباعة النموذج', 'Print form')}</Btn></div>
     <article className="paper rounded-2xl">
-      <header className="paper-head px-7 pt-6 pb-4 flex items-start justify-between gap-6">
+      <header className="paper-head px-5 sm:px-7 pt-6 pb-4 flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
         <div>
           <div className="font-bold text-[15px]">{L('شركة الفرادة للتطوير والاستثمار', 'Uniqueness Development & Investment Co.')}</div>
           <div className="text-[12px] text-ink-3">{L('إدارة الموارد البشرية', 'Human Resources Department')}</div>
@@ -24,7 +29,7 @@ export function Paper({ code, title, sub, children, actions }: { code: string; t
           </tbody>
         </table>
       </header>
-      <div className="px-7 py-6">{children}</div>
+      <div className="px-5 sm:px-7 py-6">{children}</div>
     </article>
   </div>
 }
@@ -70,7 +75,7 @@ export function Lifecycle({ steps }: { steps: { label: string; code?: string; do
   </ol>
 }
 
-export function OfferDoc({ c, offer, jobTitle }: { c: Candidate; offer: Offer; jobTitle: string }) {
+export function OfferDoc({ c, offer, jobTitle }: { c: Person; offer: OfferTerms; jobTitle: string }) {
   const L = useL(); const lang = useLang()
   const total = offer.basic + offer.housing + offer.transport + offer.fuel
   const contract = { fixed: L('محدد المدة — سنة قابلة للتجديد', 'Fixed term — 1 year renewable'), open: L('غير محدد المدة', 'Open-ended'), project: L('عقد مشروع', 'Project contract') }[offer.contract]
@@ -79,7 +84,7 @@ export function OfferDoc({ c, offer, jobTitle }: { c: Candidate; offer: Offer; j
     <p className="max-w-[70ch]">{L(`يسرّنا أن نعرض عليك العمل لدى شركة الفرادة بوظيفة «${offer.title || jobTitle}» وفق الشروط التالية، على أن يكون العرض نافذاً لمدة خمسة أيام من تاريخ إصداره.`, `We are pleased to offer you the position of "${offer.title || jobTitle}" at Uniqueness on the terms below. This offer is valid for five days from issue.`)}</p>
     <table className="w-full border border-line text-[14px]">
       <tbody>
-        {[[L('طبيعة العقد', 'Contract'), contract], [L('الراتب الأساسي', 'Basic salary'), money(offer.basic, offer.currency, lang)], [L('بدل السكن / غلاء المعيشة', 'Housing / cost of living'), money(offer.housing, offer.currency, lang)], [L('بدل المواصلات', 'Transport'), money(offer.transport, offer.currency, lang)], [L('بدل المحروقات', 'Fuel'), money(offer.fuel, offer.currency, lang)], [L('الإجازة السنوية المدفوعة', 'Paid annual leave'), `${offer.leaveDays} ${L('يوماً', 'days')}`], [L('تاريخ المباشرة المتوقع', 'Expected start date'), fmtDate(offer.startDate, lang)], [L('فترة التجربة', 'Probation'), L('90 يوماً', '90 days')]].map(([k, v]) =>
+        {[[L('طبيعة العقد', 'Contract'), contract], [L('الراتب الأساسي', 'Basic salary'), money(offer.basic, offer.currency, lang)], [L('بدل السكن / غلاء المعيشة', 'Housing / cost of living'), money(offer.housing, offer.currency, lang)], [L('بدل المواصلات', 'Transport'), money(offer.transport, offer.currency, lang)], [L('بدل المحروقات', 'Fuel'), money(offer.fuel, offer.currency, lang)], [L('الإجازة السنوية المدفوعة', 'Paid annual leave'), `${offer.leave_days} ${L('يوماً', 'days')}`], [L('تاريخ المباشرة المتوقع', 'Expected start date'), fmtDate(offer.start_date, lang)], [L('فترة التجربة', 'Probation'), L('90 يوماً', '90 days')]].map(([k, v]) =>
           <tr key={k}><td className="border border-line px-3 py-2 bg-sub w-1/2">{k}</td><td className="border border-line px-3 py-2 num font-medium">{v}</td></tr>)}
         <tr><td className="border border-ink px-3 py-2 font-bold">{L('إجمالي الراتب الشهري الشامل', 'Total monthly package')}</td><td className="border border-ink px-3 py-2 font-bold num">{money(total, offer.currency, lang)}</td></tr>
       </tbody>
@@ -87,11 +92,11 @@ export function OfferDoc({ c, offer, jobTitle }: { c: Candidate; offer: Offer; j
   </div>
 }
 
-export function DecisionDoc({ c, ap, jobTitle, deptName }: { c: Candidate; ap: Appointment; jobTitle: string; deptName: string }) {
+export function DecisionDoc({ c, ap, jobTitle, deptName }: { c: Person; ap: Pick<MyAppointment, 'decision_no' | 'approvals'>; jobTitle: string; deptName: string }) {
   const L = useL(); const lang = useLang()
   return <div className="space-y-5 text-[14px]">
     <div className="grid sm:grid-cols-4 gap-3">
-      {[[L('رقم القرار', 'Decision no.'), ap.decisionNo], [L('اسم الموظف المعيّن', 'Appointee'), c.name], [L('المنصب', 'Position'), jobTitle], [L('الإدارة', 'Department'), deptName]].map(([k, v]) => <div key={k} className="border border-line rounded-md p-2.5"><div className="text-[12px] text-ink-3">{k}</div><div className="font-semibold">{v}</div></div>)}
+      {[[L('رقم القرار', 'Decision no.'), ap.decision_no], [L('اسم الموظف المعيّن', 'Appointee'), c.name], [L('المنصب', 'Position'), jobTitle], [L('الإدارة', 'Department'), deptName]].map(([k, v]) => <div key={k} className="border border-line rounded-md p-2.5"><div className="text-[12px] text-ink-3">{k}</div><div className="font-semibold">{v}</div></div>)}
     </div>
     <div>
       <h4 className="font-semibold mb-1">{L('شروط القرار', 'Terms')}</h4>

@@ -70,6 +70,25 @@ services:
       start_period: 180s
       retries: 10
 
+  # طابور المهام: إرسال البريد (تأكيد التقديم…) بالخلفية — يبدأ بعد جاهزية الـ API (الحزم والترحيلات)
+  worker:
+    image: uhr-api:dev
+    container_name: uhr-worker
+    restart: unless-stopped
+    entrypoint: ["php", "artisan", "queue:work", "--tries=3", "--backoff=10", "--sleep=2"]
+    depends_on:
+      api: { condition: service_healthy }
+    environment:
+      FRONTEND_URL: http://localhost:${UHR_WEB_PORT:-5180}
+      MAIL_MAILER: smtp
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      MAIL_FROM_ADDRESS: no-reply@alfarada.sy
+      MAIL_FROM_NAME: UHR
+    volumes:
+      - ./backend:/var/www
+      - uhr-vendor:/var/www/vendor
+
   # كل رسائل البريد في بيئة التطوير تُلتقط هنا ولا تخرج للإنترنت: http://localhost:8125
   mailpit:
     image: axllent/mailpit:latest

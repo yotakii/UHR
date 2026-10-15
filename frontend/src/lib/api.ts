@@ -15,12 +15,14 @@ function xsrf() {
 
 export async function api<T>(path: string, init?: RequestInit & { json?: unknown }): Promise<T> {
   const { json, ...rest } = init ?? {}
+  // FormData (رفع ملفات): المتصفح يضبط Content-Type مع الـ boundary بنفسه
+  const contentType: Record<string, string> = rest.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }
   const method = (rest.method ?? (json !== undefined ? 'POST' : 'GET')).toUpperCase()
   if (method !== 'GET' && !xsrf()) await fetch('/api/auth/me', { credentials: 'same-origin', headers: { Accept: 'application/json' } })   // يضبط كوكي CSRF
   const res = await fetch(`/api${path}`, {
     ...rest, method, credentials: 'same-origin',
     body: json !== undefined ? JSON.stringify(json) : rest.body,
-    headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'Accept-Language': getPrefs().lang, 'X-XSRF-TOKEN': xsrf(), ...rest.headers },
+    headers: { Accept: 'application/json', ...contentType, 'Accept-Language': getPrefs().lang, 'X-XSRF-TOKEN': xsrf(), ...rest.headers },
   })
   const text = await res.text()
   let body: Record<string, unknown> | null = null

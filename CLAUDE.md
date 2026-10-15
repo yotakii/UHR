@@ -70,15 +70,15 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
   - Test accounts (password `123456`): `admin@alfarada.sy`, `hr@alfarada.sy` (Rasha, UHR-1003, hr_director), `samer.halabi@alfarada.sy` (employee), `leen.ali@mail.sy` (applicant with an offer).
   - Employee emails follow `first.last@alfarada.sy` (with the `al-` prefix dropped).
 
-## 6. Status (Oct 13, 2026)
+## 6. Status (Oct 15, 2026)
 | Task | Status |
 |---|---|
 | 00 Docker infra, `/api/health`, `#/status` | ✅ user verified |
 | 01 Design system & components (`#/kit`) | ✅ user verified |
 | 02 Database, `uhr:install`, TestDataSeeder (demo-identical), audit log | ✅ user verified (after adding mockery) |
-| 03 M01 public page and login (see below) | 📦 delivered, **waiting for the user's test run** |
-| 04 M02 apply wizard F-28 → M05 applicant portal | ⏭ next |
-| 05 M15 shell → M03 Kanban → M04 candidate file → M06 | |
+| 03 M01 public page and login | ✅ tests pass (backend + frontend) |
+| 04 M02 apply wizard F-28 → M05 applicant portal (see below) | 📦 delivered, **waiting for the user's test run** |
+| 05 M15 shell → M03 Kanban → M04 candidate file → M06 | ⏭ next |
 | 06 M07–M11 · 07 M12–M14 · 08 salary 2FA · 09 M16 admin + Reverb + PDF/Excel · 10 final verification | |
 
 **Task 03 delivered:**
@@ -90,6 +90,21 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 - The NFC terminal link shows only if `localStorage['uhr-device']` is set (device registration comes in M16).
 - Tests: `backend/tests/Feature/AuthTest.php`, `frontend/src/lib/__tests__/router.test.ts`.
 - User commands for 03: `docker compose up -d` (creates mailpit) → `docker compose restart web` (installs @tanstack/react-query) → `docker compose exec api php artisan test`.
+
+**Task 04 delivered:**
+- Backend layout (use it for every module):
+  - `app/Services/<Domain>/` business logic: `Recruitment/MatchScore` (port of matchScore, unit-tested against values generated from rules.ts), `DuplicateCheck`, `ApplicationService` (submitApplication), `OfferResponse` (respondOffer + opens F-31 from the `appointment` approval chain).
+  - `app/Http/Requests/` FormRequests with bilingual messages (`ApplicationRequest`); `app/Http/Resources/` API output (`MyApplicationResource`).
+  - `App\Exceptions\ApiException` for business-rule refusals: `throw new ApiException($msg, 'code', 409)` or `ApiException::field('email', $msg, 'code')` (422 under the field).
+  - `App\Support\Notify::hr()/user()` for bell notices.
+- Endpoints: `POST /api/public/applications/check-duplicate`, `POST /api/public/applications` (multipart, `throttle:applications`), `GET /api/me/application`, `POST /api/me/application/offer-response`.
+- Duplicate policy (production, stricter than the demo): merging into a previous file requires that account's password; an email that belongs to staff → «apply internally»; a file at offer/appointment/hired is not overwritten (409).
+- Files: CV → `storage/app/private/cv/Y/m`, offer signature PNG → `signatures/Y/m` (both in `files`). Signatures are returned inline as data URLs, never public links.
+- Confirmation mail `ApplicationReceived` is queued → new compose service **`worker`** (`queue:work`); generic bilingual mail view `mail/notice.blade.php`.
+- Frontend layout: `lib/public.ts` (public queries), `lib/recruitment.ts` (stages/degrees + applicant hooks), `ui/password.tsx` (PasswordFields), `screens/apply/` (`form.ts` model+validation, `Apply.tsx`, `Applied.tsx`, `submission.ts`), `screens/candidate/CandidateHome.tsx`. `ui/docs.tsx` OfferDoc/DecisionDoc now take the API shape (snake_case).
+- «الدخول كموظف» just refetches `/auth/me` (same user row gets `employee_id` at hire, M04).
+- Tests: `tests/Unit/MatchScoreTest.php`, `tests/Feature/ApplicationTest.php`, `tests/Feature/CandidatePortalTest.php`, `frontend/src/screens/apply/__tests__/form.test.ts`.
+- User commands for 04: `docker compose up -d` (creates the worker) → `docker compose exec api php artisan test`.
 
 **Open questions in SRS** (ask the user only when you reach them):
 - SMS provider for OTP.
