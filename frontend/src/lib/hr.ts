@@ -38,3 +38,14 @@ export function useSaveJob(id: number | null) {
 export function useJobStatus() {
   return useMutation({ mutationFn: (v: { id: number; status: 'open' | 'closed' }) => api(`/hr/jobs/${v.id}/status`, { json: { status: v.status } }), onSuccess: refresh })
 }
+
+/** رابط إشعار/مهمة (cand:12، emp:7، leaves…) ← مسار داخل نظام الشركة */
+export function hrLink(link: string): string {
+  const [k, id] = link.split(':')
+  if (k === 'cand') return `/hr/candidates/${id}`
+  if (k === 'emp') return `/hr/employees/${id}`
+  if (k === 'job') return '/hr/jobs'
+  if (k === 'recruitment') return '/hr/candidates'
+  if (k === 'onboard') return `/hr/onboarding${id ? '/' + id : ''}`
+  return `/hr/${k}`
+}

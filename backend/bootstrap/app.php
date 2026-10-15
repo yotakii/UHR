@@ -26,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'fresh' => \App\Http\Middleware\EnsurePasswordChanged::class,
             'portal' => \App\Http\Middleware\RequirePortal::class,
             'role' => \App\Http\Middleware\RequireRole::class,
+            'perm' => \App\Http\Middleware\RequirePermission::class,
         ]);
         $middleware->redirectGuestsTo(fn () => null);
     })

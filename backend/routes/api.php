@@ -4,10 +4,15 @@ use App\Http\Controllers\Api\ApplicationController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Candidate\MyApplicationController;
 use App\Http\Controllers\Api\HealthController;
+use App\Http\Controllers\Api\FileController;
+use App\Http\Controllers\Api\FormController;
+use App\Http\Controllers\Api\Hr\DashboardController;
 use App\Http\Controllers\Api\Hr\JobController;
+use App\Http\Controllers\Api\Hr\PermissionController;
+use App\Http\Controllers\Api\Hr\SearchController;
+use App\Http\Controllers\Api\NoticeController;
 use App\Http\Controllers\Api\Platform\PlatformController;
 use App\Http\Controllers\Api\PublicController;
-use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
 // كل المسارات هنا تحت البادئة /api
@@ -45,14 +50,39 @@ Route::middleware(['auth', 'fresh', 'portal:candidate'])->prefix('me')->group(fu
     Route::get('/profile', [MyApplicationController::class, 'profile']);
 });
 
-// نظام الشركة — الوظائف الشاغرة ونشرها (HR ومسؤول التوظيف)
-Route::middleware(['auth', 'fresh', 'portal:hr', 'role:'.implode(',', User::JOB_ROLES)])->prefix('hr')->group(function () {
-    Route::get('/jobs', [JobController::class, 'index']);
-    Route::get('/jobs/lookups', [JobController::class, 'lookups']);
-    Route::get('/jobs/{id}', [JobController::class, 'show'])->whereNumber('id');
-    Route::post('/jobs', [JobController::class, 'store']);
-    Route::put('/jobs/{id}', [JobController::class, 'update'])->whereNumber('id');
-    Route::post('/jobs/{id}/status', [JobController::class, 'status'])->whereNumber('id');
+// نظام الشركة (M15/M16 + الوحدات): كل مسار محمي بصلاحية الوحدة والإجراء من مصفوفة الشركة (SRS §10.2)
+Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function () {
+    Route::get('/dashboard', DashboardController::class);
+    Route::get('/search', SearchController::class);
+
+    Route::middleware('perm:jobs,view')->group(function () {
+        Route::get('/jobs', [JobController::class, 'index']);
+        Route::get('/jobs/lookups', [JobController::class, 'lookups']);
+        Route::get('/jobs/{id}', [JobController::class, 'show'])->whereNumber('id');
+    });
+    Route::post('/jobs', [JobController::class, 'store'])->middleware('perm:jobs,create');
+    Route::put('/jobs/{id}', [JobController::class, 'update'])->whereNumber('id')->middleware('perm:jobs,edit');
+    Route::post('/jobs/{id}/status', [JobController::class, 'status'])->whereNumber('id')->middleware('perm:jobs,edit');
+
+    // M16 — لوحة الصلاحيات
+    Route::get('/permissions', [PermissionController::class, 'show'])->middleware('perm:users,view');
+    Route::put('/permissions', [PermissionController::class, 'update'])->middleware('perm:users,edit');
+
+    // M16 — سجل النماذج وقالب الطباعة
+    Route::get('/forms', [FormController::class, 'index'])->middleware('perm:settings,view');
+    Route::put('/forms/{id}', [FormController::class, 'update'])->whereNumber('id')->middleware('perm:settings,edit');
+    Route::put('/print-template', [FormController::class, 'updateTemplate'])->middleware('perm:settings,edit');
+});
+
+// الجرس — لكل مستخدم مسجّل (HR: إشعارات الموارد البشرية + إشعاراته، الموظف والمتقدم: إشعاراته)
+Route::middleware(['auth', 'fresh'])->group(function () {
+    Route::get('/notices', [NoticeController::class, 'index']);
+    Route::post('/notices/read', [NoticeController::class, 'read']);
+    // الطباعة: قالب الشركة + تسجيل طباعة النماذج الحساسة
+    Route::get('/print/{code}', [FormController::class, 'printMeta'])->where('code', '[A-Za-z0-9.\-]+');
+    Route::post('/print/{code}', [FormController::class, 'logPrint'])->where('code', '[A-Za-z0-9.\-]+');
+    // مستودع الملفات: التنزيل عبر الخادم فقط، بصلاحية وتسجيل (SRS §10.3)
+    Route::get('/files/{id}', [FileController::class, 'show'])->whereNumber('id');
 });
 
 // مدير المنصة (Atmata)

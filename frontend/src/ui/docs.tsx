@@ -8,28 +8,40 @@ import type { MyOffer, MyAppointment } from '../lib/recruitment'
 type Person = { name: string; nameEn?: string }
 type OfferTerms = Pick<MyOffer, 'title' | 'contract' | 'currency' | 'basic' | 'housing' | 'transport' | 'fuel' | 'leave_days' | 'start_date'>
 import { Btn } from './kit'
+import { logPrint, usePrintMeta } from '../lib/console'
 
-export function Paper({ code, title, sub, children, actions }: { code: string; title: string; sub?: string; children: ReactNode; actions?: ReactNode }) {
+/**
+ * النموذج المطبوع بشكل نماذج الشركة (SRS §10.4): الشعار أعلى الصفحة حسب قالب الطباعة، العنوان بالوسط،
+ * وتذييل ثابت «الرمز · Issue · Date» من سجل النماذج (M16). طباعة النماذج الحساسة تُسجَّل في التدقيق قبل فتح نافذة الطباعة.
+ * company: للمتقدم (الشركة التي قدّم لها). subject: ما يُطبع (رقم القرار/الطلب) لسجل الطباعة.
+ */
+export function Paper({ code, title, sub, children, actions, company, subject }: { code: string; title: string; sub?: string; children: ReactNode; actions?: ReactNode; company?: string; subject?: string }) {
   const L = useL(); const lang = useLang()
+  const { data: m } = usePrintMeta(code, company)
+  const t = m?.template
+  const issued = m?.form.issued_on ? m.form.issued_on.split('-').reverse().join('-') : null
+  const print = async () => { if (m?.form.sensitive) await logPrint(code, subject, company); window.print() }
+  const align = t?.align === 'center' ? 'justify-center text-center' : t?.align === 'end' ? 'justify-end text-end' : 'justify-start text-start'
   return <div className="print-root">
-    <div className="flex justify-end gap-2 mb-2" data-noprint>{actions}<Btn size="sm" icon={<Printer size={15} />} onClick={() => window.print()}>{L('طباعة النموذج', 'Print form')}</Btn></div>
-    <article className="paper rounded-2xl">
-      <header className="paper-head px-5 sm:px-7 pt-6 pb-4 flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
-        <div>
-          <div className="font-bold text-[15px]">{L('شركة الفرادة للتطوير والاستثمار', 'Uniqueness Development & Investment Co.')}</div>
-          <div className="text-[12px] text-ink-3">{L('إدارة الموارد البشرية', 'Human Resources Department')}</div>
-          <h2 className="text-[19px] font-bold mt-3">{title}</h2>
+    <div className="flex justify-end gap-2 mb-2" data-noprint>{actions}<Btn size="sm" icon={<Printer size={15} />} onClick={print}>{L('طباعة النموذج', 'Print form')}</Btn></div>
+    {t && <style>{`@media print { @page { size: A4; margin: ${t.margin_mm}mm } }`}</style>}
+    <article className="paper rounded-2xl flex flex-col">
+      <header className="paper-head px-5 sm:px-7 pt-6 pb-4">
+        <div className={`flex items-center gap-3 ${align}`}>
+          {t?.logo && m?.company.logo && <img src={m.company.logo} alt="" className="w-auto object-contain bg-white rounded-md p-1" style={{ height: t.logo_height }} />}
+          {m && <div><div className="font-bold text-[15px]">{m.company.name[lang]}</div><div className="text-[12px] text-ink-3">{m.company.dept[lang]}</div></div>}
+        </div>
+        <div className="text-center mt-4">
+          <h2 className="text-[19px] font-bold">{title}</h2>
           {sub && <p className="text-[13px] text-ink-2 mt-0.5">{sub}</p>}
         </div>
-        <table className="text-[12px] border border-ink shrink-0" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
-          <tbody>
-            {code && <tr><td className="border border-ink px-2 py-1 text-ink-3">{L('رقم النموذج', 'Form no.')}</td><td className="border border-ink px-2 py-1 font-semibold ltr">Uniqueness-HR-01-{code}</td></tr>}
-            <tr><td className="border border-ink px-2 py-1 text-ink-3">{L('الإصدار', 'Version')}</td><td className="border border-ink px-2 py-1">1.0</td></tr>
-            <tr><td className="border border-ink px-2 py-1 text-ink-3">{L('تاريخ الطباعة', 'Printed')}</td><td className="border border-ink px-2 py-1 num">{fmtDate(new Date().toISOString(), lang)}</td></tr>
-          </tbody>
-        </table>
       </header>
-      <div className="px-5 sm:px-7 py-6">{children}</div>
+      <div className="px-5 sm:px-7 py-6 flex-1">{children}</div>
+      <footer className="paper-foot px-5 sm:px-7 py-2.5 border-t border-line text-[11.5px] text-ink-3 flex flex-wrap justify-between gap-x-4 gap-y-1 ltr" dir="ltr">
+        <span className="font-semibold text-ink-2">{m?.form.ref ?? code}</span>
+        <span>Issue:{m?.form.issue ?? '01'}</span>
+        <span className="num">Date: {issued ?? fmtDate(new Date().toISOString(), 'en')}</span>
+      </footer>
     </article>
   </div>
 }

@@ -102,14 +102,14 @@ function Application({ c }: { c: MyApplication }) {
     </Panel>}
 
     {c.offer?.status === 'sent' && <div className="grid lg:grid-cols-[1fr_340px] gap-5 items-start">
-      <Paper code="F-29" title={L('عرض العمل الرسمي', 'Official job offer')}><OfferDoc c={person} offer={c.offer} jobTitle={c.job.title.ar} /></Paper>
+      <Paper code="F-29" company={c.company.slug} subject={c.ref} title={L('عرض العمل الرسمي', 'Official job offer')}><OfferDoc c={person} offer={c.offer} jobTitle={c.job.title.ar} /></Paper>
       <OfferResponse id={c.id} />
     </div>}
 
     {c.offer?.status === 'negotiation' && <Panel><Badge tone="warn">{L('طلب التعديل قيد الدراسة', 'Change request under review')}</Badge><p className="text-ink-2 mt-2">{c.offer.note}</p></Panel>}
     {c.offer?.status === 'declined' && <Panel><Badge tone="neutral">{L('اعتذرت عن عرض العمل', 'You declined the offer')}</Badge>{c.offer.note && <p className="text-ink-2 mt-2">{c.offer.note}</p>}</Panel>}
 
-    {accepted && c.appointment && c.stage !== 'hired' && <Paper code="F-31" title={L('قرار التعيين المالي والإداري', 'Appointment decision')} sub={L('قيد الاعتماد — ستصلك رسالة عند اكتماله', 'Under approval — you will be notified when complete')}>
+    {accepted && c.appointment && c.stage !== 'hired' && <Paper code="F-31" company={c.company.slug} subject={c.appointment.decision_no} title={L('قرار التعيين المالي والإداري', 'Appointment decision')} sub={L('قيد الاعتماد — ستصلك رسالة عند اكتماله', 'Under approval — you will be notified when complete')}>
       <DecisionDoc c={person} ap={c.appointment} jobTitle={bi(c.job.title, lang)} deptName={bi(c.job.dept, lang)} />
       <div className="mt-5 max-w-xs"><SigBox label={L('توقيعك على عرض العمل', 'Your signature on the offer')} sig={c.offer?.signature ?? undefined} at={c.offer?.responded_at ?? undefined} /></div>
     </Paper>}

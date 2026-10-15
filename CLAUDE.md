@@ -38,7 +38,7 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 - Backend skeleton is hand-written (minimal): `config/app.php` holds only overrides (merged with framework defaults). No Sanctum.
 - **Auth = session cookie (httpOnly) + CSRF**, same origin via the Vite proxy (`/api` → `http://api:8000`). Middleware prepended to the `api` group in `bootstrap/app.php`: SetLocale, EncryptCookies, AddQueuedCookies, StartSession, ValidateCsrfToken. Frontend sends `X-XSRF-TOKEN` from the `XSRF-TOKEN` cookie (`frontend/src/lib/api.ts`).
 - Route middleware aliases: `fresh` (blocks users who must change a temp password → 403 `password_change_required`), `portal:hr|employee|candidate`.
-  - Future system routes: `Route::middleware(['auth','fresh','portal:hr'])`.
+  - Company system routes: `Route::middleware(['auth','fresh','portal:hr'])` + per-route `perm:module,action` (see Task 05 part 2).
 - **API messages are bilingual:** `App\Support\L::t($ar, $en)` picks the language from the `Accept-Language` header, which the frontend sends from the user's preference. Errors carry a stable `code`.
 - Mail: dev mail goes to Mailpit (http://localhost:8125). The compose `environment:` sets MAIL_* and FRONTEND_URL, which override `backend/.env` (the user's `.env` already exists, so new keys must go in compose or be documented).
 
@@ -84,10 +84,10 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 | 01 Design system & components (`#/kit`) | ✅ user verified |
 | 02 Database, `uhr:install`, TestDataSeeder (demo-identical), audit log | ✅ user verified (after adding mockery) |
 | 03 M01 public page and login | ✅ tests pass (backend + frontend) |
-| 04 M02 apply wizard F-28 → M05 applicant portal (see below) | 📦 delivered, **waiting for the user's test run** |
-| 04b v3 amendments to the apply flow (match bands, data consent, photo per job, referral rules) | ✅ tests pass on the user's machine — browser check pending |
-| 05 Foundation — **part 1 done:** multi-company, recruiter role + `role:` middleware, DecisionDialog, console Shell. **Remaining:** permissions panel, M15 dashboard/bell/search, print template, file store | 🟡 |
-| 05b Public multi-company jobs portal, company/job pages, HR jobs screen, platform console (companies, reviews, portal texts), one applicant account, SEO | ✅ tests pass on the user's machine — browser check pending |
+| 04 M02 apply wizard F-28 → M05 applicant portal (see below) | ✅ user verified |
+| 04b v3 amendments to the apply flow (match bands, data consent, photo per job, referral rules) | ✅ user verified |
+| 05 Foundation — part 1 (multi-company, recruiter, DecisionDialog, Shell) ✅; **part 2 delivered:** permission matrix + panel, M15 sidebar/dashboard/bell/Ctrl K, forms registry + print template, file store. Unified request workflow moves to task 07 (with leaves) | 📦 delivered, waiting for the user's test |
+| 05b Public multi-company jobs portal, company/job pages, HR jobs screen, platform console (companies, reviews, portal texts), one applicant account, SEO | ✅ user verified |
 | 06 Recruitment M03/M04/M06 + CV database, staged referrals, AI tests · 07 Employees/attendance/leave with company policies · 08 Custody, M17 discipline, exit per HR.01-03 · 09 M12–M14 + development · 10 salary 2FA · 11 M16 + Reverb · 12 final verification | |
 
 **Task 03 delivered:**
@@ -117,10 +117,18 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 
 **Tasks 04b + 05 (part 1) + 05b delivered:**
 - Accounts (password `123456`): `platform@atmata.sy` (platform_admin → `/platform`), `hr@atmata.sy` (Atmata HR), `jobs@atmata.sy` (recruiter), plus the alfarada accounts above. Applicant accounts have `company_id = null` and many `candidates` rows (one per company).
-- Public routes: `/` portal, `/jobs?company&city&type&exp&q`, `/c/{slug}`, `/jobs/{slug}/{code}?ref=`, `/apply/{slug}/{code}`, `/my`, `/my/{id}`. API: `/api/public/{portal,jobs,companies/{slug},jobs/{slug}/{code}[/check|/apply]}`, `/api/me/applications…`, `/api/hr/jobs…` (role:JOB_ROLES), `/api/platform/…` (portal:platform).
+- Public routes: `/` portal, `/jobs?company&city&type&exp&q`, `/c/{slug}`, `/jobs/{slug}/{code}?ref=`, `/apply/{slug}/{code}`, `/my`, `/my/{id}`. API: `/api/public/{portal,jobs,companies/{slug},jobs/{slug}/{code}[/check|/apply]}`, `/api/me/applications…`, `/api/hr/jobs…` (`perm:jobs,…`), `/api/platform/…` (portal:platform).
 - Job visibility internal/company/public; public jobs of a company with `portal_review` go `pending` → platform approves or rejects (reason ≥ 10 chars); editing content re-triggers review. `closes_at` + scheduled `jobs:close-expired` (compose service **`scheduler`**).
 - Match bands: ≥50 screening, 41–49 review, ≤40 auto-reject + polite `ApplicationClosed` mail. Consent `agree_data` required, `keep_cv` optional, photo only when `requires_photo`.
 - Tests: PortalTest, JobPublishingTest, PlatformTest + updated suites (68 backend, 27 frontend).
+
+**Task 05 part 2 delivered:**
+- **Permissions** (`App\Support\Perm`): matrix role × module × actions (`view create edit decide export print archive` = ع ض ت ق ص ط ح) × scope (`own/team/all`). Defaults from SRS §10.2 live in `Perm::DEFAULTS`; company overrides in `role_permissions` (missing cell = default). User = union of roles. Routes use `perm:module,action` (e.g. `perm:jobs,create`); the session payload carries `perms` and the UI hides with `can(user, module, action)` (`lib/session.ts`). Practical additions over the spec table: HR edits/decides on candidates and prints in its modules; executives view-only. Panel `/hr/settings/permissions` (admin) — saving is audited as `permissions.updated` (before/after letters) and refuses `self_lockout`.
+- **M15**: `screens/console/Shell.tsx` has the bell (`/api/notices`, mark read after 1.5s; HR notices filtered by the module of their link) and the Ctrl K palette (`/api/hr/search`, by permission). `screens/hr/HrApp.tsx` = the demo sidebar filtered by `view` permission; unbuilt modules show a "being built in task N" page. `/` for an HR account = dashboard. Notice/task links → paths via `hrLink()` (`lib/hr.ts`).
+- **Dashboard** `/api/hr/dashboard` (`Services/Dashboard/HrDashboard`): every section by permission; tasks newest first with `overdue` after 24h. `Services/Attendance/DayCalc` = `calcDay` port with policy params (unit-tested against rules.ts).
+- **Print**: `form_templates` registry per company (`App\Support\Forms::DEFAULTS`: demo F-xx + company HR.01-0x-F-0y, printed `ref`, issue, date, `sensitive`) + `Settings 'print'` (logo, height, align, margin). `Paper` (`ui/docs.tsx`) reads `/api/print/{code}` (applicants pass `?company=slug`) — logo + centered title + fixed footer `ref · Issue · Date`; printing a sensitive form posts `/api/print/{code}` → audit `print`. Page `/hr/settings/forms`.
+- **Files**: `/api/files/{id}` only (no public links) — owner or same-company user with `view` on the file's module (`Services/Files/FileAccess`); every download audited `file.download`. Use `fileUrl(id)` in the UI.
+- Tests: `tests/Feature/FoundationTest.php`, `tests/Unit/DayCalcTest.php`, `frontend/src/lib/__tests__/hrlink.test.ts` (78 backend, 29 frontend).
 
 **Open questions in SRS** (ask the user only when you reach them):
 - SMS provider for OTP.

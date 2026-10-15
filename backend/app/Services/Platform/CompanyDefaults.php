@@ -30,6 +30,7 @@ class CompanyDefaults
         foreach (Settings::DEFAULTS as $key => $value) if (! Setting::where('company_id', $company->id)->where('key', $key)->exists()) Settings::put($key, $value);
         Settings::put('company', [...Settings::DEFAULTS['company'], 'name_ar' => $company->name_ar, 'name_en' => $company->name_en,
             'short_ar' => $company->short_ar ?: $company->name_ar, 'short_en' => $company->short_en ?: $company->name_en, 'brand_latin' => $company->brand_latin ?: mb_strtoupper($company->name_en)]);
+        \App\Support\Forms::seed();
         foreach (Settings::POLICY_DEFAULTS as $key => $value) Policy::firstOrCreate(['key' => $key, 'effective_from' => '2020-01-01'], ['value' => $value]);
 
         $cats = ['computers' => ['حواسب', 'Computers'], 'phones' => ['هواتف', 'Phones'], 'cards' => ['بطاقات', 'Cards'], 'vehicles' => ['مركبات', 'Vehicles'], 'peripherals' => ['ملحقات', 'Peripherals']];

@@ -92,6 +92,8 @@ class User extends Authenticatable
             'must_change_password' => $this->must_change_password,
             'employee' => $e ? ['code' => $e->code, 'title' => ['ar' => $e->title_ar, 'en' => $e->title_en], 'dept' => ['ar' => $e->department->name_ar, 'en' => $e->department->name_en], 'gender' => $e->gender] : null,
             'company' => $this->company?->card(),
+            // صلاحيات الوحدات للواجهة (الإخفاء فقط — الخادم يتحقق في كل endpoint)
+            'perms' => (object) \App\Support\Perm::for($this),
         ];
     }
 

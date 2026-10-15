@@ -93,6 +93,7 @@ select.field option { background: var(--card); color: var(--fg); }
 
 .paper { background: var(--card); border: 1px solid var(--line); }
 .paper-head { border-bottom: 2px solid var(--fg); }
+.paper-foot { break-inside: avoid; }
 .sheet { background: #fff; color: #17242f; }
 .stamp { border: 2px solid currentColor; border-radius: 6px; padding: 2px 8px; font-weight: 700; transform: rotate(-4deg); display: inline-block; }
 .hoverlift { transition: transform .15s, border-color .15s, box-shadow .15s; }

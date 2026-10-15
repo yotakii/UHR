@@ -31,5 +31,14 @@ class Candidate extends Model
     public function offer(): HasOne { return $this->hasOne(Offer::class); }
     public function appointment(): HasOne { return $this->hasOne(Appointment::class); }
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
+
+    /** مهلة المرحلة (slaState في الديمو): late بعد تجاوز أيام المرحلة من الإعدادات، due في آخر يوم */
+    public function slaState(?string $today = null): string
+    {
+        $sla = (int) (\App\Support\Settings::get('stage_sla')[$this->stage] ?? 0);
+        if (! $sla || ! $this->stage_at) return 'none';
+        $days = (int) \Carbon\Carbon::parse($this->stage_at)->startOfDay()->diffInDays(\Carbon\Carbon::parse($today ?? now()->toDateString())->startOfDay());
+        return $days > $sla ? 'late' : ($days === $sla ? 'due' : 'ok');
+    }
     public function photo(): BelongsTo { return $this->belongsTo(StoredFile::class, 'photo_file_id'); }
 }

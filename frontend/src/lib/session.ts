@@ -9,7 +9,11 @@ export interface SessionUser {
   id: number; email: string; name: Bi; roles: string[]; portal: Portal; must_change_password: boolean
   employee: { code: string; title: Bi; dept: Bi; gender: 'M' | 'F' } | null
   company: CompanyCard | null
+  /** صلاحيات الوحدات (SRS §10.2) — للإخفاء في الواجهة فقط، والخادم يتحقق في كل طلب */
+  perms?: Record<string, { actions: PermAction[]; scope: 'own' | 'team' | 'all' }>
 }
+export type PermAction = 'view' | 'create' | 'edit' | 'decide' | 'export' | 'print' | 'archive'
+export const can = (u: SessionUser | null | undefined, module: string, action: PermAction = 'view') => !!u?.perms?.[module]?.actions.includes(action)
 
 export const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false, staleTime: 30_000 } } })
 

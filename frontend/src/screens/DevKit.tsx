@@ -7,6 +7,9 @@ import { CountUp, Sparkline, Bars, Radar, Ring, Donut, Heatmap } from '../ui/viz
 import { Logo, LangToggle, ThemeToggle } from '../ui/brand'
 import type { LogEvent } from '../lib/types'
 import type { MyOffer, MyAppointment } from '../lib/recruitment'
+import { PermissionGrid } from '../ui/permgrid'
+import type { Cell, PermGrid } from '../lib/console'
+import type { PermAction } from '../lib/session'
 
 /**
  * مكتبة المكونات — المهمة 01.
@@ -136,6 +139,8 @@ export function DevKit() {
         {[['سامر الحلبي', 'Samer Al-Halabi', 'UHR-1007', L('تقنية المعلومات', 'IT'), <Badge tone="brand">{L('على رأس العمل', 'Active')}</Badge>], ['حسام البيطار', 'Hussam Al-Bitar', 'UHR-1028', L('خدمة العملاء', 'Customer Service'), <Badge tone="warn">{L('مستقيل — فترة إخطار', 'Resigning')}</Badge>]].map(r => <tr key={String(r[2])} className="click" onClick={() => toast(String(r[2]))}><td><div className="flex items-center gap-2.5"><Avatar size={30} /><span className="font-medium">{lang === 'ar' ? r[0] : r[1]}</span></div></td><td className="ltr num">{r[2]}</td><td>{r[3]}</td><td>{r[4]}</td></tr>)}
       </tbody></table></div></Panel>
 
+      <Panel title="PermissionGrid" pad={false}><KitPermissions /></Panel>
+
       <Panel title={L('الطباعة', 'Print')}><Btn icon={<Printer size={15} />} onClick={() => window.print()}>{L('طباعة الصفحة (ثيم فاتح، A4)', 'Print page (light, A4)')}</Btn></Panel>
     </main>
 
@@ -145,4 +150,16 @@ export function DevKit() {
     </Modal>
     <Drawer open={drawer} onClose={() => setDrawer(false)} width={560}><div className="p-5"><div className="font-display font-bold text-[17px]">{L('سامر الحلبي', 'Samer Al-Halabi')}</div><div className="text-[12.5px] text-ink-3">{L('مطور برمجيات أول', 'Senior Software Developer')}</div></div></Drawer>
   </div>
+}
+
+/** عيّنة ثابتة لشبكة الصلاحيات (بلا خادم) */
+function KitPermissions() {
+  const grid: Pick<PermGrid, 'actions' | 'scopes' | 'modules'> = {
+    actions: [['view', 'ع', 'عرض', 'View'], ['create', 'ض', 'إضافة', 'Create'], ['edit', 'ت', 'تعديل', 'Edit'], ['decide', 'ق', 'اعتماد/رفض', 'Approve'], ['export', 'ص', 'تصدير', 'Export'], ['print', 'ط', 'طباعة', 'Print'], ['archive', 'ح', 'أرشفة', 'Archive']]
+      .map(([key, letter, ar, en]) => ({ key: key as PermAction, letter, ar, en })),
+    scopes: [{ key: 'own', ar: 'خاصته', en: 'Own' }, { key: 'team', ar: 'فريقه', en: 'Team' }, { key: 'all', ar: 'الكل', en: 'All' }],
+    modules: [{ key: 'leaves', ar: 'طلبات الإجازة', en: 'Leave requests' }, { key: 'payroll', ar: 'الرواتب والسلف', en: 'Payroll & advances' }, { key: 'jobs', ar: 'الشواغر', en: 'Job openings' }],
+  }
+  const [cells, setCells] = useState<Record<string, Cell>>({ leaves: { actions: ['view', 'decide', 'print'], scope: 'team' }, payroll: { actions: [], scope: 'all' }, jobs: { actions: ['view'], scope: 'all' } })
+  return <PermissionGrid grid={grid} cells={cells} onChange={(m, c) => setCells(x => ({ ...x, [m]: c }))} />
 }
