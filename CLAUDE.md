@@ -14,6 +14,7 @@
   - Company policy defaults: 09:00–17:00 Sat–Thu, late-deduction table, overtime after 48h/week, leave notice periods + mandatory substitute, sick 70%/80%, notice 60 days.
   - New module **M17 discipline** (violations ladder, warnings F-01, complaints F-02); M11 follows HR.01-03 (forms F-02…F-07); staged referral points 10/20/30/40; match bands ≥50 / 41–49 review / ≤40 auto-reject; AI preliminary tests (Claude API, the only AI-labelled feature).
   - Values not yet decided by the client are in SRS §10.14 with the provisional default we use.
+  - **Public jobs portal (SRS §10.15):** the main page is a multi-company careers portal — Atmata and every client company publish vacancies there (visibility internal/company/public, optional platform moderation); one applicant account applies to any company and each application is a `candidates` row inside that company; the current M01 page becomes the company page. Real path URLs + JobPosting JSON-LD for SEO. Built in task 05b right after the foundation.
 - **Build UHR standalone first.** Integration with **ZERP** (Atmata's ERP: accounting, official payroll) comes **later** — don't start it.
 
 ## 2. How we work with the user
@@ -85,6 +86,7 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 | 04 M02 apply wizard F-28 → M05 applicant portal (see below) | 📦 delivered, **waiting for the user's test run** |
 | 04b v3 amendments to the apply flow (match bands, data consent, photo per job, referral rules) | ⏭ next (small) |
 | 05 Foundation: multi-company, permissions panel + recruiter, unified workflow + DecisionDialog, M15 shell, print template, file store | |
+| 05b Public multi-company jobs portal (Atmata + clients), company/job pages, publishing + moderation, one applicant account, SEO | |
 | 06 Recruitment M03/M04/M06 + CV database, staged referrals, AI tests · 07 Employees/attendance/leave with company policies · 08 Custody, M17 discipline, exit per HR.01-03 · 09 M12–M14 + development · 10 salary 2FA · 11 M16 + Reverb · 12 final verification | |
 
 **Task 03 delivered:**
