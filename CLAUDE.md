@@ -1,7 +1,7 @@
 # UHR — Production HR System (handoff for Claude Code)
 
 > Read this file fully before touching code. It replaces the chat history the project was started in.
-> Then read `docs/SRS.md` (the full spec, Arabic) and `FEATURES.md` (task checklist).
+> Then read `docs/SRS.md` (the full spec, Arabic — **v3**, §10 holds the company's real policies and the Dev Spec cards D-01…D-34) and `FEATURES.md` (task checklist).
 
 ## 1. What we are building
 - **UHR (Uniqueness HR)**: production HR system for Atmata Group's client "Uniqueness / الفرادة". Owner: Atmata Group (Damascus).
@@ -9,6 +9,11 @@
 - **Decision (Oct 12, 2026) — production, NOT a demo.** Remove every exhibition-only tool:
   - relaxed mode, demo accounts list, visitors, sample-data buttons, reset, showcase/attract/expo mode, product tour, partners ticker, kiosk *simulation* (a real NFC terminal only on a registered device).
   - Everything that was hard-coded in the demo becomes manageable in **M16 settings** (company name, hero texts, prefixes, rules, SLAs, policies with effective dates, approval chains, holidays…).
+- **v3 (Oct 15, 2026): the company's real HR rules override the demo's values.** Source files in `reference/company/` (text copies in `reference/company/text/`): staff regulations, violations table, attendance & leave policy HR.01-01, resignation procedure HR.01-03, official forms, conduct charter, and `UHR_Dev_Spec.xlsx` (34 feature cards, permission matrix, 4 phases). Everything is merged into SRS §10:
+  - Multi-company (company_id + subdomain), editable permission matrix + `recruiter` role, unified request workflow (mandatory reason + second confirmation, delegates, 24h reminders).
+  - Company policy defaults: 09:00–17:00 Sat–Thu, late-deduction table, overtime after 48h/week, leave notice periods + mandatory substitute, sick 70%/80%, notice 60 days.
+  - New module **M17 discipline** (violations ladder, warnings F-01, complaints F-02); M11 follows HR.01-03 (forms F-02…F-07); staged referral points 10/20/30/40; match bands ≥50 / 41–49 review / ≤40 auto-reject; AI preliminary tests (Claude API, the only AI-labelled feature).
+  - Values not yet decided by the client are in SRS §10.14 with the provisional default we use.
 - **Build UHR standalone first.** Integration with **ZERP** (Atmata's ERP: accounting, official payroll) comes **later** — don't start it.
 
 ## 2. How we work with the user
@@ -78,8 +83,9 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 | 02 Database, `uhr:install`, TestDataSeeder (demo-identical), audit log | ✅ user verified (after adding mockery) |
 | 03 M01 public page and login | ✅ tests pass (backend + frontend) |
 | 04 M02 apply wizard F-28 → M05 applicant portal (see below) | 📦 delivered, **waiting for the user's test run** |
-| 05 M15 shell → M03 Kanban → M04 candidate file → M06 | ⏭ next |
-| 06 M07–M11 · 07 M12–M14 · 08 salary 2FA · 09 M16 admin + Reverb + PDF/Excel · 10 final verification | |
+| 04b v3 amendments to the apply flow (match bands, data consent, photo per job, referral rules) | ⏭ next (small) |
+| 05 Foundation: multi-company, permissions panel + recruiter, unified workflow + DecisionDialog, M15 shell, print template, file store | |
+| 06 Recruitment M03/M04/M06 + CV database, staged referrals, AI tests · 07 Employees/attendance/leave with company policies · 08 Custody, M17 discipline, exit per HR.01-03 · 09 M12–M14 + development · 10 salary 2FA · 11 M16 + Reverb · 12 final verification | |
 
 **Task 03 delivered:**
 - Landing page: hero texts from settings, 3 cards, login card with show-password.
@@ -134,3 +140,4 @@ docker compose exec web npm test
   - `inventory.json` / `delta.txt` list the strings present in v26 but not in the source (the v26-only features).
   - `UHR_Architecture_v1.0.txt` and `UHR_User_Guide_v1.0.txt` are text versions of the PDFs.
 - `screens/`: screenshots of the demo (`refshots/`) and of our task 03 build (`task03/`).
+- `company/` (v3): the client's real documents — **authoritative for rules, values, forms and approval paths** (SRS §1.1 priority 0). Use `company/text/*.txt` to read them; forms are in `company/forms/` (docx/pdf/xlsx) and their printed layout (logo top, centered title, footer `Uniqueness-HR.01-0x-F-0y · Issue · Date`) is the target for `Paper`.
