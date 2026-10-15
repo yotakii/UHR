@@ -12,6 +12,7 @@ class Counters
 {
     public static function next(string $key, int $start = 1): int
     {
+        $key = self::scoped($key);
         return DB::transaction(function () use ($key, $start) {
             $row = DB::table('counters')->where('key', $key)->lockForUpdate()->first();
             if (! $row) {
@@ -27,10 +28,14 @@ class Counters
     /** يضمن ألا يقل العداد عن قيمة (بعد استيراد أو بيانات اختبار) */
     public static function atLeast(string $key, int $value): void
     {
+        $key = self::scoped($key);
         $row = DB::table('counters')->where('key', $key)->first();
         if (! $row) DB::table('counters')->insert(['key' => $key, 'value' => $value]);
         elseif ($row->value < $value) DB::table('counters')->where('key', $key)->update(['value' => $value]);
     }
+
+    /** الترقيم لكل شركة: c{id}:employee */
+    private static function scoped(string $key): string { return ($c = Tenant::id()) ? "c{$c}:{$key}" : $key; }
 
     public static function employeeCode(): string { return Settings::prefix('employee').'-'.self::next('employee', 1001); }
     public static function assetTag(): string { return Settings::prefix('asset').'-'.str_pad((string) self::next('asset', 1), 4, '0', STR_PAD_LEFT); }

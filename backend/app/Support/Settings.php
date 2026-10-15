@@ -27,8 +27,19 @@ class Settings
             'hero_text_en' => 'Apply for a role now and live the full employee journey: interview, offer, appointment, onboarding, attendance… through to exit.',
         ],
         'prefixes' => ['employee' => 'UHR', 'candidate' => 'UNQ', 'decision' => 'QR', 'asset' => 'AST', 'job' => 'REQ'],
-        'rules' => ['match_threshold' => 70, 'auto_screen' => true, 'sla_alerts' => true, 'referral_points' => 500, 'whatsapp_nudge' => true],
+        // نطاقات المطابقة (SRS §10.9): ≥ match_threshold طبيعي، review_min…threshold-1 للمراجعة، ≤ reject_max رفض تلقائي إذا auto_reject
+        'rules' => ['match_threshold' => 50, 'review_min' => 41, 'reject_max' => 40, 'auto_reject' => true, 'auto_screen' => true, 'sla_alerts' => true, 'referral_points' => 500, 'whatsapp_nudge' => true],
         'stage_sla' => ['new' => 2, 'screening' => 3, 'interview' => 5, 'technical' => 5, 'offer' => 4],
+    ];
+
+    /** إعدادات المنصة (بلا شركة): نصوص بوابة فرص العمل العامة — SRS §10.15 */
+    public const PLATFORM_DEFAULTS = [
+        'portal' => [
+            'brand_latin' => 'UHR · ATMATA GROUP',
+            'hero_title_ar' => 'فرص عمل حقيقية في شركات سورية رائدة', 'hero_title_en' => 'Real jobs at leading Syrian companies',
+            'hero_text_ar' => 'تصفّح الشواغر المفتوحة الآن، وقدّم طلبك بحساب واحد، وتابع حالته خطوة بخطوة حتى التعيين.',
+            'hero_text_en' => 'Browse open positions, apply with one account, and follow every application step by step until you are hired.',
+        ],
     ];
 
     /** سياسات الدوام والإجازات الافتراضية — SRS §7.1–7.2 */
@@ -45,15 +56,30 @@ class Settings
         'unlock_minutes' => 5,
     ];
 
+    /** إعداد الشركة الحالية (Tenant) — وإلا القيمة الافتراضية */
     public static function get(string $key): mixed
     {
-        return Cache::rememberForever("settings:{$key}", fn () => Setting::find($key)?->value ?? self::DEFAULTS[$key] ?? null);
+        $c = Tenant::id();
+        return Cache::rememberForever("settings:{$c}:{$key}", fn () => Setting::where('company_id', $c)->where('key', $key)->first()?->value ?? self::DEFAULTS[$key] ?? null);
     }
 
     public static function put(string $key, mixed $value): void
     {
-        Setting::updateOrCreate(['key' => $key], ['value' => $value]);
-        Cache::forget("settings:{$key}");
+        $c = Tenant::id();
+        Setting::updateOrCreate(['company_id' => $c, 'key' => $key], ['value' => $value]);
+        Cache::forget("settings:{$c}:{$key}");
+    }
+
+    /** إعدادات المنصة (company_id = null) */
+    public static function platform(string $key): mixed
+    {
+        return Cache::rememberForever("settings:platform:{$key}", fn () => Setting::whereNull('company_id')->where('key', $key)->first()?->value ?? self::PLATFORM_DEFAULTS[$key] ?? null);
+    }
+
+    public static function putPlatform(string $key, mixed $value): void
+    {
+        Setting::updateOrCreate(['company_id' => null, 'key' => $key], ['value' => $value]);
+        Cache::forget("settings:platform:{$key}");
     }
 
     public static function company(string $field): ?string { return self::get('company')[$field] ?? null; }
@@ -64,7 +90,7 @@ class Settings
     public static function policy(string $key, Carbon|string|null $on = null): mixed
     {
         $on = $on ? Carbon::parse($on)->toDateString() : now()->toDateString();
-        return Cache::remember("policy:{$key}:{$on}", 300, fn () => Policy::where('key', $key)->where('effective_from', '<=', $on)
+        return Cache::remember('policy:'.Tenant::id().":{$key}:{$on}", 300, fn () => Policy::where('key', $key)->where('effective_from', '<=', $on)
             ->orderByDesc('effective_from')->first()?->value ?? self::POLICY_DEFAULTS[$key] ?? null);
     }
 

@@ -26,6 +26,10 @@ use App\Models\StoredFile;
 use App\Models\User;
 use App\Support\Audit;
 use App\Support\Counters;
+use App\Support\Tenant;
+use App\Models\Company;
+use App\Services\Platform\CompanyDefaults;
+use App\Services\Platform\CompanyProvisioner;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -76,6 +80,69 @@ class TestDataSeeder extends Seeder
 
         Audit::mute(fn () => DB::transaction(function () {
             (new DefaultsSeeder)->run();
+            [$atmata, $alfarada] = $this->companies();
+            $this->atmata($atmata);
+            Tenant::run($alfarada, fn () => $this->alfarada());
+        }));
+    }
+
+    /**
+     * شركتان على المنصة (SRS §10.15): Atmata مالكة المنصة وتنشر شواغرها مباشرة، والفرادة أول عميل وشواغرها تمر بمراجعة المنصة.
+     * + مدير المنصة platform@atmata.sy
+     */
+    private function companies(): array
+    {
+        $prov = new CompanyProvisioner;
+        $make = function (array $attrs, string $logo) use ($prov) {
+            $c = Company::where('slug', $attrs['slug'])->first();
+            if (! $c) { $c = Company::create($attrs); CompanyDefaults::seed($c); } else $c->update($attrs);
+            $prov->setLogo($c, resource_path("logos/{$logo}"));
+            return $c;
+        };
+        $atmata = $make(['slug' => 'atmata', 'name_ar' => 'مجموعة أتمتة', 'name_en' => 'Atmata Group', 'short_ar' => 'أتمتة', 'short_en' => 'Atmata', 'brand_latin' => 'ATMATA GROUP',
+            'about_ar' => 'شركة سورية للحلول التقنية وأتمتة الأعمال، مالكة منصة UHR.', 'about_en' => 'Syrian technology and business-automation company, owner of the UHR platform.',
+            'website' => 'https://atmata.sy', 'status' => 'active', 'portal_enabled' => true, 'portal_review' => false, 'is_platform' => true], 'atmata.png');
+        $alfarada = $make(['slug' => 'alfarada', 'name_ar' => 'شركة الفرادة للتطوير والاستثمار', 'name_en' => 'Uniqueness Development & Investment Co.', 'short_ar' => 'مجموعة الفرادة', 'short_en' => 'Uniqueness Group',
+            'brand_latin' => 'UNIQUENESS GROUP', 'about_ar' => 'مجموعة سورية للتطوير والاستثمار في دمشق وحلب وحمص.', 'about_en' => 'Syrian development and investment group in Damascus, Aleppo and Homs.',
+            'website' => 'https://alfarada.sy', 'status' => 'active', 'portal_enabled' => true, 'portal_review' => true, 'is_platform' => false], 'alfarada.png');
+
+        $platform = User::updateOrCreate(['email' => 'platform@atmata.sy'], ['name' => 'مدير المنصة', 'name_en' => 'Platform admin', 'company_id' => null, 'password' => Hash::make('123456'), 'must_change_password' => false, 'active' => true]);
+        $platform->roles()->sync(Role::where('key', 'platform_admin')->pluck('id'));
+        return [$atmata, $alfarada];
+    }
+
+    /** Atmata: إدارتان، مسؤولة موارد بشرية ومسؤول توظيف، وثلاث شواغر منشورة على البوابة */
+    private function atmata(Company $atmata): void
+    {
+        Tenant::run($atmata, function () use ($atmata) {
+            $loc = Location::pluck('id', 'code');
+            $it = Department::updateOrCreate(['code' => 'eng'], ['name_ar' => 'الهندسة والتطوير', 'name_en' => 'Engineering', 'color' => 'brand', 'sort' => 1]);
+            $ops = Department::updateOrCreate(['code' => 'delivery'], ['name_ar' => 'تنفيذ المشاريع', 'name_en' => 'Project Delivery', 'color' => 'brass', 'sort' => 2]);
+            $J = [
+                ['ATM-2026-001', 'مهندس Laravel', 'Laravel Engineer', $it, 'dam', 'full_time', 3, 2, 900, 1400, 'بناء أنظمة الشركات (ERP وHR) بـ Laravel وPostgreSQL ضمن فريق منتجات Atmata.', 'Build business systems (ERP and HR) with Laravel and PostgreSQL in Atmata’s product team.',
+                    [['خبرة 3 سنوات في PHP وLaravel', '3 years of PHP and Laravel'], ['قواعد بيانات علائقية وتصميم API', 'Relational databases and API design'], ['العمل بـ Git واختبارات آلية', 'Git and automated testing']], true],
+                ['ATM-2026-002', 'مطور واجهات React', 'React Front-end Developer', $it, 'dam', 'full_time', 2, 2, 800, 1200, 'تطوير واجهات ثنائية اللغة سريعة ومتجاوبة لمنتجات الشركة.', 'Build fast, responsive, bilingual interfaces for our products.',
+                    [['React وTypeScript', 'React and TypeScript'], ['خبرة بالواجهات العربية RTL', 'Arabic RTL interfaces'], ['حس تصميمي ودقة', 'Design sense and attention to detail']], false],
+                ['ATM-2026-003', 'مدير مشاريع تقنية', 'Technical Project Manager', $ops, 'alp', 'full_time', 5, 2, 1100, 1600, 'إدارة تنفيذ أنظمة Atmata لدى العملاء من التحليل حتى التشغيل.', 'Lead Atmata system rollouts at client sites from analysis to go-live.',
+                    [['خبرة 5 سنوات بإدارة المشاريع', '5 years managing projects'], ['شهادة PMP أو ما يعادلها ميزة', 'PMP or equivalent is a plus'], ['استعداد للسفر بين المحافظات', 'Willing to travel between governorates']], false],
+            ];
+            foreach ($J as $i => $j) JobOpening::updateOrCreate(['code' => $j[0]], [
+                'title_ar' => $j[1], 'title_en' => $j[2], 'department_id' => $j[3]->id, 'location_id' => $loc[$j[4]], 'employment_type' => $j[5], 'openings' => 1,
+                'min_years' => $j[6], 'degree' => $j[7], 'salary_min' => $j[8], 'salary_max' => $j[9], 'currency' => 'USD', 'summary_ar' => $j[10], 'summary_en' => $j[11],
+                'requirements' => array_map(fn ($r) => ['ar' => $r[0], 'en' => $r[1]], $j[12]), 'status' => 'open', 'posted_at' => $this->addDays($this->today, -(1 + $i * 2)),
+                'visibility' => 'public', 'portal_status' => 'approved', 'hard_to_fill' => $j[13],
+            ]);
+            $role = Role::pluck('id', 'key');
+            foreach ([['hr@atmata.sy', 'سلمى الحكيم', 'Salma Al-Hakim', ['admin', 'hr_director']], ['jobs@atmata.sy', 'كريم داود', 'Karim Daoud', ['recruiter']]] as [$email, $ar, $en, $roles]) {
+                $u = User::updateOrCreate(['email' => $email], ['name' => $ar, 'name_en' => $en, 'company_id' => $atmata->id, 'password' => Hash::make('123456'), 'must_change_password' => false, 'active' => true]);
+                $u->roles()->sync(collect($roles)->map(fn ($k) => $role[$k])->all());
+            }
+        });
+    }
+
+    /** الفرادة = بيانات ديمو المعرض حرفياً */
+    private function alfarada(): void
+    {
             $loc = Location::pluck('id', 'code');
             $depts = $this->departments();
             [$employees, $emp] = $this->employees($loc, $depts);
@@ -89,7 +156,6 @@ class TestDataSeeder extends Seeder
             Counters::atLeast('employee', 1000 + count($employees));
             Counters::atLeast('asset', Asset::count());
             Counters::atLeast('cand-app-'.now()->year, 48210 + 9 * 37);
-        }));
     }
 
     private function departments(): array
@@ -196,6 +262,8 @@ class TestDataSeeder extends Seeder
                 'openings' => $j[7], 'min_years' => $j[8], 'degree' => $j[9], 'salary_min' => $j[10], 'salary_max' => $j[11], 'currency' => 'USD',
                 'summary_ar' => $j[12], 'summary_en' => $j[13], 'requirements' => array_map(fn ($r) => ['ar' => $r[0], 'en' => $r[1]], $j[14]),
                 'status' => 'open', 'posted_at' => $this->addDays($this->today, -(4 + $i * 3)),
+                // على البوابة العامة؛ آخر وظيفة بانتظار مراجعة المنصة (لتجربة المراجعة) وتظهر على صفحة الشركة فقط
+                'visibility' => 'public', 'portal_status' => $j[0] === 'j6' ? 'pending' : 'approved',
             ]);
         }
         Counters::atLeast('job-2026', 41);
@@ -310,7 +378,7 @@ class TestDataSeeder extends Seeder
             }
         }
         $now = now();
-        foreach (array_chunk($rows, 200) as $chunk) AttendanceDay::insert(array_map(fn ($r) => ['employee_id' => $r[0], 'date' => $r[1], 'in_at' => $r[2], 'out_at' => $r[3], 'status' => $r[4], 'justified' => false, 'created_at' => $now, 'updated_at' => $now], $chunk));
+        foreach (array_chunk($rows, 200) as $chunk) AttendanceDay::insert(array_map(fn ($r) => ['company_id' => Tenant::id(), 'employee_id' => $r[0], 'date' => $r[1], 'in_at' => $r[2], 'out_at' => $r[3], 'status' => $r[4], 'justified' => false, 'created_at' => $now, 'updated_at' => $now], $chunk));
     }
 
     private function requests(array $emp): void
@@ -372,16 +440,18 @@ class TestDataSeeder extends Seeder
             $u->roles()->sync(collect($roles)->map(fn ($k) => $role[$k])->all());
             return $u;
         };
-        $mk('admin@alfarada.sy', ['name' => 'مدير النظام'], ['admin']);
+        $company = Tenant::id();
+        $mk('admin@alfarada.sy', ['name' => 'مدير النظام', 'name_en' => 'System admin', 'company_id' => $company], ['admin']);
         $special = ['UHR-1001' => ['ceo'], 'UHR-1002' => ['executive'], 'UHR-1003' => ['hr_director'], 'UHR-1004' => ['finance'], 'UHR-1005' => ['hr_officer'], 'UHR-1006' => ['hr_officer']];
         $heads = Department::pluck('head_id')->filter()->all();
         $byCode = [];
         foreach ($employees as $e) {
             $roles = array_merge(['employee'], $special[$e->code] ?? [], in_array($e->id, $heads, true) ? ['manager'] : []);
             // حساب رشا الخطيب يبقى hr@alfarada.sy كما في الديمو
-            $byCode[$e->code] = $mk($e->code === 'UHR-1003' ? 'hr@alfarada.sy' : $e->email, ['employee_id' => $e->id, 'name' => $e->name], $roles);
+            $byCode[$e->code] = $mk($e->code === 'UHR-1003' ? 'hr@alfarada.sy' : $e->email, ['employee_id' => $e->id, 'name' => $e->name, 'name_en' => $e->name_en, 'company_id' => $company], $roles);
         }
-        foreach ($cands as $c) $mk($c->email, ['candidate_id' => $c->id, 'name' => $c->name], ['candidate']);
+        // المتقدمون: حسابات على مستوى المنصة (بلا شركة)، وطلبهم داخل الفرادة
+        foreach ($cands as $c) $c->update(['user_id' => $mk($c->email, ['name' => $c->name, 'name_en' => $c->name_en, 'company_id' => null], ['candidate'])->id, 'consent_at' => $c->created_at, 'keep_cv' => true]);
 
         // سلسلة قرار التعيين: أصحاب المستويات
         $chain = ApprovalChain::where('type', 'appointment')->first();

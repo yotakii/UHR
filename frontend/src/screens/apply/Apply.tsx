@@ -1,28 +1,44 @@
-import { useState, type ReactNode } from 'react'
-import { useMutation } from '@tanstack/react-query'
-import { Check, Upload, FileText, ArrowRight, ArrowLeft } from 'lucide-react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { Check, Upload, FileText, ArrowRight, ArrowLeft, Image as ImageIcon, UserCheck, AlertTriangle } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { api, ApiError } from '../../lib/api'
 import { go } from '../../lib/router'
 import { useJob } from '../../lib/public'
+import { useMe } from '../../lib/session'
+import { CompanyLogo } from '../public/parts'
 import { DEGREES } from '../../lib/recruitment'
 import { Btn, Field, Empty } from '../../ui/kit'
 import { PasswordFields } from '../../ui/password'
-import { emptyForm, emptyExperience, validateStep, toFormData, stepOf, CV_MAX, type ApplyForm, type Errors, type YesNo } from './form'
+import { emptyForm, emptyExperience, validateStep, toFormData, stepOf, fromProfile, CV_MAX, PHOTO_MAX, type ApplyForm, type Errors, type YesNo, type Account, type Profile } from './form'
 import { setSubmission, type Submission } from './submission'
 
-interface DupCheck { duplicate: boolean; blocked: boolean; account?: boolean; code?: string; field?: string; message: string | null }
+interface DupCheck { duplicate: boolean; blocked: boolean; account?: boolean; signed_in?: boolean; code?: string; field?: string; message: string | null }
 
-/** M02 — معالج طلب التوظيف F-28 بأربع خطوات (منقول من Apply.tsx في الديمو) */
-export function Apply({ code, refCode }: { code: string; refCode?: string }) {
+/** M02 — معالج طلب التوظيف F-28 بأربع خطوات على شاغر شركة (منقول من Apply.tsx في الديمو + SRS §10.9، §10.15) */
+export function Apply({ slug, code, refCode }: { slug: string; code: string; refCode?: string }) {
   const L = useL(); const lang = useLang()
-  const { data: job, isLoading, error } = useJob(code)
+  const { data: job, isLoading, error } = useJob(slug, code, refCode)
+  const me = useMe().data
+  const signedIn = me?.portal === 'candidate'
+  const base = `/public/jobs/${encodeURIComponent(slug)}/${encodeURIComponent(code)}`
   const [step, setStep] = useState(0)
   const [f, setF] = useState<ApplyForm>(() => emptyForm(refCode))
   const [errs, setErrs] = useState<Errors>({})
   const [banner, setBanner] = useState('')
-  const [dup, setDup] = useState<{ note: string; account: boolean }>({ note: '', account: false })
+  const [dup, setDup] = useState<{ note: string; account: Account }>({ note: '', account: signedIn ? 'signed_in' : 'new' })
   const [checking, setChecking] = useState(false)
+
+  // المتقدم المسجّل: النموذج يُعبّأ من آخر طلب له، والبريد بريد حسابه
+  const profile = useQuery({ queryKey: ['me', 'profile'], queryFn: () => api<{ data: Profile }>('/me/profile').then(r => r.data), enabled: signedIn, staleTime: Infinity })
+  const filled = useRef(false)
+  useEffect(() => {
+    if (signedIn) setDup(d => ({ ...d, account: 'signed_in' }))
+    if (profile.data && !filled.current) { filled.current = true; setF(x => ({ ...fromProfile(x, profile.data), email: me!.email })) }
+  }, [signedIn, profile.data, me])
+  // رابط إحالة غير صالح ← نكمل بدونه (رسالة في رأس النموذج)
+  const badRef = job?.referral && !job.referral.valid
+  useEffect(() => { if (badRef) setF(x => ({ ...x, source: 'website', ref_code: '' })) }, [badRef])
 
   const set = <K extends keyof ApplyForm>(k: K, v: ApplyForm[K]) => { setF(x => ({ ...x, [k]: v })); setErrs(e => ({ ...e, [k]: '' })); setBanner('') }
   const setExp = (i: number, k: keyof ApplyForm['experience'][number], v: string) => set('experience', f.experience.map((y, j) => j === i ? { ...y, [k]: v } : y))
@@ -30,13 +46,13 @@ export function Apply({ code, refCode }: { code: string; refCode?: string }) {
   const goStep = (i: number) => { setStep(i); window.scrollTo(0, 0) }
 
   const submit = useMutation({
-    mutationFn: () => api<{ data: Omit<Submission, 'password'> }>('/public/applications', { method: 'POST', body: toFormData(code, f) }),
-    onSuccess: r => { setSubmission({ ...r.data, password: f.password }); go('applied') },
+    mutationFn: () => api<{ data: Omit<Submission, 'password' | 'signedIn'> }>(`${base}/apply`, { method: 'POST', body: toFormData(f) }),
+    onSuccess: r => { setSubmission({ ...r.data, password: f.password, signedIn }); go('applied') },
     onError: (e: Error) => {
       if (!(e instanceof ApiError)) { setBanner(L('تعذّر الاتصال بالخادم. تحقق من الشبكة وحاول مجدداً.', 'Could not reach the server. Check your connection and try again.')); return }
       const fields = Object.fromEntries(Object.entries(e.errors).map(([k, v]) => [k === 'agree_info' ? 'agree_medical' : k.startsWith('experience.') ? 'experience' : k, v[0]]))
       setErrs(fields)
-      if (e.code === 'existing_account') setDup(d => ({ ...d, account: true }))
+      if (e.code === 'existing_account') setDup(d => ({ ...d, account: 'existing' }))
       const keys = Object.keys(fields)
       if (keys.length) goStep(Math.min(...keys.map(stepOf)))
       if (!keys.length || e.code !== 'validation') setBanner(e.message)
@@ -44,24 +60,29 @@ export function Apply({ code, refCode }: { code: string; refCode?: string }) {
   })
 
   const next = async () => {
-    const e = validateStep(step, f, L, dup.account); setErrs(e)
+    const e = validateStep(step, f, L, { account: dup.account, requiresPhoto: job?.requires_photo }); setErrs(e)
     if (Object.keys(e).length) return
     if (step === 0) {
       setChecking(true)
       try {
-        const r = await api<DupCheck>('/public/applications/check-duplicate', { json: { national_id: f.national_id.trim(), email: f.email.trim() } })
+        const r = await api<DupCheck>(`${base}/check`, { json: { national_id: f.national_id.trim(), email: f.email.trim() } })
         if (r.blocked) { if (r.field) setErrs({ [r.field]: r.message ?? '' }); else setBanner(r.message ?? ''); return }
-        setDup({ note: r.message ?? '', account: !!r.account })
+        setDup({ note: r.message ?? '', account: r.signed_in ? 'signed_in' : r.account ? 'existing' : 'new' })
       } catch { /* الفحص المسبق اختياري — الخادم يعيد الفحص عند الإرسال */ } finally { setChecking(false) }
     }
     goStep(step + 1)
   }
-  const send = () => { const e = validateStep(3, f, L, dup.account); setErrs(e); if (!Object.keys(e).length) submit.mutate() }
+  const send = () => { const e = validateStep(3, f, L, { account: dup.account, requiresPhoto: job?.requires_photo }); setErrs(e); if (!Object.keys(e).length) submit.mutate() }
 
   const onFile = (file?: File) => {
     if (!file) return
     if (file.size > CV_MAX) { setErrs(e => ({ ...e, cv: L('الحد الأقصى لحجم الملف 10MB', 'Maximum file size is 10MB') })); return }
     set('cv', file)
+  }
+  const onPhoto = (file?: File) => {
+    if (!file) return
+    if (file.size > PHOTO_MAX) { setErrs(e => ({ ...e, photo: L('الحد الأقصى لحجم الصورة 2MB', 'Maximum photo size is 2MB') })); return }
+    set('photo', file)
   }
 
   if (isLoading) return <div className="max-w-5xl mx-auto px-5 md:px-8 py-6"><div className="rounded-2xl border border-line bg-surface h-72 animate-pulse" /></div>
@@ -76,8 +97,9 @@ export function Apply({ code, refCode }: { code: string; refCode?: string }) {
 
   return <div className="max-w-5xl mx-auto px-5 md:px-8 py-6 grid lg:grid-cols-[260px_1fr] gap-6 items-start">
     <aside className="lg:sticky lg:top-24 space-y-4">
-      <button onClick={() => go('')} className="text-[13px] text-ink-3 hover:text-ink flex items-center gap-1">{lang === 'ar' ? <ArrowRight size={14} /> : <ArrowLeft size={14} />}{L('كل الوظائف', 'All positions')}</button>
+      <button onClick={() => go('jobs')} className="text-[13px] text-ink-3 hover:text-ink flex items-center gap-1">{lang === 'ar' ? <ArrowRight size={14} /> : <ArrowLeft size={14} />}{L('كل الوظائف', 'All positions')}</button>
       <div className="bg-surface border border-line rounded-2xl p-4">
+        <a href={`/c/${job.company.slug}`} className="flex items-center gap-2 mb-3 pb-3 border-b border-line-2"><CompanyLogo c={job.company} size={36} /><span className="text-[13px] font-semibold leading-tight">{bi(job.company.name, lang)}</span></a>
         <div className="text-[12px] text-ink-3 ltr text-start">{job.code}</div>
         <h2 className="font-bold text-[17px] mt-0.5">{bi(job.title, lang)}</h2>
         <div className="text-[13px] text-ink-2 mt-1">{bi(job.city, lang)} — {bi(job.type, lang)}</div>
@@ -97,6 +119,8 @@ export function Apply({ code, refCode }: { code: string; refCode?: string }) {
       </header>
       <div className="p-6">
         {banner && <div role="alert" className="mb-4 text-[13px] bg-danger-soft text-danger rounded px-3 py-2">{banner}</div>}
+        {step === 0 && signedIn && <div className="mb-4 flex items-center gap-2 text-[13px] bg-brand-soft text-brand-2 rounded px-3 py-2"><UserCheck size={16} />{L(`تقدّم بحسابك ${me?.email} — عبّأنا بياناتك من آخر طلب، راجعها قبل المتابعة.`, `Applying with your account ${me?.email} — we filled your details from your last application; review them before continuing.`)}</div>}
+        {step === 0 && badRef && <div className="mb-4 flex items-center gap-2 text-[13px] bg-warn-soft text-warn rounded px-3 py-2"><AlertTriangle size={16} />{L('رابط الإحالة غير صالح — سيُرسل طلبك بدون إحالة.', 'The referral link is invalid — your application will be sent without a referral.')}</div>}
 
         {step === 0 && <div className="grid sm:grid-cols-2 gap-4">
           <Field label={L('الاسم الثلاثي', 'Full name')} req error={errs.name} className="sm:col-span-2">{input('name', { autoComplete: 'name' })}</Field>
@@ -109,7 +133,7 @@ export function Apply({ code, refCode }: { code: string; refCode?: string }) {
           <Field label={L('الرقم الوطني', 'National ID')} req error={errs.national_id} hint={L('يُستخدم للتحقق من عدم تكرار الطلب', 'Used to detect duplicate applications')}>{input('national_id', { className: 'ltr text-start', inputMode: 'numeric' })}</Field>
           <Field label={L('زمرة الدم', 'Blood type')} error={errs.blood}><select className="field" value={f.blood} onChange={e => set('blood', e.target.value)}><option value="">—</option>{['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].map(b => <option key={b}>{b}</option>)}</select></Field>
           <Field label={L('الجوال', 'Mobile')} req error={errs.mobile}>{input('mobile', { className: 'ltr text-start', type: 'tel', autoComplete: 'tel' })}</Field>
-          <Field label={L('البريد الإلكتروني', 'Email')} req error={errs.email} hint={L('سيكون اسم الدخول لمتابعة طلبك', 'This will be your login to track the application')}>{input('email', { className: 'ltr text-start', type: 'email', autoComplete: 'email' })}</Field>
+          <Field label={L('البريد الإلكتروني', 'Email')} req error={errs.email} hint={signedIn ? L('بريد حسابك', 'Your account email') : L('سيكون اسم الدخول لمتابعة طلباتك', 'This will be your login to track your applications')}>{input('email', { className: 'ltr text-start', type: 'email', autoComplete: 'email', disabled: signedIn })}</Field>
           <Field label={L('عنوان السكن الحالي', 'Current address')} req error={errs.address} className="sm:col-span-2">{input('address')}</Field>
           <Field label="LinkedIn" className="sm:col-span-2" error={errs.linkedin}>{input('linkedin', { className: 'ltr text-start' })}</Field>
         </div>}
@@ -161,6 +185,16 @@ export function Apply({ code, refCode }: { code: string; refCode?: string }) {
             </label>
             {errs.cv && <span className="text-[12px] text-danger">{errs.cv}</span>}
           </div>
+          {job.requires_photo && <div>
+            <span className="block text-[13px] font-medium text-ink-2 mb-1">{L('صورة شخصية', 'Personal photo')}<span className="text-danger"> *</span></span>
+            <label className="flex items-center gap-3 border border-dashed border-ink-3 rounded-md p-4 cursor-pointer hover:bg-sub" aria-invalid={!!errs.photo}
+              onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); onPhoto(e.dataTransfer.files[0]) }}>
+              {f.photo ? <img src={URL.createObjectURL(f.photo)} alt="" className="size-14 rounded-md object-cover" /> : <ImageIcon className="text-ink-3 shrink-0" />}
+              <div className="flex-1 min-w-0">{f.photo ? <><div className="font-medium truncate ltr text-start">{f.photo.name}</div><div className="text-[12px] text-ink-3">{Math.round(f.photo.size / 1024)} KB — {L('اضغط للاستبدال', 'click to replace')}</div></> : <><div className="font-medium">{L('هذه الوظيفة تتطلب صورة شخصية حديثة', 'This position requires a recent personal photo')}</div><div className="text-[12px] text-ink-3">JPG / PNG — {L('حتى 2MB', 'up to 2MB')}</div></>}</div>
+              <input type="file" accept=".jpg,.jpeg,.png" className="hidden" onChange={e => onPhoto(e.target.files?.[0])} />
+            </label>
+            {errs.photo && <span className="text-[12px] text-danger">{errs.photo}</span>}
+          </div>}
         </div>}
 
         {step === 3 && <div className="space-y-5">
@@ -169,13 +203,18 @@ export function Apply({ code, refCode }: { code: string; refCode?: string }) {
             {([[L('الاسم', 'Name'), f.name], [L('الرقم الوطني', 'National ID'), f.national_id], [L('البريد', 'Email'), <span className="ltr">{f.email}</span>], [L('الجوال', 'Mobile'), <span className="ltr">{f.mobile}</span>], [L('المؤهل', 'Qualification'), `${DEGREES[Number(f.degree)][lang]} — ${f.major}`], [L('الخبرة', 'Experience'), `${f.years_exp} ${L('سنوات', 'years')}`], [L('الراتب المتوقع', 'Expected salary'), `$${f.salary}`], [L('السيرة الذاتية', 'CV'), f.cv?.name ?? L('لم تُرفق', 'Not attached')]] as [string, ReactNode][]).map(([k, v]) =>
               <div key={k} className="flex justify-between gap-3 py-2 border-b border-line-2 min-w-0"><dt className="text-ink-3 shrink-0">{k}</dt><dd className="font-medium text-end truncate">{v}</dd></div>)}
           </dl>
-          {dup.account
-            ? <div className="grid sm:grid-cols-2 gap-4"><Field label={L('كلمة مرور حسابك الحالي', 'Your current account password')} req error={errs.password} hint={<a className="underline" href="#/forgot">{L('نسيت كلمة المرور؟', 'Forgot your password?')}</a>}><input type="password" className="field ltr text-start" value={f.password} aria-invalid={!!errs.password} onChange={e => set('password', e.target.value)} autoComplete="current-password" /></Field></div>
-            : <div className="grid sm:grid-cols-2 gap-4 items-start"><PasswordFields label={L('أنشئ كلمة مرور لمتابعة طلبك', 'Create a password to track your application')} v={f} set={(k, x) => set(k, x)} errs={{ password: errs.password, password_confirmation: errs.password_confirmation }} /></div>}
+          {dup.account === 'signed_in'
+            ? <div className="flex items-center gap-2 text-[13px] bg-brand-soft text-brand-2 rounded px-3 py-2"><UserCheck size={16} />{L(`سيُضاف الطلب لحسابك ${me?.email ?? f.email}.`, `This application will be added to your account ${me?.email ?? f.email}.`)}</div>
+            : dup.account === 'existing'
+            ? <div className="grid sm:grid-cols-2 gap-4"><Field label={L('كلمة مرور حسابك الحالي', 'Your current account password')} req error={errs.password} hint={<a className="underline" href="/forgot">{L('نسيت كلمة المرور؟', 'Forgot your password?')}</a>}><input type="password" className="field ltr text-start" value={f.password} aria-invalid={!!errs.password} onChange={e => set('password', e.target.value)} autoComplete="current-password" /></Field></div>
+            : <div className="grid sm:grid-cols-2 gap-4 items-start"><PasswordFields label={L('أنشئ كلمة مرور لمتابعة طلباتك', 'Create a password to track your applications')} v={f} set={(k, x) => set(k, x)} errs={{ password: errs.password, password_confirmation: errs.password_confirmation }} /></div>}
           <div className="bg-canvas rounded-md p-4 space-y-3 text-[14px]">
             <label className="flex gap-3"><input type="checkbox" className="mt-1 accent-[var(--primary)]" checked={f.agree_info} onChange={e => set('agree_info', e.target.checked)} /><span>{L('أقر بأن جميع المعلومات الواردة صحيحة، وأن أي معلومة غير صحيحة أو ناقصة تكون سبباً لإنهاء التعيين في حال تمّ.', 'I confirm that all information is true. Any false or missing information is grounds for termination if hired.')}</span></label>
             <label className="flex gap-3"><input type="checkbox" className="mt-1 accent-[var(--primary)]" checked={f.agree_medical} onChange={e => set('agree_medical', e.target.checked)} /><span>{L('أوافق على سياسة الفحص الطبي وأنظمة الشركة الداخلية.', 'I accept the medical examination policy and company regulations.')}</span></label>
             {errs.agree_medical && <div className="text-[12px] text-danger">{errs.agree_medical}</div>}
+            <label className="flex gap-3"><input type="checkbox" className="mt-1 accent-[var(--primary)]" checked={f.agree_data} onChange={e => set('agree_data', e.target.checked)} /><span>{L(`أوافق على معالجة بياناتي من ${job.company.name.ar} لغرض التوظيف فقط، ولا تُشارك مع أي جهة أخرى دون موافقتي.`, `I agree that ${job.company.name.en} processes my data for recruitment only, and it is not shared with anyone else without my consent.`)}</span></label>
+            {errs.agree_data && <div className="text-[12px] text-danger">{errs.agree_data}</div>}
+            <label className="flex gap-3 text-ink-2"><input type="checkbox" className="mt-1 accent-[var(--primary)]" checked={f.keep_cv} onChange={e => set('keep_cv', e.target.checked)} /><span>{L('احتفظوا بسيرتي لفرص قادمة تناسبني (اختياري).', 'Keep my CV for future openings that suit me (optional).')}</span></label>
           </div>
         </div>}
       </div>

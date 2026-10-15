@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Notice extends Model
 {
+    use Concerns\BelongsToCompany;
     protected bool $audit = false;
     public $timestamps = false;
     protected function casts(): array { return ['at' => 'datetime']; }

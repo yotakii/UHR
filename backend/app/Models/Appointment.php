@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Appointment extends Model
 {
+    use Concerns\BelongsToCompany;
     protected function casts(): array { return ['issued_at' => 'datetime']; }
     public function candidate(): BelongsTo { return $this->belongsTo(Candidate::class); }
     public function employee(): BelongsTo { return $this->belongsTo(Employee::class); }

@@ -15,7 +15,7 @@ class ResetPasswordNotice extends Notification
 
     public function url(object $notifiable): string
     {
-        return rtrim(config('app.frontend_url'), '/').'/#/reset?'.http_build_query(['token' => $this->token, 'email' => $notifiable->getEmailForPasswordReset()]);
+        return rtrim(config('app.frontend_url'), '/').'/reset?'.http_build_query(['token' => $this->token, 'email' => $notifiable->getEmailForPasswordReset()]);
     }
 
     public function toMail(object $notifiable): MailMessage

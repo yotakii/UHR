@@ -56,7 +56,7 @@ export function PortalHome({ user }: { user: SessionUser }) {
         <span className="size-12 rounded-2xl bg-brand-soft text-brand grid place-items-center">{meta.icon}</span>
         <div className="min-w-0 flex-1"><div className="text-[13px] text-ink-3">{meta.t}</div>
           <h1 className="text-[22px] font-bold">{L('أهلاً', 'Welcome')}، {bi(user.name, lang)}</h1>
-          <div className="text-[13px] text-ink-2 mt-0.5">{user.employee ? <>{bi(user.employee.title, lang)} · {bi(user.employee.dept, lang)} · <span className="ltr">{user.employee.code}</span></> : user.candidate ? <span className="ltr">{user.candidate.ref}</span> : <span className="ltr">{user.email}</span>}</div></div>
+          <div className="text-[13px] text-ink-2 mt-0.5">{user.employee ? <>{bi(user.employee.title, lang)} · {bi(user.employee.dept, lang)} · <span className="ltr">{user.employee.code}</span></> : <span className="ltr">{user.email}</span>}</div></div>
       </section>
       <div className="flex flex-wrap gap-1.5">{user.roles.map(r => <Badge key={r} tone="brand">{r}</Badge>)}</div>
       <section className="rounded-2xl border border-dashed border-line bg-surface/60"><Empty title={meta.t}>{L(`تُبنى هذه الواجهة في المهمة ${meta.task}.`, `This portal is built in task ${meta.task}.`)}</Empty></section>

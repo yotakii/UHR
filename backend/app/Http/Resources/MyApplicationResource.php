@@ -18,13 +18,14 @@ class MyApplicationResource extends JsonResource
 {
     public static function load(Candidate $c): Candidate
     {
-        return $c->load(['jobOpening.department', 'cv', 'offer.signature', 'appointment.approvals']);
+        return $c->load(['jobOpening.department', 'jobOpening.company', 'cv', 'offer.signature', 'appointment.approvals']);
     }
 
     public function toArray(Request $request): array
     {
         $job = $this->jobOpening; $o = $this->offer; $ap = $this->appointment;
         return [
+            'id' => $this->id, 'company' => $job->company->card(),
             'ref' => $this->ref, 'created_at' => $this->created_at?->toIso8601String(), 'stage' => $this->stage,
             'name' => $this->name, 'name_en' => $this->name_en, 'email' => $this->email, 'mobile' => $this->mobile, 'salary' => $this->salary,
             'cv' => $this->cv ? ['name' => $this->cv->name, 'size' => $this->cv->size] : null,

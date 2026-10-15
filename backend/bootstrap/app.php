@@ -20,10 +20,12 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
             \Illuminate\Session\Middleware\StartSession::class,
             \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
+            \App\Http\Middleware\ResolveTenant::class,
         ]);
         $middleware->alias([
             'fresh' => \App\Http\Middleware\EnsurePasswordChanged::class,
             'portal' => \App\Http\Middleware\RequirePortal::class,
+            'role' => \App\Http\Middleware\RequireRole::class,
         ]);
         $middleware->redirectGuestsTo(fn () => null);
     })

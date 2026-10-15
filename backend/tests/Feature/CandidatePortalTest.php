@@ -25,9 +25,12 @@ class CandidatePortalTest extends TestCase
 
     protected function tearDown(): void { Carbon::setTestNow(); parent::tearDown(); }
 
+    private int $leenId;
+
     private function asLeen(): static
     {
         $this->postJson('/api/auth/login', ['email' => 'leen.ali@mail.sy', 'password' => '123456'])->assertOk();
+        $this->leenId = $this->getJson('/api/me/applications')->assertOk()->json('data.0.id');
         return $this;
     }
 
@@ -41,12 +44,14 @@ class CandidatePortalTest extends TestCase
 
     private function respond(array $body)
     {
-        return $this->postJson('/api/me/application/offer-response', $body);
+        return $this->postJson("/api/me/applications/{$this->leenId}/offer-response", $body);
     }
 
     public function test_applicant_sees_own_application_with_pending_offer(): void
     {
-        $this->asLeen()->getJson('/api/me/application')->assertOk()
+        $this->asLeen()->getJson('/api/me/applications')->assertOk()->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.company.slug', 'alfarada')->assertJsonPath('data.0.offer', 'sent')->assertJsonPath('data.0.job.title.en', 'Accountant');
+        $this->getJson("/api/me/applications/{$this->leenId}")->assertOk()->assertJsonPath('data.company.name.en', 'Uniqueness Development & Investment Co.')
             ->assertJsonPath('data.name', 'لين العلي')->assertJsonPath('data.stage', 'offer')
             ->assertJsonPath('data.job.title.en', 'Accountant')->assertJsonPath('data.job.dept.en', 'Finance')
             ->assertJsonPath('data.offer.status', 'sent')->assertJsonPath('data.offer.total', 800)->assertJsonPath('data.offer.signature', null)
@@ -56,9 +61,15 @@ class CandidatePortalTest extends TestCase
 
     public function test_only_applicants_reach_the_portal(): void
     {
-        $this->getJson('/api/me/application')->assertUnauthorized();
+        $this->getJson('/api/me/applications')->assertUnauthorized();
         $this->postJson('/api/auth/login', ['email' => 'hr@alfarada.sy', 'password' => '123456']);
-        $this->getJson('/api/me/application')->assertForbidden();
+        $this->getJson('/api/me/applications')->assertForbidden();
+        $this->postJson('/api/auth/logout');
+        // متقدم لا يصل لطلب غيره
+        $other = Candidate::where('email', 'cand1@mail.sy')->value('id');
+        $this->postJson('/api/auth/login', ['email' => 'leen.ali@mail.sy', 'password' => '123456']);
+        $this->getJson("/api/me/applications/{$other}")->assertNotFound();
+        $this->postJson("/api/me/applications/{$other}/offer-response", ['status' => 'declined'])->assertNotFound();
     }
 
     public function test_accepting_requires_a_signature(): void
@@ -104,7 +115,14 @@ class CandidatePortalTest extends TestCase
     public function test_applicant_without_offer_cannot_respond(): void
     {
         $this->postJson('/api/auth/login', ['email' => 'cand1@mail.sy', 'password' => '123456'])->assertOk();
-        $this->getJson('/api/me/application')->assertOk()->assertJsonPath('data.offer', null);
+        $this->leenId = $this->getJson('/api/me/applications')->json('data.0.id');
+        $this->getJson("/api/me/applications/{$this->leenId}")->assertOk()->assertJsonPath('data.offer', null);
         $this->respond(['status' => 'declined'])->assertStatus(409);
+    }
+
+    public function test_profile_prefills_the_next_application(): void
+    {
+        $this->asLeen()->getJson('/api/me/profile')->assertOk()->assertJsonPath('data.name', 'لين العلي')->assertJsonPath('data.email', 'leen.ali@mail.sy')
+            ->assertJsonPath('data.institute', 'جامعة دمشق')->assertJsonPath('data.degree', 2)->assertJsonMissingPath('data.password');
     }
 }

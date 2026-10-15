@@ -21,8 +21,10 @@ class User extends Authenticatable
     protected $guarded = ['id'];
     protected $hidden = ['password', 'remember_token'];
 
-    /** أدوار لوحة الإدارة */
-    public const ADMIN_ROLES = ['admin', 'hr_director', 'hr_officer', 'finance', 'executive', 'ceo'];
+    /** أدوار لوحة الإدارة (مسؤول التوظيف يدخل نفس الإطار بمجموعة التوظيف فقط — SRS §10.2) */
+    public const ADMIN_ROLES = ['admin', 'hr_director', 'hr_officer', 'finance', 'executive', 'ceo', 'recruiter'];
+    /** من يدير الشواغر وينشرها */
+    public const JOB_ROLES = ['admin', 'hr_director', 'hr_officer', 'recruiter'];
 
     protected function casts(): array
     {
@@ -37,7 +39,9 @@ class User extends Authenticatable
 
     public function roles(): BelongsToMany { return $this->belongsToMany(Role::class); }
     public function employee(): BelongsTo { return $this->belongsTo(Employee::class); }
-    public function candidate(): BelongsTo { return $this->belongsTo(Candidate::class); }
+    public function company(): BelongsTo { return $this->belongsTo(Company::class); }
+    /** طلبات المتقدم في كل الشركات (حساب واحد على المنصة — SRS §10.15) */
+    public function candidates(): HasMany { return $this->hasMany(Candidate::class)->withoutGlobalScope('company'); }
     public function mfa(): HasOne { return $this->hasOne(MfaFactor::class); }
     public function passkeys(): HasMany { return $this->hasMany(Passkey::class); }
 
@@ -48,9 +52,10 @@ class User extends Authenticatable
 
     public function isHr(): bool { return $this->hasRole('admin', 'hr_director', 'hr_officer'); }
 
-    /** hr | employee | candidate — الواجهة بعد الدخول */
+    /** platform | hr | employee | candidate — الواجهة بعد الدخول */
     public function portal(): string
     {
+        if ($this->hasRole('platform_admin')) return 'platform';
         if ($this->hasRole(...self::ADMIN_ROLES)) return 'hr';
         if ($this->employee_id) return 'employee';
         return 'candidate';
@@ -59,14 +64,13 @@ class User extends Authenticatable
     public function displayName(string $lang = 'ar'): string
     {
         if ($this->employee) return $lang === 'en' ? $this->employee->name_en : $this->employee->name;
-        if ($this->candidate) return $lang === 'en' ? ($this->candidate->name_en ?: $this->candidate->name) : $this->candidate->name;
-        return $this->name ?? $this->email;
+        return ($lang === 'en' ? $this->name_en : null) ?: $this->name ?: $this->email;
     }
 
-    /** موقوف: حساب معطّل، أو موظف انتهت خدمته (M11 يمنع الدخول بعد الإغلاق) */
+    /** موقوف: حساب معطّل، أو موظف انتهت خدمته (M11 يمنع الدخول بعد الإغلاق)، أو شركته معلّقة على المنصة */
     public function blocked(): bool
     {
-        return ! $this->active || $this->employee?->status === 'terminated';
+        return ! $this->active || $this->employee?->status === 'terminated' || $this->company?->status === 'suspended';
     }
 
     public function lockedMinutes(): int
@@ -77,8 +81,8 @@ class User extends Authenticatable
     /** ما تحتاجه الواجهة بعد الدخول */
     public function sessionPayload(): array
     {
-        $this->loadMissing(['roles', 'employee.department', 'candidate']);
-        $e = $this->employee; $c = $this->candidate;
+        $this->loadMissing(['roles', 'employee.department', 'company']);
+        $e = $this->employee;
         return [
             'id' => $this->id,
             'email' => $this->email,
@@ -87,7 +91,7 @@ class User extends Authenticatable
             'portal' => $this->portal(),
             'must_change_password' => $this->must_change_password,
             'employee' => $e ? ['code' => $e->code, 'title' => ['ar' => $e->title_ar, 'en' => $e->title_en], 'dept' => ['ar' => $e->department->name_ar, 'en' => $e->department->name_en], 'gender' => $e->gender] : null,
-            'candidate' => $c ? ['ref' => $c->ref, 'stage' => $c->stage] : null,
+            'company' => $this->company?->card(),
         ];
     }
 

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Scan extends Model
 {
+    use Concerns\BelongsToCompany;
     protected bool $audit = false;
     public $timestamps = false;
     protected function casts(): array { return ['ts' => 'datetime']; }

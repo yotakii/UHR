@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Employee extends Model
 {
+    use Concerns\BelongsToCompany;
     use HasEventLog;
 
     public const STATUSES = ['onboarding', 'probation', 'active', 'leave', 'resigning', 'terminated'];

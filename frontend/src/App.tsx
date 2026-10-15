@@ -6,7 +6,9 @@ import { useRoute } from './lib/router'
 import { queryClient, useMe } from './lib/session'
 import { Btn, Toaster, Empty } from './ui/kit'
 import { Logo } from './ui/brand'
-import { Public } from './screens/Public'
+import { Public, PUBLIC_PAGES } from './screens/public/Public'
+import { HrApp } from './screens/hr/HrApp'
+import { PlatformApp } from './screens/platform/PlatformApp'
 import { ForceChangePassword, PortalHome } from './screens/Account'
 import SystemStatus from './screens/SystemStatus'
 import { DevKit } from './screens/DevKit'
@@ -27,6 +29,10 @@ function Root() {
   const user = me.data
   if (!user) return <Public />
   if (user.must_change_password) return <ForceChangePassword user={user} />
+  // صفحات البوابة العامة متاحة للجميع؛ الصفحة الرئيسية لكل حساب = واجهته
+  if (route.page && PUBLIC_PAGES.includes(route.page) && route.page !== 'login') return <Public />
+  if (user.portal === 'platform') return <PlatformApp user={user} />
+  if (user.portal === 'hr') return <HrApp user={user} />
   if (user.portal === 'candidate') return <CandidateHome user={user} />
   return <PortalHome user={user} />
 }

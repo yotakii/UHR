@@ -2,24 +2,54 @@
 
 namespace App\Http\Controllers\Api\Candidate;
 
-use App\Exceptions\ApiException;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\MyApplicationResource;
 use App\Models\Candidate;
 use App\Services\Recruitment\OfferResponse;
 use App\Support\L;
+use App\Support\Tenant;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
-/** بوابة المتقدم (M05): طلبه فقط — المعرّف من الجلسة لا من المدخلات */
+/**
+ * بوابة المتقدم (M05 + §10.15): كل طلبات الحساب لدى كل الشركات — المعرّف من الجلسة لا من المدخلات.
+ */
 class MyApplicationController extends Controller
 {
-    public function show(Request $request): MyApplicationResource
+    public function index(Request $request): JsonResponse
     {
-        return new MyApplicationResource(MyApplicationResource::load($this->candidate($request)));
+        $list = $request->user()->candidates()->with(['jobOpening.company', 'offer', 'appointment.approvals'])->latest('created_at')->latest('id')->get();
+        return response()->json(['data' => $list->map(fn (Candidate $c) => [
+            'id' => $c->id, 'ref' => $c->ref, 'stage' => $c->stage, 'created_at' => $c->created_at?->toIso8601String(), 'updated_at' => $c->updated_at?->toIso8601String(),
+            'company' => $c->jobOpening->company->card(),
+            'job' => ['code' => $c->jobOpening->code, 'title' => ['ar' => $c->jobOpening->title_ar, 'en' => $c->jobOpening->title_en]],
+            'offer' => $c->offer?->status, 'appointment' => $c->appointment ? ['complete' => $c->appointment->isComplete()] : null,
+        ])]);
     }
 
-    public function respondOffer(Request $request, OfferResponse $service): MyApplicationResource
+    public function show(Request $request, int $id): MyApplicationResource
+    {
+        return new MyApplicationResource(MyApplicationResource::load($this->candidate($request, $id)));
+    }
+
+    /** آخر بيانات F-28 لتعبئة الطلب التالي تلقائياً (لا تُنسخ الملفات ولا الإقرارات) */
+    public function profile(Request $request): JsonResponse
+    {
+        $c = $request->user()->candidates()->latest('updated_at')->latest('id')->first();
+        $user = $request->user();
+        if (! $c) return response()->json(['data' => ['name' => $user->name, 'name_en' => $user->name_en, 'email' => $user->email]]);
+        $edu = $c->education[0] ?? [];
+        return response()->json(['data' => [
+            'name' => $c->name, 'name_en' => $c->name_en, 'gender' => $c->gender, 'marital' => $c->marital, 'nationality' => $c->nationality, 'dob' => $c->dob?->toDateString(),
+            'pob' => $c->pob, 'national_id' => $c->national_id, 'blood' => $c->blood, 'mobile' => $c->mobile, 'email' => $user->email, 'address' => $c->address, 'linkedin' => $c->linkedin,
+            'degree' => $c->degree_level, 'institute' => $edu['institute'] ?? '', 'major' => $edu['major'] ?? '', 'grad_year' => $edu['year'] ?? '', 'grade' => $edu['grade'] ?? '',
+            'english' => $c->english, 'years_exp' => $c->years_exp, 'experience' => $c->experience, 'ref' => $c->refs[0] ?? null,
+            'shifts' => $c->shifts, 'travel' => $c->travel, 'public_sector' => $c->public_sector, 'conviction' => $c->conviction, 'salary' => $c->salary,
+        ]]);
+    }
+
+    public function respondOffer(Request $request, OfferResponse $service, int $id): MyApplicationResource
     {
         $data = $request->validate([
             'status' => ['required', Rule::in(['accepted', 'declined', 'negotiation'])],
@@ -30,14 +60,14 @@ class MyApplicationController extends Controller
             'note.required' => L::t('اكتب البنود التي تطلب تعديلها.', 'Write the terms you would like changed.'),
             'note.max' => L::t('النص أطول من المسموح.', 'Text is too long.'),
         ]);
-        $cand = $service->respond($this->candidate($request), $data['status'], $data['signature'] ?? null, trim((string) ($data['note'] ?? '')));
+        $cand = $this->candidate($request, $id);
+        // الرد يُكتب داخل شركة الطلب: سلسلة الاعتماد والترقيم والإشعارات من إعداداتها
+        Tenant::run($cand->company_id, fn () => $service->respond($cand, $data['status'], $data['signature'] ?? null, trim((string) ($data['note'] ?? ''))));
         return new MyApplicationResource(MyApplicationResource::load($cand->refresh()));
     }
 
-    private function candidate(Request $request): Candidate
+    private function candidate(Request $request, int $id): Candidate
     {
-        $id = $request->user()->candidate_id;
-        if (! $id) throw new ApiException(L::t('لا يوجد طلب توظيف مرتبط بهذا الحساب.', 'No application is linked to this account.'), 'no_application', 404);
-        return Candidate::findOrFail($id);
+        return $request->user()->candidates()->findOrFail($id);
     }
 }

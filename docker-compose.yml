@@ -89,6 +89,18 @@ services:
       - ./backend:/var/www
       - uhr-vendor:/var/www/vendor
 
+  # المهام المجدولة: إغلاق الشواغر المنتهية يومياً (jobs:close-expired) وما يُضاف لاحقاً
+  scheduler:
+    image: uhr-api:dev
+    container_name: uhr-scheduler
+    restart: unless-stopped
+    entrypoint: ["php", "artisan", "schedule:work"]
+    depends_on:
+      api: { condition: service_healthy }
+    volumes:
+      - ./backend:/var/www
+      - uhr-vendor:/var/www/vendor
+
   # كل رسائل البريد في بيئة التطوير تُلتقط هنا ولا تخرج للإنترنت: http://localhost:8125
   mailpit:
     image: axllent/mailpit:latest

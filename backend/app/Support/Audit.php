@@ -33,6 +33,7 @@ class Audit
         $req = app()->bound('request') && ! app()->runningInConsole() ? request() : null;
         return AuditLog::create([
             'user_id' => auth()->id(),
+            'company_id' => Tenant::id(),
             'action' => $action,
             'subject_type' => $subject?->getMorphClass(),
             'subject_id' => $subject?->getKey(),

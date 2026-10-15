@@ -41,7 +41,7 @@ class AuthTest extends TestCase
     public function test_each_role_lands_on_its_portal(): void
     {
         foreach (['admin@alfarada.sy' => 'hr', 'hr@alfarada.sy' => 'hr', 'basel.atassi@alfarada.sy' => 'hr', 'samer.halabi@alfarada.sy' => 'employee',
-            'alaa.sheikhani@alfarada.sy' => 'employee', 'leen.ali@mail.sy' => 'candidate'] as $email => $portal) {
+            'alaa.sheikhani@alfarada.sy' => 'employee', 'leen.ali@mail.sy' => 'candidate', 'platform@atmata.sy' => 'platform', 'jobs@atmata.sy' => 'hr'] as $email => $portal) {
             $this->login(strtoupper($email))->assertOk()->assertJsonPath('user.portal', $portal)->assertJsonPath('user.email', $email);
             $this->getJson('/api/auth/me')->assertJsonPath('user.portal', $portal);
             $this->postJson('/api/auth/logout')->assertOk();
@@ -124,7 +124,7 @@ class AuthTest extends TestCase
         $token = null;
         Notification::assertSentTo($u, ResetPasswordNotice::class, function ($n) use (&$token, $u) {
             $token = $n->token;
-            return str_starts_with($n->url($u), 'http://localhost:5180/#/reset?token=') && str_contains($n->toMail($u)->render(), 'إعادة تعيين كلمة المرور');
+            return str_starts_with($n->url($u), 'http://localhost:5180/reset?token=') && str_contains($n->toMail($u)->render(), 'إعادة تعيين كلمة المرور');
         });
 
         $u->forceFill(['failed_logins' => 3, 'locked_until' => now()->addMinutes(5)])->save();
@@ -133,22 +133,6 @@ class AuthTest extends TestCase
         $this->postJson('/api/auth/reset', ['email' => $u->email, 'token' => $token, 'password' => 'Fresh2026x', 'password_confirmation' => 'Fresh2026x'])->assertOk();
         $this->login($u->email, '123456')->assertStatus(422);
         $this->login($u->email, 'Fresh2026x')->assertOk();
-    }
-
-    public function test_public_site_and_jobs(): void
-    {
-        $this->getJson('/api/public/site')->assertOk()->assertJsonPath('company.brand_latin', 'UNIQUENESS GROUP')
-            ->assertJsonPath('hero.title.en', 'The Complete People Operating System');
-        $jobs = $this->getJson('/api/public/jobs')->assertOk()->json('data');
-        $this->assertCount(6, $jobs);
-        $this->assertSame('REQ-2026-031', $jobs[0]['code']);   // الأحدث نشراً أولاً
-        $this->assertSame(['ar' => 'ورديات', 'en' => 'Shifts'], collect($jobs)->firstWhere('code', 'REQ-2026-038')['type']);
-        $this->assertArrayNotHasKey('salary_min', $jobs[0]);
-
-        $this->getJson('/api/public/jobs/REQ-2026-034')->assertOk()->assertJsonPath('data.dept.code', 'fin')->assertJsonCount(3, 'data.requirements');
-        JobOpening::where('code', 'REQ-2026-034')->update(['status' => 'closed']);
-        $this->getJson('/api/public/jobs/REQ-2026-034')->assertNotFound();
-        $this->assertCount(5, $this->getJson('/api/public/jobs')->json('data'));
     }
 
     public function test_portal_middleware(): void

@@ -2,12 +2,8 @@
 
 namespace App\Models;
 
-
+/** إعداد مفتاح/قيمة لكل شركة؛ company_id = null لإعدادات المنصة (Settings::platform) */
 class Setting extends Model
 {
-    protected $primaryKey = 'key';
-    public $incrementing = false;
-    protected $keyType = 'string';
-    protected $guarded = [];
     protected function casts(): array { return ['value' => 'array']; }
 }

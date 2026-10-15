@@ -13,6 +13,10 @@ export default defineConfig({
     strictPort: true,
     // ويندوز + Docker: مراقبة التغييرات بالـ polling حتى يشتغل الـ hot reload
     watch: process.env.CHOKIDAR_USEPOLLING === 'true' ? { usePolling: true, interval: 300 } : undefined,
-    proxy: { '/api': { target: apiTarget, changeOrigin: true } },
+    proxy: {
+      '/api': { target: apiTarget, changeOrigin: true },
+      // خريطة الموقع لمحركات البحث (SRS §10.15)
+      '/sitemap.xml': { target: apiTarget, changeOrigin: true, rewrite: () => '/api/public/sitemap.xml' },
+    },
   },
 })

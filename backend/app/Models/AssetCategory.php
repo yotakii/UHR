@@ -6,5 +6,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AssetCategory extends Model
 {
+    use Concerns\BelongsToCompany;
     public function assets(): HasMany { return $this->hasMany(Asset::class); }
 }

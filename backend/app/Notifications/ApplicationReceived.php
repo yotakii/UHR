@@ -3,7 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\MessageTemplate;
-use App\Support\Settings;
+use App\Support\Tenant;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -14,16 +14,21 @@ class ApplicationReceived extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(public string $ref, public string $jobAr, public string $jobEn) {}
+    public ?int $companyId;
+
+    public function __construct(public string $ref, public string $jobAr, public string $jobEn, public string $companyAr = '', public string $companyEn = '')
+    {
+        $this->companyId = Tenant::id();   // القالب من إعدادات شركة الشاغر حتى داخل الطابور
+    }
 
     public function via(object $notifiable): array { return ['mail']; }
 
     public function toMail(object $notifiable): MailMessage
     {
-        $tpl = MessageTemplate::where('key', 'application_received')->where('channel', 'email')->first();
+        $tpl = Tenant::run($this->companyId, fn () => MessageTemplate::where('key', 'application_received')->where('channel', 'email')->first());
         $fill = fn (?string $s, string $job, string $fallback) => strtr($s ?: $fallback, [':job' => $job, ':ref' => $this->ref]);
-        $company = ['ar' => Settings::company('short_ar'), 'en' => Settings::company('short_en')];
-        $url = rtrim(config('app.frontend_url'), '/').'/#/';
+        $company = ['ar' => $this->companyAr, 'en' => $this->companyEn];
+        $url = rtrim(config('app.frontend_url'), '/').'/';
         return (new MailMessage)
             ->subject("استلمنا طلبك · Application received — {$this->ref}")
             ->view('mail.notice', [

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class StoredFile extends Model
 {
+    use Concerns\BelongsToCompany;
     protected bool $audit = false;
     protected $table = 'files';
 

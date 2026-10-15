@@ -55,7 +55,8 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
   - Gallery of all of the above: `#/kit` (dev only).
 - **Porting rule:** to build a screen, open the demo source for it (`reference/demo-src/screens/*.tsx`) and copy markup and classes 1:1. Replace `useStore`/`actions.ts` calls with API calls (TanStack Query), and drop demo-only bits. Where the v26 bundle differs from the source, the **v26 bundle wins** (`reference/demo-bundle/app.js`, beautified; app code starts at about line 15900).
 - **Business logic lives on the server** (port `reference/demo-src/lib/rules.ts`: matchScore, F25, F19, calcDay, settlement, annualEntitlement… to PHP), and is unit-tested against the TS originals.
-- **Routing:** hash router `frontend/src/lib/router.ts` (`#/page/id?query`). Use `go()`, `href()` and `useRoute()`.
+- **Routing:** path router (History API) `frontend/src/lib/router.ts` (`/page/id/…?query`); links are intercepted, old `#/` URLs redirect. Use `go()`, `href()`, `setQuery()` and `useRoute()`. SEO: `lib/seo.ts` (`setMeta`, `jobPostingLd`) + `/sitemap.xml`.
+- **Multi-company:** `App\Support\Tenant` (`set/id/company/run/forget`) + trait `BelongsToCompany` (global scope + fills `company_id`; `Model::allCompanies()` to bypass). Middleware `ResolveTenant` runs every request inside the user's company. Settings/Counters/Audit are per company; `Settings::platform()` = company_id null. New company: `CompanyProvisioner::create()` (defaults via `CompanyDefaults`). Tests: `$this->makeCompany()` / `useCompany()`.
 - **Models:**
   - Base `App\Models\Model`: `$guarded=['id']`, and `Auditable` writes `audit_logs` automatically on every create/update/delete (changed fields only; secrets masked).
   - Opt out per model with `protected bool $audit = false` (EventLog, AuditLog, Notice, Scan, AttendanceDay, StoredFile).
@@ -84,9 +85,9 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 | 02 Database, `uhr:install`, TestDataSeeder (demo-identical), audit log | ✅ user verified (after adding mockery) |
 | 03 M01 public page and login | ✅ tests pass (backend + frontend) |
 | 04 M02 apply wizard F-28 → M05 applicant portal (see below) | 📦 delivered, **waiting for the user's test run** |
-| 04b v3 amendments to the apply flow (match bands, data consent, photo per job, referral rules) | ⏭ next (small) |
-| 05 Foundation: multi-company, permissions panel + recruiter, unified workflow + DecisionDialog, M15 shell, print template, file store | |
-| 05b Public multi-company jobs portal (Atmata + clients), company/job pages, publishing + moderation, one applicant account, SEO | |
+| 04b v3 amendments to the apply flow (match bands, data consent, photo per job, referral rules) | 📦 delivered, waiting for the user's test |
+| 05 Foundation — **part 1 done:** multi-company, recruiter role + `role:` middleware, DecisionDialog, console Shell. **Remaining:** permissions panel, M15 dashboard/bell/search, print template, file store | 🟡 |
+| 05b Public multi-company jobs portal, company/job pages, HR jobs screen, platform console (companies, reviews, portal texts), one applicant account, SEO | 📦 delivered, waiting for the user's test |
 | 06 Recruitment M03/M04/M06 + CV database, staged referrals, AI tests · 07 Employees/attendance/leave with company policies · 08 Custody, M17 discipline, exit per HR.01-03 · 09 M12–M14 + development · 10 salary 2FA · 11 M16 + Reverb · 12 final verification | |
 
 **Task 03 delivered:**
@@ -113,6 +114,13 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 - «الدخول كموظف» just refetches `/auth/me` (same user row gets `employee_id` at hire, M04).
 - Tests: `tests/Unit/MatchScoreTest.php`, `tests/Feature/ApplicationTest.php`, `tests/Feature/CandidatePortalTest.php`, `frontend/src/screens/apply/__tests__/form.test.ts`.
 - User commands for 04: `docker compose up -d` (creates the worker) → `docker compose exec api php artisan test`.
+
+**Tasks 04b + 05 (part 1) + 05b delivered:**
+- Accounts (password `123456`): `platform@atmata.sy` (platform_admin → `/platform`), `hr@atmata.sy` (Atmata HR), `jobs@atmata.sy` (recruiter), plus the alfarada accounts above. Applicant accounts have `company_id = null` and many `candidates` rows (one per company).
+- Public routes: `/` portal, `/jobs?company&city&type&exp&q`, `/c/{slug}`, `/jobs/{slug}/{code}?ref=`, `/apply/{slug}/{code}`, `/my`, `/my/{id}`. API: `/api/public/{portal,jobs,companies/{slug},jobs/{slug}/{code}[/check|/apply]}`, `/api/me/applications…`, `/api/hr/jobs…` (role:JOB_ROLES), `/api/platform/…` (portal:platform).
+- Job visibility internal/company/public; public jobs of a company with `portal_review` go `pending` → platform approves or rejects (reason ≥ 10 chars); editing content re-triggers review. `closes_at` + scheduled `jobs:close-expired` (compose service **`scheduler`**).
+- Match bands: ≥50 screening, 41–49 review, ≤40 auto-reject + polite `ApplicationClosed` mail. Consent `agree_data` required, `keep_cv` optional, photo only when `requires_photo`.
+- Tests: PortalTest, JobPublishingTest, PlatformTest + updated suites (68 backend, 27 frontend).
 
 **Open questions in SRS** (ask the user only when you reach them):
 - SMS provider for OTP.

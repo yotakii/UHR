@@ -2,6 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { api } from './api'
 import { queryClient } from './session'
 import type { Bi } from './types'
+import type { CompanyCard } from './session'
 
 /* ---------- ثوابت التوظيف (من rules.ts في الديمو) ---------- */
 export type Stage = 'new' | 'screening' | 'interview' | 'technical' | 'offer' | 'hired' | 'rejected'
@@ -28,21 +29,29 @@ export interface MyOffer {
 export interface MyApproval { level: number; role: Bi; name: string; status: 'pending' | 'approved'; at: string | null }
 export interface MyAppointment { decision_no: string; issued_at: string; complete: boolean; approvals: MyApproval[] }
 export interface MyApplication {
-  ref: string; created_at: string; stage: Stage; name: string; name_en: string | null; email: string; mobile: string; salary: number
+  id: number; company: CompanyCard; ref: string; created_at: string; stage: Stage; name: string; name_en: string | null; email: string; mobile: string; salary: number
   cv: { name: string; size: number } | null
   job: { code: string; title: Bi; dept: Bi }
   offer: MyOffer | null; appointment: MyAppointment | null
 }
 
-const MY = ['me', 'application'] as const
-
-export function useMyApplication() {
-  return useQuery({ queryKey: MY, queryFn: () => api<{ data: MyApplication }>('/me/application').then(r => r.data) })
+/** سطر في «طلباتي» — كل طلبات الحساب لدى كل الشركات */
+export interface MyApplicationRow {
+  id: number; ref: string; stage: Stage; created_at: string; updated_at: string; company: CompanyCard
+  job: { code: string; title: Bi }; offer: OfferStatus | null; appointment: { complete: boolean } | null
 }
 
-export function useRespondOffer() {
+export function useMyApplications() {
+  return useQuery({ queryKey: ['me', 'applications'], queryFn: () => api<{ data: MyApplicationRow[] }>('/me/applications').then(r => r.data) })
+}
+
+export function useMyApplication(id: number) {
+  return useQuery({ queryKey: ['me', 'application', id], queryFn: () => api<{ data: MyApplication }>(`/me/applications/${id}`).then(r => r.data), retry: false })
+}
+
+export function useRespondOffer(id: number) {
   return useMutation({
-    mutationFn: (v: { status: Exclude<OfferStatus, 'sent'>; signature?: string; note?: string }) => api<{ data: MyApplication }>('/me/application/offer-response', { json: v }).then(r => r.data),
-    onSuccess: data => queryClient.setQueryData(MY, data),
+    mutationFn: (v: { status: Exclude<OfferStatus, 'sent'>; signature?: string; note?: string }) => api<{ data: MyApplication }>(`/me/applications/${id}/offer-response`, { json: v }).then(r => r.data),
+    onSuccess: data => { queryClient.setQueryData(['me', 'application', id], data); queryClient.invalidateQueries({ queryKey: ['me', 'applications'] }) },
   })
 }

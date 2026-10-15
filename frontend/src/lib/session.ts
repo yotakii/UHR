@@ -1,12 +1,14 @@
 import { QueryClient, useMutation, useQuery } from '@tanstack/react-query'
 import { api } from './api'
+import { navigate } from './router'
 import type { Bi } from './types'
 
-export type Portal = 'hr' | 'employee' | 'candidate'
+export type Portal = 'platform' | 'hr' | 'employee' | 'candidate'
+export interface CompanyCard { slug: string; name: Bi; short: Bi; brand_latin: string | null; logo: string | null }
 export interface SessionUser {
   id: number; email: string; name: Bi; roles: string[]; portal: Portal; must_change_password: boolean
   employee: { code: string; title: Bi; dept: Bi; gender: 'M' | 'F' } | null
-  candidate: { ref: string; stage: string } | null
+  company: CompanyCard | null
 }
 
 export const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false, staleTime: 30_000 } } })
@@ -22,7 +24,7 @@ export function useLogin() {
   return useMutation({ mutationFn: (v: { email: string; password: string }) => api<{ user: SessionUser }>('/auth/login', { json: v }), onSuccess: setMe })
 }
 export function useLogout() {
-  return useMutation({ mutationFn: () => api<{ user: null }>('/auth/logout', { json: {} }), onSettled: () => { setMe({ user: null }); location.hash = '' } })
+  return useMutation({ mutationFn: () => api<{ user: null }>('/auth/logout', { json: {} }), onSettled: () => { setMe({ user: null }); navigate('/') } })
 }
 export function useChangePassword() {
   return useMutation({ mutationFn: (v: { current_password: string; password: string; password_confirmation: string }) => api<{ user: SessionUser }>('/auth/password', { json: v }), onSuccess: r => queryClient.setQueryData(['me'], r.user) })

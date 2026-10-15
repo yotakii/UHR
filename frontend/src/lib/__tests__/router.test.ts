@@ -3,16 +3,17 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { parse, href } from '../router'
 import { api, ApiError } from '../api'
 
-describe('hash router', () => {
-  it('parses page, id and query', () => {
-    expect(parse('#/jobs/REQ-2026-031?ref=UHR1007-J1')).toEqual({ page: 'jobs', id: 'REQ-2026-031', query: { ref: 'UHR1007-J1' } })
-    expect(parse('')).toEqual({ page: '', id: undefined, query: {} })
-    expect(parse('#/reset?token=abc&email=a%40b.sy').query).toEqual({ token: 'abc', email: 'a@b.sy' })
+describe('path router', () => {
+  it('parses page, id, parts and query', () => {
+    expect(parse('/jobs/alfarada/REQ-2026-031', '?ref=UHR1007-J1')).toEqual({ page: 'jobs', id: 'alfarada/REQ-2026-031', parts: ['jobs', 'alfarada', 'REQ-2026-031'], query: { ref: 'UHR1007-J1' } })
+    expect(parse('/')).toEqual({ page: '', id: undefined, parts: [], query: {} })
+    expect(parse('/reset?token=abc&email=a%40b.sy').query).toEqual({ token: 'abc', email: 'a@b.sy' })
   })
-  it('builds links that round-trip', () => {
-    const h = href('jobs', 'REQ-2026-031', { ref: 'X 1' })
-    expect(parse(h)).toEqual({ page: 'jobs', id: 'REQ-2026-031', query: { ref: 'X 1' } })
-    expect(href('')).toBe('#/')
+  it('builds links that round-trip, encoding each segment and dropping empty filters', () => {
+    const h = href('jobs', 'alfarada/REQ 1', { ref: 'X 1', q: '' })
+    expect(h).toBe('/jobs/alfarada/REQ%201?ref=X+1')
+    expect(parse(h)).toEqual({ page: 'jobs', id: 'alfarada/REQ 1', parts: ['jobs', 'alfarada', 'REQ 1'], query: { ref: 'X 1' } })
+    expect(href('')).toBe('/')
   })
 })
 

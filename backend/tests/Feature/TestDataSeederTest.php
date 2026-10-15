@@ -29,12 +29,24 @@ class TestDataSeederTest extends TestCase
         parent::setUp();
         Carbon::setTestNow(Carbon::parse('2026-10-12 10:30:00', 'Asia/Damascus'));
         $this->seed(TestDataSeeder::class);
+        $this->useCompany('alfarada');   // بيانات الديمو داخل شركة الفرادة
     }
 
     protected function tearDown(): void
     {
         Carbon::setTestNow();
         parent::tearDown();
+    }
+
+    public function test_two_companies_and_isolation(): void
+    {
+        $this->assertSame(['atmata', 'alfarada'], \App\Models\Company::orderBy('id')->pluck('slug')->all());
+        $this->assertSame(6, JobOpening::count());
+        $this->useCompany('atmata');
+        $this->assertSame(3, JobOpening::count());
+        $this->assertSame(0, Employee::count());
+        $this->assertSame(2, Department::count());
+        $this->assertSame(9, JobOpening::allCompanies()->count());
     }
 
     public function test_counts_match_the_demo(): void
@@ -102,7 +114,11 @@ class TestDataSeederTest extends TestCase
         $this->assertTrue($hr->hasRole('hr_director'));
         $this->assertSame('UHR-1003', $hr->employee->code);
         $this->assertSame('employee', User::where('email', 'samer.halabi@alfarada.sy')->first()->portal());
-        $this->assertSame('candidate', User::where('email', 'leen.ali@mail.sy')->first()->portal());
+        $leen = User::where('email', 'leen.ali@mail.sy')->first();
+        $this->assertSame(['candidate', null], [$leen->portal(), $leen->company_id]);
+        $this->assertSame(['UNQ-2026-APP-48506'], $leen->candidates->pluck('ref')->all());
+        $this->assertSame('alfarada', User::where('email', 'hr@alfarada.sy')->first()->company->slug);
+        $this->assertSame('platform', User::where('email', 'platform@atmata.sy')->first()->portal());
 
         $this->assertSame('UHR-1033', Counters::employeeCode());
         $this->assertSame('AST-0075', Counters::assetTag());
@@ -112,6 +128,8 @@ class TestDataSeederTest extends TestCase
     public function test_reseeding_is_safe(): void
     {
         $this->seed(TestDataSeeder::class);
+        $this->useCompany('alfarada');
+        $this->assertSame(2, \App\Models\Company::count());
         $this->assertSame(32, Employee::count());
         $this->assertSame(10, Candidate::count());
         $this->assertSame(74, Asset::count());

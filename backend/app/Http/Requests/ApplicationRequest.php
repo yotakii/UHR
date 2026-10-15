@@ -3,6 +3,8 @@
 namespace App\Http\Requests;
 
 use App\Http\Controllers\Api\Auth\AuthController;
+use App\Http\Controllers\Api\PublicController;
+use App\Models\JobOpening;
 use App\Models\Referral;
 use App\Services\Recruitment\DuplicateCheck;
 use App\Support\L;
@@ -24,14 +26,26 @@ class ApplicationRequest extends FormRequest
     public const SOURCES = ['website', 'linkedin', 'referral', 'expo'];
     public const CV_MAX_KB = 10240;
 
+    public const PHOTO_MAX_KB = 2048;
+
     private ?DuplicateCheck $dup = null;
+    private ?JobOpening $job = null;
 
     public function authorize(): bool { return true; }
 
+    /** الشاغر من المسار /public/jobs/{slug}/{code}/apply — 404 إذا أُغلق أو انتهى موعده */
+    public function job(): JobOpening
+    {
+        return $this->job ??= PublicController::openJob((string) $this->route('slug'), (string) $this->route('code'));
+    }
+
     protected function prepareForValidation(): void
     {
+        // المتقدم المسجّل يقدّم ببريد حسابه دائماً
+        $user = $this->user();
+        $email = $user && $user->portal() === 'candidate' ? $user->email : $this->input('email');
         $this->merge([
-            'email' => strtolower(trim((string) $this->input('email'))),
+            'email' => strtolower(trim((string) $email)),
             'national_id' => trim((string) $this->input('national_id')),
             'ref_code' => strtoupper(trim((string) $this->input('ref_code'))) ?: null,
         ]);
@@ -40,15 +54,15 @@ class ApplicationRequest extends FormRequest
     /** الملف السابق بنفس الرقم الوطني أو البريد (إن وُجد) */
     public function previousApplication(): DuplicateCheck
     {
-        return $this->dup ??= DuplicateCheck::find($this->input('national_id'), (string) $this->input('email'));
+        return $this->dup ??= DuplicateCheck::find($this->job(), $this->input('national_id'), (string) $this->input('email'), $this->user());
     }
 
     public function rules(): array
     {
-        $hasAccount = (bool) $this->previousApplication()->account;
+        $dup = $this->previousApplication();
         $year = (int) now()->year;
+        $password = $dup->signedIn ? ['nullable'] : ($dup->account ? ['required', 'string'] : ['required', 'confirmed', AuthController::passwordRule()]);
         return [
-            'job' => ['required', 'string', Rule::exists('job_openings', 'code')->where('status', 'open')],
             // 1. البيانات الشخصية
             'name' => ['required', 'string', 'max:120'],
             'name_en' => ['nullable', 'string', 'max:120'],
@@ -88,10 +102,15 @@ class ApplicationRequest extends FormRequest
             'source' => ['required', Rule::in(self::SOURCES)],
             'ref_code' => ['nullable', 'string', 'max:30', $this->referral(...)],
             'cv' => ['nullable', 'file', 'extensions:pdf,doc,docx', 'mimes:pdf,doc,docx', 'max:'.self::CV_MAX_KB],
+            // الصورة فقط إذا طلبها الشاغر (D-19)
+            'photo' => [$this->job()->requires_photo ? 'required' : 'nullable', 'file', 'extensions:jpg,jpeg,png', 'mimes:jpg,jpeg,png', 'max:'.self::PHOTO_MAX_KB],
             // 4. المراجعة والإقرار
-            'password' => $hasAccount ? ['required', 'string'] : ['required', 'confirmed', AuthController::passwordRule()],
+            'password' => $password,
             'agree_info' => ['accepted'],
             'agree_medical' => ['accepted'],
+            // إقرار معالجة البيانات لهذه الشركة، وخيار الاحتفاظ بالسيرة لفرص قادمة (D-02، D-05)
+            'agree_data' => ['accepted'],
+            'keep_cv' => ['nullable', 'boolean'],
         ];
     }
 
@@ -102,7 +121,7 @@ class ApplicationRequest extends FormRequest
 
     private function referral(string $attr, mixed $value, Closure $fail): void
     {
-        if ($this->input('source') === 'referral' && $value && ! Referral::whereRaw('upper(code) = ?', [$value])->exists()) {
+        if ($this->input('source') === 'referral' && $value && ! Referral::allCompanies()->where('company_id', $this->job()->company_id)->whereRaw('upper(code) = ?', [$value])->exists()) {
             $fail(L::t('رمز الإحالة غير موجود. تحقق منه مع الموظف.', 'Referral code not found. Check it with the employee.'));
         }
     }
@@ -130,6 +149,10 @@ class ApplicationRequest extends FormRequest
             'cv.file' => L::t('تعذّر رفع الملف، حاول مجدداً', 'Upload failed, try again'),
             'agree_info.accepted' => L::t('يجب الموافقة على الإقرارين لإرسال الطلب', 'You must accept both declarations to submit'),
             'agree_medical.accepted' => L::t('يجب الموافقة على الإقرارين لإرسال الطلب', 'You must accept both declarations to submit'),
+            'agree_data.accepted' => L::t('يجب الموافقة على معالجة بياناتك لإرسال الطلب', 'You must accept the processing of your data to submit'),
+            'photo.required' => L::t('هذه الوظيفة تتطلب صورة شخصية', 'This position requires a personal photo'),
+            'photo.max' => L::t('الحد الأقصى لحجم الصورة 2MB', 'Maximum photo size is 2MB'),
+            'photo.mimes' => L::t('الصورة بصيغة JPG أو PNG', 'Photo must be JPG or PNG'), 'photo.extensions' => L::t('الصورة بصيغة JPG أو PNG', 'Photo must be JPG or PNG'),
         ] + AuthController::passwordMessages() + ['password.required' => L::t('أنشئ كلمة مرور لمتابعة طلبك', 'Create a password to track your application')];
     }
 

@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Support\Counters;
 use App\Support\L;
 use App\Support\Notify;
+use App\Support\Tenant;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -75,7 +76,7 @@ class OfferResponse
     /** صاحب المستوى: المستخدم المحدد في السلسلة، وإلا أول حساب فعّال يحمل دور المستوى */
     private function approver(array $lvl): ?User
     {
-        $q = User::with(['employee', 'candidate'])->where('active', true);
+        $q = User::with('employee')->where('active', true)->where('company_id', Tenant::id());
         if (! empty($lvl['user_id'])) return (clone $q)->find($lvl['user_id']);
         if (empty($lvl['role_key'])) return null;
         return $q->whereHas('roles', fn ($r) => $r->where('key', $lvl['role_key']))->orderBy('id')->first();
