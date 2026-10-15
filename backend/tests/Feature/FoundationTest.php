@@ -85,6 +85,21 @@ class FoundationTest extends TestCase
         $this->putJson('/api/hr/permissions', ['matrix' => ['recruiter' => ['jobs' => ['actions' => ['fly'], 'scope' => 'all']]]])->assertStatus(422);
     }
 
+    public function test_removed_permission_is_refused_and_reaches_the_session(): void
+    {
+        $this->login('hr@atmata.sy');   // مدير نظام أتمتة
+        $this->putJson('/api/hr/permissions', ['matrix' => ['recruiter' => ['jobs' => ['actions' => ['view', 'edit'], 'scope' => 'all']]]])->assertOk();
+        $this->login('jobs@atmata.sy');
+        $this->assertSame(['view', 'edit'], $this->getJson('/api/auth/me')->json('user.perms.jobs.actions'));
+        $this->postJson('/api/hr/jobs', [])->assertForbidden();
+        $this->getJson('/api/hr/jobs')->assertOk();
+        // تعديل الفرادة لا يمس مسؤول توظيف أتمتة
+        $this->login('admin@alfarada.sy');
+        $this->putJson('/api/hr/permissions', ['matrix' => ['recruiter' => ['jobs' => ['actions' => [], 'scope' => 'all']]]])->assertOk();
+        $this->login('jobs@atmata.sy');
+        $this->getJson('/api/hr/jobs')->assertOk();
+    }
+
     public function test_dashboard_sections_follow_permissions(): void
     {
         $this->login('hr@alfarada.sy');

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Plus, ExternalLink, Globe, Building2, Lock, Lock as LockIcon, Unlock, Link2 } from 'lucide-react'
 import { useL, useLang, bi, fmtDate } from '../../lib/store'
 import { useHrJobs, useJobStatus, type HrJob } from '../../lib/hr'
+import { can, useMe } from '../../lib/session'
 import { DEGREES, STAGES, type Stage } from '../../lib/recruitment'
 import { Badge, Btn, Empty, PageHead, Panel, toast } from '../../ui/kit'
 import { DecisionDialog } from '../../ui/decision'
@@ -14,6 +15,9 @@ export function Jobs() {
   const L = useL(); const lang = useLang()
   const { data, isLoading, error, refetch } = useHrJobs()
   const status = useJobStatus()
+  // الواجهة تخفي ما لا تسمح به صلاحيات الدور — والخادم يرفضه على كل حال (SRS §10.2)
+  const me = useMe().data
+  const canCreate = can(me, 'jobs', 'create'), canEdit = can(me, 'jobs', 'edit')
   const [edit, setEdit] = useState<{ open: boolean; id: number | null }>({ open: false, id: null })
   const [toggle, setToggle] = useState<HrJob | null>(null)
   const company = data?.company
@@ -21,7 +25,7 @@ export function Jobs() {
   const copy = (j: HrJob) => navigator.clipboard?.writeText(location.origin + publicUrl(j)).then(() => toast(L('تم نسخ رابط الوظيفة', 'Job link copied')), () => {})
   return <div className="max-w-[1280px] mx-auto">
     <PageHead title={L('الوظائف الشاغرة', 'Job openings')} sub={L('الوظائف المنشورة على بوابة التوظيف وعدد المتقدمين في كل مرحلة.', 'Roles published on the careers portal and applicants per stage.')}
-      actions={<Btn kind="primary" icon={<Plus size={16} />} onClick={() => setEdit({ open: true, id: null })}>{L('شاغر جديد', 'New position')}</Btn>} />
+      actions={canCreate && <Btn kind="primary" icon={<Plus size={16} />} onClick={() => setEdit({ open: true, id: null })}>{L('شاغر جديد', 'New position')}</Btn>} />
     {company && <div className={`mb-4 flex flex-wrap items-center gap-2 rounded-xl border px-4 py-2.5 text-[13px] ${company.portal_enabled ? 'border-brand/30 bg-brand-soft text-brand-2' : 'border-line bg-sub text-ink-2'}`}>
       <Globe size={16} />
       {company.portal_enabled
@@ -33,11 +37,11 @@ export function Jobs() {
     <Panel pad={false}>
       {isLoading && <div className="h-48 animate-pulse" />}
       {error && <Empty title={L('تعذّر تحميل الوظائف', 'Could not load positions')} action={<Btn onClick={() => refetch()}>{L('إعادة المحاولة', 'Retry')}</Btn>}>{error.message}</Empty>}
-      {data?.data.length === 0 && <Empty title={L('لا توجد شواغر بعد', 'No positions yet')} action={<Btn kind="primary" icon={<Plus size={16} />} onClick={() => setEdit({ open: true, id: null })}>{L('أضف أول شاغر', 'Add the first position')}</Btn>}>{L('أنشئ شاغراً واختر مكان نشره: داخلي، صفحة الشركة، أو البوابة العامة.', 'Create a position and choose where to publish it: internal, company page, or the public portal.')}</Empty>}
+      {data?.data.length === 0 && <Empty title={L('لا توجد شواغر بعد', 'No positions yet')} action={canCreate && <Btn kind="primary" icon={<Plus size={16} />} onClick={() => setEdit({ open: true, id: null })}>{L('أضف أول شاغر', 'Add the first position')}</Btn>}>{L('أنشئ شاغراً واختر مكان نشره: داخلي، صفحة الشركة، أو البوابة العامة.', 'Create a position and choose where to publish it: internal, company page, or the public portal.')}</Empty>}
       {!!data?.data.length && <div className="scroll-x"><table className="tbl"><thead><tr>
         <th>{L('الوظيفة', 'Role')}</th><th>{L('الإدارة', 'Department')}</th><th>{L('المدينة', 'City')}</th><th>{L('الشواغر', 'Openings')}</th><th>{L('المتطلبات', 'Requirements')}</th><th>{L('نطاق الراتب', 'Pay band')}</th>
         <th>{L('النشر', 'Publishing')}</th>{FIVE.map(s => <th key={s}>{STAGES[s][lang]}</th>)}<th /></tr></thead>
-        <tbody>{data.data.map(j => <tr key={j.id} className="click" onClick={() => setEdit({ open: true, id: j.id })}>
+        <tbody>{data.data.map(j => <tr key={j.id} className={canEdit ? 'click' : undefined} onClick={canEdit ? () => setEdit({ open: true, id: j.id }) : undefined}>
           <td className="min-w-[190px]"><div className="font-medium">{bi(j.title, lang)}</div><div className="text-[12px] text-ink-3 ltr text-start whitespace-nowrap">{j.code}</div></td>
           <td className="min-w-[120px]">{bi(j.dept, lang)}</td><td>{bi(j.city, lang)}</td><td className="num">{j.openings}</td>
           <td className="text-[13px] text-ink-2 whitespace-nowrap">{j.min_years} {L('سنوات', 'yrs')} · {DEGREES[j.degree][lang]}</td>
@@ -46,7 +50,7 @@ export function Jobs() {
           {FIVE.map(s => { const n = j.pipeline?.[s] ?? 0; return <td key={s} className={`num text-center ${n ? 'font-semibold' : 'text-ink-3'}`}>{n || '·'}</td> })}
           <td onClick={e => e.stopPropagation()}><div className="flex gap-1 justify-end">
             {j.visibility !== 'internal' && j.accepting && <Btn size="sm" kind="ghost" onClick={() => copy(j)} aria-label={L('نسخ الرابط', 'Copy link')} title={L('نسخ الرابط', 'Copy link')}><Link2 size={15} /></Btn>}
-            {j.status !== 'draft' && <Btn size="sm" kind={j.status === 'open' ? 'danger' : 'secondary'} icon={j.status === 'open' ? <LockIcon size={14} /> : <Unlock size={14} />} onClick={() => setToggle(j)}>{j.status === 'open' ? L('إغلاق', 'Close') : L('إعادة فتح', 'Reopen')}</Btn>}
+            {canEdit && j.status !== 'draft' && <Btn size="sm" kind={j.status === 'open' ? 'danger' : 'secondary'} icon={j.status === 'open' ? <LockIcon size={14} /> : <Unlock size={14} />} onClick={() => setToggle(j)}>{j.status === 'open' ? L('إغلاق', 'Close') : L('إعادة فتح', 'Reopen')}</Btn>}
           </div></td>
         </tr>)}</tbody></table></div>}
     </Panel>

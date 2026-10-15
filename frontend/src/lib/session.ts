@@ -18,7 +18,8 @@ export const can = (u: SessionUser | null | undefined, module: string, action: P
 export const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false, staleTime: 30_000 } } })
 
 export function useMe() {
-  return useQuery({ queryKey: ['me'], queryFn: () => api<{ user: SessionUser | null }>('/auth/me').then(r => r.user), staleTime: Infinity })
+  // يُحدَّث عند العودة للنافذة وكل دقيقتين: تعديل الصلاحيات أو تعليق الحساب يصل بدون إعادة دخول
+  return useQuery({ queryKey: ['me'], queryFn: () => api<{ user: SessionUser | null }>('/auth/me').then(r => r.user), staleTime: 60_000, refetchOnWindowFocus: true, refetchInterval: 120_000 })
 }
 
 // تبديل المستخدم: نُسقط كل بيانات المستخدم السابق، ونحدّث ['me'] في مكانه (لا clear حتى لا ينفصل مراقب useMe)
