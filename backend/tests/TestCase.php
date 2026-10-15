@@ -5,6 +5,7 @@ namespace Tests;
 use App\Models\Company;
 use App\Services\Platform\CompanyDefaults;
 use App\Support\Tenant;
+use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
@@ -12,6 +13,9 @@ abstract class TestCase extends BaseTestCase
     protected function tearDown(): void
     {
         Tenant::forget();
+        // Eloquent يخزّن أعمدة كل جدول (لفحص $guarded) في متغير ساكن طوال العملية؛ اختبار وحدة قبل
+        // RefreshDatabase قد يقرأ مخططاً قديماً من uhr_test ← نفرّغه بعد كل اختبار
+        (fn () => static::$guardableColumns = [])->bindTo(null, EloquentModel::class)();
         parent::tearDown();
     }
 

@@ -133,6 +133,7 @@ docker compose exec api php artisan test        # backend (DB uhr_test; RefreshD
 docker compose exec web npm run typecheck
 docker compose exec web npm test
 ```
+- The api image has GD (tests use `UploadedFile::fake()->image()` and signature PNGs). `tests/TestCase` clears Eloquent's cached column lists after each test (a unit test filling a model can otherwise cache a stale `uhr_test` schema).
 - `phpunit.xml` forces `DB_DATABASE=uhr_test`, `MAIL_MAILER=array`, and `FRONTEND_URL`.
 - `CACHE_STORE`, `SESSION_DRIVER` and `QUEUE_CONNECTION` are not forced, so they don't override compose env. Add `force="true"` when a compose env var must be overridden.
 - Verify UI visually: 3 themes × AR/EN at 1440px and 390px, no console errors, no horizontal scroll (SRS §9.4).
