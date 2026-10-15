@@ -85,9 +85,9 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 | 02 Database, `uhr:install`, TestDataSeeder (demo-identical), audit log | ✅ user verified (after adding mockery) |
 | 03 M01 public page and login | ✅ tests pass (backend + frontend) |
 | 04 M02 apply wizard F-28 → M05 applicant portal (see below) | 📦 delivered, **waiting for the user's test run** |
-| 04b v3 amendments to the apply flow (match bands, data consent, photo per job, referral rules) | 📦 delivered, waiting for the user's test |
+| 04b v3 amendments to the apply flow (match bands, data consent, photo per job, referral rules) | ✅ tests pass on the user's machine — browser check pending |
 | 05 Foundation — **part 1 done:** multi-company, recruiter role + `role:` middleware, DecisionDialog, console Shell. **Remaining:** permissions panel, M15 dashboard/bell/search, print template, file store | 🟡 |
-| 05b Public multi-company jobs portal, company/job pages, HR jobs screen, platform console (companies, reviews, portal texts), one applicant account, SEO | 📦 delivered, waiting for the user's test |
+| 05b Public multi-company jobs portal, company/job pages, HR jobs screen, platform console (companies, reviews, portal texts), one applicant account, SEO | ✅ tests pass on the user's machine — browser check pending |
 | 06 Recruitment M03/M04/M06 + CV database, staged referrals, AI tests · 07 Employees/attendance/leave with company policies · 08 Custody, M17 discipline, exit per HR.01-03 · 09 M12–M14 + development · 10 salary 2FA · 11 M16 + Reverb · 12 final verification | |
 
 **Task 03 delivered:**
