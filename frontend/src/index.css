@@ -1,0 +1,144 @@
+/* UHR — نظام التصميم: منسوخ من الكود المصدري للديمو + إضافات v26 (SRS §3) */
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@font-face { font-family: "UHR Arabic"; src: url("./assets/fonts/uhr-arabic-400.woff2") format("woff2"); font-weight: 300 400; font-display: block; }
+@font-face { font-family: "UHR Arabic"; src: url("./assets/fonts/uhr-arabic-500.woff2") format("woff2"); font-weight: 500; font-display: block; }
+@font-face { font-family: "UHR Arabic"; src: url("./assets/fonts/uhr-arabic-600.woff2") format("woff2"); font-weight: 600; font-display: block; }
+@font-face { font-family: "UHR Arabic"; src: url("./assets/fonts/uhr-arabic-700.woff2") format("woff2"); font-weight: 700 900; font-display: block; }
+@font-face { font-family: Figtree; src: url("./assets/fonts/figtree-400.woff2") format("woff2"); font-weight: 400 600; font-display: block; }
+@font-face { font-family: Figtree; src: url("./assets/fonts/figtree-700.woff2") format("woff2"); font-weight: 700 900; font-display: block; }
+@font-face { font-family: Outfit; src: url("./assets/fonts/outfit-600.woff2") format("woff2"); font-weight: 600 800; font-display: block; }
+@font-face { font-family: Outfit; src: url("./assets/fonts/outfit-900.woff2") format("woff2"); font-weight: 900; font-display: block; }
+
+/* ---- UHR identity tokens (from the exhibition demo) ---- */
+:root {
+  --bg: oklch(97% .008 230); --card: oklch(99.5% .004 91); --fg: oklch(22% .055 263); --fg2: oklch(42% .045 260); --fg3: oklch(55.4% .046 257.417);
+  --line: oklch(88% .018 91); --line2: oklch(93% .012 91); --sub: oklch(96.8% .007 247.896);
+  --primary: oklch(62% .12 180); --primary-2: oklch(54% .11 182); --on-primary: oklch(99% .004 91); --primary-soft: oklch(62% .12 180 / .12);
+  --warn: oklch(64% .14 70); --warn-soft: oklch(82% .15 82 / .2);
+  --danger: oklch(60% .19 32); --danger-soft: oklch(70% .19 35 / .14);
+  --user: oklch(55% .16 294); --user-soft: oklch(61% .16 294 / .12);
+  --sidebar: oklch(20.5% .04 256); --sidebar-fg: oklch(96.5% .012 91); --sidebar-accent: oklch(30% .052 263);
+  --showcase: oklch(16% .055 263); --showcase-fg: oklch(98% .008 91);
+}
+.dark {
+  --bg: oklch(14.5% .03 256); --card: oklch(19.5% .035 252); --fg: oklch(96.5% .008 180); --fg2: oklch(82% .02 250); --fg3: oklch(66% .035 256);
+  --line: oklch(100% 0 0 / .09); --line2: oklch(100% 0 0 / .05); --sub: oklch(24% .038 258);
+  --primary: oklch(72% .135 178); --primary-2: oklch(78% .13 178); --on-primary: oklch(13% .02 265); --primary-soft: oklch(72% .135 178 / .14);
+  --warn: oklch(80% .15 80); --warn-soft: oklch(80% .15 80 / .14);
+  --danger: oklch(72% .17 30); --danger-soft: oklch(72% .17 30 / .14);
+  --user: oklch(72% .14 302); --user-soft: oklch(72% .14 302 / .14);
+  --sidebar: oklch(11.5% .025 256); --sidebar-fg: oklch(98.4% .003 247.858); --sidebar-accent: oklch(18% .025 265);
+  --showcase: oklch(7.5% .018 265); --showcase-fg: oklch(96.5% .008 180);
+}
+
+.slate {
+  --bg: #0f172a; --card: #1e293b; --fg: #f1f5f9; --fg2: #cbd5e1; --fg3: #94a3b8;
+  --line: #334155; --line2: rgb(51 65 85 / .55); --sub: #172036;
+  --primary: #6366f1; --primary-2: #818cf8; --on-primary: #ffffff; --primary-soft: rgb(99 102 241 / .16);
+  --warn: #fbbf24; --warn-soft: rgb(245 158 11 / .12); --danger: #fb7185; --danger-soft: rgb(244 63 94 / .13);
+  --user: #34d399; --user-soft: rgb(16 185 129 / .13);
+  --sidebar: #0b1222; --sidebar-fg: #e2e8f0; --sidebar-accent: #1e293b;
+  --showcase: #0a1020; --showcase-fg: #f1f5f9;
+  --glow1: rgb(99 102 241 / .16); --glow2: rgb(16 185 129 / .08); --orb: rgb(99 102 241 / .6);
+}
+:root { --glow1: oklch(72% .135 178 / .16); --glow2: oklch(61% .16 294 / .12); --orb: oklch(72% .135 178 / .55); }
+
+@theme inline {
+  --font-sans: "UHR Arabic", Figtree, Tahoma, sans-serif;
+  --font-display: "UHR Arabic", Outfit, sans-serif;
+  --color-canvas: var(--bg); --color-surface: var(--card); --color-sub: var(--sub);
+  --color-ink: var(--fg); --color-ink-2: var(--fg2); --color-ink-3: var(--fg3);
+  --color-line: var(--line); --color-line-2: var(--line2);
+  --color-brand: var(--primary); --color-brand-2: var(--primary-2); --color-brand-soft: var(--primary-soft); --color-on-brand: var(--on-primary);
+  --color-brass: var(--warn); --color-brass-soft: var(--warn-soft); --color-warn: var(--warn); --color-warn-soft: var(--warn-soft);
+  --color-danger: var(--danger); --color-danger-soft: var(--danger-soft);
+  --color-info: var(--user); --color-info-soft: var(--user-soft);
+  --color-side: var(--sidebar); --color-side-fg: var(--sidebar-fg); --color-side-accent: var(--sidebar-accent);
+  --color-show: var(--showcase); --color-show-fg: var(--showcase-fg);
+}
+
+html[lang="en"] { --font-sans: Figtree, "UHR Arabic", sans-serif; }
+html, body, #root { height: 100%; }
+body { font-family: var(--font-sans); color: var(--fg); background: var(--bg); font-size: 14px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+html[lang="en"] body { font-family: Figtree, "UHR Arabic", sans-serif; }
+h1, h2, h3, .font-display { font-family: "UHR Arabic", Outfit, sans-serif; letter-spacing: 0; }
+html[lang="en"] h1, html[lang="en"] h2, html[lang="en"] h3, html[lang="en"] .font-display { font-family: Outfit, "UHR Arabic", sans-serif; }
+.num { font-variant-numeric: tabular-nums; }
+.ltr { direction: ltr; unicode-bidi: isolate; }
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+@layer base { input, select, textarea, button { font: inherit; color: inherit; } }
+
+/* app background glow, as in the exhibition demo */
+.app-glow { background:
+  radial-gradient(900px 420px at 85% -10%, var(--glow1), transparent 60%),
+  radial-gradient(700px 500px at -5% 105%, var(--glow2), transparent 60%), var(--bg); }
+
+.field { width: 100%; height: 38px; border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 0 11px; }
+textarea.field { height: auto; padding: 8px 11px; min-height: 76px; }
+select.field option { background: var(--card); color: var(--fg); }
+.field:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+.field[aria-invalid="true"] { border-color: var(--danger); }
+.dark input[type="date"].field { color-scheme: dark; }
+
+.tbl { width: 100%; border-collapse: collapse; }
+.tbl th { text-align: start; font-weight: 600; font-size: 12px; color: var(--fg3); background: var(--sub); padding: 9px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.tbl td { padding: 10px 14px; border-bottom: 1px solid var(--line2); vertical-align: middle; }
+.tbl tr.click { transition: background .12s; }
+.tbl tr.click:hover td { background: var(--primary-soft); cursor: pointer; }
+.scroll-x { overflow-x: auto; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: color-mix(in oklab, var(--fg3) 45%, transparent); border-radius: 4px; }
+
+.paper { background: var(--card); border: 1px solid var(--line); }
+.paper-head { border-bottom: 2px solid var(--fg); }
+.sheet { background: #fff; color: #17242f; }
+.stamp { border: 2px solid currentColor; border-radius: 6px; padding: 2px 8px; font-weight: 700; transform: rotate(-4deg); display: inline-block; }
+.hoverlift { transition: transform .15s, border-color .15s, box-shadow .15s; }
+.hoverlift:hover { transform: translateY(-2px); border-color: color-mix(in oklab, var(--primary) 45%, transparent); box-shadow: 0 10px 30px -18px var(--primary); }
+
+@keyframes scanpulse { 0% { box-shadow: 0 0 0 0 oklch(72% .135 178 / .5);} 100% { box-shadow: 0 0 0 34px oklch(72% .135 178 / 0);} }
+.scan-pulse { animation: scanpulse 1.1s ease-out 2; }
+@keyframes slidein { from { transform: translateX(-24px); opacity: 0 } to { transform: none; opacity: 1 } }
+.drawer { animation: slidein .18s ease-out; }
+@keyframes fadeup { from { opacity: 0; transform: translateY(14px) } to { opacity: 1; transform: none } }
+.fadeup { animation: fadeup .55s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes growx { from { transform: scaleX(0) } to { transform: scaleX(1) } }
+@keyframes growy { from { transform: scaleY(0) } to { transform: scaleY(1) } }
+.grow-y { transform-origin: bottom; animation: growy .7s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes progress { from { width: 0 } to { width: 100% } }
+.show-progress { animation: progress linear forwards; }
+@keyframes floaty { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-8px) } }
+@keyframes glow { 0%,100% { box-shadow: 0 0 40px -6px var(--orb) } 50% { box-shadow: 0 0 70px 0 var(--orb) } }
+.icon-orb { animation: glow 3.2s ease-in-out infinite; }
+@keyframes livedot { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+.live-dot { animation: livedot 1.4s ease-in-out infinite; }
+
+/* showcase */
+.show-root { background: var(--showcase); color: var(--showcase-fg); }
+.show-bg i { position: absolute; border-radius: 50%; filter: blur(90px); opacity: .55; }
+.show-bg i:nth-child(1) { width: 52vw; height: 52vw; right: -12vw; top: -18vw; background: color-mix(in oklab, var(--primary) 55%, transparent); animation: floaty 9s ease-in-out infinite; }
+.show-bg i:nth-child(2) { width: 40vw; height: 40vw; left: -12vw; bottom: -16vw; background: color-mix(in oklab, var(--user) 45%, transparent); animation: floaty 11s ease-in-out infinite reverse; }
+.show-bg i:nth-child(3) { width: 26vw; height: 26vw; left: 38vw; top: 30vh; background: oklch(60% .13 180 / .16); }
+.show-grid { position: absolute; inset: 0; background-image: linear-gradient(oklch(100% 0 0 / .035) 1px, transparent 1px), linear-gradient(90deg, oklch(100% 0 0 / .035) 1px, transparent 1px); background-size: 56px 56px; mask-image: radial-gradient(ellipse at center, #000 30%, transparent 75%); }
+.show-in > * { animation: fadeup .7s cubic-bezier(.2,.7,.2,1) both; }
+.show-in > *:nth-child(2) { animation-delay: .12s } .show-in > *:nth-child(3) { animation-delay: .24s } .show-in > *:nth-child(4) { animation-delay: .36s } .show-in > *:nth-child(5) { animation-delay: .48s }
+
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+@media print {
+  :root, .dark { --bg: #fff; --card: #fff; --fg: #17242f; --fg2: #3b4652; --fg3: #6b7680; --line: #cfd6dc; --line2: #e5e9ec; --sub: #f5f7f8; }
+  body { background: #fff !important; }
+  [data-noprint] { display: none !important; }
+  .print-root { padding: 0 !important; margin: 0 !important; }
+  .paper { border: none; }
+  @page { size: A4; margin: 14mm; }
+}
+@keyframes sigdraw { to { stroke-dashoffset: 0 } }
+
+/* Arabic display typography: Kufi needs taller lines and a little word space at large sizes */
+html[lang="ar"] h1, html[lang="ar"] h2, html[lang="ar"] h3, html[lang="ar"] .font-display { line-height: 1.45; font-weight: 700; }
+html[lang="ar"] .show-root h1, html[lang="ar"] .show-root h2 { line-height: 1.35 !important; font-weight: 700 !important; letter-spacing: 0; }
+html[lang="ar"] .show-root p { line-height: 1.8; }
+html[lang="en"] .show-root h1, html[lang="en"] .show-root h2 { line-height: 1.12; }

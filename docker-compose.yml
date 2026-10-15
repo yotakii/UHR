@@ -1,0 +1,102 @@
+# UHR — بيئة التطوير المحلية
+# البورتات على جهازك (قابلة للتغيير من ملف .env بجانب هذا الملف):
+#   الواجهة 5180 · الـ API 8180 · PostgreSQL 54330 · Redis 6390 · صندوق البريد التجريبي 8125
+name: uhr
+
+services:
+  db:
+    image: postgres:18-alpine
+    container_name: uhr-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: uhr
+      POSTGRES_USER: uhr
+      POSTGRES_PASSWORD: uhr_secret
+      TZ: Asia/Damascus
+      PGTZ: Asia/Damascus
+    volumes:
+      - uhr-db:/var/lib/postgresql          # Postgres 18 يخزن تحت /var/lib/postgresql/18/
+      - ./docker/db/init.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
+    ports:
+      - "${UHR_DB_PORT:-54330}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U uhr -d uhr"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: uhr-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - uhr-redis:/data
+    ports:
+      - "${UHR_REDIS_PORT:-6390}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+    image: uhr-api:dev
+    container_name: uhr-api
+    restart: unless-stopped
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      mailpit: { condition: service_started }
+    environment:
+      FRONTEND_URL: http://localhost:${UHR_WEB_PORT:-5180}
+      MAIL_MAILER: smtp
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      MAIL_FROM_ADDRESS: no-reply@alfarada.sy
+      MAIL_FROM_NAME: UHR
+    volumes:
+      - ./backend:/var/www
+      - uhr-vendor:/var/www/vendor          # الحزم داخل volume — أسرع بكثير على ويندوز
+    ports:
+      - "${UHR_API_PORT:-8180}:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8000/up >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      start_period: 180s
+      retries: 10
+
+  # كل رسائل البريد في بيئة التطوير تُلتقط هنا ولا تخرج للإنترنت: http://localhost:8125
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: uhr-mail
+    restart: unless-stopped
+    ports:
+      - "${UHR_MAIL_PORT:-8125}:8025"
+
+  web:
+    image: node:22-alpine
+    container_name: uhr-web
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -c "npm install --no-audit --no-fund && npm run dev"
+    environment:
+      VITE_API_PROXY: http://api:8000
+      CHOKIDAR_USEPOLLING: "true"
+    depends_on:
+      - api
+    volumes:
+      - ./frontend:/app
+      - uhr-node-modules:/app/node_modules
+    ports:
+      - "${UHR_WEB_PORT:-5180}:5173"
+
+volumes:
+  uhr-db:
+  uhr-redis:
+  uhr-vendor:
+  uhr-node-modules:
