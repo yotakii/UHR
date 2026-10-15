@@ -45,7 +45,7 @@ class MyApplicationResource extends JsonResource
     }
 
     /** صورة التوقيع مضمّنة (صغيرة) — لا رابط عام لملفات التخزين */
-    private static function dataUrl(?StoredFile $f): ?string
+    public static function dataUrl(?StoredFile $f): ?string
     {
         if (! $f || ! Storage::disk($f->disk)->exists($f->path)) return null;
         return 'data:'.$f->mime.';base64,'.base64_encode(Storage::disk($f->disk)->get($f->path));

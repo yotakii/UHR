@@ -68,7 +68,7 @@ class Perm
         'hr_officer' => ['attendance' => 'vexp', 'leaves' => 'vdxp', 'excuses' => 'vd', 'payroll' => 'vedxp', 'salary_cert' => 'vdp', 'jobs' => 'vce', 'candidates' => 'vcedxp',
             'internal' => 'v', 'referrals' => 've', 'announcements' => 'vcea', 'employees' => 'vcexp', 'assets' => 'vce', 'policies' => 'vcea', 'org' => 'vexp',
             'discipline' => 'vcedxp', 'performance' => 'vdx', 'succession' => 'vce'],
-        'recruiter' => ['jobs' => 'vcea', 'candidates' => 'vcexp', 'referrals' => 'v'],
+        'recruiter' => ['jobs' => 'vcea', 'candidates' => 'vcedxp', 'referrals' => 'v'],
         'finance' => ['attendance' => 'vx', 'payroll' => 'vedxp', 'salary_cert' => 'vdp', 'employees' => 'v', 'assets' => 'v'],
         'executive' => ['attendance' => 'v', 'leaves' => 'v', 'payroll' => 'v', 'jobs' => 'v', 'candidates' => 'v', 'employees' => 'v', 'org' => 'vp', 'performance' => 'v', 'discipline' => 'v'],
         'ceo' => ['attendance' => 'v', 'leaves' => 'v', 'payroll' => 'v', 'jobs' => 'v', 'candidates' => 'v', 'employees' => 'v', 'org' => 'vp', 'performance' => 'v', 'discipline' => 'v'],

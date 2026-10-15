@@ -87,13 +87,13 @@ export function Lifecycle({ steps }: { steps: { label: string; code?: string; do
   </ol>
 }
 
-export function OfferDoc({ c, offer, jobTitle }: { c: Person; offer: OfferTerms; jobTitle: string }) {
+export function OfferDoc({ c, offer, jobTitle, company }: { c: Person; offer: OfferTerms; jobTitle: string; company?: { ar: string; en: string } }) {
   const L = useL(); const lang = useLang()
   const total = offer.basic + offer.housing + offer.transport + offer.fuel
   const contract = { fixed: L('محدد المدة — سنة قابلة للتجديد', 'Fixed term — 1 year renewable'), open: L('غير محدد المدة', 'Open-ended'), project: L('عقد مشروع', 'Project contract') }[offer.contract]
   return <div className="space-y-5 text-[14px]">
     <p>{L(`السيد/ة ${c.name} المحترم/ة،`, `Dear ${c.nameEn || c.name},`)}</p>
-    <p className="max-w-[70ch]">{L(`يسرّنا أن نعرض عليك العمل لدى شركة الفرادة بوظيفة «${offer.title || jobTitle}» وفق الشروط التالية، على أن يكون العرض نافذاً لمدة خمسة أيام من تاريخ إصداره.`, `We are pleased to offer you the position of "${offer.title || jobTitle}" at Uniqueness on the terms below. This offer is valid for five days from issue.`)}</p>
+    <p className="max-w-[70ch]">{L(`يسرّنا أن نعرض عليك العمل لدى ${company?.ar ?? 'الشركة'} بوظيفة «${offer.title || jobTitle}» وفق الشروط التالية، على أن يكون العرض نافذاً لمدة خمسة أيام من تاريخ إصداره.`, `We are pleased to offer you the position of "${offer.title || jobTitle}" at ${company?.en ?? 'the company'} on the terms below. This offer is valid for five days from issue.`)}</p>
     <table className="w-full border border-line text-[14px]">
       <tbody>
         {[[L('طبيعة العقد', 'Contract'), contract], [L('الراتب الأساسي', 'Basic salary'), money(offer.basic, offer.currency, lang)], [L('بدل السكن / غلاء المعيشة', 'Housing / cost of living'), money(offer.housing, offer.currency, lang)], [L('بدل المواصلات', 'Transport'), money(offer.transport, offer.currency, lang)], [L('بدل المحروقات', 'Fuel'), money(offer.fuel, offer.currency, lang)], [L('الإجازة السنوية المدفوعة', 'Paid annual leave'), `${offer.leave_days} ${L('يوماً', 'days')}`], [L('تاريخ المباشرة المتوقع', 'Expected start date'), fmtDate(offer.start_date, lang)], [L('فترة التجربة', 'Probation'), L('90 يوماً', '90 days')]].map(([k, v]) =>
@@ -121,10 +121,10 @@ export function DecisionDoc({ c, ap, jobTitle, deptName }: { c: Person; ap: Pick
     <div>
       <h4 className="font-semibold mb-2">{L('سلسلة الاعتماد', 'Approval chain')}</h4>
       <div className="grid sm:grid-cols-4 gap-3">
-        {ap.approvals.map(a => <div key={a.level} className={`border rounded-md p-3 ${a.status === 'approved' ? 'border-brand' : 'border-line'}`}>
+        {ap.approvals.map(a => <div key={a.level} className={`border rounded-md p-3 ${a.status === 'approved' ? 'border-brand' : a.status === 'rejected' ? 'border-danger' : 'border-line'}`}>
           <div className="text-[12px] text-ink-3">{a.level}. {a.role[lang]}</div>
           <div className="font-medium">{a.name}</div>
-          <div className="mt-2 h-8">{a.status === 'approved' ? <span className="stamp text-brand text-[12px]">{L('معتمد', 'APPROVED')}</span> : <span className="text-[12px] text-brass">{L('بانتظار الاعتماد', 'Pending')}</span>}</div>
+          <div className="mt-2 h-8">{a.status === 'approved' ? <span className="stamp text-brand text-[12px]">{L('معتمد', 'APPROVED')}</span> : a.status === 'rejected' ? <span className="stamp text-danger text-[12px]">{L('مرفوض', 'REJECTED')}</span> : <span className="text-[12px] text-brass">{L('بانتظار الاعتماد', 'Pending')}</span>}</div>
           {a.at && <div className="text-[11px] text-ink-3 num mt-1">{fmtDateTime(a.at, lang)}</div>}
         </div>)}
       </div>

@@ -6,9 +6,12 @@ use App\Http\Controllers\Api\Candidate\MyApplicationController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\FileController;
 use App\Http\Controllers\Api\FormController;
+use App\Http\Controllers\Api\Hr\ApprovalController;
+use App\Http\Controllers\Api\Hr\CandidateController;
 use App\Http\Controllers\Api\Hr\DashboardController;
 use App\Http\Controllers\Api\Hr\JobController;
 use App\Http\Controllers\Api\Hr\PermissionController;
+use App\Http\Controllers\Api\Hr\RulesController;
 use App\Http\Controllers\Api\Hr\SearchController;
 use App\Http\Controllers\Api\NoticeController;
 use App\Http\Controllers\Api\Platform\PlatformController;
@@ -63,6 +66,23 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
     Route::post('/jobs', [JobController::class, 'store'])->middleware('perm:jobs,create');
     Route::put('/jobs/{id}', [JobController::class, 'update'])->whereNumber('id')->middleware('perm:jobs,edit');
     Route::post('/jobs/{id}/status', [JobController::class, 'status'])->whereNumber('id')->middleware('perm:jobs,edit');
+
+    // M03/M04 — لوحة المتقدمين وملف المتقدم
+    Route::middleware('perm:candidates,view')->group(function () {
+        Route::get('/candidates', [CandidateController::class, 'index']);
+        Route::get('/candidates/{id}', [CandidateController::class, 'show'])->whereNumber('id');
+        Route::get('/recruitment-rules', [RulesController::class, 'show']);
+    });
+    Route::middleware('perm:candidates,edit')->group(function () {
+        Route::post('/candidates/{id}/move', [CandidateController::class, 'move'])->whereNumber('id');
+        Route::post('/candidates/{id}/notes', [CandidateController::class, 'note'])->whereNumber('id');
+        Route::put('/candidates/{id}/interview', [CandidateController::class, 'interview'])->whereNumber('id');
+        Route::put('/candidates/{id}/offer', [CandidateController::class, 'offer'])->whereNumber('id');
+    });
+    Route::put('/recruitment-rules', [RulesController::class, 'update'])->middleware('perm:settings,edit');
+    // «اعتماداتي» — قرار التعيين F-31: لصاحب المستوى فقط (التحقق في AppointmentFlow)
+    Route::get('/approvals', [ApprovalController::class, 'index']);
+    Route::post('/approvals/{id}', [ApprovalController::class, 'decide'])->whereNumber('id');
 
     // M16 — لوحة الصلاحيات
     Route::get('/permissions', [PermissionController::class, 'show'])->middleware('perm:users,view');

@@ -26,7 +26,7 @@ export interface MyOffer {
   basic: number; housing: number; transport: number; fuel: number; total: number; leave_days: number; start_date: string
   issued_at: string; status: OfferStatus; responded_at: string | null; note: string | null; signature: string | null
 }
-export interface MyApproval { level: number; role: Bi; name: string; status: 'pending' | 'approved'; at: string | null }
+export interface MyApproval { level: number; role: Bi; name: string; status: 'pending' | 'approved' | 'rejected'; at: string | null }
 export interface MyAppointment { decision_no: string; issued_at: string; complete: boolean; approvals: MyApproval[] }
 export interface MyApplication {
   id: number; company: CompanyCard; ref: string; created_at: string; stage: Stage; name: string; name_en: string | null; email: string; mobile: string; salary: number

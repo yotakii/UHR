@@ -86,9 +86,11 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 | 03 M01 public page and login | ✅ tests pass (backend + frontend) |
 | 04 M02 apply wizard F-28 → M05 applicant portal (see below) | ✅ user verified |
 | 04b v3 amendments to the apply flow (match bands, data consent, photo per job, referral rules) | ✅ user verified |
-| 05 Foundation — part 1 (multi-company, recruiter, DecisionDialog, Shell) ✅; **part 2 delivered:** permission matrix + panel, M15 sidebar/dashboard/bell/Ctrl K, forms registry + print template, file store. Unified request workflow moves to task 07 (with leaves) | 📦 delivered, waiting for the user's test |
+| 05 Foundation — multi-company, recruiter, DecisionDialog, Shell, permission matrix + panel, M15 sidebar/dashboard/bell/Ctrl K, forms registry + print template, file store. Unified request workflow moves to task 07 (with leaves) | ✅ user verified |
 | 05b Public multi-company jobs portal, company/job pages, HR jobs screen, platform console (companies, reviews, portal texts), one applicant account, SEO | ✅ user verified |
-| 06 Recruitment M03/M04/M06 + CV database, staged referrals, AI tests · 07 Employees/attendance/leave with company policies · 08 Custody, M17 discipline, exit per HR.01-03 · 09 M12–M14 + development · 10 salary 2FA · 11 M16 + Reverb · 12 final verification | |
+| 06a Recruitment: M03 Kanban + M04 candidate file (F-25, F-29 issue, F-31 approvals per level) → employee file | 📦 delivered, waiting for the user's test |
+| 06b M06 onboarding (F-19, F-32, undertakings, add-employee wizard, Excel import) + staged referral points · 06c CV database + AI preliminary tests | ⏭ next |
+| 07 Employees/attendance/leave with company policies + unified request workflow · 08 Custody, M17 discipline, exit per HR.01-03 · 09 M12–M14 + development · 10 salary 2FA · 11 M16 + Reverb · 12 final verification | |
 
 **Task 03 delivered:**
 - Landing page: hero texts from settings, 3 cards, login card with show-password.
@@ -130,9 +132,16 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 - **Files**: `/api/files/{id}` only (no public links) — owner or same-company user with `view` on the file's module (`Services/Files/FileAccess`); every download audited `file.download`. Use `fileUrl(id)` in the UI.
 - Tests: `tests/Feature/FoundationTest.php`, `tests/Unit/DayCalcTest.php`, `frontend/src/lib/__tests__/hrlink.test.ts` (78 backend, 29 frontend).
 
+**Task 06a delivered:**
+- **Decision (Oct 16):** each F-31 level is approved from its owner's own account — the user named in the `appointment` approval chain, else any company user holding the level's `role_key` — strictly in order; admin cannot approve on anyone's behalf. Rejecting a level needs a reason (≥10) and closes the application.
+- Services: `Recruitment/Pipeline` (move with rules: no move after the appointment opens except reject, `hired` only via F-31, `offer` needs an issued offer, reject needs a reason → `ApplicationClosed` mail; interview stage → `interview_invite` mail; notes; F-25 save + auto-move to technical when recommended; F-29 issue/revise → `offer_sent` mail), `Recruitment/F25` (port of F25/f25Score/f25Label, unit-tested), `Recruitment/AppointmentFlow` (decide + hire: employee code, onboarding row, applicant user → employee of the company, NFC card from stock `pending_ack`, referral status `hired`; points come in 06b). `Notifications/CandidateMessage` = template-driven candidate mail.
+- API: `/api/hr/candidates[?job&q]`, `/{id}`, `/{id}/move|notes` (POST), `/{id}/interview|offer` (PUT) — `perm:candidates,view|edit`, reject also needs `decide`; `/api/hr/approvals` (my turn only) + `POST /api/hr/approvals/{approvalId}`; `/api/hr/recruitment-rules` (GET by candidates view, PUT by `settings,edit`, bands must ascend). Resource `Http/Resources/HrCandidate` (card/full/appointment with headcount check).
+- Recruiter default now includes `decide` on candidates (rejecting applicants is their job).
+- Frontend: `lib/candidates.ts`; `screens/hr/recruitment/` — `Board` (7 columns, drag & drop, SLA/match/badges, reject via DecisionDialog with presets), `CandidateFile` (tabs via `?tab=`), `InterviewForm`, `OfferTab`, `Approvals` (`MyApprovals` page `/hr/approvals` + `ApprovalActions`), `RulesModal`. `DecisionDialog` got `presets`. `OfferDoc` takes the company name.
+- Tests: `tests/Feature/RecruitmentTest.php`, `tests/Unit/F25Test.php` (87 backend, 29 frontend).
+
 **Open questions in SRS** (ask the user only when you reach them):
 - SMS provider for OTP.
-- Whether F-31 approval levels each sign from their own account.
 - ZERP data scope.
 
 ## 7. Testing

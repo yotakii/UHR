@@ -93,11 +93,15 @@ class HrDashboard
         $cn = fn ($c) => ['ar' => $c->name, 'en' => $c->name_en ?: $c->name];
         $en = fn ($e) => ['ar' => $e->name, 'en' => $e->name_en];
 
+        // قرارات التعيين: لصاحب المستوى الحالي («اعتماداتي») حتى بلا صلاحية المتقدمين، ولفريق التوظيف للمتابعة
+        Appointment::with(['candidate', 'approvals'])->get()->each(function ($a) use ($add, $cn) {
+            $p = \App\Services\Recruitment\AppointmentFlow::current($a);
+            if (! $p) return;
+            $mine = \App\Services\Recruitment\AppointmentFlow::canDecide($this->user, $p);
+            if ($mine) $add("ap{$a->id}", $cn($a->candidate), ["قرار تعيين بانتظار اعتمادك — {$p->role_ar}", "Appointment awaiting your approval — {$p->role_en}"], 'F-31', $a->issued_at, 'approvals', 'appointment');
+            elseif ($this->can('candidates')) $add("ap{$a->id}", $cn($a->candidate), ["قرار تعيين بانتظار اعتماد {$p->role_ar}", "Appointment awaiting {$p->role_en}"], 'F-31', $a->issued_at, "cand:{$a->candidate_id}", 'appointment');
+        });
         if ($this->can('candidates')) {
-            Appointment::with(['candidate', 'approvals'])->get()->each(function ($a) use ($add, $cn) {
-                $p = $a->approvals->firstWhere('status', 'pending');
-                if ($p) $add("ap{$a->id}", $cn($a->candidate), ["قرار تعيين بانتظار اعتماد {$p->role_ar}", "Appointment awaiting {$p->role_en}"], 'F-31', $a->issued_at, "cand:{$a->candidate_id}", 'appointment');
-            });
             Offer::with('candidate')->where('status', 'negotiation')->get()->each(fn ($o) => $add("ng{$o->id}", $cn($o->candidate), ['طلب تعديل بنود عرض العمل', 'Requested offer changes'], 'F-29', $o->responded_at, "cand:{$o->candidate_id}", 'offer'));
             Candidate::with('jobOpening')->where('stage', 'new')->get()->each(fn ($c) => $add("nw{$c->id}", $cn($c), ["طلب توظيف جديد — {$c->jobOpening->title_ar}", "New application — {$c->jobOpening->title_en}"], 'F-28', $c->created_at, "cand:{$c->id}", 'application'));
         }

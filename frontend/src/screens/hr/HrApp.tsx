@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer } from 'lucide-react'
+import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { useRoute } from '../../lib/router'
 import { can, type SessionUser } from '../../lib/session'
@@ -11,6 +11,9 @@ import { Dashboard } from './Dashboard'
 import { Jobs } from './Jobs'
 import { Permissions } from './Permissions'
 import { Forms } from './Forms'
+import { Board } from './recruitment/Board'
+import { CandidateFile } from './recruitment/CandidateFile'
+import { MyApprovals } from './recruitment/Approvals'
 
 type Page = { item: NavItem; module: string | ((u: SessionUser) => boolean); view?: () => ReactNode; task?: string }
 
@@ -28,7 +31,11 @@ export function HrApp({ user }: { user: SessionUser }) {
   const pages: Page[] = [
     { item: { to: '/hr', icon: <LayoutGrid size={18} />, label: L('لوحة المتابعة', 'Overview') }, module: () => true, view: () => <Dashboard user={user} /> },
     { item: { to: '/hr/jobs', icon: <Briefcase size={18} />, label: L('الوظائف الشاغرة', 'Job openings'), group: g1 }, module: 'jobs', view: () => <Jobs /> },
-    { item: { to: '/hr/candidates', icon: <Kanban size={18} />, label: L('المتقدمون', 'Applicants'), count: dash?.funnel?.find(f => f.stage === 'new')?.count, group: g1 }, module: 'candidates', task: '06' },
+    { item: { to: '/hr/candidates', icon: <Kanban size={18} />, label: L('المتقدمون', 'Applicants'), count: dash?.funnel?.find(f => f.stage === 'new')?.count, group: g1 }, module: 'candidates',
+      view: () => route.parts[2] && /^\d+$/.test(route.parts[2]) ? <CandidateFile id={Number(route.parts[2])} /> : <Board /> },
+    // «اعتماداتي» لكل حساب في الشركة: يظهر عندما يصل لمستواه قرار تعيين (أو لمن يتابع التوظيف)
+    { item: { to: '/hr/approvals', icon: <Stamp size={18} />, label: L('اعتماداتي', 'My approvals'), count: dash?.tasks.filter(t => t.link === 'approvals').length, group: g1 },
+      module: () => true, view: () => <MyApprovals /> },
     { item: { to: '/hr/onboarding', icon: <UserPlus size={18} />, label: L('التعيين والمباشرة', 'Appointment & onboarding'), count: count('appointment', 'onboarding'), group: g1 }, module: 'candidates', task: '06' },
     { item: { to: '/hr/referrals', icon: <Trophy size={17} />, label: L('الإحالات والمكافآت', 'Referrals & rewards'), group: g1 }, module: 'referrals', task: '06' },
     { item: { to: '/hr/employees', icon: <Users size={18} />, label: L('الموظفون', 'Employees'), group: g2 }, module: 'employees', task: '07' },

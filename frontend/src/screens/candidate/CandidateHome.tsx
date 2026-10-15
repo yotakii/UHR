@@ -102,7 +102,7 @@ function Application({ c }: { c: MyApplication }) {
     </Panel>}
 
     {c.offer?.status === 'sent' && <div className="grid lg:grid-cols-[1fr_340px] gap-5 items-start">
-      <Paper code="F-29" company={c.company.slug} subject={c.ref} title={L('عرض العمل الرسمي', 'Official job offer')}><OfferDoc c={person} offer={c.offer} jobTitle={c.job.title.ar} /></Paper>
+      <Paper code="F-29" company={c.company.slug} subject={c.ref} title={L('عرض العمل الرسمي', 'Official job offer')}><OfferDoc c={person} offer={c.offer} jobTitle={c.job.title.ar} company={c.company.name} /></Paper>
       <OfferResponse id={c.id} />
     </div>}
 

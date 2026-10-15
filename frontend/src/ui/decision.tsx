@@ -8,9 +8,9 @@ import { Btn, Field, Modal } from './kit'
  * نافذة القرار (SRS §10.1): كل اعتماد/رفض/تحويل يمر بخطوتين — تبرير (إلزامي للرفض)، ثم تأكيد ثانٍ —
  * حتى لا يُتخذ قرار بكبسة خاطئة. الإلغاء يترك السجل كما هو.
  */
-export function DecisionDialog({ open, onClose, title, subject, confirmLabel, tone = 'primary', reasonRequired = false, minLength = 10, reasonLabel, onConfirm }: {
+export function DecisionDialog({ open, onClose, title, subject, confirmLabel, tone = 'primary', reasonRequired = false, minLength = 10, reasonLabel, presets, onConfirm }: {
   open: boolean; onClose: () => void; title: ReactNode; subject?: ReactNode; confirmLabel: string; tone?: 'primary' | 'danger'
-  reasonRequired?: boolean; minLength?: number; reasonLabel?: string; onConfirm: (reason: string) => Promise<unknown>
+  reasonRequired?: boolean; minLength?: number; reasonLabel?: string; presets?: string[]; onConfirm: (reason: string) => Promise<unknown>
 }) {
   const L = useL()
   const [step, setStep] = useState<1 | 2>(1)
@@ -33,8 +33,10 @@ export function DecisionDialog({ open, onClose, title, subject, confirmLabel, to
     <div className="space-y-4">
       {subject && <div className="rounded-lg bg-sub px-3 py-2 text-[14px]">{subject}</div>}
       {step === 1
-        ? <Field label={reasonLabel ?? (reasonRequired ? L('سبب القرار', 'Reason for this decision') : L('ملاحظة (اختيارية)', 'Note (optional)'))} req={reasonRequired} error={err}>
-            <textarea className="field min-h-[96px]" value={reason} maxLength={500} autoFocus onChange={e => { setReason(e.target.value); setErr('') }} /></Field>
+        ? <Field div={!!presets} label={reasonLabel ?? (reasonRequired ? L('سبب القرار', 'Reason for this decision') : L('ملاحظة (اختيارية)', 'Note (optional)'))} req={reasonRequired} error={err}>
+            <>{presets && <div className="flex flex-wrap gap-1.5 mb-2">{presets.map(p => <button key={p} type="button" onClick={() => { setReason(p); setErr('') }} className={`h-8 px-2.5 rounded-lg border text-[12.5px] ${reason === p ? 'bg-brand-soft border-brand/50 text-brand' : 'border-line bg-surface hover:border-brand/40'}`}>{p}</button>)}</div>}
+            <textarea className="field min-h-[96px]" value={reason} maxLength={500} autoFocus onChange={e => { setReason(e.target.value); setErr('') }} /></>
+          </Field>
         : <div className="flex gap-3"><span className={`size-10 rounded-full grid place-items-center shrink-0 ${tone === 'danger' ? 'bg-danger-soft text-danger' : 'bg-brand-soft text-brand'}`}><ShieldCheck size={20} /></span>
             <div className="text-[14px]"><div className="font-semibold">{L('تأكيد القرار', 'Confirm the decision')}</div>
               <p className="text-ink-2 mt-0.5">{L('هذا القرار يُسجَّل باسمك ووقته في سجل التدقيق، ولا يمكن التراجع عنه من هنا.', 'This decision is recorded with your name and time in the audit log, and cannot be undone from here.')}</p>
