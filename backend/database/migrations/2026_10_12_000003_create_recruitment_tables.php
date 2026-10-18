@@ -128,7 +128,7 @@ return new class extends Migration
             $t->string('code', 30)->unique();           // UHR1007-J1
             $t->unsignedInteger('clicks')->default(0);
             $t->foreignId('candidate_id')->nullable()->constrained()->nullOnDelete();
-            $t->string('status', 10)->default('shared');   // shared, applied, hired
+            $t->string('status', 10)->default('shared');   // shared, applied, processing, hired, rewarded, closed
             $t->unsignedInteger('awarded')->nullable();
             $t->timestamps();
             $t->unique(['employee_id', 'job_opening_id']);

@@ -40,5 +40,12 @@ class Employee extends Model
 
     public function scopeCurrent($q) { return $q->where('status', '!=', 'terminated'); }
 
+    /** رقم بطاقة NFC فريد على مستوى المنصة (04:A1:…) */
+    public static function newNfcUid(): string
+    {
+        do { $uid = implode(':', array_map(fn () => strtoupper(str_pad(dechex(random_int(0, 255)), 2, '0', STR_PAD_LEFT)), range(1, 5))); } while (self::allCompanies()->where('nfc_uid', $uid)->exists());
+        return $uid;
+    }
+
     public function displayName(string $lang): string { return $lang === 'en' ? $this->name_en : $this->name; }
 }

@@ -89,8 +89,9 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 | 04b v3 amendments to the apply flow (match bands, data consent, photo per job, referral rules) | ✅ user verified |
 | 05 Foundation — multi-company, recruiter, DecisionDialog, Shell, permission matrix + panel, M15 sidebar/dashboard/bell/Ctrl K, forms registry + print template, file store. Unified request workflow moves to task 07 (with leaves) | ✅ user verified |
 | 05b Public multi-company jobs portal, company/job pages, HR jobs screen, platform console (companies, reviews, portal texts), one applicant account, SEO | ✅ user verified |
-| 06a Recruitment: M03 Kanban + M04 candidate file (F-25, F-29 issue, F-31 approvals per level) → employee file | 📦 delivered, waiting for the user's test |
-| 06b M06 onboarding (F-19, F-32, undertakings, add-employee wizard, Excel import) + staged referral points · 06c CV database + AI preliminary tests | ⏭ next |
+| 06a Recruitment: M03 Kanban + M04 candidate file (F-25, F-29 issue, F-31 approvals per level) → employee file | ✅ user verified |
+| 06b M06 onboarding (F-19, F-32, undertakings + conduct charter, custody, add-employee wizard, Excel import) + staged referral points + employee «documents to sign» | 📦 delivered, waiting for the user's test |
+| 06c CV database + AI preliminary tests (+ recruiter panel) | ⏭ next |
 | 07 Employees/attendance/leave with company policies + unified request workflow · 08 Custody, M17 discipline, exit per HR.01-03 · 09 M12–M14 + development · 10 salary 2FA · 11 M16 + Reverb · 12 final verification | |
 
 **Task 03 delivered:**
@@ -140,6 +141,16 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 - Recruiter default now includes `decide` on candidates (rejecting applicants is their job).
 - Frontend: `lib/candidates.ts`; `screens/hr/recruitment/` — `Board` (7 columns, drag & drop, SLA/match/badges, reject via DecisionDialog with presets), `CandidateFile` (tabs via `?tab=`), `InterviewForm`, `OfferTab`, `Approvals` (`MyApprovals` page `/hr/approvals` + `ApprovalActions`), `RulesModal`. `DecisionDialog` got `presets`. `OfferDoc` takes the company name.
 - Tests: `tests/Feature/RecruitmentTest.php`, `tests/Unit/F25Test.php` (87 backend, 29 frontend).
+- Layout fix (Oct 18): no screen needs horizontal scrolling (see §4).
+
+**Task 06b delivered:**
+- Migration `2026_10_18_000001_add_onboarding_and_points`: onboardings + `conduct_signature_file_id/conduct_signed_at`, `probation_started_at`, `confirmed_at/by`; new `point_logs` (company, employee, referral, candidate, stage 1..4, points ±, reason ar/en, by, at; unique candidate+stage). Fixes F-20/F-22/F-32 titles to SRS §1.5 and adds forms `COC` (conduct charter) and `CUS` (custody receipt).
+- `App\Support\Signature` (store PNG data URL / dataUrl) — used by offers, undertakings and custody receipts.
+- Services: `Onboarding/F19` (28 items, AUTO = 4 memo · 10 F-22 · 12 F-20 · 22 custody · 27 confirm, locked in UI and API `auto_item`; 14 done → probation), `Onboarding/OnboardingFlow` (toggle, memo → bell notice to every company employee, issue/return asset, employee `sign` f22|f20(mother name)|conduct|asset, `confirm` probation → active + referral stage 4, `probationEnd` from policy `probation_days`), `Onboarding/WelcomeMemo` (F-32 text, gendered), `Referrals/ReferralPoints` (rules `referral_stages` [10,20,30,40] × `hard_to_fill_x` 2; `sync` after every stage change: screening → 1, interview/technical/offer → 2, hired → 3; once per stage, nothing after rejection → referral `closed`; statuses shared → applied → processing → hired → rewarded), `People/NewEmployee` (wizard: onboarding + F-19 items 1 & 14 + temp-password account + `EmployeeWelcome` mail + assets pending_ack; shared row validation `check()`), `People/EmployeeImport` (openspout: xlsx template with codes sheet, preview with per-row errors, all-or-nothing commit, active without F-19, counter bumped past imported codes).
+- New composer package **`openspout/openspout`** (xlsx/csv read & write) — the api entrypoint runs `composer install` because composer.json changed.
+- API: `/api/hr/onboarding` (+ pending F-31 when the user sees candidates), `/{id}`, `/{id}/check|memo|assets|confirm` (POST), `DELETE /{id}/assets/{assetId}` — `perm:employees,view|edit`, list scoped by the employees scope (own/team/all); `/api/hr/employees/lookups`, `POST /api/hr/employees`, `/api/hr/employees/import/template|preview|import` — `perm:employees,create`; `/api/me/documents` + `POST /api/me/documents/sign` for any account linked to an employee. Rules: `referral_points` removed, `referral_stages` + `hard_to_fill_x` added (RulesController fills new keys from defaults).
+- Frontend: `lib/onboarding.ts`; `screens/hr/onboarding/` — `OnboardingList` (pending F-31 + new joiners, buttons «إضافة موظف» / «استيراد من Excel»), `OnboardPage` (tabs `?tab=f19|f32|custody|pledges|log`, confirm via DecisionDialog), `AddEmployee` (4-step wizard), `ImportEmployees`; `screens/employee/` — `EmployeeApp` (employee portal shell: home + documents; rest in tasks 07/09) and `MyDocuments` (custody receipts, F-22, F-20 + mother name, conduct charter text from `reference/company`). HR staff with an employee file get «وثائقي للتوقيع» at `/hr/my-documents`. RulesModal edits the four stage values and the multiplier. Notice links: `onboard:{id}`, `docs`.
+- Tests: `tests/Feature/OnboardingTest.php` (91 backend, 29 frontend).
 
 **Open questions in SRS** (ask the user only when you reach them):
 - SMS provider for OTP.

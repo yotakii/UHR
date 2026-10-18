@@ -9,10 +9,11 @@ use App\Models\Asset;
 use App\Models\Candidate;
 use App\Models\Employee;
 use App\Models\Onboarding;
-use App\Models\Referral;
 use App\Models\Role;
 use App\Models\User;
 use App\Notifications\CandidateMessage;
+use App\Services\Onboarding\F19;
+use App\Services\Referrals\ReferralPoints;
 use App\Support\Audit;
 use App\Support\Counters;
 use App\Support\L;
@@ -71,6 +72,7 @@ class AppointmentFlow
             } else {
                 $c->update(['stage' => 'rejected', 'stage_at' => now()->toDateString(), 'reject_reason' => trim($note)]);
                 $c->log("رفض قرار التعيين — {$step->role_ar}: {$name}{$n}", "Appointment rejected — {$step->role_en}: {$nameEn}{$n}", 'danger', 'F-31');
+                (new ReferralPoints)->sync($c);
                 Notify::hr("رُفض قرار تعيين {$c->name} من {$step->role_ar}", 'Appointment of '.($c->name_en ?: $c->name)." rejected by {$step->role_en}", "cand:{$c->id}");
             }
             Audit::record('appointment.'.$decision, $ap, null, ['level' => $step->level, 'role' => $step->role_en, 'note' => $note]);
@@ -90,11 +92,11 @@ class AppointmentFlow
             'code' => Counters::employeeCode(), 'name' => $c->name, 'name_en' => $c->name_en ?: $c->name, 'gender' => $c->gender,
             'title_ar' => $o?->title ?: $job->title_ar, 'title_en' => $job->title_en, 'department_id' => $job->department_id, 'location_id' => $job->location_id,
             'email' => $c->email, 'phone' => $c->mobile, 'hire_date' => $o?->start_date ?? now()->toDateString(), 'dob' => $c->dob, 'national_id' => $c->national_id,
-            'salary' => $o?->total() ?? 0, 'currency' => $o?->currency ?? 'USD', 'status' => 'onboarding', 'nfc_uid' => $this->nfcUid(), 'manager_id' => $mgr, 'candidate_id' => $c->id,
+            'salary' => $o?->total() ?? 0, 'currency' => $o?->currency ?? 'USD', 'status' => 'onboarding', 'nfc_uid' => Employee::newNfcUid(), 'manager_id' => $mgr, 'candidate_id' => $c->id,
         ]);
         foreach ($c->logs()->orderBy('at')->get() as $l) $emp->log($l->text_ar, $l->text_en, $l->kind, $l->form, $l->at);
         $emp->log("صدور قرار التعيين {$ap->decision_no} ومنح الرقم الوظيفي {$emp->code}", "Decision {$ap->decision_no} issued, employee ID {$emp->code}", 'ok', 'F-31');
-        Onboarding::create(['employee_id' => $emp->id, 'checklist' => array_map(fn ($i) => $i === 0 || $i === 8, range(0, 27))]);
+        Onboarding::create(['employee_id' => $emp->id, 'checklist' => F19::blank(0, 8)]);
         $ap->update(['employee_id' => $emp->id]);
         $c->update(['stage' => 'hired', 'stage_at' => now()->toDateString()]);
         $c->log("تم التعيين — الرقم الوظيفي {$emp->code}", "Hired — employee ID {$emp->code}", 'ok');
@@ -110,16 +112,10 @@ class AppointmentFlow
         }
         // بطاقة الحضور NFC من المخزون — بانتظار توقيع الاستلام
         Asset::whereHas('category', fn ($q) => $q->where('code', 'cards'))->where('status', 'available')->orderBy('id')->first()?->update(['employee_id' => $emp->id, 'status' => 'pending_ack', 'assigned_at' => now()]);
-        // الإحالة: الحالة «تعيين» — النقاط المرحلية مع المهمة 06b
-        Referral::where('candidate_id', $c->id)->update(['status' => 'hired']);
+        // الإحالة: نقاط المرحلة 3 (توقيع العرض ومباشرة العمل) — والمرحلة 4 عند تثبيت التعيين
+        (new ReferralPoints)->sync($c);
         if ($c->internal_employee_id) Employee::find($c->internal_employee_id)?->log("قبول طلب النقل/الترقية الداخلي إلى {$job->title_ar}", "Internal move to {$job->title_en} approved", 'ok', 'F-27');
-        Notify::hr("اكتمل قرار تعيين {$c->name} — بدأت إجراءات المباشرة", ($c->name_en ?: $c->name).' appointed — onboarding started', "emp:{$emp->id}");
+        Notify::hr("اكتمل قرار تعيين {$c->name} — بدأت إجراءات المباشرة", ($c->name_en ?: $c->name).' appointed — onboarding started', "onboard:{$emp->id}");
         return $emp;
-    }
-
-    private function nfcUid(): string
-    {
-        do { $uid = implode(':', array_map(fn () => strtoupper(str_pad(dechex(random_int(0, 255)), 2, '0', STR_PAD_LEFT)), range(1, 5))); } while (Employee::allCompanies()->where('nfc_uid', $uid)->exists());
-        return $uid;
     }
 }

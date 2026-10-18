@@ -3,13 +3,16 @@
 use App\Http\Controllers\Api\ApplicationController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Candidate\MyApplicationController;
+use App\Http\Controllers\Api\Employee\MyDocumentsController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\FileController;
 use App\Http\Controllers\Api\FormController;
 use App\Http\Controllers\Api\Hr\ApprovalController;
 use App\Http\Controllers\Api\Hr\CandidateController;
 use App\Http\Controllers\Api\Hr\DashboardController;
+use App\Http\Controllers\Api\Hr\EmployeeController;
 use App\Http\Controllers\Api\Hr\JobController;
+use App\Http\Controllers\Api\Hr\OnboardingController;
 use App\Http\Controllers\Api\Hr\PermissionController;
 use App\Http\Controllers\Api\Hr\RulesController;
 use App\Http\Controllers\Api\Hr\SearchController;
@@ -53,6 +56,12 @@ Route::middleware(['auth', 'fresh', 'portal:candidate'])->prefix('me')->group(fu
     Route::get('/profile', [MyApplicationController::class, 'profile']);
 });
 
+// M14 — «وثائق للتوقيع»: لكل حساب مرتبط بموظف (ومنهم موظفو الموارد البشرية أنفسهم)
+Route::middleware(['auth', 'fresh'])->prefix('me/documents')->group(function () {
+    Route::get('/', [MyDocumentsController::class, 'index']);
+    Route::post('/sign', [MyDocumentsController::class, 'sign'])->middleware('throttle:30,1');
+});
+
 // نظام الشركة (M15/M16 + الوحدات): كل مسار محمي بصلاحية الوحدة والإجراء من مصفوفة الشركة (SRS §10.2)
 Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function () {
     Route::get('/dashboard', DashboardController::class);
@@ -83,6 +92,27 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
     // «اعتماداتي» — قرار التعيين F-31: لصاحب المستوى فقط (التحقق في AppointmentFlow)
     Route::get('/approvals', [ApprovalController::class, 'index']);
     Route::post('/approvals/{id}', [ApprovalController::class, 'decide'])->whereNumber('id');
+
+    // M06 — التعيين والمباشرة (نطاق «الموظفين» للمستخدم: خاصته/فريقه/الكل)
+    Route::middleware('perm:employees,view')->group(function () {
+        Route::get('/onboarding', [OnboardingController::class, 'index']);
+        Route::get('/onboarding/{id}', [OnboardingController::class, 'show'])->whereNumber('id');
+    });
+    Route::middleware('perm:employees,edit')->prefix('onboarding/{id}')->whereNumber('id')->group(function () {
+        Route::post('/check', [OnboardingController::class, 'check']);
+        Route::post('/memo', [OnboardingController::class, 'memo']);
+        Route::post('/assets', [OnboardingController::class, 'issueAsset']);
+        Route::delete('/assets/{assetId}', [OnboardingController::class, 'returnAsset'])->whereNumber('assetId');
+        Route::post('/confirm', [OnboardingController::class, 'confirm']);
+    });
+    // معالج إضافة موظف + استيراد الموظفين الحاليين من Excel
+    Route::middleware('perm:employees,create')->prefix('employees')->group(function () {
+        Route::get('/lookups', [EmployeeController::class, 'lookups']);
+        Route::post('/', [EmployeeController::class, 'store']);
+        Route::get('/import/template', [EmployeeController::class, 'template']);
+        Route::post('/import/preview', [EmployeeController::class, 'preview'])->middleware('throttle:30,1');
+        Route::post('/import', [EmployeeController::class, 'import'])->middleware('throttle:10,1');
+    });
 
     // M16 — لوحة الصلاحيات
     Route::get('/permissions', [PermissionController::class, 'show'])->middleware('perm:users,view');

@@ -120,7 +120,7 @@ class HrDashboard
             Resignation::with('employee')->whereNotIn('status', ['closed', 'rejected'])->get()->each(fn ($r) => $add("rs{$r->id}", $en($r->employee),
                 $r->status === 'clearance' ? ['إبراء ذمة قيد الإنجاز', 'Clearance in progress'] : ['طلب استقالة بانتظار الاعتماد', 'Resignation awaiting approval'], 'F-02', $r->created_at, 'offboarding', 'resignation'));
             Employee::with('onboarding')->where('status', 'onboarding')->get()->each(fn ($e) => $add("ob{$e->id}", $en($e),
-                ['إجراءات المباشرة '.($e->onboarding?->doneCount() ?? 0).'/28', 'Onboarding '.($e->onboarding?->doneCount() ?? 0).'/28'], 'F-19', $e->hire_date, "emp:{$e->id}", 'onboarding'));
+                ['إجراءات المباشرة '.($e->onboarding?->doneCount() ?? 0).'/28', 'Onboarding '.($e->onboarding?->doneCount() ?? 0).'/28'], 'F-19', $e->hire_date, "onboard:{$e->id}", 'onboarding'));
         }
         usort($t, fn ($a, $b) => strcmp($b['at'], $a['at']));
         return $t;

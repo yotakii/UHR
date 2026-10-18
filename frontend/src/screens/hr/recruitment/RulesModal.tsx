@@ -9,6 +9,8 @@ import { Btn, Modal, toast } from '../../../ui/kit'
 const SLA_STAGES: Stage[] = ['new', 'screening', 'interview', 'technical', 'offer']
 
 /** قواعد الأتمتة (RulesModal في الديمو) بنطاقات v3 ومهل المراحل — بدون «وضع العرض». التعديل لصلاحية الإعدادات */
+const REF_STAGES = [{ ar: 'تجاوز الفرز الأولي', en: 'Passed screening' }, { ar: 'التأهل للمقابلة', en: 'Qualified for interview' }, { ar: 'توقيع العرض والمباشرة', en: 'Offer signed & started' }, { ar: 'اجتياز التجربة', en: 'Passed probation' }]
+
 export function RulesModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const L = useL(); const lang = useLang()
   const me = useMe().data
@@ -44,7 +46,13 @@ export function RulesModal({ open, onClose }: { open: boolean; onClose: () => vo
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">{SLA_STAGES.map(s => <label key={s} className="text-[12px] text-ink-3"><span className="block truncate mb-1">{STAGES[s][lang]}</span>
         <input type="number" min={0} max={60} disabled={!editable} className="field num text-center" value={sla[s] ?? 0} onChange={e => setSla({ ...sla, [s]: Number(e.target.value) })} /></label>)}</div>
     </div>
-    <div className="flex items-center justify-between py-3"><span className="text-[14px] font-semibold">{L('نقاط الإحالة عند التعيين', 'Referral points per hire')}</span>
-      <input type="number" step={50} disabled={!editable} className="field !w-28 num" value={r.referral_points} onChange={e => setR({ ...r, referral_points: Number(e.target.value) })} /></div>
+    <div className="py-3">
+      <div className="text-[14px] font-semibold">{L('نقاط الإحالة المرحلية', 'Staged referral points')}</div>
+      <div className="text-[12px] text-ink-3 mb-2">{L('تُمنح للموظف المُحيل مرة واحدة لكل مرحلة، ولا تُمنح بعد رفض المرشح.', 'Awarded to the referring employee once per stage, never after the applicant is rejected.')}</div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">{REF_STAGES.map((st, i) => <label key={i} className="text-[12px] text-ink-3"><span className="block mb-1 leading-tight min-h-[2lh]">{i + 1}. {st[lang]}</span>
+        <input type="number" min={0} max={10000} disabled={!editable} className="field num text-center" value={r.referral_stages[i] ?? 0} onChange={e => setR({ ...r, referral_stages: r.referral_stages.map((x, j) => j === i ? Number(e.target.value) : x) })} /></label>)}</div>
+      <label className="flex flex-wrap items-center justify-between gap-2 mt-3 text-[13px]"><span>{L('مضاعف الوظائف الحرجة / النادرة', 'Hard-to-fill multiplier')} <span className="text-ink-3">({L('المجموع', 'total')} <span className="num">{r.referral_stages.reduce((a, b) => a + b, 0)}</span> · {L('الحرجة', 'hard-to-fill')} <span className="num">{r.referral_stages.reduce((a, b) => a + b, 0) * r.hard_to_fill_x}</span>)</span></span>
+        <select disabled={!editable} className="field !w-24" value={r.hard_to_fill_x} onChange={e => setR({ ...r, hard_to_fill_x: Number(e.target.value) })}>{[1, 2, 3].map(x => <option key={x} value={x}>×{x}</option>)}</select></label>
+    </div>
   </Modal>
 }

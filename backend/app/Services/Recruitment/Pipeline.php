@@ -9,6 +9,7 @@ use App\Models\Offer;
 use App\Models\User;
 use App\Notifications\ApplicationClosed;
 use App\Notifications\CandidateMessage;
+use App\Services\Referrals\ReferralPoints;
 use App\Support\L;
 use App\Support\Notify;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +21,8 @@ use Illuminate\Support\Facades\DB;
  */
 class Pipeline
 {
+    public function __construct(private ReferralPoints $points) {}
+
     public const STAGES = ['new' => ['طلبات جديدة', 'New'], 'screening' => ['فرز أولي', 'Screening'], 'interview' => ['المقابلة الأولية', 'HR interview'],
         'technical' => ['التقييم الفني', 'Technical review'], 'offer' => ['عرض العمل', 'Offer'], 'hired' => ['تم التعيين', 'Hired'], 'rejected' => ['غير مقبول', 'Not selected']];
 
@@ -38,6 +41,7 @@ class Pipeline
             $c->update(['stage' => $to, 'stage_at' => now()->toDateString(), 'reject_reason' => $to === 'rejected' ? trim($reason) : $c->reject_reason]);
             $r = $to === 'rejected' ? ' — '.trim($reason) : '';
             $c->log("نقل من «{$fa}» إلى «{$ta}»{$r} ({$by->displayName('ar')})", "Moved from \"{$fe}\" to \"{$te}\"{$r} ({$by->displayName('en')})", $to === 'rejected' ? 'danger' : 'info');
+            $this->points->sync($c);
         });
 
         $job = $c->jobOpening; $co = $job->company()->first();
@@ -74,6 +78,7 @@ class Pipeline
             if ($rec === 'recommended' && in_array($c->stage, ['new', 'screening', 'interview'], true)) {
                 $c->update(['stage' => 'technical', 'stage_at' => now()->toDateString()]);
                 $c->log('انتقال تلقائي إلى التقييم الفني', 'Auto-moved to technical review');
+                $this->points->sync($c);
             }
             return $iv;
         });

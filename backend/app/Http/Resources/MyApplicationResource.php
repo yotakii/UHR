@@ -6,7 +6,6 @@ use App\Models\Candidate;
 use App\Models\StoredFile;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * طلب المتقدم كما يراه في بوابته (M05): المسار، عرض العمل، قرار التعيين، ملخص الطلب.
@@ -45,9 +44,5 @@ class MyApplicationResource extends JsonResource
     }
 
     /** صورة التوقيع مضمّنة (صغيرة) — لا رابط عام لملفات التخزين */
-    public static function dataUrl(?StoredFile $f): ?string
-    {
-        if (! $f || ! Storage::disk($f->disk)->exists($f->path)) return null;
-        return 'data:'.$f->mime.';base64,'.base64_encode(Storage::disk($f->disk)->get($f->path));
-    }
+    public static function dataUrl(?StoredFile $f): ?string { return \App\Support\Signature::dataUrl($f); }
 }

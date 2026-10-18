@@ -6,15 +6,14 @@ use App\Exceptions\ApiException;
 use App\Models\ApprovalChain;
 use App\Models\Appointment;
 use App\Models\Candidate;
-use App\Models\StoredFile;
 use App\Models\User;
 use App\Support\Counters;
 use App\Support\L;
 use App\Support\Notify;
+use App\Support\Signature;
 use App\Support\Tenant;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 /**
  * رد المتقدم على عرض العمل F-29 (respondOffer في الديمو):
@@ -22,11 +21,10 @@ use Illuminate\Support\Str;
  */
 class OfferResponse
 {
-    public const MAX_SIGNATURE_BYTES = 300_000;
 
     public function respond(Candidate $cand, string $status, ?string $signature, ?string $note): Candidate
     {
-        $sigFile = $status === 'accepted' ? $this->storeSignature($signature) : null;
+        $sigFile = $status === 'accepted' ? Signature::store($signature, 'التوقيع مطلوب لقبول العرض.', 'Your signature is required to accept the offer.') : null;
         try {
             DB::transaction(function () use ($cand, $status, $note, $sigFile) {
                 $offer = $cand->offer()->lockForUpdate()->first();
@@ -80,17 +78,5 @@ class OfferResponse
         if (! empty($lvl['user_id'])) return (clone $q)->find($lvl['user_id']);
         if (empty($lvl['role_key'])) return null;
         return $q->whereHas('roles', fn ($r) => $r->where('key', $lvl['role_key']))->orderBy('id')->first();
-    }
-
-    /** التوقيع صورة PNG (data URL من لوح التوقيع) تُحفظ ملفاً — لا يُقبل قبول بلا توقيع */
-    private function storeSignature(?string $dataUrl): StoredFile
-    {
-        $bad = fn () => ApiException::field('signature', L::t('التوقيع مطلوب لقبول العرض.', 'Your signature is required to accept the offer.'), 'signature_required');
-        if (! $dataUrl || ! preg_match('#^data:image/png;base64,([A-Za-z0-9+/=]+)$#', $dataUrl, $m)) throw $bad();
-        $png = base64_decode($m[1], true);
-        if ($png === false || strlen($png) < 100 || strlen($png) > self::MAX_SIGNATURE_BYTES || ! str_starts_with($png, "\x89PNG")) throw $bad();
-        $path = 'signatures/'.now()->format('Y/m').'/'.Str::uuid().'.png';
-        Storage::disk('local')->put($path, $png);
-        return StoredFile::create(['disk' => 'local', 'path' => $path, 'name' => 'signature.png', 'size' => strlen($png), 'mime' => 'image/png', 'uploaded_by' => auth()->id()]);
     }
 }

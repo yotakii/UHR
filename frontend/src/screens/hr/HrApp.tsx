@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp } from 'lucide-react'
+import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { useRoute } from '../../lib/router'
 import { can, type SessionUser } from '../../lib/session'
@@ -14,6 +14,9 @@ import { Forms } from './Forms'
 import { Board } from './recruitment/Board'
 import { CandidateFile } from './recruitment/CandidateFile'
 import { MyApprovals } from './recruitment/Approvals'
+import { OnboardingList } from './onboarding/OnboardingList'
+import { OnboardPage } from './onboarding/OnboardPage'
+import { MyDocuments } from '../employee/MyDocuments'
 
 type Page = { item: NavItem; module: string | ((u: SessionUser) => boolean); view?: () => ReactNode; task?: string }
 
@@ -36,14 +39,17 @@ export function HrApp({ user }: { user: SessionUser }) {
     // «اعتماداتي» لكل حساب في الشركة: يظهر عندما يصل لمستواه قرار تعيين (أو لمن يتابع التوظيف)
     { item: { to: '/hr/approvals', icon: <Stamp size={18} />, label: L('اعتماداتي', 'My approvals'), count: dash?.tasks.filter(t => t.link === 'approvals').length, group: g1 },
       module: () => true, view: () => <MyApprovals /> },
-    { item: { to: '/hr/onboarding', icon: <UserPlus size={18} />, label: L('التعيين والمباشرة', 'Appointment & onboarding'), count: count('appointment', 'onboarding'), group: g1 }, module: 'candidates', task: '06' },
-    { item: { to: '/hr/referrals', icon: <Trophy size={17} />, label: L('الإحالات والمكافآت', 'Referrals & rewards'), group: g1 }, module: 'referrals', task: '06' },
+    { item: { to: '/hr/onboarding', icon: <UserPlus size={18} />, label: L('التعيين والمباشرة', 'Appointment & onboarding'), count: count('appointment', 'onboarding'), group: g1 }, module: 'employees',
+      view: () => route.parts[2] && /^\d+$/.test(route.parts[2]) ? <OnboardPage id={Number(route.parts[2])} /> : <OnboardingList user={user} /> },
+    { item: { to: '/hr/referrals', icon: <Trophy size={17} />, label: L('الإحالات والمكافآت', 'Referrals & rewards'), group: g1 }, module: 'referrals', task: '09' },
     { item: { to: '/hr/employees', icon: <Users size={18} />, label: L('الموظفون', 'Employees'), group: g2 }, module: 'employees', task: '07' },
     { item: { to: '/hr/org', icon: <Network size={17} />, label: L('الهيكل التنظيمي', 'Org chart'), group: g2 }, module: 'org', task: '07' },
     { item: { to: '/hr/attendance', icon: <Clock size={18} />, label: L('الحضور والدوام', 'Attendance'), group: g2 }, module: 'attendance', task: '07' },
     { item: { to: '/hr/leaves', icon: <CalendarCheck size={18} />, label: L('الإجازات والتبريرات', 'Leave & justifications'), count: count('leave', 'service'), group: g2 }, module: 'leaves', task: '07' },
     { item: { to: '/hr/custody', icon: <Package size={18} />, label: L('العهد', 'Custody'), group: g2 }, module: 'assets', task: '08' },
     { item: { to: '/hr/offboarding', icon: <DoorOpen size={18} />, label: L('الاستقالات وإنهاء الخدمة', 'Resignations & exits'), count: count('resignation'), group: g2 }, module: 'employees', task: '08' },
+    // موظفو الشركة أصحاب الحسابات الإدارية يوقّعون وثائقهم من هنا (M14)
+    { item: { to: '/hr/my-documents', icon: <FileSignature size={17} />, label: L('وثائقي للتوقيع', 'My documents'), group: g2 }, module: u => !!u.employee, view: () => <MyDocuments /> },
     { item: { to: '/hr/performance', icon: <Target size={17} />, label: L('الأداء وتقييم 360', 'Performance & 360'), group: g3 }, module: 'performance', task: '09' },
     { item: { to: '/hr/analytics', icon: <BarChart3 size={17} />, label: L('التحليلات', 'Analytics'), group: g3 }, module: u => can(u, 'employees', 'export'), task: '09' },
     { item: { to: '/hr/settings/policies', icon: <Settings2 size={18} />, label: L('سياسات الدوام والإجازات', 'Work & leave policies'), group: g4 }, module: 'policies', task: '07' },

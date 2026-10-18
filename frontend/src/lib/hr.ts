@@ -47,5 +47,6 @@ export function hrLink(link: string): string {
   if (k === 'job') return '/hr/jobs'
   if (k === 'recruitment') return '/hr/candidates'
   if (k === 'onboard') return `/hr/onboarding${id ? '/' + id : ''}`
+  if (k === 'docs') return '/hr/my-documents'
   return `/hr/${k}`
 }

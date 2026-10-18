@@ -37,7 +37,7 @@ export interface CandFile extends Omit<CandCard, 'offer' | 'appointment' | 'job'
   offer: HrOffer | null; appointment: HrAppointment | null; logs: LogRow[]
 }
 export type OfferInput = Pick<HrOffer, 'title' | 'contract' | 'currency' | 'basic' | 'housing' | 'transport' | 'fuel' | 'leave_days' | 'start_date'>
-export interface Rules { match_threshold: number; review_min: number; reject_max: number; auto_reject: boolean; auto_screen: boolean; sla_alerts: boolean; whatsapp_nudge: boolean; referral_points: number }
+export interface Rules { match_threshold: number; review_min: number; reject_max: number; auto_reject: boolean; auto_screen: boolean; sla_alerts: boolean; whatsapp_nudge: boolean; referral_stages: number[]; hard_to_fill_x: number }
 export interface MyApprovalItem { candidate: CandCard & { name_ar: string; gender: 'M' | 'F' }; job: { title: Bi; dept: Bi }; offer: (OfferInput & { total: number }) | null; appointment: HrAppointment }
 
 export const useBoard = (job?: number, q?: string) => useQuery({
