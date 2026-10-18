@@ -7,7 +7,7 @@ import type { Stage, OfferStatus } from './recruitment'
 /** لوحة المتقدمين (M03) وملف المتقدم (M04) وقرار التعيين F-31 — من /hr/candidates و/hr/approvals */
 export interface CandCard {
   id: number; ref: string; name: Bi; stage: Stage; stage_at: string; days_in_stage: number; sla: 'ok' | 'due' | 'late' | 'none'; sla_limit: number; created_at: string
-  match: number; band: 'normal' | 'review' | 'reject' | null; auto_flag: string | null; internal: boolean; referred: boolean; offer: OfferStatus | null; appointment: boolean
+  match: number; band: 'normal' | 'review' | 'reject' | null; auto_flag: string | null; internal: boolean; referred: boolean; referrer: Bi | null; offer: OfferStatus | null; appointment: boolean
   job: { id: number; code: string; title: Bi }
 }
 export interface MatchPart { key: string; ar: string; en: string; weight: number; score: number; note_ar: string; note_en: string }
@@ -21,7 +21,7 @@ export interface HrAppointment {
   current: { id: number; role: Bi; mine: boolean } | null; headcount: { approved: number; current: number }; degree_ok: boolean
 }
 export interface LogRow { at: string; ar: string; en: string; kind: 'ok' | 'info' | 'warn' | 'danger'; form: string | null }
-export interface CandFile extends Omit<CandCard, 'offer' | 'appointment' | 'job'> {
+export interface CandFile extends Omit<CandCard, 'offer' | 'appointment' | 'job' | 'referrer'> {
   name_ar: string; name_en: string | null; gender: 'M' | 'F'; marital: string | null; nationality: string | null; dob: string | null; pob: string | null; national_id: string | null; blood: string | null
   email: string; mobile: string; address: string | null; linkedin: string | null
   education: { phase: string; institute: string; major: string; year: string; grade: string }[]

@@ -23,6 +23,7 @@ class HrCandidate
             'id' => $c->id, 'ref' => $c->ref, 'name' => ['ar' => $c->name, 'en' => $c->name_en ?: $c->name], 'stage' => $c->stage, 'stage_at' => $c->stage_at?->toDateString(),
             'days_in_stage' => $days, 'sla' => $sla, 'sla_limit' => $limit, 'created_at' => $c->created_at?->toIso8601String(),
             'match' => $c->match_score, 'band' => $c->match_band, 'auto_flag' => $c->auto_flag, 'internal' => (bool) $c->internal_employee_id, 'referred' => (bool) $c->referrer_id,
+            'referrer' => $c->referrer ? ['ar' => $c->referrer->name, 'en' => $c->referrer->name_en] : null,
             'offer' => $c->offer?->status, 'appointment' => (bool) $c->appointment,
             'job' => ['id' => $c->job_opening_id, 'code' => $c->jobOpening->code, 'title' => ['ar' => $c->jobOpening->title_ar, 'en' => $c->jobOpening->title_en]],
         ];

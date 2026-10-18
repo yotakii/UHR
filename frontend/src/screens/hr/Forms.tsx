@@ -18,14 +18,14 @@ export function Forms() {
     <PageHead title={L('النماذج وقالب الطباعة', 'Forms & print template')} sub={L('كل نموذج يُطبع بشعار الشركة وتذييل ثابت: الرمز · الإصدار · التاريخ. طباعة النماذج الحساسة تُسجَّل.', 'Every form prints with the company logo and a fixed footer: code · issue · date. Printing sensitive forms is logged.')} />
     <TemplatePanel initial={data.template} editable={editable} />
     <Panel title={L('سجل النماذج', 'Forms registry')} sub={L(`${data.data.length} نموذجاً`, `${data.data.length} forms`)} pad={false}>
-      <div className="scroll-x"><table className="tbl min-w-[760px]">
-        <thead><tr><th>{L('النموذج', 'Form')}</th><th>{L('الرمز المطبوع', 'Printed code')}</th><th>{L('الإصدار', 'Issue')}</th><th>{L('تاريخ الإصدار', 'Issued on')}</th><th>{L('حساس', 'Sensitive')}</th><th /></tr></thead>
+      <div><table className="tbl w-full">
+        <thead><tr><th>{L('النموذج', 'Form')}</th><th className="hidden md:table-cell">{L('الرمز المطبوع', 'Printed code')}</th><th className="hidden sm:table-cell">{L('الإصدار', 'Issue')}</th><th className="hidden sm:table-cell">{L('تاريخ الإصدار', 'Issued on')}</th><th className="hidden md:table-cell">{L('حساس', 'Sensitive')}</th><th /></tr></thead>
         <tbody>{data.data.map(f => <tr key={f.id}>
-          <td><div className="font-medium">{bi(f.title, lang)}</div><div className="text-[12px] text-ink-3"><span className="ltr inline-block">{f.code}</span></div></td>
-          <td className="whitespace-nowrap font-semibold"><span className="ltr inline-block">{f.ref}</span></td>
-          <td className="num">{f.issue}</td>
-          <td className="num whitespace-nowrap">{f.issued_on?.split('-').reverse().join('-')}</td>
-          <td>{f.sensitive ? <Badge tone="warn"><Lock size={12} />{L('يُسجَّل', 'Logged')}</Badge> : <span className="text-ink-3">—</span>}</td>
+          <td><div className="font-medium">{bi(f.title, lang)}</div><div className="text-[12px] text-ink-3"><span className="ltr inline-block">{f.code}</span><span className="md:hidden"> · <span className="ltr inline-block">{f.ref}</span></span><span className="sm:hidden"> · Issue {f.issue}</span></div></td>
+          <td className="hidden md:table-cell whitespace-nowrap font-semibold"><span className="ltr inline-block">{f.ref}</span></td>
+          <td className="hidden sm:table-cell num">{f.issue}</td>
+          <td className="hidden sm:table-cell num whitespace-nowrap">{f.issued_on?.split('-').reverse().join('-')}</td>
+          <td className="hidden md:table-cell">{f.sensitive ? <Badge tone="warn"><Lock size={12} />{L('يُسجَّل', 'Logged')}</Badge> : <span className="text-ink-3">—</span>}</td>
           <td className="text-end">{editable && <Btn size="sm" icon={<Pencil size={14} />} onClick={() => setEdit(f)}>{L('تعديل', 'Edit')}</Btn>}</td>
         </tr>)}</tbody>
       </table></div>

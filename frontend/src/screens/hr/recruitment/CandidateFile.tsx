@@ -49,7 +49,7 @@ function File({ c, lang }: { c: CandFile; lang: 'ar' | 'en' }) {
         {c.photo ? <img src={fileUrl(c.photo.id, true)} alt="" className="size-[52px] rounded-full object-cover border border-line" /> : <Avatar size={52} tone="brand" />}
         <div className="flex-1 min-w-[220px]">
           <div className="flex items-center gap-2 flex-wrap"><h1 className="text-[21px] font-bold">{name}</h1>
-            {c.internal && <Badge tone="info">{L('طلب داخلي F-27', 'Internal F-27')}</Badge>}{c.referred && <Badge tone="brass">{L('عبر إحالة', 'Referred')}</Badge>}
+            {c.internal && <Badge tone="info">{L('طلب داخلي F-27', 'Internal F-27')}</Badge>}{c.referrer && <Badge tone="brass">{L(`إحالة من ${c.referrer.name.ar}`, `Referred by ${c.referrer.name.en}`)}</Badge>}
             {c.band === 'review' && <Badge tone="warn">{L('مطابقة منخفضة — للمراجعة', 'Low match — review')}</Badge>}
             <Badge tone={c.stage === 'rejected' ? 'danger' : c.stage === 'hired' ? 'brand' : 'info'}>{STAGES[c.stage][lang]}</Badge></div>
           <div className="text-ink-2 text-[14px]">{bi(c.job.title, lang)} — <span className="ltr inline-block">{c.job.code}</span></div>
@@ -141,7 +141,7 @@ function MatchTab({ c }: { c: CandFile }) {
     <div className="grid lg:grid-cols-[1fr_auto] gap-8 items-center"><div className="space-y-4 max-w-2xl min-w-0">{c.match_parts.map(p => <div key={p.key} className="grid grid-cols-[120px_1fr] sm:grid-cols-[150px_1fr_120px] gap-x-4 gap-y-1 items-center text-[14px]">
       <span>{p[lang]} <span className="text-ink-3 text-[12px] num">({p.weight}{P})</span></span><Progress value={p.score * 100} tone={p.score >= 0.75 ? 'brand' : p.score >= 0.45 ? 'brass' : 'danger'} /><span className="text-[13px] text-ink-2 col-span-2 sm:col-span-1">{lang === 'ar' ? p.note_ar : p.note_en}</span></div>)}
       <div className="pt-3 border-t border-line-2 flex justify-between font-semibold"><span>{L('النتيجة', 'Result')}</span><span className="num">{c.match}{P}</span></div>
-      <div className="text-[13px] text-ink-3">{L('المطلوب', 'Required')}: {c.job.min_years} {L('سنوات خبرة', 'years')} · {DEGREES[c.job.degree]?.[lang]} · <span className="num">${c.job.salary_min}–${c.job.salary_max}</span></div>
+      <div className="text-[13px] text-ink-3">{L('المطلوب', 'Required')}: {c.job.min_years} {L('سنوات خبرة', 'years')} · {DEGREES[c.job.degree]?.[lang]} · <bdi dir="ltr" className="num">${c.job.salary_min}–${c.job.salary_max}</bdi></div>
       {c.internal_reason && <div className="text-[13px] bg-info-soft rounded-lg p-3"><b>F-27 · </b>{c.internal_reason}</div>}
     </div>
     <div className="flex flex-wrap justify-center gap-4"><div className="text-center"><Radar size={240} axes={c.match_parts.map(p => ({ label: p[lang], value: p.score }))} /><div className="text-[12px] text-ink-3">{L('مطابقة المتطلبات', 'Requirement match')}</div></div>

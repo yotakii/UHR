@@ -48,9 +48,9 @@ function OverviewPage() {
       <Kpi icon={<Inbox size={20} />} label={L('طلبات توظيف (30 يوماً)', 'Applications (30 days)')} value={data?.applications_30d} />
     </div>
     <Panel title={L('التقديم حسب الشركة', 'Applications by company')} pad={false}>
-      <div className="scroll-x"><table className="tbl"><thead><tr><th>{L('الشركة', 'Company')}</th><th>{L('فرص في البوابة', 'Portal jobs')}</th><th>{L('طلبات (30 يوماً)', 'Applications (30d)')}</th><th>{L('كل الطلبات', 'All applications')}</th></tr></thead>
+      <div><table className="tbl w-full"><thead><tr><th>{L('الشركة', 'Company')}</th><th>{L('فرص في البوابة', 'Portal jobs')}</th><th>{L('طلبات (30 يوماً)', 'Applications (30d)')}</th><th className="hidden sm:table-cell">{L('كل الطلبات', 'All applications')}</th></tr></thead>
         <tbody>{data?.by_company.map(c => <tr key={c.slug}><td><div className="flex items-center gap-2"><CompanyLogo c={c} size={32} /><span className="font-medium">{bi(c.name, lang)}</span></div></td>
-          <td className="num">{c.jobs}</td><td className="num">{c.applications_30d}</td><td className="num">{c.applications}</td></tr>)}</tbody></table></div>
+          <td className="num">{c.jobs}</td><td className="num">{c.applications_30d}</td><td className="num hidden sm:table-cell">{c.applications}</td></tr>)}</tbody></table></div>
     </Panel>
   </div>
 }

@@ -35,8 +35,8 @@ export function PortalHome() {
 
     {!!p?.companies.length && <section>
       <h2 className="text-[15px] font-bold mb-3">{L('شركات توظّف الآن', 'Companies hiring now')}</h2>
-      <div className="flex gap-3 overflow-x-auto pb-1">{p.companies.map(c =>
-        <a key={c.slug} href={`/c/${c.slug}`} className="hoverlift shrink-0 flex items-center gap-3 rounded-2xl border border-line bg-surface ps-2 pe-4 py-2 min-w-[220px]">
+      <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(200px,1fr))]">{p.companies.map(c =>
+        <a key={c.slug} href={`/c/${c.slug}`} className="hoverlift min-w-0 flex items-center gap-3 rounded-2xl border border-line bg-surface ps-2 pe-4 py-2">
           <CompanyLogo c={c} size={48} /><span className="min-w-0"><span className="block font-semibold text-[14px] truncate">{bi(c.short, lang)}</span><span className="block text-[12px] text-ink-3 num">{c.jobs} {L('فرص', 'jobs')}</span></span></a>)}</div>
     </section>}
 

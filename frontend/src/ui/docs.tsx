@@ -73,8 +73,9 @@ export function Timeline({ items, compact }: { items: LogEvent[]; compact?: bool
 }
 
 export function Lifecycle({ steps }: { steps: { label: string; code?: string; done: boolean; current?: boolean }[] }) {
-  return <ol className="flex overflow-x-auto pb-1">
-    {steps.map((s, i) => <li key={i} className="flex-1 min-w-[96px] relative">
+  // كل المراحل ظاهرة: سطر واحد على الشاشات العريضة، وتلتف لسطرين على الجوال (بلا تمرير أفقي)
+  return <ol className="grid grid-cols-4 gap-y-4 sm:flex pb-1">
+    {steps.map((s, i) => <li key={i} className="sm:flex-1 min-w-0 relative">
       <div className="flex items-center">
         <span className={`relative z-10 size-7 rounded-full grid place-items-center border-2 shrink-0 ${s.done ? 'bg-brand border-brand text-on-brand' : s.current ? 'bg-surface border-brass text-brass' : 'bg-surface border-line text-ink-3'}`}>
           {s.done ? <CheckCircle2 size={15} /> : <Circle size={9} fill="currentColor" />}

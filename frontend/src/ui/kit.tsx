@@ -83,7 +83,7 @@ export function Drawer({ open, onClose, children, width = 620 }: { open: boolean
 }
 
 export function Tabs<T extends string>({ value, onChange, tabs }: { value: T; onChange: (v: T) => void; tabs: { v: T; label: ReactNode; count?: number }[] }) {
-  return <div className="flex gap-1 border-b border-line overflow-x-auto" data-noprint>
+  return <div className="flex flex-wrap gap-x-1 border-b border-line" data-noprint>
     {tabs.map(t => <button key={t.v} onClick={() => onChange(t.v)} className={`h-11 px-3.5 -mb-px border-b-2 whitespace-nowrap text-[14px] transition-colors ${value === t.v ? 'border-brand text-brand font-bold' : 'border-transparent text-ink-2 hover:text-ink'}`}>
       {t.label}{t.count !== undefined && <span className="ms-1.5 text-[12px] text-ink-3 num">{t.count}</span>}</button>)}
   </div>

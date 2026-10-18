@@ -38,17 +38,20 @@ export function Jobs() {
       {isLoading && <div className="h-48 animate-pulse" />}
       {error && <Empty title={L('تعذّر تحميل الوظائف', 'Could not load positions')} action={<Btn onClick={() => refetch()}>{L('إعادة المحاولة', 'Retry')}</Btn>}>{error.message}</Empty>}
       {data?.data.length === 0 && <Empty title={L('لا توجد شواغر بعد', 'No positions yet')} action={canCreate && <Btn kind="primary" icon={<Plus size={16} />} onClick={() => setEdit({ open: true, id: null })}>{L('أضف أول شاغر', 'Add the first position')}</Btn>}>{L('أنشئ شاغراً واختر مكان نشره: داخلي، صفحة الشركة، أو البوابة العامة.', 'Create a position and choose where to publish it: internal, company page, or the public portal.')}</Empty>}
-      {!!data?.data.length && <div className="scroll-x"><table className="tbl"><thead><tr>
-        <th>{L('الوظيفة', 'Role')}</th><th>{L('الإدارة', 'Department')}</th><th>{L('المدينة', 'City')}</th><th>{L('الشواغر', 'Openings')}</th><th>{L('المتطلبات', 'Requirements')}</th><th>{L('نطاق الراتب', 'Pay band')}</th>
-        <th>{L('النشر', 'Publishing')}</th>{FIVE.map(s => <th key={s}>{STAGES[s][lang]}</th>)}<th /></tr></thead>
+      {!!data?.data.length && <div className="overflow-hidden"><table className="tbl w-full"><thead><tr>
+        <th>{L('الوظيفة', 'Role')}</th><th className="hidden md:table-cell">{L('المتطلبات والراتب', 'Requirements & pay')}</th>
+        <th className="hidden sm:table-cell">{L('النشر', 'Publishing')}</th><th className="hidden lg:table-cell">{L('المتقدمون حسب المرحلة', 'Applicants by stage')}</th><th /></tr></thead>
         <tbody>{data.data.map(j => <tr key={j.id} className={canEdit ? 'click' : undefined} onClick={canEdit ? () => setEdit({ open: true, id: j.id }) : undefined}>
-          <td className="min-w-[190px]"><div className="font-medium">{bi(j.title, lang)}</div><div className="text-[12px] text-ink-3 ltr text-start whitespace-nowrap">{j.code}</div></td>
-          <td className="min-w-[120px]">{bi(j.dept, lang)}</td><td>{bi(j.city, lang)}</td><td className="num">{j.openings}</td>
-          <td className="text-[13px] text-ink-2 whitespace-nowrap">{j.min_years} {L('سنوات', 'yrs')} · {DEGREES[j.degree][lang]}</td>
-          <td className="num whitespace-nowrap">{j.currency === 'USD' ? '$' : ''}{j.salary_min}–{j.salary_max}{j.currency === 'SYP' ? ' SYP' : ''}</td>
-          <td><Publishing j={j} /></td>
-          {FIVE.map(s => { const n = j.pipeline?.[s] ?? 0; return <td key={s} className={`num text-center ${n ? 'font-semibold' : 'text-ink-3'}`}>{n || '·'}</td> })}
-          <td onClick={e => e.stopPropagation()}><div className="flex gap-1 justify-end">
+          <td><div className="font-medium">{bi(j.title, lang)}</div>
+            <div className="text-[12px] text-ink-3"><span className="ltr inline-block whitespace-nowrap">{j.code}</span> · {bi(j.dept, lang)} · {bi(j.city, lang)} · {L(`${j.openings} شاغر`, `${j.openings} opening${j.openings > 1 ? 's' : ''}`)}</div>
+            <div className="sm:hidden mt-1.5"><Publishing j={j} /></div></td>
+          <td className="hidden md:table-cell text-[13px] text-ink-2"><div className="whitespace-nowrap">{j.min_years} {L('سنوات', 'yrs')} · {DEGREES[j.degree][lang]}</div>
+            <div className="num whitespace-nowrap"><bdi dir="ltr">{j.currency === 'USD' ? '$' : ''}{j.salary_min}–{j.salary_max}{j.currency === 'SYP' ? ' SYP' : ''}</bdi></div></td>
+          <td className="hidden sm:table-cell"><Publishing j={j} /></td>
+          <td className="hidden lg:table-cell"><div className="flex gap-1">{FIVE.map(s => { const n = j.pipeline?.[s] ?? 0
+            return <span key={s} title={STAGES[s][lang]} className={`min-w-[44px] rounded-lg border px-1.5 py-1 text-center ${n ? 'border-brand/40 bg-brand-soft' : 'border-line'}`}>
+              <span className={`block text-[14px] num ${n ? 'font-bold text-brand' : 'text-ink-3'}`}>{n || '·'}</span><span className="block text-[10px] text-ink-3 truncate max-w-[56px]">{STAGES[s][lang]}</span></span> })}</div></td>
+          <td onClick={e => e.stopPropagation()}><div className="flex flex-wrap gap-1 justify-end">
             {j.visibility !== 'internal' && j.accepting && <Btn size="sm" kind="ghost" onClick={() => copy(j)} aria-label={L('نسخ الرابط', 'Copy link')} title={L('نسخ الرابط', 'Copy link')}><Link2 size={15} /></Btn>}
             {canEdit && j.status !== 'draft' && <Btn size="sm" kind={j.status === 'open' ? 'danger' : 'secondary'} icon={j.status === 'open' ? <LockIcon size={14} /> : <Unlock size={14} />} onClick={() => setToggle(j)}>{j.status === 'open' ? L('إغلاق', 'Close') : L('إعادة فتح', 'Reopen')}</Btn>}
           </div></td>

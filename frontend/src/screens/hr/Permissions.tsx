@@ -43,9 +43,9 @@ export function Permissions({ user }: { user: SessionUser }) {
         <Btn kind="primary" icon={<Save size={16} />} disabled={!changes.length} onClick={() => setConfirm(true)}>{L('حفظ', 'Save')}{changes.length ? <span className="num">({changes.length})</span> : null}</Btn>
       </>} />
 
-    <div className="flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label={L('الأدوار', 'Roles')}>
+    <div className="flex flex-wrap gap-2" role="tablist" aria-label={L('الأدوار', 'Roles')}>
       {grid.roles.map(r => <button key={r.key} role="tab" aria-selected={role === r.key} onClick={() => setRole(r.key)}
-        className={`shrink-0 h-10 px-3.5 rounded-xl border text-[13px] font-semibold flex items-center gap-2 ${role === r.key ? 'bg-brand text-on-brand border-brand' : 'bg-surface border-line hover:border-brand/50'}`}>
+        className={`h-10 px-3.5 rounded-xl border text-[13px] font-semibold flex items-center gap-2 ${role === r.key ? 'bg-brand text-on-brand border-brand' : 'bg-surface border-line hover:border-brand/50'}`}>
         {bi(r, lang)}<span className={`text-[11px] font-bold num rounded-full px-1.5 ${role === r.key ? 'bg-white/20' : 'bg-sub text-ink-3'}`}>{r.users}</span>
         {changedRoles.has(r.key) && <span className="size-1.5 rounded-full bg-brass" />}
       </button>)}
@@ -57,12 +57,12 @@ export function Permissions({ user }: { user: SessionUser }) {
       <PermissionGrid grid={grid} cells={draft[role]} base={grid.matrix[role]} readOnly={!editable} onChange={(m, c) => setDraft(d => ({ ...d!, [role]: { ...d![role], [m]: c } }))} />
     </Panel>
 
-    <Panel title={L('المصفوفة كاملة', 'Full matrix')} sub={L('ع عرض · ض إضافة · ت تعديل · ق اعتماد/رفض · ص تصدير · ط طباعة · ح أرشفة — انقر عمود دور لتعديله', 'ع view · ض create · ت edit · ق approve · ص export · ط print · ح archive — click a role column to edit it')} pad={false}>
-      <div className="scroll-x"><table className="tbl min-w-[980px] text-[12.5px]">
-        <thead><tr><th>{L('الوحدة', 'Module')}</th>{grid.roles.map(r => <th key={r.key} className="text-center"><button onClick={() => setRole(r.key)} className={`font-semibold whitespace-nowrap ${role === r.key ? 'text-brand' : ''}`}>{bi(r, lang)}</button></th>)}</tr></thead>
-        <tbody>{grid.modules.map(m => <tr key={m.key}><td className="font-medium whitespace-nowrap">{bi(m, lang)}</td>
+    <Panel className="hidden lg:block" title={L('المصفوفة كاملة', 'Full matrix')} sub={L('ع عرض · ض إضافة · ت تعديل · ق اعتماد/رفض · ص تصدير · ط طباعة · ح أرشفة — انقر عمود دور لتعديله', 'ع view · ض create · ت edit · ق approve · ص export · ط print · ح archive — click a role column to edit it')} pad={false}>
+      <div><table className="tbl w-full table-fixed text-[12px]">
+        <thead><tr><th className="w-[22%]">{L('الوحدة', 'Module')}</th>{grid.roles.map(r => <th key={r.key} className="text-center !px-1"><button onClick={() => setRole(r.key)} className={`font-semibold leading-tight ${role === r.key ? 'text-brand' : ''}`}>{bi(r, lang)}</button></th>)}</tr></thead>
+        <tbody>{grid.modules.map(m => <tr key={m.key}><td className="font-medium leading-tight">{bi(m, lang)}</td>
           {grid.roles.map(r => { const c = draft[r.key][m.key]
-            return <td key={r.key} className={`text-center whitespace-nowrap ${role === r.key ? 'bg-brand-soft/50' : ''}`}>{c.actions.length ? <><span className="font-semibold">{letters(grid, c)}</span>{c.scope !== 'all' && <span className="block text-[10.5px] text-ink-3">{bi(grid.scopes.find(s => s.key === c.scope), lang)}</span>}</> : <span className="text-ink-3">—</span>}</td> })}
+            return <td key={r.key} className={`text-center !px-1 ${role === r.key ? 'bg-brand-soft/50' : ''}`}>{c.actions.length ? <><span className="font-semibold">{letters(grid, c)}</span>{c.scope !== 'all' && <span className="block text-[10.5px] text-ink-3">{bi(grid.scopes.find(s => s.key === c.scope), lang)}</span>}</> : <span className="text-ink-3">—</span>}</td> })}
         </tr>)}</tbody>
       </table></div>
     </Panel>

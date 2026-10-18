@@ -56,20 +56,20 @@ export function Board() {
           <option value="">{L('كل الوظائف', 'All positions')}</option>{data?.jobs.map(j => <option key={j.id} value={j.id}>{bi(j.title, lang)} — {j.code}</option>)}</select>
       </>} />
     {isLoading ? <div className="grid place-items-center py-24"><Loader2 className="animate-spin text-brand" /></div>
-      : <div className="flex gap-3 overflow-x-auto pb-3 items-start">
+      : <div className="grid gap-3 items-start [grid-template-columns:repeat(auto-fill,minmax(232px,1fr))]">
         {COLUMNS.map(st => { const items = list.filter(c => c.stage === st); const sla = data?.sla[st]
           return <section key={st} onDragOver={e => { if (canEdit) { e.preventDefault(); setOver(st) } }} onDragLeave={() => setOver(null)} onDrop={() => drop(st)}
-            className={`w-[280px] shrink-0 rounded-2xl border ${over === st ? 'border-brand bg-brand-soft' : 'border-line bg-sub/70'}`} aria-label={STAGES[st][lang]}>
+            className={`min-w-0 rounded-2xl border ${over === st ? 'border-brand bg-brand-soft' : 'border-line bg-sub/70'}`} aria-label={STAGES[st][lang]}>
             <header className="h-11 px-3 flex items-center justify-between"><span className="font-semibold text-[14px]">{STAGES[st][lang]}</span>
               <span className="text-[12px] text-ink-3 num" title={sla ? L(`مهلة المرحلة ${sla} أيام`, `Stage limit ${sla} days`) : ''}>{items.length}</span></header>
-            <div className="px-2 pb-2 space-y-2 min-h-[120px] max-h-[calc(100vh-250px)] overflow-y-auto">
+            <div className="px-2 pb-2 space-y-2 min-h-[96px] max-h-[460px] overflow-y-auto">
               {items.map(c => <article key={c.id} draggable={canEdit} onDragStart={() => setDrag(c.id)} onDragEnd={() => setDrag(null)} onClick={() => navigate(`/hr/candidates/${c.id}`)}
                 className={`hoverlift bg-surface rounded-xl border border-line p-3 cursor-pointer ${drag === c.id ? 'opacity-50' : ''}`}>
                 <div className="flex items-start gap-2.5"><Avatar size={30} tone={c.internal ? 'ink' : 'brand'} />
                   <div className="flex-1 min-w-0"><div className="font-semibold text-[14px] truncate">{bi(c.name, lang)}</div><div className="text-[12px] text-ink-3 truncate">{bi(c.job.title, lang)}</div></div>
                   <span className={`text-[13px] font-bold num ${c.match >= 75 ? 'text-brand' : c.match >= 55 ? 'text-brass' : 'text-ink-3'}`}>{c.match}{P}</span></div>
                 <div className="flex items-center justify-between gap-2 mt-2.5 text-[12px]">
-                  <span className="flex items-center gap-1.5 min-w-0"><span className="text-ink-3 ltr num truncate">#{c.ref.split('-').pop()}</span>{c.internal && <Badge tone="info">{L('داخلي', 'Internal')}</Badge>}{c.referred && <Badge tone="brass">{L('إحالة', 'Referral')}</Badge>}{c.band === 'review' && c.stage === 'new' && <Badge tone="warn">{L('مطابقة منخفضة', 'Low match')}</Badge>}</span>
+                  <span className="flex items-center gap-1.5 min-w-0"><span className="text-ink-3 ltr num truncate">#{c.ref.split('-').pop()}</span>{c.internal && <Badge tone="info">{L('داخلي', 'Internal')}</Badge>}{c.referred && <span title={c.referrer ? L(`إحالة من ${c.referrer.ar}`, `Referred by ${c.referrer.en}`) : undefined}><Badge tone="brass">{L('إحالة موظف', 'Referral')}</Badge></span>}{c.band === 'review' && c.stage === 'new' && <Badge tone="warn">{L('مطابقة منخفضة', 'Low match')}</Badge>}</span>
                   {c.sla === 'late' ? <Badge tone="danger"><Clock size={11} />{L(`متأخر ${c.days_in_stage - c.sla_limit} ي`, `${c.days_in_stage - c.sla_limit}d over`)}</Badge>
                     : c.sla === 'due' ? <Badge tone="warn">{L('يستحق اليوم', 'Due today')}</Badge>
                     : c.offer === 'accepted' ? <Badge tone="brand">{L('وقّع العرض', 'Offer signed')}</Badge>
