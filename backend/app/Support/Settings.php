@@ -32,7 +32,18 @@ class Settings
             // نقاط الإحالة المرحلية (SRS §10.9): الفرز، المقابلة، المباشرة، اجتياز التجربة — ×hard_to_fill_x للوظائف الحرجة
             'referral_stages' => [10, 20, 30, 40], 'hard_to_fill_x' => 2,
             // قاعدة السير (D-02): مدة الاحتفاظ بالسيرة قبل أرشفتها تلقائياً
-            'cv_retention_months' => 24],
+            'cv_retention_months' => 24,
+            // المباشرة F-19: عدد البنود المنجزة الذي ينقل الموظف إلى فترة التجربة
+            'probation_at' => 14],
+        // معايرة المطابقة (لكل شركة، والأوزان قابلة للتجاوز لكل شاغر) — القيم الافتراضية = الديمو، كلها نسب مئوية
+        'match' => [
+            'weights' => ['exp' => 30, 'deg' => 25, 'sal' => 20, 'eng' => 15, 'file' => 10],                // مجموعها 100، و0 يلغي المعيار
+            'exp' => ['meets' => 70, 'bonus_years' => 3, 'below_max' => 60],                                 // يستوفي الحد ← meets٪ ثم يرتفع خطياً حتى 100٪ بعد bonus_years سنوات إضافية؛ دون الحد ← حتى below_max٪ بالتناسب
+            'deg' => ['above' => 100, 'equal' => 85, 'one_below' => 40, 'lower' => 10],
+            'sal' => ['to_mid' => 100, 'to_max' => 75, 'over' => 50, 'over_penalty' => 2],                    // حتى منتصف النطاق، حتى أعلاه، فوقه يبدأ من over٪ وينقص over_penalty نقطة لكل 1٪ زيادة
+            'eng' => ['excellent' => 100, 'good' => 70, 'fair' => 40, 'weak' => 10],
+            'file' => ['cv' => true, 'education' => true, 'experience' => true, 'refs' => true, 'linkedin' => true], // ما يُحسب في اكتمال الملف
+        ],
         // الاختبار الأولي (D-34): مفتاح Claude API مشفّراً، والنموذج
         'ai' => ['api_key' => null, 'model' => 'claude-opus-5-5'],
         // قالب الطباعة (SRS §10.4): الشعار وحجمه ومحاذاته والهامش
@@ -92,6 +103,15 @@ class Settings
 
     public static function company(string $field): ?string { return self::get('company')[$field] ?? null; }
     public static function prefix(string $kind): string { return self::get('prefixes')[$kind] ?? self::DEFAULTS['prefixes'][$kind]; }
+    /** معايرة المطابقة للشركة: القيم المحفوظة فوق الافتراضية (مفتاحاً بمفتاح، حتى لا تنكسر بإضافة إعداد جديد) */
+    public static function match(): array
+    {
+        $saved = self::get('match') ?? [];
+        $out = [];
+        foreach (self::DEFAULTS['match'] as $k => $def) $out[$k] = array_merge($def, array_intersect_key($saved[$k] ?? [], $def));   // بترتيب الافتراضي (jsonb لا يحفظ الترتيب)
+        return $out;
+    }
+
     public static function rule(string $key): mixed { return self::get('rules')[$key] ?? self::DEFAULTS['rules'][$key]; }
 
     /** قيمة السياسة النافذة في تاريخ معيّن (افتراضياً اليوم) */

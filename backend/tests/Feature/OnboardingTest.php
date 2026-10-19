@@ -133,7 +133,7 @@ class OnboardingTest extends TestCase
         $this->login('hr@alfarada.sy');
         $this->postJson("/api/hr/onboarding/{$id}/confirm")->assertStatus(409)->assertJsonPath('code', 'not_in_probation');
         foreach ([2, 3, 5, 6, 7, 8, 9] as $i) $this->postJson("/api/hr/onboarding/{$id}/check", ['index' => $i])->assertOk();
-        $this->assertSame([F19::PROBATION_AT, 'probation'], [$ob()->doneCount(), Employee::find($id)->status]);
+        $this->assertSame([14, 'probation'], [$ob()->doneCount(), Employee::find($id)->status]);
         $page = $this->getJson("/api/hr/onboarding/{$id}")->json('data');
         $this->assertSame('2027-01-10', $page['probation']['end']);   // 90 يوماً من بدء التجربة
         $this->postJson("/api/hr/onboarding/{$id}/confirm", ['note' => 'أداء ممتاز'])->assertOk()->assertJsonPath('data.items.27.done', true);

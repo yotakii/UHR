@@ -40,4 +40,24 @@ class MatchScoreTest extends TestCase
         $this->assertSame('4 من 3 مطلوبة', $r['parts'][0]['note_ar']);
         $this->assertSame('Above band', $r['parts'][2]['note_en']);
     }
+
+    public function test_company_calibration_and_job_weights_change_the_score(): void
+    {
+        $job = new JobOpening(['min_years' => 3, 'degree' => 2, 'salary_min' => 700, 'salary_max' => 1100]);
+        $cand = new Candidate(['years_exp' => 3, 'degree_level' => 2, 'salary' => 800, 'english' => 'weak', 'education' => [[]], 'experience' => [[]], 'refs' => [], 'linkedin' => '', 'cv_file_id' => 5]);
+        $cfg = \App\Support\Settings::DEFAULTS['match'];
+        $this->assertSame(70, MatchScore::total($cand, $job, $cfg));          // 30×.7 + 25×.85 + 20×1 + 15×.1 + 10×.6 = 69.75
+        // الخبرة فقط بوزن 100، ومن يستوفي الحد يأخذ 100٪ مباشرة
+        $cfg['weights'] = ['exp' => 100, 'deg' => 0, 'sal' => 0, 'eng' => 0, 'file' => 0];
+        $cfg['exp']['meets'] = 100;
+        $r = MatchScore::compute($cand, $job, $cfg);
+        $this->assertSame([100, ['exp']], [$r['total'], array_column($r['parts'], 'key')]);   // المعايير بوزن 0 لا تظهر
+        // اكتمال الملف: السيرة فقط تُحسب
+        $cfg['weights'] = ['exp' => 0, 'deg' => 0, 'sal' => 0, 'eng' => 0, 'file' => 100];
+        $cfg['file'] = ['cv' => true, 'education' => false, 'experience' => false, 'refs' => false, 'linkedin' => false];
+        $this->assertSame(100, MatchScore::total($cand, $job, $cfg));
+        // أوزان الشاغر تتجاوز أوزان الشركة إذا كان مجموعها 100
+        $job->match_weights = ['exp' => 0, 'deg' => 0, 'sal' => 0, 'eng' => 100, 'file' => 0];
+        $this->assertSame(10, MatchScore::total($cand, $job, MatchScore::config($job, \App\Support\Settings::DEFAULTS['match'])));
+    }
 }

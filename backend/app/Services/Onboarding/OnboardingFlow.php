@@ -166,7 +166,7 @@ class OnboardingFlow
     /** ≥ 14 بنداً والحالة «قيد المباشرة» ← فترة التجربة */
     private function advance(Employee $e, Onboarding $ob): void
     {
-        if ($e->status !== 'onboarding' || $ob->doneCount() < F19::PROBATION_AT) return;
+        if ($e->status !== 'onboarding' || $ob->doneCount() < (int) Settings::rule('probation_at')) return;
         $days = (int) Settings::policy('probation_days');
         $e->update(['status' => 'probation']);
         $ob->update(['probation_started_at' => now()->toDateString()]);

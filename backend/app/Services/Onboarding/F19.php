@@ -42,9 +42,6 @@ class F19
     /** فهرس البند => مصدره التلقائي */
     public const AUTO = [4 => 'memo', 10 => 'f22', 12 => 'f20', 22 => 'custody', 27 => 'confirm'];
 
-    /** عدد البنود المنجزة الذي ينقل الموظف إلى فترة التجربة */
-    public const PROBATION_AT = 14;
-
     public static function blank(int ...$done): array
     {
         return array_map(fn ($i) => in_array($i, $done, true), range(0, count(self::ITEMS) - 1));

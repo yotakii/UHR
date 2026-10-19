@@ -113,6 +113,7 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
         Route::post('/cv/{id}/archive', [CvController::class, 'archive'])->whereNumber('id');
     });
     Route::put('/recruitment-rules', [RulesController::class, 'update'])->middleware('perm:settings,edit');
+    Route::post('/recruitment-rules/preview', [RulesController::class, 'preview'])->middleware('perm:settings,edit');
     // «اعتماداتي» — قرار التعيين F-31: لصاحب المستوى فقط (التحقق في AppointmentFlow)
     Route::get('/approvals', [ApprovalController::class, 'index']);
     Route::post('/approvals/{id}', [ApprovalController::class, 'decide'])->whereNumber('id');

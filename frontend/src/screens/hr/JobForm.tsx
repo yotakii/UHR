@@ -2,13 +2,14 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Plus, Trash2, X, AlertTriangle, Globe, Building2, Lock } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { ApiError } from '../../lib/api'
-import { useHrJob, useLookups, useSaveJob, type HrCompany, type JobInput, type Visibility } from '../../lib/hr'
+import { useHrJob, useLookups, useSaveJob, type HrCompany, type JobInput, type MatchWeights, type Visibility } from '../../lib/hr'
+import { useRules } from '../../lib/candidates'
 import { Btn, Drawer, Field, Seg, toast } from '../../ui/kit'
 
 const EMPTY: JobInput = {
   title_ar: '', title_en: '', department_id: '', location_id: '', employment_type: 'full_time', openings: 1, min_years: 0, degree: 2,
   salary_min: '', salary_max: '', currency: 'USD', summary_ar: '', summary_en: '', requirements: [{ ar: '', en: '' }],
-  visibility: 'public', closes_at: '', hard_to_fill: false, requires_photo: false, status: 'open',
+  visibility: 'public', closes_at: '', hard_to_fill: false, requires_photo: false, status: 'open', match_weights: null,
 }
 
 /** إنشاء/تعديل شاغر ونشره (لوحة 620px) — الحقول باللغتين، ومكان النشر وحالة مراجعة المنصة */
@@ -28,7 +29,7 @@ export function JobForm({ open, id, company, onClose }: { open: boolean; id: num
       title_ar: existing.title_ar, title_en: existing.title_en, department_id: existing.department_id, location_id: existing.location_id, employment_type: existing.employment_type,
       openings: existing.openings, min_years: existing.min_years, degree: existing.degree, salary_min: existing.salary_min, salary_max: existing.salary_max, currency: existing.currency,
       summary_ar: existing.summary_ar, summary_en: existing.summary_en, requirements: existing.requirements.length ? existing.requirements : [{ ar: '', en: '' }],
-      visibility: existing.visibility, closes_at: existing.closes_at ?? '', hard_to_fill: existing.hard_to_fill, requires_photo: existing.requires_photo, status: existing.status,
+      visibility: existing.visibility, closes_at: existing.closes_at ?? '', hard_to_fill: existing.hard_to_fill, requires_photo: existing.requires_photo, status: existing.status, match_weights: existing.match_weights,
     })
   }, [open, id, existing])
   const set = <K extends keyof JobInput>(k: K, x: JobInput[K]) => { setV(s => ({ ...s, [k]: x })); if (save.error) save.reset() }
@@ -100,6 +101,7 @@ export function JobForm({ open, id, company, onClose }: { open: boolean; id: num
           </div>
           <label className="flex gap-3 text-[14px]"><input type="checkbox" className="mt-1 accent-[var(--primary)]" checked={v.hard_to_fill} onChange={x => set('hard_to_fill', x.target.checked)} /><span>{L('وظيفة حرجة / نادرة — «مطلوب بشدة» في البوابة ومضاعفة نقاط الإحالة', 'Critical / hard-to-fill — "Hiring urgently" on the portal and double referral points')}</span></label>
           <label className="flex gap-3 text-[14px]"><input type="checkbox" className="mt-1 accent-[var(--primary)]" checked={v.requires_photo} onChange={x => set('requires_photo', x.target.checked)} /><span>{L('تتطلب صورة شخصية مع الطلب', 'Requires a personal photo with the application')}</span></label>
+          <WeightsField value={v.match_weights} onChange={w => set('match_weights', w)} error={err('match_weights')} />
         </section>
       </div>
       <footer className="px-5 py-3 border-t border-line-2 flex justify-end gap-2 shrink-0">
@@ -108,4 +110,21 @@ export function JobForm({ open, id, company, onClose }: { open: boolean; id: num
       </footer>
     </div>
   </Drawer>
+}
+
+/** أوزان مطابقة خاصة بهذا الشاغر (اختياري) — بدونها تُستخدم أوزان الشركة من «قواعد التوظيف والمطابقة» */
+function WeightsField({ value, onChange, error }: { value: MatchWeights | null; onChange: (w: MatchWeights | null) => void; error?: string }) {
+  const L = useL()
+  const rules = useRules().data
+  const base = rules?.match.weights ?? { exp: 30, deg: 25, sal: 20, eng: 15, file: 10 }
+  const label: Record<keyof MatchWeights, string> = { exp: L('الخبرة', 'Experience'), deg: L('المؤهل', 'Qualification'), sal: L('الراتب', 'Salary'), eng: L('الإنكليزية', 'English'), file: L('اكتمال الملف', 'Completeness') }
+  const sum = value ? Object.values(value).reduce((a, b) => a + (Number(b) || 0), 0) : 100
+  return <div className="rounded-xl border border-line p-3 space-y-2">
+    <label className="flex gap-3 text-[14px]"><input type="checkbox" className="mt-1 accent-[var(--primary)]" checked={!!value} onChange={x => onChange(x.target.checked ? { ...base } : null)} />
+      <span>{L('أوزان مطابقة خاصة بهذا الشاغر', 'Custom match weights for this position')}<span className="block text-[12px] text-ink-3">{L('بدونها تُطبَّق أوزان الشركة. المجموع يجب أن يكون 100.', 'Otherwise the company weights apply. They must add up to 100.')}</span></span></label>
+    {value && <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(110px,1fr))]">{(Object.keys(label) as (keyof MatchWeights)[]).map(k => <label key={k} className="text-[12px] text-ink-3">
+      <span className="block mb-1 truncate">{label[k]}</span><input type="number" min={0} max={100} step={5} className="field num text-center" value={value[k]} onChange={x => onChange({ ...value, [k]: Number(x.target.value) })} /></label>)}</div>}
+    {value && <div className={`text-[12px] ${sum === 100 ? 'text-ink-3' : 'text-danger'}`}>{L('المجموع', 'Total')} <span className="num">{sum}</span>/100</div>}
+    {error && <div className="text-[12px] text-danger">{error}</div>}
+  </div>
 }

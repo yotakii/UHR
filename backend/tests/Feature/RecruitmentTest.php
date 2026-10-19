@@ -191,4 +191,33 @@ class RecruitmentTest extends TestCase
         $this->login('jobs@atmata.sy');
         $this->putJson('/api/hr/recruitment-rules', $ok)->assertForbidden();
     }
+
+    public function test_company_calibrates_matching_with_preview_and_open_applications_are_rescored(): void
+    {
+        $this->login('admin@alfarada.sy');
+        $cur = $this->getJson('/api/hr/recruitment-rules')->assertOk()->json();
+        $this->assertSame(30, $cur['match']['weights']['exp']);
+        $m = $cur['match'];
+        $m['weights'] = ['exp' => 50, 'deg' => 50, 'sal' => 0, 'eng' => 0, 'file' => 0];
+        // مجموع الأوزان لا يساوي 100 ← رفض
+        $bad = $m; $bad['weights']['exp'] = 40;
+        $this->postJson('/api/hr/recruitment-rules/preview', ['match' => $bad])->assertStatus(422)->assertJsonValidationErrors('match.weights');
+        $p = $this->postJson('/api/hr/recruitment-rules/preview', ['match' => $m])->assertOk()->json('data');
+        $this->assertNotEmpty($p);
+        $this->assertArrayHasKey('new', $p[0]);
+
+        $open = Candidate::whereNotIn('stage', ['hired', 'rejected'])->first();
+        $r = $this->putJson('/api/hr/recruitment-rules', ['rules' => $cur['rules'], 'stage_sla' => $cur['stage_sla'], 'match' => $m])->assertOk();
+        $this->assertSame(50, $r->json('match.weights.deg'));
+        $this->assertSame(collect($p)->firstWhere('id', $open->id)['new'] ?? $open->refresh()->match_score, $open->refresh()->match_score);
+        $this->assertSame(0, collect($this->getJson("/api/hr/candidates/{$open->id}")->json('data.match_parts'))->where('key', 'sal')->count());
+
+        // أوزان خاصة بشاغر (من يملك تعديل الشواغر)
+        $this->login('hr@alfarada.sy');
+        $job = $this->getJson('/api/hr/jobs/'.$open->job_opening_id)->json('data');
+        $body = array_intersect_key($job, array_flip(['title_ar', 'title_en', 'department_id', 'location_id', 'employment_type', 'openings', 'min_years', 'degree', 'salary_min', 'salary_max', 'currency', 'summary_ar', 'summary_en', 'requirements', 'visibility', 'hard_to_fill', 'requires_photo', 'status']));
+        $this->putJson('/api/hr/jobs/'.$open->job_opening_id, $body + ['match_weights' => ['exp' => 10, 'deg' => 10, 'sal' => 10, 'eng' => 10, 'file' => 10]])->assertStatus(422)->assertJsonValidationErrors('match_weights');
+        $this->putJson('/api/hr/jobs/'.$open->job_opening_id, $body + ['match_weights' => ['exp' => 0, 'deg' => 0, 'sal' => 0, 'eng' => 100, 'file' => 0]])->assertOk()->assertJsonPath('data.match_weights.eng', 100);
+        $this->assertSame(['eng'], array_column($this->getJson("/api/hr/candidates/{$open->id}")->json('data.match_parts'), 'key'));
+    }
 }

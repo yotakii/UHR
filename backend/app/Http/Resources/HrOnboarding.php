@@ -36,7 +36,7 @@ class HrOnboarding
             'manager' => $e->manager ? ['ar' => $e->manager->name, 'en' => $e->manager->name_en] : null,
             'city' => ['ar' => $e->location->name_ar, 'en' => $e->location->name_en],
             'items' => array_map(fn ($it, $i) => ['ar' => $it[0], 'en' => $it[1], 'done' => (bool) ($ob->checklist[$i] ?? false), 'auto' => F19::AUTO[$i] ?? null], F19::ITEMS, array_keys(F19::ITEMS)),
-            'probation_at' => F19::PROBATION_AT,
+            'probation_at' => (int) \App\Support\Settings::rule('probation_at'),
             'probation' => ['started' => $ob->probation_started_at?->toDateString(), 'end' => $end, 'due' => $end && Carbon::parse($end)->lte(now()), 'confirmed_at' => $ob->confirmed_at?->toIso8601String()],
             'memo' => ['sent_at' => $ob->memo_sent_at?->toIso8601String(), 'text' => WelcomeMemo::text($e)],
             'f22' => $sig('f22'), 'f20' => [...$sig('f20'), 'mother_name' => $ob->f20_mother_name], 'conduct' => $sig('conduct'),

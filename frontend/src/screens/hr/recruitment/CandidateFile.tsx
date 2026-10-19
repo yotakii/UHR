@@ -142,7 +142,7 @@ function FileTab({ c }: { c: CandFile }) {
 
 function MatchTab({ c }: { c: CandFile }) {
   const L = useL(); const lang = useLang(); const P = lang === 'ar' ? '٪' : '%'
-  return <Panel title={L('مطابقة المتقدم مع متطلبات الوظيفة', 'Applicant vs role requirements')} sub={L('حساب بقواعد ثابتة وأوزان معتمدة في سياسات التوظيف', 'Rule-based calculation with the weights set in hiring policy')}>
+  return <Panel title={L('مطابقة المتقدم مع متطلبات الوظيفة', 'Applicant vs role requirements')} sub={<>{L('حسب معايرة شركتك: الأوزان ودرجة كل حالة من', 'Per your company calibration: weights and per-case scores in')} <a href="/hr/settings/recruitment" className="text-brand font-semibold">{L('قواعد التوظيف والمطابقة', 'Recruitment & matching rules')}</a></>}>
     <div className="grid lg:grid-cols-[1fr_auto] gap-8 items-center"><div className="space-y-4 max-w-2xl min-w-0">{c.match_parts.map(p => <div key={p.key} className="grid grid-cols-[120px_1fr] sm:grid-cols-[150px_1fr_120px] gap-x-4 gap-y-1 items-center text-[14px]">
       <span>{p[lang]} <span className="text-ink-3 text-[12px] num">({p.weight}{P})</span></span><Progress value={p.score * 100} tone={p.score >= 0.75 ? 'brand' : p.score >= 0.45 ? 'brass' : 'danger'} /><span className="text-[13px] text-ink-2 col-span-2 sm:col-span-1">{lang === 'ar' ? p.note_ar : p.note_en}</span></div>)}
       <div className="pt-3 border-t border-line-2 flex justify-between font-semibold"><span>{L('النتيجة', 'Result')}</span><span className="num">{c.match}{P}</span></div>

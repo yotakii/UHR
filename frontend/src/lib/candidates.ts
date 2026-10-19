@@ -39,7 +39,17 @@ export interface CandFile extends Omit<CandCard, 'offer' | 'appointment' | 'job'
   keep_cv: boolean; cv_status: 'active' | 'archived' | 'erased'; test_detail: import('./tests').CandTestDetail
 }
 export type OfferInput = Pick<HrOffer, 'title' | 'contract' | 'currency' | 'basic' | 'housing' | 'transport' | 'fuel' | 'leave_days' | 'start_date'>
-export interface Rules { match_threshold: number; review_min: number; reject_max: number; auto_reject: boolean; auto_screen: boolean; sla_alerts: boolean; whatsapp_nudge: boolean; referral_stages: number[]; hard_to_fill_x: number }
+export interface Rules { match_threshold: number; review_min: number; reject_max: number; auto_reject: boolean; auto_screen: boolean; sla_alerts: boolean; whatsapp_nudge: boolean; referral_stages: number[]; hard_to_fill_x: number; cv_retention_months: number; probation_at: number }
+/** معايرة المطابقة — كل القيم نسب مئوية (عدا السنوات ومعامل الخصم) */
+export interface MatchConfig {
+  weights: Record<'exp' | 'deg' | 'sal' | 'eng' | 'file', number>
+  exp: { meets: number; bonus_years: number; below_max: number }
+  deg: { above: number; equal: number; one_below: number; lower: number }
+  sal: { to_mid: number; to_max: number; over: number; over_penalty: number }
+  eng: { excellent: number; good: number; fair: number; weak: number }
+  file: { cv: boolean; education: boolean; experience: boolean; refs: boolean; linkedin: boolean }
+}
+export interface RulesData { rules: Rules; stage_sla: Record<string, number>; match: MatchConfig; defaults: { rules: Rules; stage_sla: Record<string, number>; match: MatchConfig } }
 export interface MyApprovalItem { candidate: CandCard & { name_ar: string; gender: 'M' | 'F' }; job: { title: Bi; dept: Bi }; offer: (OfferInput & { total: number }) | null; appointment: HrAppointment }
 
 export const useBoard = (job?: number, q?: string) => useQuery({
@@ -57,10 +67,13 @@ export const useNote = (id: number) => useMutation({ mutationFn: (text: string) 
 export const useInterview = (id: number) => useMutation({ mutationFn: (v: { ratings: Record<string, number>; notes: string; recommendation: string }) => post(`/hr/candidates/${id}/interview`, 'PUT', v), onSuccess: settle })
 export const useIssueOffer = (id: number) => useMutation({ mutationFn: (v: OfferInput) => post(`/hr/candidates/${id}/offer`, 'PUT', v), onSuccess: settle })
 
-export const useRules = () => useQuery({ queryKey: ['hr', 'rules'], queryFn: () => api<{ rules: Rules; stage_sla: Record<string, number> }>('/hr/recruitment-rules') })
+export const useRules = () => useQuery({ queryKey: ['hr', 'rules'], queryFn: () => api<RulesData>('/hr/recruitment-rules') })
 export const useSaveRules = () => useMutation({
-  mutationFn: (v: { rules: Rules; stage_sla: Record<string, number> }) => api<{ rules: Rules; stage_sla: Record<string, number> }>('/hr/recruitment-rules', { method: 'PUT', json: v }),
-  onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['hr', 'rules'] }); queryClient.invalidateQueries({ queryKey: ['hr', 'candidates'] }) },
+  mutationFn: (v: { rules: Rules; stage_sla: Record<string, number>; match: MatchConfig }) => api<RulesData & { recomputed: number }>('/hr/recruitment-rules', { method: 'PUT', json: v }),
+  onSuccess: d => { queryClient.setQueryData(['hr', 'rules'], d); for (const k of ['candidates', 'candidate', 'cv']) queryClient.invalidateQueries({ queryKey: ['hr', k] }) },
+})
+export const usePreviewMatch = () => useMutation({
+  mutationFn: (match: MatchConfig) => api<{ data: { id: number; name: Bi; job: Bi; current: number; new: number }[] }>('/hr/recruitment-rules/preview', { method: 'POST', json: { match } }).then(r => r.data),
 })
 
 export const useMyApprovals = () => useQuery({ queryKey: ['hr', 'approvals'], queryFn: () => api<{ data: MyApprovalItem[] }>('/hr/approvals').then(r => r.data) })

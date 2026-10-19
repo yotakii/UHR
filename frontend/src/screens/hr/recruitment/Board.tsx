@@ -8,7 +8,6 @@ import { STAGES, type Stage } from '../../../lib/recruitment'
 import type { ApiError } from '../../../lib/api'
 import { Avatar, Badge, Btn, PageHead, toast } from '../../../ui/kit'
 import { DecisionDialog } from '../../../ui/decision'
-import { RulesModal } from './RulesModal'
 
 const COLUMNS: Stage[] = ['new', 'screening', 'interview', 'technical', 'offer', 'hired', 'rejected']
 
@@ -29,7 +28,7 @@ export function Board() {
   const { data, isLoading } = useBoard(job, search)
   const move = useMove()
   const [drag, setDrag] = useState<number | null>(null); const [over, setOver] = useState<Stage | null>(null)
-  const [reject, setReject] = useState<CandCard | null>(null); const [rulesOpen, setRulesOpen] = useState(false)
+  const [reject, setReject] = useState<CandCard | null>(null);
   const canEdit = can(me, 'candidates', 'edit'), canDecide = can(me, 'candidates', 'decide')
   const list = data?.data ?? []
 
@@ -50,7 +49,7 @@ export function Board() {
   return <div className="max-w-[1500px] mx-auto">
     <PageHead title={L('المتقدمون', 'Applicants')} sub={L('اسحب البطاقة لنقل المتقدم بين المراحل، أو افتحها لعرض ملفه.', 'Drag a card to move it between stages, or open it to see the file.')}
       actions={<>
-        <Btn icon={<Settings2 size={15} />} onClick={() => setRulesOpen(true)}>{L('قواعد الأتمتة', 'Automation rules')}</Btn>
+        <Btn icon={<Settings2 size={15} />} onClick={() => navigate('/hr/settings/recruitment')}>{L('قواعد التوظيف والمطابقة', 'Recruitment & matching rules')}</Btn>
         <input className="field sm:!w-56" placeholder={L('بحث بالاسم أو رقم الطلب', 'Search name or reference')} value={q} onChange={e => setQ(e.target.value)} aria-label={L('بحث', 'Search')} />
         <select className="field sm:!w-60" value={job ?? ''} onChange={e => setQuery({ job: e.target.value || undefined })} aria-label={L('الوظيفة', 'Position')}>
           <option value="">{L('كل الوظائف', 'All positions')}</option>{data?.jobs.map(j => <option key={j.id} value={j.id}>{bi(j.title, lang)} — {j.code}</option>)}</select>
@@ -81,7 +80,6 @@ export function Board() {
             </div>
           </section> })}
       </div>}
-    <RulesModal open={rulesOpen} onClose={() => setRulesOpen(false)} />
     <DecisionDialog open={!!reject} onClose={() => setReject(null)} tone="danger" reasonRequired presets={rejectPresets(L)}
       title={L('عدم قبول المتقدم', 'Not selecting the applicant')} reasonLabel={L('سبب عدم القبول', 'Reason for not selecting')}
       subject={reject && <><span className="font-semibold">{bi(reject.name, lang)}</span> · {bi(reject.job.title, lang)}<div className="text-[13px] text-ink-2 mt-1">{L('سيصل المتقدم إشعار مهذب بانتهاء مراجعة طلبه.', 'The applicant will receive a courteous notice.')}</div></>}

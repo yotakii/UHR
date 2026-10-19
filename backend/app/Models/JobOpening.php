@@ -23,7 +23,7 @@ class JobOpening extends Model
     protected function casts(): array
     {
         return ['requirements' => 'array', 'posted_at' => 'date', 'closes_at' => 'date', 'portal_reviewed_at' => 'datetime',
-            'salary_min' => 'float', 'salary_max' => 'float', 'hard_to_fill' => 'boolean', 'requires_photo' => 'boolean'];
+            'salary_min' => 'float', 'salary_max' => 'float', 'hard_to_fill' => 'boolean', 'requires_photo' => 'boolean', 'match_weights' => 'array', 'test_enabled' => 'boolean'];
     }
 
     public function department(): BelongsTo { return $this->belongsTo(Department::class); }

@@ -34,8 +34,20 @@ class JobRequest extends FormRequest
             'visibility' => ['required', Rule::in(JobOpening::VISIBILITY)],
             'closes_at' => ['nullable', 'date', 'after_or_equal:today'],
             'hard_to_fill' => ['boolean'], 'requires_photo' => ['boolean'],
+            // أوزان مطابقة خاصة بالشاغر (اختياري) — مجموعها 100، وإلا تُستخدم أوزان الشركة
+            'match_weights' => ['nullable', 'array'], 'match_weights.exp' => ['required_with:match_weights', 'integer', 'between:0,100'], 'match_weights.deg' => ['required_with:match_weights', 'integer', 'between:0,100'],
+            'match_weights.sal' => ['required_with:match_weights', 'integer', 'between:0,100'], 'match_weights.eng' => ['required_with:match_weights', 'integer', 'between:0,100'],
+            'match_weights.file' => ['required_with:match_weights', 'integer', 'between:0,100'],
             'status' => ['required', Rule::in(['draft', 'open', 'closed'])],
         ];
+    }
+
+    public function withValidator(Validator $v): void
+    {
+        $v->after(function ($v) {
+            $w = $this->input('match_weights');
+            if (is_array($w) && array_sum(array_map('intval', $w)) !== 100) $v->errors()->add('match_weights', L::t('مجموع الأوزان يجب أن يكون 100', 'Weights must add up to 100'));
+        });
     }
 
     public function messages(): array

@@ -75,7 +75,7 @@ class JobController extends Controller
             'hard_to_fill' => $j->hard_to_fill, 'requires_photo' => $j->requires_photo, 'accepting' => $j->acceptingApplications(), 'test_enabled' => $j->test_enabled,
         ];
         if ($full) $out += ['title_ar' => $j->title_ar, 'title_en' => $j->title_en, 'summary_ar' => $j->summary_ar, 'summary_en' => $j->summary_en,
-            'requirements' => $j->requirements, 'department_id' => $j->department_id, 'location_id' => $j->location_id, 'employment_type' => $j->employment_type];
+            'requirements' => $j->requirements, 'match_weights' => $j->match_weights, 'department_id' => $j->department_id, 'location_id' => $j->location_id, 'employment_type' => $j->employment_type];
         return $out;
     }
 }

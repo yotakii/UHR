@@ -14,11 +14,13 @@ export interface HrJob {
   posted_at: string | null; closes_at: string | null; hard_to_fill: boolean; requires_photo: boolean; accepting: boolean; test_enabled: boolean
   pipeline?: Record<Stage, number>
 }
-export interface HrJobFull extends HrJob { title_ar: string; title_en: string; summary_ar: string; summary_en: string; requirements: Bi[]; department_id: number; location_id: number; employment_type: string }
+export interface HrJobFull extends HrJob { title_ar: string; title_en: string; summary_ar: string; summary_en: string; requirements: Bi[]; department_id: number; location_id: number; employment_type: string; match_weights: MatchWeights | null }
+export type MatchWeights = Record<'exp' | 'deg' | 'sal' | 'eng' | 'file', number>
 export interface JobInput {
   title_ar: string; title_en: string; department_id: number | ''; location_id: number | ''; employment_type: string; openings: number; min_years: number; degree: number
   salary_min: number | ''; salary_max: number | ''; currency: 'USD' | 'SYP'; summary_ar: string; summary_en: string; requirements: Bi[]
   visibility: Visibility; closes_at: string; hard_to_fill: boolean; requires_photo: boolean; status: 'draft' | 'open' | 'closed'
+  match_weights: MatchWeights | null
 }
 export interface Lookups { departments: (Bi & { id: number })[]; locations: (Bi & { id: number })[]; types: (Bi & { code: string })[]; degrees: Bi[] }
 export type HrCompany = CompanyCard & { portal_enabled: boolean; portal_review: boolean }

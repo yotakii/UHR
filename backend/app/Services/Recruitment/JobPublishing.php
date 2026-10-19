@@ -32,7 +32,10 @@ class JobPublishing
             $job->portal_status = $company->portal_review ? 'pending' : 'approved';
             $job->portal_note = null;
         }
+        $reweighted = $job->exists && $job->isDirty(['match_weights', 'min_years', 'degree', 'salary_min', 'salary_max']);
+        if (array_key_exists('match_weights', $data) && is_array($data['match_weights'])) $job->match_weights = array_map('intval', array_intersect_key($data['match_weights'], array_flip(MatchScore::KEYS)));
         $job->save();
+        if ($reweighted) MatchScore::recompute($job);
         return $job;
     }
 
