@@ -9,9 +9,11 @@ use App\Http\Controllers\Api\FileController;
 use App\Http\Controllers\Api\FormController;
 use App\Http\Controllers\Api\Hr\ApprovalController;
 use App\Http\Controllers\Api\Hr\CandidateController;
+use App\Http\Controllers\Api\Hr\CvController;
 use App\Http\Controllers\Api\Hr\DashboardController;
 use App\Http\Controllers\Api\Hr\EmployeeController;
 use App\Http\Controllers\Api\Hr\JobController;
+use App\Http\Controllers\Api\Hr\JobTestController;
 use App\Http\Controllers\Api\Hr\OnboardingController;
 use App\Http\Controllers\Api\Hr\PermissionController;
 use App\Http\Controllers\Api\Hr\RulesController;
@@ -19,6 +21,7 @@ use App\Http\Controllers\Api\Hr\SearchController;
 use App\Http\Controllers\Api\NoticeController;
 use App\Http\Controllers\Api\Platform\PlatformController;
 use App\Http\Controllers\Api\PublicController;
+use App\Http\Controllers\Api\PublicTestController;
 use Illuminate\Support\Facades\Route;
 
 // كل المسارات هنا تحت البادئة /api
@@ -34,6 +37,12 @@ Route::prefix('public')->group(function () {
     Route::get('/jobs/{slug}/{code}', [PublicController::class, 'job']);
     Route::post('/jobs/{slug}/{code}/check', [ApplicationController::class, 'checkDuplicate'])->middleware('throttle:30,1');
     Route::post('/jobs/{slug}/{code}/apply', [ApplicationController::class, 'store'])->middleware('throttle:applications');
+    // الاختبار الأولي للمتقدم: الرابط السري (D-34)
+    Route::middleware('throttle:60,1')->group(function () {
+        Route::get('/tests/{token}', [PublicTestController::class, 'show']);
+        Route::post('/tests/{token}/start', [PublicTestController::class, 'start']);
+        Route::post('/tests/{token}/submit', [PublicTestController::class, 'submit']);
+    });
 });
 
 // الدخول والجلسة
@@ -53,6 +62,7 @@ Route::middleware(['auth', 'fresh', 'portal:candidate'])->prefix('me')->group(fu
     Route::get('/applications', [MyApplicationController::class, 'index']);
     Route::get('/applications/{id}', [MyApplicationController::class, 'show'])->whereNumber('id');
     Route::post('/applications/{id}/offer-response', [MyApplicationController::class, 'respondOffer'])->whereNumber('id');
+    Route::post('/applications/{id}/erase', [MyApplicationController::class, 'erase'])->whereNumber('id')->middleware('throttle:10,1');
     Route::get('/profile', [MyApplicationController::class, 'profile']);
 });
 
@@ -71,7 +81,15 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
         Route::get('/jobs', [JobController::class, 'index']);
         Route::get('/jobs/lookups', [JobController::class, 'lookups']);
         Route::get('/jobs/{id}', [JobController::class, 'show'])->whereNumber('id');
+        Route::get('/jobs/{id}/test', [JobTestController::class, 'show'])->whereNumber('id');
     });
+    // الاختبار الأولي للشاغر: الإعداد، اقتراح الأسئلة بالذكاء الاصطناعي، التعديل والاعتماد
+    Route::middleware('perm:jobs,edit')->group(function () {
+        Route::put('/jobs/{id}/test', [JobTestController::class, 'update'])->whereNumber('id');
+        Route::post('/jobs/{id}/test/generate', [JobTestController::class, 'generate'])->whereNumber('id')->middleware('throttle:10,1');
+    });
+    Route::get('/ai-settings', [JobTestController::class, 'ai'])->middleware('perm:jobs,view');
+    Route::put('/ai-settings', [JobTestController::class, 'saveAi'])->middleware('perm:settings,edit');
     Route::post('/jobs', [JobController::class, 'store'])->middleware('perm:jobs,create');
     Route::put('/jobs/{id}', [JobController::class, 'update'])->whereNumber('id')->middleware('perm:jobs,edit');
     Route::post('/jobs/{id}/status', [JobController::class, 'status'])->whereNumber('id')->middleware('perm:jobs,edit');
@@ -81,12 +99,18 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
         Route::get('/candidates', [CandidateController::class, 'index']);
         Route::get('/candidates/{id}', [CandidateController::class, 'show'])->whereNumber('id');
         Route::get('/recruitment-rules', [RulesController::class, 'show']);
+        // قاعدة السير الذاتية (D-02)
+        Route::get('/cv', [CvController::class, 'index']);
     });
+    Route::get('/cv/export', [CvController::class, 'export'])->middleware('perm:candidates,export');
     Route::middleware('perm:candidates,edit')->group(function () {
         Route::post('/candidates/{id}/move', [CandidateController::class, 'move'])->whereNumber('id');
         Route::post('/candidates/{id}/notes', [CandidateController::class, 'note'])->whereNumber('id');
         Route::put('/candidates/{id}/interview', [CandidateController::class, 'interview'])->whereNumber('id');
         Route::put('/candidates/{id}/offer', [CandidateController::class, 'offer'])->whereNumber('id');
+        Route::post('/candidates/{id}/test', [CandidateController::class, 'sendTest'])->whereNumber('id');
+        Route::post('/candidates/{id}/test/review', [CandidateController::class, 'reviewTest'])->whereNumber('id');
+        Route::post('/cv/{id}/archive', [CvController::class, 'archive'])->whereNumber('id');
     });
     Route::put('/recruitment-rules', [RulesController::class, 'update'])->middleware('perm:settings,edit');
     // «اعتماداتي» — قرار التعيين F-31: لصاحب المستوى فقط (التحقق في AppointmentFlow)

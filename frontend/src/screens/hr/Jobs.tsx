@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Plus, ExternalLink, Globe, Building2, Lock, Lock as LockIcon, Unlock, Link2 } from 'lucide-react'
+import { Plus, ExternalLink, Globe, Building2, Lock, Lock as LockIcon, Unlock, Link2, ClipboardCheck } from 'lucide-react'
 import { useL, useLang, bi, fmtDate } from '../../lib/store'
+import { navigate } from '../../lib/router'
 import { useHrJobs, useJobStatus, type HrJob } from '../../lib/hr'
 import { can, useMe } from '../../lib/session'
 import { DEGREES, STAGES, type Stage } from '../../lib/recruitment'
@@ -52,6 +53,8 @@ export function Jobs() {
             return <span key={s} title={STAGES[s][lang]} className={`min-w-[44px] rounded-lg border px-1.5 py-1 text-center ${n ? 'border-brand/40 bg-brand-soft' : 'border-line'}`}>
               <span className={`block text-[14px] num ${n ? 'font-bold text-brand' : 'text-ink-3'}`}>{n || '·'}</span><span className="block text-[10px] text-ink-3 truncate max-w-[56px]">{STAGES[s][lang]}</span></span> })}</div></td>
           <td onClick={e => e.stopPropagation()}><div className="flex flex-wrap gap-1 justify-end">
+            <Btn size="sm" kind={j.test_enabled ? 'secondary' : 'ghost'} onClick={() => navigate(`/hr/jobs/${j.id}/test`)} title={L('الاختبار الأولي', 'Preliminary test')} aria-label={L('الاختبار الأولي', 'Preliminary test')}>
+              <ClipboardCheck size={15} className={j.test_enabled ? 'text-brand' : undefined} /><span className="hidden xl:inline">{L('الاختبار', 'Test')}</span></Btn>
             {j.visibility !== 'internal' && j.accepting && <Btn size="sm" kind="ghost" onClick={() => copy(j)} aria-label={L('نسخ الرابط', 'Copy link')} title={L('نسخ الرابط', 'Copy link')}><Link2 size={15} /></Btn>}
             {canEdit && j.status !== 'draft' && <Btn size="sm" kind={j.status === 'open' ? 'danger' : 'secondary'} icon={j.status === 'open' ? <LockIcon size={14} /> : <Unlock size={14} />} onClick={() => setToggle(j)}>{j.status === 'open' ? L('إغلاق', 'Close') : L('إعادة فتح', 'Reopen')}</Btn>}
           </div></td>

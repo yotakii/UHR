@@ -8,6 +8,7 @@ use App\Models\Candidate;
 use App\Models\JobOpening;
 use App\Services\Recruitment\F25;
 use App\Services\Recruitment\Pipeline;
+use App\Services\Recruitment\PreliminaryTests;
 use App\Support\L;
 use App\Support\Perm;
 use Illuminate\Http\JsonResponse;
@@ -75,6 +76,24 @@ class CandidateController extends Controller
         ], ['required' => L::t('هذا الحقل مطلوب', 'This field is required'), 'start_date.after_or_equal' => L::t('تاريخ المباشرة لا يكون في الماضي', 'The start date cannot be in the past'), 'basic.min' => L::t('أدخل الراتب الأساسي', 'Enter the basic salary')]);
         $c = Candidate::findOrFail($id);
         $this->pipeline->offer($c, $data, $request->user());
+        return response()->json(['data' => HrCandidate::full($c->refresh(), $request->user())]);
+    }
+
+    /** الاختبار الأولي: إرسال/إعادة إرسال الرابط (ضمن عدد المحاولات) */
+    public function sendTest(Request $request, PreliminaryTests $tests, int $id): JsonResponse
+    {
+        $c = Candidate::findOrFail($id);
+        $tests->send($c, null, $request->user());
+        return response()->json(['data' => HrCandidate::full($c->refresh(), $request->user())]);
+    }
+
+    /** مراجعة HR: درجات الأسئلة المفتوحة وملاحظة ← النتيجة النهائية (لا رفض آلي بالاختبار) */
+    public function reviewTest(Request $request, PreliminaryTests $tests, int $id): JsonResponse
+    {
+        $d = $request->validate(['scores' => ['present', 'array'], 'scores.*' => ['nullable', 'integer', 'min:0'], 'note' => ['nullable', 'string', 'max:1000']]);
+        $c = Candidate::with('test')->findOrFail($id);
+        abort_unless($c->test, 404);
+        $tests->review($c->test, $d['scores'], $d['note'] ?? null, $request->user());
         return response()->json(['data' => HrCandidate::full($c->refresh(), $request->user())]);
     }
 }

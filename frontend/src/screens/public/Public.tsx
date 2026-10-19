@@ -4,6 +4,7 @@ import { useRoute } from '../../lib/router'
 import { useMe } from '../../lib/session'
 import { Logo, LangToggle, ThemeToggle } from '../../ui/brand'
 import { Apply } from '../apply/Apply'
+import { TakeTest } from './TakeTest'
 import { Applied } from '../apply/Applied'
 import { PortalHome } from './Portal'
 import { JobsBoard } from './JobsBoard'
@@ -12,7 +13,7 @@ import { JobPage } from './JobPage'
 import { Forgot, Login, Reset } from './Auth'
 
 /** صفحات الزائر: البوابة، فرص العمل، صفحة الشركة، صفحة الشاغر، التقديم، الدخول */
-export const PUBLIC_PAGES = ['', 'jobs', 'c', 'apply', 'applied', 'login', 'forgot', 'reset']
+export const PUBLIC_PAGES = ['', 'jobs', 'c', 'apply', 'applied', 'login', 'forgot', 'reset', 'test']
 
 export function Public() {
   const route = useRoute(); const { page, parts, query } = route
@@ -27,6 +28,7 @@ export function Public() {
         : page === 'applied' ? <Applied />
         : page === 'login' ? <Login />
         : page === 'forgot' ? <Forgot />
+        : page === 'test' && parts[1] ? <TakeTest token={parts[1]} />
         : page === 'reset' ? <Reset token={query.token ?? ''} email={query.email ?? ''} />
         : <PortalHome />}
     </main>

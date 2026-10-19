@@ -12,7 +12,8 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        // الاختبار الأولي: Claude API (الاختبارات تستبدله بنسخة وهمية)
+        $this->app->bind(\App\Services\Ai\AiClient::class, \App\Services\Ai\ClaudeClient::class);
     }
 
     public function boot(): void

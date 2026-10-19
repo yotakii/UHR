@@ -5,11 +5,14 @@ namespace App\Http\Controllers\Api\Candidate;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\MyApplicationResource;
 use App\Models\Candidate;
+use App\Exceptions\ApiException;
+use App\Services\Cv\CvDatabase;
 use App\Services\Recruitment\OfferResponse;
 use App\Support\L;
 use App\Support\Tenant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 
 /**
@@ -64,6 +67,16 @@ class MyApplicationController extends Controller
         // الرد يُكتب داخل شركة الطلب: سلسلة الاعتماد والترقيم والإشعارات من إعداداتها
         Tenant::run($cand->company_id, fn () => $service->respond($cand, $data['status'], $data['signature'] ?? null, trim((string) ($data['note'] ?? ''))));
         return new MyApplicationResource(MyApplicationResource::load($cand->refresh()));
+    }
+
+    /** «احذف بياناتي» (D-05): بكلمة مرور الحساب — تُمسح الملفات والبيانات الشخصية ويبقى أثر مجهّل لدى الشركة */
+    public function erase(Request $request, CvDatabase $db, int $id): JsonResponse
+    {
+        $pw = $request->validate(['password' => ['required', 'string']], ['password.required' => L::t('أدخل كلمة مرور حسابك للتأكيد.', 'Enter your account password to confirm.')])['password'];
+        if (! Hash::check($pw, $request->user()->password)) throw ApiException::field('password', L::t('كلمة المرور غير صحيحة.', 'The password is incorrect.'), 'bad_password');
+        $cand = $this->candidate($request, $id);
+        Tenant::run($cand->company_id, fn () => $db->erase($cand));
+        return response()->json(['ok' => true]);
     }
 
     private function candidate(Request $request, int $id): Candidate

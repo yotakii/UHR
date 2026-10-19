@@ -17,7 +17,7 @@ class MyApplicationResource extends JsonResource
 {
     public static function load(Candidate $c): Candidate
     {
-        return $c->load(['jobOpening.department', 'jobOpening.company', 'cv', 'offer.signature', 'appointment.approvals']);
+        return $c->load(['jobOpening.department', 'jobOpening.company', 'cv', 'offer.signature', 'appointment.approvals', 'test']);
     }
 
     public function toArray(Request $request): array
@@ -36,6 +36,11 @@ class MyApplicationResource extends JsonResource
                 'status' => $o->status, 'responded_at' => $o->responded_at?->toIso8601String(), 'note' => $o->note,
                 'signature' => self::dataUrl($o->signature),
             ] : null,
+            // الاختبار الأولي: الرابط لصاحب الطلب ما دام مفتوحاً، والحالة فقط بعده (النتيجة لا تظهر للمتقدم)
+            'test' => ($t = $this->test) ? ['status' => $t->overdue() ? 'expired' : $t->status, 'minutes' => $t->minutes, 'expires_at' => $t->expires_at->toIso8601String(),
+                'link' => in_array($t->status, ['sent', 'started'], true) && ! $t->overdue() ? '/test/'.$t->token : null] : null,
+            'keep_cv' => (bool) $this->keep_cv,
+            'can_erase' => $this->stage !== 'hired' && (! $ap || $this->stage === 'rejected'),
             'appointment' => $ap ? [
                 'decision_no' => $ap->decision_no, 'issued_at' => $ap->issued_at?->toIso8601String(), 'complete' => $ap->isComplete(),
                 'approvals' => $ap->approvals->map(fn ($a) => ['level' => $a->level, 'role' => ['ar' => $a->role_ar, 'en' => $a->role_en], 'name' => $a->approver_name, 'status' => $a->status, 'at' => $a->approved_at?->toIso8601String()])->values(),

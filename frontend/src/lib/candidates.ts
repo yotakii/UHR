@@ -8,6 +8,7 @@ import type { Stage, OfferStatus } from './recruitment'
 export interface CandCard {
   id: number; ref: string; name: Bi; stage: Stage; stage_at: string; days_in_stage: number; sla: 'ok' | 'due' | 'late' | 'none'; sla_limit: number; created_at: string
   match: number; band: 'normal' | 'review' | 'reject' | null; auto_flag: string | null; internal: boolean; referred: boolean; referrer: Bi | null; offer: OfferStatus | null; appointment: boolean
+  test: { status: import('./tests').TestStatus; pct: number | null; auto_pct: number | null } | null
   job: { id: number; code: string; title: Bi }
 }
 export interface MatchPart { key: string; ar: string; en: string; weight: number; score: number; note_ar: string; note_en: string }
@@ -35,6 +36,7 @@ export interface CandFile extends Omit<CandCard, 'offer' | 'appointment' | 'job'
   match_parts: MatchPart[]
   interview: { ratings: Record<string, number>; notes: string | null; recommendation: 'recommended' | 'reserve' | 'rejected'; interviewer: string; date: string; pct: number } | null
   offer: HrOffer | null; appointment: HrAppointment | null; logs: LogRow[]
+  keep_cv: boolean; cv_status: 'active' | 'archived' | 'erased'; test_detail: import('./tests').CandTestDetail
 }
 export type OfferInput = Pick<HrOffer, 'title' | 'contract' | 'currency' | 'basic' | 'housing' | 'transport' | 'fuel' | 'leave_days' | 'start_date'>
 export interface Rules { match_threshold: number; review_min: number; reject_max: number; auto_reject: boolean; auto_screen: boolean; sla_alerts: boolean; whatsapp_nudge: boolean; referral_stages: number[]; hard_to_fill_x: number }

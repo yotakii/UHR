@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature } from 'lucide-react'
+import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { useRoute } from '../../lib/router'
 import { can, type SessionUser } from '../../lib/session'
@@ -14,6 +14,8 @@ import { Forms } from './Forms'
 import { Board } from './recruitment/Board'
 import { CandidateFile } from './recruitment/CandidateFile'
 import { MyApprovals } from './recruitment/Approvals'
+import { JobTest } from './recruitment/JobTest'
+import { CvDatabase } from './recruitment/CvDatabase'
 import { OnboardingList } from './onboarding/OnboardingList'
 import { OnboardPage } from './onboarding/OnboardPage'
 import { MyDocuments } from '../employee/MyDocuments'
@@ -33,9 +35,11 @@ export function HrApp({ user }: { user: SessionUser }) {
 
   const pages: Page[] = [
     { item: { to: '/hr', icon: <LayoutGrid size={18} />, label: L('لوحة المتابعة', 'Overview') }, module: () => true, view: () => <Dashboard user={user} /> },
-    { item: { to: '/hr/jobs', icon: <Briefcase size={18} />, label: L('الوظائف الشاغرة', 'Job openings'), group: g1 }, module: 'jobs', view: () => <Jobs /> },
+    { item: { to: '/hr/jobs', icon: <Briefcase size={18} />, label: L('الوظائف الشاغرة', 'Job openings'), group: g1 }, module: 'jobs',
+      view: () => route.parts[2] && /^\d+$/.test(route.parts[2]) && route.parts[3] === 'test' ? <JobTest id={Number(route.parts[2])} /> : <Jobs /> },
     { item: { to: '/hr/candidates', icon: <Kanban size={18} />, label: L('المتقدمون', 'Applicants'), count: dash?.funnel?.find(f => f.stage === 'new')?.count, group: g1 }, module: 'candidates',
       view: () => route.parts[2] && /^\d+$/.test(route.parts[2]) ? <CandidateFile id={Number(route.parts[2])} /> : <Board /> },
+    { item: { to: '/hr/cv', icon: <FileSearch size={18} />, label: L('قاعدة السير الذاتية', 'CV database'), group: g1 }, module: 'candidates', view: () => <CvDatabase /> },
     // «اعتماداتي» لكل حساب في الشركة: يظهر عندما يصل لمستواه قرار تعيين (أو لمن يتابع التوظيف)
     { item: { to: '/hr/approvals', icon: <Stamp size={18} />, label: L('اعتماداتي', 'My approvals'), count: dash?.tasks.filter(t => t.link === 'approvals').length, group: g1 },
       module: () => true, view: () => <MyApprovals /> },

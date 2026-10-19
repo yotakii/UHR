@@ -9,6 +9,7 @@ import { STAGES, DEGREES, ENGLISH, type Stage } from '../../../lib/recruitment'
 import type { ApiError } from '../../../lib/api'
 import { Avatar, Badge, Btn, Empty, KV, Panel, Progress, Tabs, toast } from '../../../ui/kit'
 import { Lifecycle, Paper, Timeline, DecisionDoc } from '../../../ui/docs'
+import { TestTab, testStatus } from './TestTab'
 import { Radar } from '../../../ui/viz'
 import { DecisionDialog } from '../../../ui/decision'
 import { rejectPresets } from './Board'
@@ -16,7 +17,7 @@ import { InterviewForm } from './InterviewForm'
 import { OfferTab } from './OfferTab'
 import { ApprovalActions } from './Approvals'
 
-type Tab = 'file' | 'match' | 'interview' | 'offer' | 'decision' | 'log'
+type Tab = 'file' | 'match' | 'test' | 'interview' | 'offer' | 'decision' | 'log'
 const ORDER: Stage[] = ['new', 'screening', 'interview', 'technical', 'offer']
 
 /** ملف المتقدم (M04 — CandidateFile في الديمو): البيانات، المطابقة، F-25، F-29، F-31، السجل */
@@ -50,6 +51,7 @@ function File({ c, lang }: { c: CandFile; lang: 'ar' | 'en' }) {
         <div className="flex-1 min-w-[220px]">
           <div className="flex items-center gap-2 flex-wrap"><h1 className="text-[21px] font-bold">{name}</h1>
             {c.internal && <Badge tone="info">{L('طلب داخلي F-27', 'Internal F-27')}</Badge>}{c.referrer && <Badge tone="brass">{L(`إحالة من ${c.referrer.name.ar}`, `Referred by ${c.referrer.name.en}`)}</Badge>}
+            {c.cv_status === 'erased' && <Badge tone="danger">{L('محذوف بطلب المتقدم', 'Erased on request')}</Badge>}
             {c.band === 'review' && <Badge tone="warn">{L('مطابقة منخفضة — للمراجعة', 'Low match — review')}</Badge>}
             <Badge tone={c.stage === 'rejected' ? 'danger' : c.stage === 'hired' ? 'brand' : 'info'}>{STAGES[c.stage][lang]}</Badge></div>
           <div className="text-ink-2 text-[14px]">{bi(c.job.title, lang)} — <span className="ltr inline-block">{c.job.code}</span></div>
@@ -57,6 +59,8 @@ function File({ c, lang }: { c: CandFile; lang: 'ar' | 'en' }) {
           {c.stage === 'rejected' && c.reject_reason && <div className="text-[13px] text-danger mt-1">{L('السبب:', 'Reason:')} {c.reject_reason}</div>}
         </div>
         <div className="text-center px-4 border-s border-line-2"><div className="text-[12px] text-ink-3">{L('مطابقة المتطلبات', 'Requirement match')}</div><div className={`text-[28px] font-bold num ${c.match >= 75 ? 'text-brand' : c.match >= 55 ? 'text-brass' : 'text-ink-3'}`}>{c.match}{P}</div></div>
+        {c.test && <button type="button" onClick={() => setTab('test')} className="text-center px-4 border-s border-line-2"><div className="text-[12px] text-ink-3">{L('الاختبار الأولي', 'Preliminary test')}</div>
+          {c.test.pct !== null ? <div className="text-[28px] font-bold num text-info">{c.test.pct}{P}</div> : <div className="mt-1.5"><Badge tone={testStatus(c.test.status, L)[1]}>{testStatus(c.test.status, L)[0]}</Badge></div>}</button>}
         <div className="flex gap-2 flex-wrap">
           {canEdit && next && c.stage !== 'offer' && next !== 'offer' && !c.appointment && <Btn kind="primary" disabled={move.isPending} onClick={() => doMove(next)}>{L('نقل إلى', 'Move to')} {STAGES[next][lang]}</Btn>}
           {canEdit && c.stage === 'technical' && !c.offer && <Btn kind="primary" onClick={() => setTab('offer')}>{L('إعداد عرض العمل', 'Prepare offer')}</Btn>}
@@ -77,11 +81,12 @@ function File({ c, lang }: { c: CandFile; lang: 'ar' | 'en' }) {
     </div>
 
     <Tabs value={tab} onChange={setTab} tabs={[
-      { v: 'file', label: L('بيانات الطلب', 'Application') }, { v: 'match', label: L('المطابقة', 'Match') }, { v: 'interview', label: L('المقابلة الأولية', 'HR interview') },
+      { v: 'file', label: L('بيانات الطلب', 'Application') }, { v: 'match', label: L('المطابقة', 'Match') }, { v: 'test', label: L('الاختبار الأولي', 'Preliminary test') }, { v: 'interview', label: L('المقابلة الأولية', 'HR interview') },
       { v: 'offer', label: L('عرض العمل', 'Offer') }, { v: 'decision', label: L('قرار التعيين', 'Appointment') }, { v: 'log', label: L('السجل', 'History'), count: c.logs.length }]} />
     <div className="mt-4">
       {tab === 'file' && <FileTab c={c} />}
       {tab === 'match' && <MatchTab c={c} />}
+      {tab === 'test' && <TestTab c={c} />}
       {tab === 'interview' && <InterviewForm c={c} readOnly={!canEdit} />}
       {tab === 'offer' && <OfferTab c={c} readOnly={!canEdit} />}
       {tab === 'decision' && (c.appointment

@@ -78,8 +78,18 @@ class ApplicationService
             $co = $job->company;
             $cand->user->notify((new ApplicationReceived($cand->ref, $job->title_ar, $job->title_en, $co->name_ar, $co->name_en))->afterCommit());
             if ($cand->stage === 'rejected') $cand->user->notify((new ApplicationClosed($job->title_ar, $job->title_en, $co->name_ar, $co->name_en))->afterCommit());
+            else $this->alertManagers($cand, $job);
+            app(PreliminaryTests::class)->afterApplication($cand);
             return $cand;
         });
+    }
+
+    /** تنبيه مدير الإدارة بوصول سيرة لشاغر مفتوح في إدارته (D-02) — بلا بيانات شخصية في الإشعار */
+    private function alertManagers(Candidate $cand, JobOpening $job): void
+    {
+        $ids = User::where('company_id', $job->company_id)->where('active', true)->whereHas('roles', fn ($r) => $r->where('key', 'manager'))
+            ->whereHas('employee', fn ($e) => $e->where('department_id', $job->department_id))->pluck('id');
+        foreach ($ids as $id) Notify::user($id, "وصلت سيرة ذاتية جديدة لشاغر {$job->title_ar} في إدارتك", "A new CV arrived for {$job->title_en} in your department");
     }
 
     private function createAccount(array $d): User

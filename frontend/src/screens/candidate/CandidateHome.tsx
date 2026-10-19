@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { LogOut, Loader2, Search } from 'lucide-react'
+import { LogOut, Loader2, Search, ClipboardCheck, Trash2 } from 'lucide-react'
 import { useL, useLang, bi, fmtDate } from '../../lib/store'
-import { useRoute } from '../../lib/router'
+import { navigate, useRoute } from '../../lib/router'
+import { useEraseApplication } from '../../lib/tests'
 import { Back, CompanyLogo } from '../public/parts'
 import { ApiError } from '../../lib/api'
 import { queryClient, useLogout, type SessionUser } from '../../lib/session'
@@ -101,6 +102,15 @@ function Application({ c }: { c: MyApplication }) {
       </div>
     </Panel>}
 
+    {c.test?.link && <Panel>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div><h2 className="font-bold text-[17px] flex items-center gap-2"><ClipboardCheck size={18} className="text-brand" />{L('اختبار أولي بانتظارك', 'A preliminary test is waiting for you')}</h2>
+          <p className="text-ink-2 text-[14px]">{L(`المدة ${c.test.minutes} دقيقة تبدأ عند فتح الأسئلة. الرابط صالح حتى`, `${c.test.minutes} minutes, starting when you open the questions. Valid until`)} <span className="num">{fmtDate(c.test.expires_at, lang)}</span>.</p></div>
+        <a href={c.test.link} className="inline-flex items-center h-10 px-5 rounded-lg bg-brand text-on-brand font-bold text-[14px] hover:brightness-110">{c.test.status === 'started' ? L('متابعة الاختبار', 'Continue the test') : L('بدء الاختبار', 'Start the test')}</a>
+      </div>
+    </Panel>}
+    {c.test && !c.test.link && ['completed', 'reviewed'].includes(c.test.status) && <Panel><Badge tone="brand">{L('أرسلت إجابات الاختبار الأولي', 'You submitted the preliminary test')}</Badge></Panel>}
+
     {c.offer?.status === 'sent' && <div className="grid lg:grid-cols-[1fr_340px] gap-5 items-start">
       <Paper code="F-29" company={c.company.slug} subject={c.ref} title={L('عرض العمل الرسمي', 'Official job offer')}><OfferDoc c={person} offer={c.offer} jobTitle={c.job.title.ar} company={c.company.name} /></Paper>
       <OfferResponse id={c.id} />
@@ -122,9 +132,32 @@ function Application({ c }: { c: MyApplication }) {
         <KV k={L('الجوال', 'Mobile')} v={<span className="ltr">{c.mobile}</span>} />
         <KV k={L('الراتب المتوقع', 'Expected salary')} v={`$${c.salary}`} />
         <KV k={L('السيرة الذاتية', 'CV')} v={c.cv?.name ?? '—'} />
+        <KV k={L('قاعدة السير', 'CV database')} v={c.keep_cv ? L('محفوظة لفرص قادمة', 'Kept for future openings') : L('غير محفوظة', 'Not kept')} />
       </div>
     </Panel>
+    {c.can_erase && <EraseData id={c.id} />}
   </>
+}
+
+/** «احذف بياناتي» (D-05): بكلمة مرور الحساب — تُمسح الملفات والبيانات الشخصية لهذا الطلب ويبقى أثر مجهّل لدى الشركة */
+function EraseData({ id }: { id: number }) {
+  const L = useL()
+  const [open, setOpen] = useState(false); const [pw, setPw] = useState('')
+  const erase = useEraseApplication()
+  const err = erase.error instanceof ApiError ? erase.error : null
+  return <section className="rounded-2xl border border-line bg-surface/60 p-5">
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div><h2 className="font-semibold text-[15px]">{L('حذف بياناتي من هذا الطلب', 'Delete my data from this application')}</h2>
+        <p className="text-[13px] text-ink-3 max-w-[65ch]">{L('تُحذف سيرتك وصورتك وبياناتك الشخصية نهائياً، ويُغلق الطلب. يبقى لدى الشركة أثر مجهّل فقط (رقم الطلب والوظيفة والتواريخ).', 'Your CV, photo and personal data are deleted permanently and the application is closed. The company keeps only an anonymous trace (reference, position and dates).')}</p></div>
+      {!open && <Btn kind="danger" icon={<Trash2 size={15} />} onClick={() => setOpen(true)}>{L('حذف بياناتي', 'Delete my data')}</Btn>}
+    </div>
+    {open && <form className="mt-4 flex flex-wrap items-end gap-3" onSubmit={e => { e.preventDefault(); erase.mutate({ id, password: pw }, { onSuccess: () => { toast(L('حُذفت بياناتك من الطلب', 'Your data was deleted from the application')); navigate('/my') } }) }}>
+      <Field label={L('كلمة مرور حسابك للتأكيد', 'Your account password to confirm')} error={err?.field('password') ?? (err && !err.field('password') ? err.message : undefined)} className="flex-1 min-w-[220px]">
+        <input type="password" className="field ltr text-start" value={pw} onChange={e => { setPw(e.target.value); erase.reset() }} autoComplete="current-password" autoFocus /></Field>
+      <Btn onClick={() => setOpen(false)} type="button">{L('إلغاء', 'Cancel')}</Btn>
+      <Btn kind="danger" type="submit" disabled={!pw || erase.isPending}>{L('تأكيد الحذف النهائي', 'Confirm permanent deletion')}</Btn>
+    </form>}
+  </section>
 }
 
 /** «ردّك على العرض»: القبول بتوقيع إلزامي، طلب تعديل بنص إلزامي، أو اعتذار بسبب اختياري */

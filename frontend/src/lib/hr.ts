@@ -11,7 +11,7 @@ export interface HrJob {
   id: number; code: string; title: Bi; dept: Bi & { id: number }; city: Bi & { id: number }; type: Bi | null
   openings: number; min_years: number; degree: number; salary_min: number; salary_max: number; currency: 'USD' | 'SYP'
   status: 'draft' | 'open' | 'closed'; visibility: Visibility; portal_status: PortalStatus; portal_note: string | null
-  posted_at: string | null; closes_at: string | null; hard_to_fill: boolean; requires_photo: boolean; accepting: boolean
+  posted_at: string | null; closes_at: string | null; hard_to_fill: boolean; requires_photo: boolean; accepting: boolean; test_enabled: boolean
   pipeline?: Record<Stage, number>
 }
 export interface HrJobFull extends HrJob { title_ar: string; title_en: string; summary_ar: string; summary_en: string; requirements: Bi[]; department_id: number; location_id: number; employment_type: string }

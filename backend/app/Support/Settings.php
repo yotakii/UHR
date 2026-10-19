@@ -30,7 +30,11 @@ class Settings
         // نطاقات المطابقة (SRS §10.9): ≥ match_threshold طبيعي، review_min…threshold-1 للمراجعة، ≤ reject_max رفض تلقائي إذا auto_reject
         'rules' => ['match_threshold' => 50, 'review_min' => 41, 'reject_max' => 40, 'auto_reject' => true, 'auto_screen' => true, 'sla_alerts' => true, 'whatsapp_nudge' => true,
             // نقاط الإحالة المرحلية (SRS §10.9): الفرز، المقابلة، المباشرة، اجتياز التجربة — ×hard_to_fill_x للوظائف الحرجة
-            'referral_stages' => [10, 20, 30, 40], 'hard_to_fill_x' => 2],
+            'referral_stages' => [10, 20, 30, 40], 'hard_to_fill_x' => 2,
+            // قاعدة السير (D-02): مدة الاحتفاظ بالسيرة قبل أرشفتها تلقائياً
+            'cv_retention_months' => 24],
+        // الاختبار الأولي (D-34): مفتاح Claude API مشفّراً، والنموذج
+        'ai' => ['api_key' => null, 'model' => 'claude-opus-5-5'],
         // قالب الطباعة (SRS §10.4): الشعار وحجمه ومحاذاته والهامش
         'print' => ['logo' => true, 'logo_height' => 56, 'align' => 'start', 'margin_mm' => 14],
         'stage_sla' => ['new' => 2, 'screening' => 3, 'interview' => 5, 'technical' => 5, 'offer' => 4],

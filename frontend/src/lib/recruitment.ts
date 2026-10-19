@@ -33,6 +33,8 @@ export interface MyApplication {
   cv: { name: string; size: number } | null
   job: { code: string; title: Bi; dept: Bi }
   offer: MyOffer | null; appointment: MyAppointment | null
+  test: { status: 'sent' | 'started' | 'completed' | 'reviewed' | 'expired'; minutes: number; expires_at: string; link: string | null } | null
+  keep_cv: boolean; can_erase: boolean
 }
 
 /** سطر في «طلباتي» — كل طلبات الحساب لدى كل الشركات */

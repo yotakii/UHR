@@ -19,7 +19,7 @@ class Candidate extends Model
             'stage_at' => 'date:Y-m-d', 'dob' => 'date:Y-m-d', 'availability' => 'date:Y-m-d',
             'education' => 'array', 'experience' => 'array', 'refs' => 'array',
             'shifts' => 'boolean', 'travel' => 'boolean', 'public_sector' => 'boolean', 'conviction' => 'boolean',
-            'salary' => 'float', 'consent_at' => 'datetime', 'keep_cv' => 'boolean',
+            'salary' => 'float', 'consent_at' => 'datetime', 'keep_cv' => 'boolean', 'cv_archived_at' => 'datetime', 'erased_at' => 'datetime',
         ];
     }
 
@@ -41,4 +41,6 @@ class Candidate extends Model
         return $days > $sla ? 'late' : ($days === $sla ? 'due' : 'ok');
     }
     public function photo(): BelongsTo { return $this->belongsTo(StoredFile::class, 'photo_file_id'); }
+    /** آخر محاولة للاختبار الأولي */
+    public function test(): HasOne { return $this->hasOne(CandidateTest::class)->latestOfMany('attempt'); }
 }

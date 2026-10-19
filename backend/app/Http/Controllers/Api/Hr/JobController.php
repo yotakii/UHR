@@ -72,7 +72,7 @@ class JobController extends Controller
             'salary_min' => $j->salary_min, 'salary_max' => $j->salary_max, 'currency' => $j->currency,
             'status' => $j->status, 'visibility' => $j->visibility, 'portal_status' => $j->portal_status, 'portal_note' => $j->portal_note,
             'posted_at' => $j->posted_at?->toDateString(), 'closes_at' => $j->closes_at?->toDateString(),
-            'hard_to_fill' => $j->hard_to_fill, 'requires_photo' => $j->requires_photo, 'accepting' => $j->acceptingApplications(),
+            'hard_to_fill' => $j->hard_to_fill, 'requires_photo' => $j->requires_photo, 'accepting' => $j->acceptingApplications(), 'test_enabled' => $j->test_enabled,
         ];
         if ($full) $out += ['title_ar' => $j->title_ar, 'title_en' => $j->title_en, 'summary_ar' => $j->summary_ar, 'summary_en' => $j->summary_en,
             'requirements' => $j->requirements, 'department_id' => $j->department_id, 'location_id' => $j->location_id, 'employment_type' => $j->employment_type];

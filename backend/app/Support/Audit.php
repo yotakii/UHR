@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 class Audit
 {
     /** حقول لا تُكتب قيمتها أبداً في السجل */
-    public const SECRET = ['password', 'remember_token', 'totp_secret', 'backup_hashes', 'config', 'key_hash', 'public_key'];
+    public const SECRET = ['password', 'remember_token', 'token', 'api_key', 'totp_secret', 'backup_hashes', 'config', 'key_hash', 'public_key'];
     /** حقول تتغير كثيراً بلا معنى تدقيقي */
     public const NOISE = ['updated_at', 'created_at', 'last_login_at', 'last_seen_at', 'failed_logins'];
 

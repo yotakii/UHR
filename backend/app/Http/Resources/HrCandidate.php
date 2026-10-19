@@ -12,7 +12,7 @@ use Carbon\Carbon;
 /** المتقدم كما يراه فريق التوظيف (M03 بطاقة اللوحة، M04 الملف الكامل) */
 class HrCandidate
 {
-    public const WITH = ['jobOpening.department', 'offer', 'appointment.approvals', 'referrer'];
+    public const WITH = ['jobOpening.department', 'offer', 'appointment.approvals', 'referrer', 'test'];
 
     public static function card(Candidate $c): array
     {
@@ -25,6 +25,7 @@ class HrCandidate
             'match' => $c->match_score, 'band' => $c->match_band, 'auto_flag' => $c->auto_flag, 'internal' => (bool) $c->internal_employee_id, 'referred' => (bool) $c->referrer_id,
             'referrer' => $c->referrer ? ['ar' => $c->referrer->name, 'en' => $c->referrer->name_en] : null,
             'offer' => $c->offer?->status, 'appointment' => (bool) $c->appointment,
+            'test' => $c->test ? ['status' => $c->test->status, 'pct' => $c->test->pct, 'auto_pct' => $c->test->auto_pct] : null,
             'job' => ['id' => $c->job_opening_id, 'code' => $c->jobOpening->code, 'title' => ['ar' => $c->jobOpening->title_ar, 'en' => $c->jobOpening->title_en]],
         ];
     }
@@ -52,11 +53,29 @@ class HrCandidate
                 'total' => $o->total(), 'leave_days' => $o->leave_days, 'start_date' => $o->start_date?->toDateString(), 'issued_at' => $o->issued_at?->toIso8601String(), 'status' => $o->status,
                 'responded_at' => $o->responded_at?->toIso8601String(), 'note' => $o->note, 'signature' => MyApplicationResource::dataUrl($o->signature)] : null,
             'appointment' => $ap ? self::appointment($ap, $c, $viewer) : null,
+            'keep_cv' => $c->keep_cv, 'cv_status' => $c->cv_status,
+            'test_detail' => self::test($c),
             'logs' => $c->logs->sortByDesc('at')->values()->map(fn ($l) => ['at' => $l->at->toIso8601String(), 'ar' => $l->text_ar, 'en' => $l->text_en, 'kind' => $l->kind, 'form' => $l->form]),
         ]);
     }
 
     /** F-31 مع مطابقة الملاك العددي للإدارة ومن عليه الدور الآن */
+    /** الاختبار الأولي في ملف المتقدم: الإعداد على الشاغر + آخر محاولة بأسئلتها وإجاباتها ودرجاتها */
+    public static function test(Candidate $c): array
+    {
+        $job = $c->jobOpening; $t = $c->test;
+        $approved = \App\Models\JobTest::where('job_opening_id', $job->id)->where('status', 'approved')->exists();
+        return [
+            'enabled' => (bool) $job->test_enabled, 'approved' => $approved, 'attempts' => (int) $job->test_attempts,
+            'current' => $t ? [
+                'id' => $t->id, 'attempt' => $t->attempt, 'status' => $t->overdue() ? 'expired' : $t->status, 'minutes' => $t->minutes,
+                'sent_at' => $t->sent_at->toIso8601String(), 'expires_at' => $t->expires_at->toIso8601String(), 'started_at' => $t->started_at?->toIso8601String(),
+                'submitted_at' => $t->submitted_at?->toIso8601String(), 'reviewed_at' => $t->reviewed_at?->toIso8601String(), 'review_note' => $t->review_note,
+                'auto_pct' => $t->auto_pct, 'pct' => $t->pct, 'questions' => $t->questions, 'answers' => $t->answers ?? (object) [], 'suggested' => $t->suggested ?? (object) [], 'scores' => $t->scores ?? (object) [],
+            ] : null,
+        ];
+    }
+
     public static function appointment($ap, Candidate $c, User $viewer): array
     {
         $job = $c->jobOpening;
