@@ -11,6 +11,8 @@ use App\Http\Controllers\Api\Hr\ApprovalController;
 use App\Http\Controllers\Api\Hr\CandidateController;
 use App\Http\Controllers\Api\Hr\CvController;
 use App\Http\Controllers\Api\Hr\DashboardController;
+use App\Http\Controllers\Api\Hr\DirectoryController;
+use App\Http\Controllers\Api\Hr\EmployeeDocController;
 use App\Http\Controllers\Api\Hr\EmployeeController;
 use App\Http\Controllers\Api\Hr\JobController;
 use App\Http\Controllers\Api\Hr\JobTestController;
@@ -131,8 +133,25 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
         Route::post('/confirm', [OnboardingController::class, 'confirm']);
     });
     // معالج إضافة موظف + استيراد الموظفين الحاليين من Excel
+    // M07 — دليل الموظفين والملف الوظيفي والملفات الإضافية والهيكل (بنطاق own/team/all)
+    Route::middleware('perm:employees,view')->group(function () {
+        Route::get('/employees', [DirectoryController::class, 'index']);
+        Route::get('/employees/lookups', [EmployeeController::class, 'lookups']);
+        Route::get('/employees/{id}', [DirectoryController::class, 'show'])->whereNumber('id');
+        Route::get('/employees/{id}/documents/{docId}/log', [EmployeeDocController::class, 'history'])->whereNumber(['id', 'docId']);
+        Route::get('/employee-docs/settings', [EmployeeDocController::class, 'settings']);
+    });
+    Route::get('/employees/export', [DirectoryController::class, 'export'])->middleware('perm:employees,export');
+    Route::middleware('perm:employees,edit')->prefix('employees/{id}')->whereNumber('id')->group(function () {
+        Route::put('/', [DirectoryController::class, 'update']);
+        Route::put('/card', [DirectoryController::class, 'card']);
+        Route::post('/documents', [EmployeeDocController::class, 'store'])->middleware('throttle:30,1');
+        Route::post('/documents/{docId}/archive', [EmployeeDocController::class, 'archive'])->whereNumber('docId');
+    });
+    Route::put('/employee-docs/settings', [EmployeeDocController::class, 'saveSettings'])->middleware('perm:settings,edit');
+    Route::get('/org', [DirectoryController::class, 'org'])->middleware('perm:org,view');
+
     Route::middleware('perm:employees,create')->prefix('employees')->group(function () {
-        Route::get('/lookups', [EmployeeController::class, 'lookups']);
         Route::post('/', [EmployeeController::class, 'store']);
         Route::get('/import/template', [EmployeeController::class, 'template']);
         Route::post('/import/preview', [EmployeeController::class, 'preview'])->middleware('throttle:30,1');

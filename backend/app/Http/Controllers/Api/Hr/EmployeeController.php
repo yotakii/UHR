@@ -10,21 +10,22 @@ use App\Models\Employee;
 use App\Models\Location;
 use App\Services\People\EmployeeImport;
 use App\Services\People\NewEmployee;
+use App\Support\Perm;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
-/** M06 — معالج إضافة موظف واستيراد الموظفين الحاليين (دليل الموظفين M07 يأتي مع المهمة 07) */
+/** M06 — معالج إضافة موظف واستيراد الموظفين الحاليين (الدليل والملف في DirectoryController) */
 class EmployeeController extends Controller
 {
-    /** قوائم المعالج: الإدارات (برئيسها)، المقرات، المدراء المحتملون، العهد المتاحة */
-    public function lookups(): JsonResponse
+    /** قوائم المعالج ونموذج التعديل: الإدارات (برئيسها)، المقرات، المدراء المحتملون، والعهد المتاحة لمن يضيف موظفين */
+    public function lookups(Request $request): JsonResponse
     {
         return response()->json([
             'departments' => Department::with('head')->where('active', true)->orderBy('sort')->get()->map(fn ($d) => ['id' => $d->id, 'code' => $d->code, 'ar' => $d->name_ar, 'en' => $d->name_en, 'head' => $d->head ? ['ar' => $d->head->name, 'en' => $d->head->name_en] : null]),
             'locations' => Location::where('active', true)->orderBy('id')->get()->map(fn ($l) => ['id' => $l->id, 'code' => $l->code, 'ar' => $l->name_ar, 'en' => $l->name_en]),
             'managers' => Employee::current()->orderBy('code')->get(['id', 'code', 'name', 'name_en', 'department_id'])->map(fn ($e) => ['id' => $e->id, 'code' => $e->code, 'ar' => $e->name, 'en' => $e->name_en, 'department_id' => $e->department_id]),
-            'assets' => Asset::with('category')->where('status', 'available')->orderBy('asset_category_id')->orderBy('tag')->get()->map(fn ($a) => HrOnboarding::asset($a)),
+            'assets' => ! Perm::can($request->user(), 'employees', 'create') ? [] : Asset::with('category')->where('status', 'available')->orderBy('asset_category_id')->orderBy('tag')->get()->map(fn ($a) => HrOnboarding::asset($a)),
             'currencies' => NewEmployee::CURRENCIES,
         ]);
     }

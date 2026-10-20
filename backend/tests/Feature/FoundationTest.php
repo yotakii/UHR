@@ -180,8 +180,8 @@ class FoundationTest extends TestCase
         $this->login('samer.halabi@alfarada.sy');               // موظف بلا صلاحية المتقدمين
         $this->getJson("/api/files/{$file->id}")->assertForbidden();
 
-        $logs = AuditLog::where('action', 'file.download')->where('subject_id', $file->id)->get();
-        $this->assertCount(2, $logs);
+        $logs = AuditLog::whereIn('action', ['file.download', 'file.view'])->where('subject_id', $file->id)->orderBy('id')->get();
+        $this->assertSame(['file.download', 'file.view'], $logs->pluck('action')->all());
         $this->assertSame('cv:'.$cand->ref, $logs[0]->after['of']);
     }
 

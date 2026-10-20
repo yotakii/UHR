@@ -37,6 +37,7 @@ class Employee extends Model
     public function resignations(): HasMany { return $this->hasMany(Resignation::class); }
     public function referrals(): HasMany { return $this->hasMany(Referral::class); }
     public function redemptions(): HasMany { return $this->hasMany(Redemption::class); }
+    public function documents(): HasMany { return $this->hasMany(EmployeeDocument::class); }
 
     public function scopeCurrent($q) { return $q->where('status', '!=', 'terminated'); }
 

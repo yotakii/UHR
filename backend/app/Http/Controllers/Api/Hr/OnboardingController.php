@@ -8,6 +8,7 @@ use App\Models\Appointment;
 use App\Models\Employee;
 use App\Models\User;
 use App\Services\Onboarding\OnboardingFlow;
+use App\Services\People\Directory;
 use App\Support\Perm;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -82,15 +83,9 @@ class OnboardingController extends Controller
         return response()->json(['data' => HrOnboarding::full($e, Perm::can($request->user(), 'employees', 'edit'))]);
     }
 
-    /** نطاق «الموظفين» للمستخدم: own خاصته، team فريقه، all الكل (SRS §10.2) */
     private function scoped(User $u): Builder
     {
-        $q = Employee::query();
-        return match (Perm::scope($u, 'employees')) {
-            'all' => $q,
-            'team' => $q->where(fn ($w) => $w->where('manager_id', $u->employee_id)->orWhere('id', $u->employee_id)),
-            default => $q->where('id', $u->employee_id),
-        };
+        return Directory::scoped($u);
     }
 
     private function employee(User $u, int $id): Employee

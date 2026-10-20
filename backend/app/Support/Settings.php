@@ -48,6 +48,16 @@ class Settings
         'ai' => ['api_key' => null, 'model' => 'claude-opus-5-5'],
         // قالب الطباعة (SRS §10.4): الشعار وحجمه ومحاذاته والهامش
         'print' => ['logo' => true, 'logo_height' => 56, 'align' => 'start', 'margin_mm' => 14],
+        // الملفات الإضافية للموظف (SRS §10.11، D-25): الأنواع، الصيغ والحجم، أيام التنبيه قبل الانتهاء، والأدوار التي ترى «الحساس»
+        'docs' => [
+            'types' => [
+                ['key' => 'id', 'ar' => 'هوية شخصية', 'en' => 'ID card'], ['key' => 'passport', 'ar' => 'جواز سفر', 'en' => 'Passport'],
+                ['key' => 'degree', 'ar' => 'شهادة علمية', 'en' => 'Degree certificate'], ['key' => 'contract', 'ar' => 'عقد عمل', 'en' => 'Employment contract'],
+                ['key' => 'medical', 'ar' => 'تقرير طبي', 'en' => 'Medical report'], ['key' => 'experience', 'ar' => 'شهادة خبرة', 'en' => 'Experience certificate'],
+                ['key' => 'license', 'ar' => 'رخصة / إجازة مزاولة', 'en' => 'License / permit'], ['key' => 'other', 'ar' => 'أخرى', 'en' => 'Other'],
+            ],
+            'extensions' => ['pdf', 'jpg', 'jpeg', 'png', 'docx'], 'max_mb' => 10, 'alert_days' => 30, 'sensitive_roles' => ['hr_director', 'hr_officer'],
+        ],
         'stage_sla' => ['new' => 2, 'screening' => 3, 'interview' => 5, 'technical' => 5, 'offer' => 4],
     ];
 
@@ -110,6 +120,12 @@ class Settings
         $out = [];
         foreach (self::DEFAULTS['match'] as $k => $def) $out[$k] = array_merge($def, array_intersect_key($saved[$k] ?? [], $def));   // بترتيب الافتراضي (jsonb لا يحفظ الترتيب)
         return $out;
+    }
+
+    /** إعدادات الملفات الإضافية: المحفوظ فوق الافتراضي مفتاحاً بمفتاح */
+    public static function docs(): array
+    {
+        return array_merge(self::DEFAULTS['docs'], array_intersect_key(self::get('docs') ?? [], self::DEFAULTS['docs']));
     }
 
     public static function rule(string $key): mixed { return self::get('rules')[$key] ?? self::DEFAULTS['rules'][$key]; }

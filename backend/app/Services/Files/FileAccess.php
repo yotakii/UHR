@@ -4,10 +4,13 @@ namespace App\Services\Files;
 
 use App\Models\Asset;
 use App\Models\Candidate;
+use App\Models\EmployeeDocument;
 use App\Models\Offer;
 use App\Models\Onboarding;
 use App\Models\StoredFile;
 use App\Models\User;
+use App\Services\People\Directory;
+use App\Services\People\EmployeeDocs;
 use App\Support\Perm;
 
 /**
@@ -16,7 +19,7 @@ use App\Support\Perm;
  */
 class FileAccess
 {
-    /** @return array{module: string, owner: ?int, label: string}|null */
+    /** @return array{module: string, owner: ?int, label: string, employee_id?: int, sensitive?: bool}|null */
     public static function owner(StoredFile $f): ?array
     {
         if ($c = Candidate::allCompanies()->where('cv_file_id', $f->id)->orWhere('photo_file_id', $f->id)->first()) {
@@ -27,6 +30,9 @@ class FileAccess
         if ($b = Onboarding::with('employee.user')->where('f22_signature_file_id', $f->id)->orWhere('f20_signature_file_id', $f->id)->first()) {
             return ['module' => 'employees', 'owner' => $b->employee?->user?->id, 'label' => 'onboarding-signature:'.$b->employee?->code];
         }
+        if ($d = EmployeeDocument::with('employee.user')->where('file_id', $f->id)->first()) {
+            return ['module' => 'employees', 'owner' => $d->employee?->user?->id, 'label' => 'employee-doc:'.$d->employee?->code, 'employee_id' => $d->employee_id, 'sensitive' => $d->sensitive];
+        }
         return null;
     }
 
@@ -34,6 +40,9 @@ class FileAccess
     {
         if (! $owner) return false;
         if ($owner['owner'] && $owner['owner'] === $user->id) return true;
-        return $user->company_id && $user->company_id === $f->company_id && Perm::can($user, $owner['module']);
+        if (! $user->company_id || $user->company_id !== $f->company_id || ! Perm::can($user, $owner['module'])) return false;
+        // مستندات الموظف: ضمن نطاق رؤية المستخدم (خاصته/فريقه/الكل)، والحساس لأدواره فقط
+        if (isset($owner['employee_id']) && ! Directory::visible($user, $owner['employee_id'])) return false;
+        return empty($owner['sensitive']) || EmployeeDocs::canSensitive($user);
     }
 }

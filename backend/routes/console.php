@@ -31,3 +31,11 @@ Artisan::command('cv:archive-expired', function () {
     $this->info("Archived {$n} CV(s).");
 })->purpose('Archive CVs past the retention period');
 Schedule::command('cv:archive-expired')->dailyAt('00:20');
+
+// الملفات الإضافية للموظف: المنتهي ← «منتهي»، وتنبيه قبل الانتهاء بـ alert_days (D-25) — يومياً
+Artisan::command('docs:sweep', function () {
+    $t = ['expired' => 0, 'alerted' => 0];
+    foreach (\App\Models\Company::pluck('id') as $id) foreach (\App\Support\Tenant::run($id, fn () => app(\App\Services\People\EmployeeDocs::class)->sweep()) as $k => $n) $t[$k] += $n;
+    $this->info("Expired {$t['expired']}, alerted {$t['alerted']} document(s).");
+})->purpose('Expire employee documents and alert before expiry');
+Schedule::command('docs:sweep')->dailyAt('07:30');
