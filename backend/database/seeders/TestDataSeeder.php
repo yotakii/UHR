@@ -20,12 +20,14 @@ use App\Models\Redemption;
 use App\Models\Referral;
 use App\Models\Resignation;
 use App\Models\Reward;
+use App\Models\Policy;
 use App\Models\Role;
 use App\Models\ServiceRequest;
 use App\Models\StoredFile;
 use App\Models\User;
 use App\Support\Audit;
 use App\Support\Counters;
+use App\Support\Settings;
 use App\Support\Tenant;
 use App\Models\Company;
 use App\Services\Platform\CompanyDefaults;
@@ -86,6 +88,19 @@ class TestDataSeeder extends Seeder
         }));
     }
 
+    /** سياسة الدوام في الديمو (rules.ts SHIFT) — بيانات الحضور التجريبية مولّدة عليها؛ أي شركة جديدة تأخذ سياسة الشركة الفعلية */
+    public const DEMO_POLICIES = [
+        'work_days' => [0, 1, 2, 3, 4],
+        'shift' => ['start' => 480, 'end' => 960, 'grace' => 15, 'break' => 60, 'break_after' => 300, 'ot_threshold' => 30, 'night_from' => 1320],
+        'overtime_rates' => ['day' => 0.25, 'night' => 0.5, 'rest' => 1.0, 'holiday' => 2.0],
+    ];
+
+    public static function demoPolicies(): void
+    {
+        foreach (self::DEMO_POLICIES as $key => $value) Policy::updateOrCreate(['key' => $key, 'effective_from' => '2020-01-01'], ['value' => $value]);
+        Settings::flush();
+    }
+
     /**
      * شركتان على المنصة (SRS §10.15): Atmata مالكة المنصة وتنشر شواغرها مباشرة، والفرادة أول عميل وشواغرها تمر بمراجعة المنصة.
      * + مدير المنصة platform@atmata.sy
@@ -96,6 +111,7 @@ class TestDataSeeder extends Seeder
         $make = function (array $attrs, string $logo) use ($prov) {
             $c = Company::where('slug', $attrs['slug'])->first();
             if (! $c) { $c = Company::create($attrs); CompanyDefaults::seed($c); } else $c->update($attrs);
+            Tenant::run($c, fn () => self::demoPolicies());
             $prov->setLogo($c, resource_path("logos/{$logo}"));
             return $c;
         };

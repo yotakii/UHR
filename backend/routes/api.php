@@ -10,7 +10,11 @@ use App\Http\Controllers\Api\FormController;
 use App\Http\Controllers\Api\Hr\ApprovalController;
 use App\Http\Controllers\Api\Hr\CandidateController;
 use App\Http\Controllers\Api\Hr\CvController;
+use App\Http\Controllers\Api\Device\TerminalController;
+use App\Http\Controllers\Api\Hr\AttendanceController;
 use App\Http\Controllers\Api\Hr\DashboardController;
+use App\Http\Controllers\Api\Hr\DeviceController;
+use App\Http\Controllers\Api\Hr\PolicyController;
 use App\Http\Controllers\Api\Hr\DirectoryController;
 use App\Http\Controllers\Api\Hr\EmployeeDocController;
 use App\Http\Controllers\Api\Hr\EmployeeController;
@@ -151,6 +155,34 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
     Route::put('/employee-docs/settings', [EmployeeDocController::class, 'saveSettings'])->middleware('perm:settings,edit');
     Route::get('/org', [DirectoryController::class, 'org'])->middleware('perm:org,view');
 
+    // M08 — الحضور والدوام (بنطاق own/team/all لوحدة attendance) + الأجهزة المسجّلة
+    Route::middleware('perm:attendance,view')->group(function () {
+        Route::get('/attendance', [AttendanceController::class, 'daily']);
+        Route::get('/attendance/period', [AttendanceController::class, 'period']);
+    });
+    Route::get('/attendance/export', [AttendanceController::class, 'export'])->middleware('perm:attendance,export');
+    Route::middleware('perm:attendance,edit')->group(function () {
+        Route::put('/attendance/{id}', [AttendanceController::class, 'correct'])->whereNumber('id');
+        Route::get('/devices', [DeviceController::class, 'index']);
+        Route::post('/devices', [DeviceController::class, 'store']);
+        Route::put('/devices/{id}', [DeviceController::class, 'update'])->whereNumber('id');
+        Route::post('/devices/{id}/rotate', [DeviceController::class, 'rotate'])->whereNumber('id');
+    });
+
+    // M16 — سياسات الدوام بتاريخ نفاذ والعطل الرسمية
+    Route::middleware('perm:policies,view')->group(function () {
+        Route::get('/policies', [PolicyController::class, 'index']);
+        Route::get('/holidays', [PolicyController::class, 'holidays']);
+    });
+    Route::middleware('perm:policies,edit')->group(function () {
+        Route::post('/policies', [PolicyController::class, 'store']);
+        Route::post('/policies/preview', [PolicyController::class, 'preview'])->middleware('throttle:30,1');
+        Route::delete('/policies/{id}', [PolicyController::class, 'destroy'])->whereNumber('id');
+        Route::post('/holidays', [PolicyController::class, 'addHoliday']);
+        Route::post('/holidays/fixed', [PolicyController::class, 'fixedHolidays']);
+        Route::delete('/holidays/{id}', [PolicyController::class, 'deleteHoliday'])->whereNumber('id');
+    });
+
     Route::middleware('perm:employees,create')->prefix('employees')->group(function () {
         Route::post('/', [EmployeeController::class, 'store']);
         Route::get('/import/template', [EmployeeController::class, 'template']);
@@ -190,4 +222,10 @@ Route::middleware(['auth', 'fresh', 'portal:platform'])->prefix('platform')->gro
     Route::post('/reviews/{id}', [PlatformController::class, 'review'])->whereNumber('id');
     Route::get('/portal', [PlatformController::class, 'portal']);
     Route::put('/portal', [PlatformController::class, 'updatePortal']);
+});
+
+// جهاز الحضور وجسر القارئ: مفتاح الجهاز في X-Device-Key (بلا جلسة)
+Route::middleware(['device', 'throttle:120,1'])->prefix('device')->group(function () {
+    Route::get('/me', [TerminalController::class, 'me']);
+    Route::post('/scan', [TerminalController::class, 'scan']);
 });

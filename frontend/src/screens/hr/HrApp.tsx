@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog } from 'lucide-react'
+import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { useRoute } from '../../lib/router'
 import { can, type SessionUser } from '../../lib/session'
@@ -24,6 +24,9 @@ import { Employees } from './employees/Employees'
 import { EmployeeFile } from './employees/EmployeeFile'
 import { OrgChart } from './employees/OrgChart'
 import { DocumentSettings } from './DocumentSettings'
+import { Attendance } from './attendance/Attendance'
+import { PolicySettings } from './PolicySettings'
+import { Devices } from './Devices'
 
 type Page = { item: NavItem; module: string | ((u: SessionUser) => boolean); view?: () => ReactNode; task?: string }
 
@@ -54,7 +57,7 @@ export function HrApp({ user }: { user: SessionUser }) {
     { item: { to: '/hr/employees', icon: <Users size={18} />, label: L('الموظفون', 'Employees'), group: g2 }, module: 'employees',
       view: () => route.parts[2] && /^\d+$/.test(route.parts[2]) ? <EmployeeFile id={Number(route.parts[2])} /> : <Employees /> },
     { item: { to: '/hr/org', icon: <Network size={17} />, label: L('الهيكل التنظيمي', 'Org chart'), group: g2 }, module: 'org', view: () => <OrgChart /> },
-    { item: { to: '/hr/attendance', icon: <Clock size={18} />, label: L('الحضور والدوام', 'Attendance'), group: g2 }, module: 'attendance', task: '07' },
+    { item: { to: '/hr/attendance', icon: <Clock size={18} />, label: L('الحضور والدوام', 'Attendance'), group: g2 }, module: 'attendance', view: () => <Attendance /> },
     { item: { to: '/hr/leaves', icon: <CalendarCheck size={18} />, label: L('الإجازات والتبريرات', 'Leave & justifications'), count: count('leave', 'service'), group: g2 }, module: 'leaves', task: '07' },
     { item: { to: '/hr/custody', icon: <Package size={18} />, label: L('العهد', 'Custody'), group: g2 }, module: 'assets', task: '08' },
     { item: { to: '/hr/offboarding', icon: <DoorOpen size={18} />, label: L('الاستقالات وإنهاء الخدمة', 'Resignations & exits'), count: count('resignation'), group: g2 }, module: 'employees', task: '08' },
@@ -62,7 +65,8 @@ export function HrApp({ user }: { user: SessionUser }) {
     { item: { to: '/hr/my-documents', icon: <FileSignature size={17} />, label: L('وثائقي للتوقيع', 'My documents'), group: g2 }, module: u => !!u.employee, view: () => <MyDocuments /> },
     { item: { to: '/hr/performance', icon: <Target size={17} />, label: L('الأداء وتقييم 360', 'Performance & 360'), group: g3 }, module: 'performance', task: '09' },
     { item: { to: '/hr/analytics', icon: <BarChart3 size={17} />, label: L('التحليلات', 'Analytics'), group: g3 }, module: u => can(u, 'employees', 'export'), task: '09' },
-    { item: { to: '/hr/settings/policies', icon: <Settings2 size={18} />, label: L('سياسات الدوام والإجازات', 'Work & leave policies'), group: g4 }, module: 'policies', task: '07' },
+    { item: { to: '/hr/settings/policies', icon: <Settings2 size={18} />, label: L('سياسات الدوام والإجازات', 'Work & leave policies'), group: g4 }, module: 'policies', view: () => <PolicySettings /> },
+    { item: { to: '/hr/settings/devices', icon: <Nfc size={18} />, label: L('أجهزة الحضور', 'Attendance devices'), group: g4 }, module: u => can(u, 'attendance', 'edit'), view: () => <Devices /> },
     { item: { to: '/hr/settings/recruitment', icon: <Scale size={18} />, label: L('قواعد التوظيف والمطابقة', 'Recruitment & matching rules'), group: g4 }, module: u => can(u, 'settings') || can(u, 'candidates'), view: () => <RecruitmentSettings /> },
     { item: { to: '/hr/settings/documents', icon: <FolderCog size={18} />, label: L('الملفات الإضافية للموظفين', 'Employee documents'), group: g4 }, module: u => can(u, 'settings') && can(u, 'employees'), view: () => <DocumentSettings /> },
     { item: { to: '/hr/settings/permissions', icon: <ShieldCheck size={18} />, label: L('الصلاحيات', 'Permissions'), group: g4 }, module: 'users', view: () => <Permissions user={user} /> },

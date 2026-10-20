@@ -71,11 +71,24 @@ class Settings
         ],
     ];
 
-    /** سياسات الدوام والإجازات الافتراضية — SRS §7.1–7.2 */
+    /**
+     * سياسات الدوام والإجازات الافتراضية لأي شركة جديدة = سياسة الشركة HR.01-01 (SRS §10.6): السبت–الخميس 09:00–17:00،
+     * جدول حسم التأخير، الإضافي بعد 48 ساعة أسبوعياً بحد ساعتين يومياً. بيانات الاختبار (TestDataSeeder) تكتب قيم الديمو فوقها.
+     * المفتاح «key@{department_id}» يتجاوز السياسة لإدارة بعينها (shift، work_days).
+     */
     public const POLICY_DEFAULTS = [
-        'work_days' => [0, 1, 2, 3, 4],          // الأحد–الخميس (Carbon: 0 = الأحد)
-        'shift' => ['start' => 480, 'end' => 960, 'grace' => 15, 'break' => 60, 'break_after' => 300, 'ot_threshold' => 30, 'night_from' => 1320],
-        'overtime_rates' => ['day' => 0.25, 'night' => 0.5, 'rest' => 1.0],
+        'work_days' => [6, 0, 1, 2, 3, 4],       // السبت–الخميس (Carbon: 0 = الأحد، 6 = السبت)
+        // الدقائق من منتصف الليل: البداية، النهاية، سماح، استراحة تُطرح بعد break_after دقيقة عمل، عتبة الإضافي اليومي، بداية الليل
+        'shift' => ['start' => 540, 'end' => 1020, 'grace' => 0, 'break' => 60, 'break_after' => 300, 'ot_threshold' => 30, 'night_from' => 1140],
+        // نسب الإضافي فوق الأجر: نهاري، ليلي، يوم الراحة (مضاعف)، العطلة الرسمية (ثلاثة أضعاف)
+        'overtime_rates' => ['day' => 0.25, 'night' => 0.5, 'rest' => 1.0, 'holiday' => 2.0],
+        // حسم التأخير الصباحي: شرائح [من، إلى، معامل]؛ حتى exempt_upto دقيقة يُعفى exempt_per_month مرة بمبرر؛ أكثر من absent_after = غياب
+        'late_deduction' => ['tiers' => [['from' => 1, 'to' => 15, 'factor' => 1], ['from' => 16, 'to' => 30, 'factor' => 1], ['from' => 31, 'to' => 60, 'factor' => 1.5], ['from' => 61, 'to' => 120, 'factor' => 2]],
+            'exempt_upto' => 15, 'exempt_per_month' => 3, 'absent_after' => 120],
+        // الإضافي بتكليف مسبق (F-04): بعد weekly_hours ساعة أسبوعياً، وبحد daily_max دقيقة باليوم
+        'overtime' => ['weekly_hours' => 48, 'daily_max' => 120, 'requires_assignment' => true, 'max_continuous_hours' => 10],
+        // جهاز الحضور: تجاهل التمرير المكرر خلال cooldown ثانية، واليوم بلا خروج «ناقص» بعد incomplete_after دقيقة من نهاية الوردية
+        'terminal' => ['cooldown' => 10, 'incomplete_after' => 120],
         'annual_leave' => ['first_year' => 14, 'standard' => 21, 'senior' => 30, 'senior_years' => 10, 'senior_age' => 50],
         'sick_leave' => ['full' => 30, 'p80' => 30, 'p75' => 30],
         'probation_days' => 90,
@@ -131,12 +144,43 @@ class Settings
     public static function rule(string $key): mixed { return self::get('rules')[$key] ?? self::DEFAULTS['rules'][$key]; }
 
     /** قيمة السياسة النافذة في تاريخ معيّن (افتراضياً اليوم) */
-    public static function policy(string $key, Carbon|string|null $on = null): mixed
+    /** قيم مؤقتة للمعاينة قبل الحفظ (withPolicies) — لا تُكتب */
+    private static array $overrides = [];
+
+    public static function withPolicies(array $values, callable $fn): mixed
     {
-        $on = $on ? Carbon::parse($on)->toDateString() : now()->toDateString();
-        return Cache::remember('policy:'.Tenant::id().":{$key}:{$on}", 300, fn () => Policy::where('key', $key)->where('effective_from', '<=', $on)
-            ->orderByDesc('effective_from')->first()?->value ?? self::POLICY_DEFAULTS[$key] ?? null);
+        $prev = self::$overrides;
+        self::$overrides = $values + self::$overrides;
+        try { return $fn(); } finally { self::$overrides = $prev; }
     }
 
-    public static function flush(): void { Cache::flush(); }
+    public static function policy(string $key, Carbon|string|null $on = null): mixed
+    {
+        if (array_key_exists($key, self::$overrides)) return self::$overrides[$key];
+        $on = $on ? Carbon::parse($on)->toDateString() : now()->toDateString();
+        $def = self::POLICY_DEFAULTS[$key] ?? null;
+        if (microtime(true) - self::$memoAt > 5) { self::$memo = []; self::$memoAt = microtime(true); }   // العامل والمجدول يعيشان طويلاً
+        $memo = Tenant::id().":{$key}:{$on}";
+        if (array_key_exists($memo, self::$memo)) return self::$memo[$memo];
+        $v = Cache::remember('policy:'.Tenant::id().':'.self::policyVersion().":{$key}:{$on}", 300, fn () => Policy::where('key', $key)->where('effective_from', '<=', $on)
+            ->orderByDesc('effective_from')->first()?->value ?? $def);
+        // نسخة قديمة محفوظة قبل إضافة مفتاح جديد للسياسة: المفتاح الناقص من الافتراضي (بترتيبه — jsonb لا يحفظ الترتيب)
+        return self::$memo[$memo] = is_array($def) && ! array_is_list($def) && is_array($v) ? array_merge($def, array_intersect_key($v, $def)) : $v;
+    }
+
+    /** كاش داخل الطلب الواحد (حساب أسبوعين لكل الموظفين يقرأ السياسة آلاف المرات) */
+    private static array $memo = [];
+    private static float $memoAt = 0;
+
+    /** سياسة دوام لإدارة: «key@{dept}» إن وُجدت لها نسخة نافذة، وإلا سياسة الشركة */
+    public static function schedule(string $key, Carbon|string|null $on = null, ?int $deptId = null): mixed
+    {
+        return ($deptId ? self::policy("{$key}@{$deptId}", $on) : null) ?? self::policy($key, $on);
+    }
+
+    public static function flush(): void { Cache::flush(); self::$memo = []; }
+
+    /** إبطال كاش السياسات للشركة الحالية فقط (بعد حفظ نسخة) */
+    public static function bumpPolicies(): void { Cache::forever('policy-ver:'.Tenant::id(), self::policyVersion() + 1); self::$memo = []; }
+    private static function policyVersion(): int { return (int) Cache::get('policy-ver:'.Tenant::id(), 0); }
 }

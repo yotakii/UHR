@@ -27,7 +27,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'portal' => \App\Http\Middleware\RequirePortal::class,
             'role' => \App\Http\Middleware\RequireRole::class,
             'perm' => \App\Http\Middleware\RequirePermission::class,
+            'device' => \App\Http\Middleware\RequireDevice::class,
         ]);
+        // أجهزة الحضور وجسر القارئ تُصادَق بمفتاح الجهاز في الهيدر — بلا جلسة ولا CSRF
+        $middleware->validateCsrfTokens(except: ['api/device/*']);
         $middleware->redirectGuestsTo(fn () => null);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

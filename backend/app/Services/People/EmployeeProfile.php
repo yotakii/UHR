@@ -7,6 +7,7 @@ use App\Models\Department;
 use App\Models\Employee;
 use App\Models\Location;
 use App\Models\User;
+use App\Support\CardUid;
 use App\Support\L;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -58,15 +59,12 @@ class EmployeeProfile
         });
     }
 
-    /** ربط/تغيير بطاقة NFC — الرقم يُقرأ من القارئ (لوحة مفاتيح USB) أو يُكتب، وفريد على مستوى المنصة */
+    /** ربط/تغيير بطاقة NFC — الرقم يُقرأ من القارئ (لوحة مفاتيح USB، عشري أو ست عشري) أو يُكتب، وفريد على مستوى المنصة بكل صيغه */
     public function card(Employee $e, ?string $uid, User $by): Employee
     {
-        $uid = $uid ? strtoupper(trim(preg_replace('/[\s-]+/', ':', trim($uid)), ':')) : null;
-        if ($uid && ! preg_match('/^[0-9A-F]{2}(:[0-9A-F]{2}){3,9}$/', $uid)) {
-            if (preg_match('/^[0-9A-F]{8,20}$/', $uid) && strlen($uid) % 2 === 0) $uid = implode(':', str_split($uid, 2));   // قارئ يرسل الرقم بلا فواصل
-            else throw ApiException::field('uid', L::t('رقم البطاقة غير صالح (مثال 04:A1:B2:C3:D4).', 'Invalid card UID (e.g. 04:A1:B2:C3:D4).'), 'card_invalid');
-        }
-        if ($uid && Employee::allCompanies()->where('nfc_uid', $uid)->whereKeyNot($e->id)->exists()) throw ApiException::field('uid', L::t('البطاقة مربوطة بموظف آخر.', 'This card belongs to another employee.'), 'card_taken');
+        $raw = $uid; $uid = $raw !== null && trim($raw) !== '' ? CardUid::format($raw) : null;
+        if ($raw !== null && trim($raw) !== '' && ! $uid) throw ApiException::field('uid', L::t('رقم البطاقة غير صالح (مثال 04:A1:B2:C3:D4).', 'Invalid card UID (e.g. 04:A1:B2:C3:D4).'), 'card_invalid');
+        if ($uid && CardUid::match(Employee::allCompanies(), $uid)->whereKeyNot($e->id)->exists()) throw ApiException::field('uid', L::t('البطاقة مربوطة بموظف آخر.', 'This card belongs to another employee.'), 'card_taken');
         $old = $e->nfc_uid;
         if ($old === $uid) return $e;
         $e->update(['nfc_uid' => $uid]);
