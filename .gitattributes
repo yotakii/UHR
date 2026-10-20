@@ -1,3 +1,7 @@
 * text=auto
 *.sh text eol=lf
 artisan text eol=lf
+
+# سكربتات ويندوز تحتاج CRLF
+*.bat text eol=crlf
+tools/UHR-NFC-Bridge/* text eol=crlf
