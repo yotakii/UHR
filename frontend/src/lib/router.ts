@@ -46,6 +46,9 @@ export function useRoute(): Route {
 }
 
 /** روابط <a href="/…"> داخل التطبيق تُفتح بدون إعادة تحميل؛ والروابط القديمة #/… تتحول لمسارات */
+/** روابط الواجهة فقط: الـ API والملفات الثابتة (/downloads، أي مسار بامتداد ملف) يفتحها المتصفح مباشرة */
+export const isAppPath = (path: string) => !path.startsWith('/api/') && !path.startsWith('/downloads/') && !/\.[a-z0-9]{2,5}$/i.test(path)
+
 export function installRouter() {
   if (location.hash.startsWith('#/')) history.replaceState(null, '', location.hash.slice(1))
   document.addEventListener('click', e => {
@@ -53,7 +56,7 @@ export function installRouter() {
     const a = (e.target as HTMLElement).closest('a')
     if (!a || a.target === '_blank' || a.hasAttribute('download')) return
     const url = new URL(a.href, location.href)
-    if (url.origin !== location.origin || url.pathname.startsWith('/api/')) return
+    if (url.origin !== location.origin || !isAppPath(url.pathname)) return
     e.preventDefault()
     navigate(url.pathname + url.search)
   })

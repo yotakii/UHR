@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { parse, href } from '../router'
+import { parse, href, isAppPath } from '../router'
 import { api, ApiError } from '../api'
 
 describe('path router', () => {
@@ -14,6 +14,16 @@ describe('path router', () => {
     expect(h).toBe('/jobs/alfarada/REQ%201?ref=X+1')
     expect(parse(h)).toEqual({ page: 'jobs', id: 'alfarada/REQ 1', parts: ['jobs', 'alfarada', 'REQ 1'], query: { ref: 'X 1' } })
     expect(href('')).toBe('/')
+  })
+})
+
+describe('link interception', () => {
+  it('leaves API calls and static files to the browser', () => {
+    expect(isAppPath('/hr/employees/7')).toBe(true)
+    expect(isAppPath('/jobs/alfarada/REQ-2026-034')).toBe(true)
+    expect(isAppPath('/api/files/3')).toBe(false)
+    expect(isAppPath('/downloads/UHR-NFC-Bridge.zip')).toBe(false)
+    expect(isAppPath('/sitemap.xml')).toBe(false)
   })
 })
 
