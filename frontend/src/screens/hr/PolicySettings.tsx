@@ -77,6 +77,25 @@ export function PolicySettings() {
     </div>
     <PolicyCard k="leave_types" title={L('أنواع الإجازات', 'Leave types')} data={data} editable={ed} render={(v, set) => <LeaveTypesEditor v={v} set={set} editable={ed} />}
       hint={L('الأجر والرصيد والحد والمستند وشروط الخدمة لكل نوع. نوع عليه طلبات قيد الاعتماد لا يُحذف.', 'Pay, balance, limit, document and service conditions per type. A type with pending requests cannot be removed.')} />
+    <h2 className="font-display font-bold text-[17px] pt-2">{L('الكشف الشهري والسلفة', 'Monthly sheet & advances')}</h2>
+    <PolicyCard k="payroll" title={L('قواعد الكشف الشهري', 'Monthly sheet rules')} data={data} editable={ed}
+      hint={L('المبالغ تقديرية حتى التكامل مع النظام المالي. التغيير يسري على الكشوف غير المغلقة عند إعادة احتسابها.', 'Amounts are estimates until the finance integration. Changes apply to open sheets when recalculated.')}
+      render={(v, set) => <div className="grid lg:grid-cols-2 gap-x-8">
+        <div>
+          <label className="flex items-center justify-between gap-3 py-1.5 text-[13.5px]"><span>{L('بدء احتساب الدوام في النظام', 'Attendance counted from')}</span>
+            <input type="date" disabled={!ed} value={v.start_date ?? ''} onChange={e => set({ ...v, start_date: e.target.value || null })} className="field !h-9 !w-40" /></label>
+          {num(v.month_days, x => set({ ...v, month_days: x }), L('أيام الشهر للأجر اليومي', 'Month days for the daily wage'), ed, L('يوم', 'days'))}
+          {num(v.day_hours, x => set({ ...v, day_hours: x }), L('ساعات اليوم لأجر الساعة', 'Day hours for the hourly wage'), ed, L('ساعة', 'h'))}
+          {num(v.absent_days, x => set({ ...v, absent_days: x }), L('حسم الغياب غير المبرر', 'Unjustified absence deduction'), ed, L('يوم أجر', 'day wage'), 0.5)}
+          {num(v.justified_absent_days, x => set({ ...v, justified_absent_days: x }), L('حسم الغياب المبرر', 'Justified absence deduction'), ed, L('يوم أجر', 'day wage'), 0.5)}
+        </div>
+        <div>
+          {num(v.insurance_base * 100, x => set({ ...v, insurance_base: x / 100 }), L('أساس التأمينات من الراتب', 'Insurance base of salary'), ed, '%')}
+          {num(v.insurance_rate * 100, x => set({ ...v, insurance_rate: x / 100 }), L('نسبة التأمينات (حصة العامل)', 'Insurance rate (employee)'), ed, '%', 0.5)}
+          {num(v.advance_earned_ratio * 100, x => set({ ...v, advance_earned_ratio: x / 100 }), L('السلفة من المستحق حتى تاريخه', 'Advance of pay earned so far'), ed, '%')}
+          {num(v.advance_max_ratio * 100, x => set({ ...v, advance_max_ratio: x / 100 }), L('سقف السلفة من الراتب', 'Advance cap of salary'), ed, '%')}
+          {num(v.advance_per_month, x => set({ ...v, advance_per_month: x }), L('عدد السلف بالشهر', 'Advances per month'), ed, L('سلفة', 'adv.'))}
+        </div></div>} />
   </div>
 }
 

@@ -113,7 +113,7 @@ class HrDashboard
             });
         }
         if ($this->can('employees')) {
-            ServiceRequest::with('employee')->where('status', 'pending')->get()->each(function ($x) use ($add, $en) {
+            ServiceRequest::with('employee')->whereIn('status', \App\Models\LeaveRequest::PENDING)->get()->each(function ($x) use ($add, $en) {
                 $k = ServiceRequest::KINDS[$x->kind] ?? [$x->kind, $x->kind];
                 $add("sv{$x->id}", $en($x->employee), ["طلب خدمة: {$k[0]}", "Service: {$k[1]}"], null, $x->created_at, 'leaves', 'service');
             });

@@ -46,6 +46,9 @@ class CompanyDefaults
         // المسار الموحد (SRS §10.1): التبرير المدير ← HR، والتكليف بالإضافي (يطلبه المدير) ← HR
         ApprovalChain::firstOrCreate(['type' => 'justification'], ['levels' => [$mgr, $hr]]);
         ApprovalChain::firstOrCreate(['type' => 'overtime'], ['levels' => [$hr]]);
+        // طلبات الخدمات والشهادات والسلفة (D-16، D-01) ← الموارد البشرية
+        ApprovalChain::firstOrCreate(['type' => 'service'], ['levels' => [$hr]]);
+        ApprovalChain::firstOrCreate(['type' => 'advance'], ['levels' => [$hr]]);
         ApprovalChain::firstOrCreate(['type' => 'appointment'], ['levels' => [
             $hr + ['user_id' => null],
             ['role_ar' => 'الإدارة المالية', 'role_en' => 'Finance', 'role_key' => 'finance', 'user_id' => null],

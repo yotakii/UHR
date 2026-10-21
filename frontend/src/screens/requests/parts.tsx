@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Check, Clock, FileText, X } from 'lucide-react'
-import { useL, useLang, bi, fmtDate } from '../../lib/store'
+import { useL, useLang, bi, fmtDate, money } from '../../lib/store'
 import { fileUrl } from '../../lib/console'
 import { minsLabel } from '../../lib/employees'
 import { useDecide, type ReqRow, type Step } from '../../lib/requests'
@@ -25,6 +25,10 @@ export function StepsPath({ steps }: { steps: Step[] }) {
 /** الفترة/المدة كما في الديمو: ساعات، يوم التبرير ودقائقه، أو من — إلى */
 export function Period({ r }: { r: ReqRow }) {
   const L = useL(); const lang = useLang()
+  if (r.kind === 'service') return <span className="num">{fmtDate(r.created_at, lang)}{r.amount ? <> — {money(r.amount, r.currency ?? 'USD', lang)}</> : null}
+    {r.addressee?.name && <span className="block text-[12px] text-ink-3">{L('إلى', 'To')}: {r.addressee.name}{r.addressee.cr_no ? ` · ${L('سجل', 'CR')} ${r.addressee.cr_no}` : ''}</span>}
+    {r.data?.phone && <span className="block text-[12px] text-ink-3">{L('الجوال الجديد', 'New mobile')}: <span className="ltr inline-block">{r.data.phone}</span></span>}
+    {r.ref_no && <span className="block text-[12px] text-brand ltr text-start">{r.ref_no}</span>}</span>
   if (r.kind === 'overtime') return <span className="num">{fmtDate(r.from, lang)} — {minsLabel(r.minutes ?? 0, lang)}</span>
   if (r.kind === 'justify') return <span className="num">{fmtDate(r.ref_date ?? r.from, lang)}{r.minutes ? <> — {minsLabel(r.minutes, lang)}</> : <> — {r.warnings.issue === 'incomplete' ? L('بلا خروج', 'no out') : L('غياب', 'absent')}</>}</span>
   if (r.hours) return <span className="num">{fmtDate(r.from, lang)} — {r.hours} {L('ساعة', 'h')}</span>

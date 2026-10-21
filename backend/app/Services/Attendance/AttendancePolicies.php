@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Validator;
 class AttendancePolicies
 {
     /** المفاتيح التي تديرها صفحة «سياسات الدوام» — وما يقبل تجاوزاً لإدارة */
-    public const KEYS = ['shift', 'work_days', 'late_deduction', 'overtime_rates', 'overtime', 'terminal', 'annual_leave', 'leave_rules', 'leave_types'];
+    public const KEYS = ['shift', 'work_days', 'late_deduction', 'overtime_rates', 'overtime', 'terminal', 'annual_leave', 'leave_rules', 'leave_types', 'payroll'];
     public const DEPT_KEYS = ['shift', 'work_days'];
 
     /** كل النسخ لكل مفتاح (والإدارات)، والنافذة اليوم، والقيم الافتراضية */
@@ -97,6 +97,9 @@ class AttendancePolicies
                 'tiers.*.factor' => ['required', 'numeric', 'between:0,10'], 'exempt_upto' => ['required', 'integer', 'between:0,120'], 'exempt_per_month' => ['required', 'integer', 'between:0,31'], 'absent_after' => ['required', 'integer', 'between:1,600']],
             'overtime' => ['weekly_hours' => ['required', 'integer', 'between:1,84'], 'daily_max' => ['required', 'integer', 'between:0,720'], 'requires_assignment' => ['required', 'boolean'], 'max_continuous_hours' => ['required', 'integer', 'between:1,24']],
             'terminal' => ['cooldown' => ['required', 'integer', 'between:0,3600'], 'incomplete_after' => ['required', 'integer', 'between:0,720']],
+            'payroll' => ['start_date' => ['nullable', 'date_format:Y-m-d'], 'month_days' => ['required', 'integer', 'between:20,31'], 'day_hours' => ['required', 'integer', 'between:1,12'], 'absent_days' => ['required', 'numeric', 'between:0,5'],
+                'justified_absent_days' => ['required', 'numeric', 'between:0,5'], 'insurance_base' => ['required', 'numeric', 'between:0,1'], 'insurance_rate' => ['required', 'numeric', 'between:0,0.5'],
+                'advance_earned_ratio' => ['required', 'numeric', 'between:0,1'], 'advance_max_ratio' => ['required', 'numeric', 'between:0,1'], 'advance_per_month' => ['required', 'integer', 'between:0,5']],
             'annual_leave' => ['first_year' => ['required', 'numeric', 'between:0,60'], 'standard' => ['required', 'numeric', 'between:0,60'], 'senior' => ['required', 'numeric', 'between:0,60'],
                 'standard_years' => ['required', 'numeric', 'between:0,40'], 'senior_years' => ['required', 'numeric', 'between:0,50', 'gte:standard_years'], 'senior_age' => ['required', 'integer', 'between:18,80'], 'prorate_first_year' => ['required', 'boolean']],
             'leave_rules' => ['notice' => ['required', 'array', 'min:1', 'max:10'], 'notice.*.max_days' => ['required', 'integer', 'between:1,365', 'distinct'], 'notice.*.days_before' => ['required', 'integer', 'between:0,90'],

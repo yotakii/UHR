@@ -34,6 +34,10 @@ class Forms
         'HR.01-03-F-05' => ['تسليم مهام', 'Handover of duties', 'employees', false],
         'HR.01-03-F-06' => ['شهادة خبرة / خدمة', 'Experience / service certificate', 'employees', true],
         'HR.01-03-F-07' => ['تسليم عهدة موظف', 'Employee custody handover', 'assets', false],
+        // شهادات الخدمات (D-16): برقم تسلسلي وبيانات الجهة
+        'SAL' => ['شهادة راتب', 'Salary certificate', 'salary_cert', true],
+        'EMP' => ['شهادة عمل / تعريف', 'Employment certificate', 'employees', false],
+        'PAY' => ['كشف الدوام والمستحقات الشهري', 'Monthly attendance & pay sheet', 'payroll', true],
     ];
 
     public const ISSUED_ON = '2025-04-01';

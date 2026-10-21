@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Home, FileSignature, ChevronLeft, ChevronRight, CalendarPlus, Fingerprint, Stamp } from 'lucide-react'
+import { Home, FileSignature, ChevronLeft, ChevronRight, CalendarPlus, Fingerprint, Stamp, ClipboardList, Receipt } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { useRoute } from '../../lib/router'
 import type { SessionUser } from '../../lib/session'
@@ -11,9 +11,12 @@ import { useInbox, useMyAttendance } from '../../lib/requests'
 import { MyRequests } from '../requests/MyRequests'
 import { MyAttendance } from '../requests/MyAttendance'
 import { TeamApprovals } from '../requests/TeamApprovals'
+import { MyServices } from '../requests/MyServices'
+import { MyPayslip } from '../requests/MyPayslip'
+import { CertificatePage } from '../requests/Certificate'
 
 /** روابط إشعارات الموظف ← مسارات بوابته */
-export const employeeLink = (link: string) => ({ docs: '/me/documents', requests: '/me/requests', approvals: '/me/approvals', attendance: '/me/attendance' } as Record<string, string>)[link] ?? null
+export const employeeLink = (link: string) => ({ docs: '/me/documents', requests: '/me/requests', approvals: '/me/approvals', attendance: '/me/attendance', payslip: '/me/payslip', services: '/me/services' } as Record<string, string>)[link] ?? null
 
 /**
  * بوابة الموظف (M14): «الرئيسية» بما ينتظره، «إجازاتي وطلباتي»، «حضوري» مع التبرير، «اعتماداتي» للمدير (فريقه، نائبه، التكليف بالإضافي)
@@ -29,13 +32,16 @@ export function EmployeeApp({ user }: { user: SessionUser }) {
   const items = [{ to: '/', icon: <Home size={18} />, label: L('الرئيسية', 'Home') },
     { to: '/me/requests', icon: <CalendarPlus size={18} />, label: L('إجازاتي وطلباتي', 'My leave & requests') },
     { to: '/me/attendance', icon: <Fingerprint size={18} />, label: L('حضوري', 'My attendance'), count: issues.length || undefined },
+    { to: '/me/services', icon: <ClipboardList size={18} />, label: L('خدماتي', 'My services') },
+    { to: '/me/payslip', icon: <Receipt size={18} />, label: L('كشفي الشهري', 'My monthly sheet') },
     ...(approver ? [{ to: '/me/approvals', icon: <Stamp size={18} />, label: L('اعتماداتي', 'My approvals'), count: inbox!.data.length || undefined }] : []),
     { to: '/me/documents', icon: <FileSignature size={18} />, label: L('وثائق للتوقيع', 'Documents to sign'), count: n || undefined }]
   const sec = route.parts[0] === 'me' ? route.parts[1] : undefined
-  const page = sec === 'documents' ? 'docs' : sec === 'requests' || sec === 'attendance' || (sec === 'approvals' && approver) ? sec : 'home'
+  const page = sec === 'documents' ? 'docs' : sec === 'requests' || sec === 'attendance' || sec === 'services' || sec === 'payslip' || (sec === 'approvals' && approver) ? sec : 'home'
   const Next = lang === 'ar' ? ChevronLeft : ChevronRight
   return <Shell items={items} user={user} org={user.company ? bi(user.company.short, lang) : ''} sub={L('بوابة الموظف', 'Employee portal')} linkOf={employeeLink}>
-    {page === 'docs' ? <MyDocuments /> : page === 'requests' ? <MyRequests /> : page === 'attendance' ? <MyAttendance /> : page === 'approvals' ? <TeamApprovals /> : <div className="max-w-[1000px] mx-auto space-y-5">
+    {page === 'docs' ? <MyDocuments /> : page === 'requests' ? <MyRequests /> : page === 'attendance' ? <MyAttendance /> : page === 'approvals' ? <TeamApprovals /> : page === 'payslip' ? <MyPayslip />
+      : page === 'services' ? (route.parts[2] && /^\d+$/.test(route.parts[2]) ? <CertificatePage id={Number(route.parts[2])} hr={false} back="/me/services" /> : <MyServices base="/me/services" />) : <div className="max-w-[1000px] mx-auto space-y-5">
       <PageHead title={<>{L('أهلاً', 'Welcome')}، {bi(user.name, lang)}</>} sub={user.employee ? <>{bi(user.employee.title, lang)} · {bi(user.employee.dept, lang)} · <span className="ltr inline-block">{user.employee.code}</span></> : undefined} />
       <Panel title={L('بانتظارك', 'Waiting for you')} pad={false}>
         {n === 0 && !issues.length && !inbox?.data.length ? <Empty title={L('لا شيء بانتظارك الآن', 'Nothing waiting for you now')} /> : <ul className="divide-y divide-line-2">

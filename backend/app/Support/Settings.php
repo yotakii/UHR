@@ -116,6 +116,11 @@ class Settings
             ['key' => 'unpaid', 'ar' => 'إجازة غير مدفوعة', 'en' => 'Unpaid leave', 'paid' => 0, 'balance' => 'unpaid', 'unit' => 'day', 'max_days' => 30, 'notice' => true, 'doc' => 'none', 'after_months' => 0, 'confirmed' => false, 'once' => false, 'calendar' => false, 'exec' => true],
             ['key' => 'mission', 'ar' => 'مهمة عمل', 'en' => 'Work mission', 'paid' => 100, 'balance' => null, 'unit' => 'day', 'max_days' => null, 'notice' => false, 'doc' => 'none', 'after_months' => 0, 'confirmed' => false, 'once' => false, 'calendar' => false, 'exec' => false],
         ],
+        // الكشف الشهري والسلفة (D-01، SRS §10.10): الأجر اليومي = الراتب ÷ month_days، والساعة ÷ day_hours؛ الغياب غير المبرر يُحسم absent_days يوماً،
+        // والمبرر justified_absent_days؛ التأمينات insurance_rate من insurance_base من الراتب؛ السلفة حتى advance_earned_ratio من المستحق حتى تاريخه
+        // وبحد advance_max_ratio من الراتب، وadvance_per_month سلفة بالشهر؛ start_date = بدء احتساب الدوام في النظام (ما قبله لا يُعدّ غياباً)
+        'payroll' => ['start_date' => null, 'month_days' => 30, 'day_hours' => 8, 'absent_days' => 1, 'justified_absent_days' => 0, 'insurance_base' => 0.72, 'insurance_rate' => 0.07,
+            'advance_earned_ratio' => 0.5, 'advance_max_ratio' => 0.5, 'advance_per_month' => 1],
         'sick_leave' => ['full' => 30, 'p80' => 30, 'p75' => 30],
         'probation_days' => 90,
         'notice_days' => 30,

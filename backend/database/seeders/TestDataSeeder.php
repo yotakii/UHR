@@ -397,6 +397,9 @@ class TestDataSeeder extends Seeder
         }
         $now = now();
         foreach (array_chunk($rows, 200) as $chunk) AttendanceDay::insert(array_map(fn ($r) => ['company_id' => Tenant::id(), 'employee_id' => $r[0], 'date' => $r[1], 'in_at' => $r[2], 'out_at' => $r[3], 'status' => $r[4], 'justified' => false, 'created_at' => $now, 'updated_at' => $now], $chunk));
+        // الكشف الشهري: ما قبل أول يوم في بيانات الديمو لا يُعدّ غياباً (بدء احتساب الدوام في النظام)
+        if ($rows) Policy::updateOrCreate(['key' => 'payroll', 'effective_from' => '2020-01-01'], ['value' => ['start_date' => min(array_column($rows, 1))] + Settings::POLICY_DEFAULTS['payroll']]);
+        Settings::bumpPolicies();
     }
 
     private function requests(array $emp): void
@@ -421,8 +424,13 @@ class TestDataSeeder extends Seeder
             'text' => 'أتقدم بطلب قبول استقالتي بسبب السفر خارج القطر، مع التزامي بإتمام فترة الإخطار وتسليم المهام.',
             'clearance' => ['custody' => false, 'it' => false, 'finance' => false, 'hr' => false], 'chain' => [$mgr + ['by' => 'ميس الكردي', 'at' => $d(-2).'T09:30:00'], $hr]]);
 
+        \App\Models\MonthSheet::query()->delete(); \App\Models\Advance::query()->delete(); \App\Models\OvertimeRequest::query()->delete();
+        \App\Models\RequestStep::whereIn('subject_type', [(new ServiceRequest)->getMorphClass(), (new \App\Models\OvertimeRequest)->getMorphClass()])->delete();
         ServiceRequest::query()->delete();
-        ServiceRequest::create(['employee_id' => $emp['e1012']->id, 'kind' => 'salary_cert', 'note' => 'لتقديمها إلى المصرف', 'status' => 'pending', 'created_at' => $d(-1).' 10:10:00']);
+        $sv = ServiceRequest::create(['employee_id' => $emp['e1012']->id, 'kind' => 'salary_cert', 'note' => 'لتقديمها إلى المصرف', 'status' => 'pending_hr', 'created_at' => $d(-1).' 10:10:00',
+            'addressee' => ['name' => 'المصرف التجاري السوري', 'cr_no' => '12345', 'email' => 'loans@cbs.gov.sy', 'phone' => '+963 11 221 8890'], 'notify_consent' => true]);
+        \App\Models\RequestStep::create(['subject_type' => $sv->getMorphClass(), 'subject_id' => $sv->id, 'level' => 1, 'role_key' => 'hr_director', 'role_ar' => 'الموارد البشرية', 'role_en' => 'Human Resources',
+            'status' => 'pending', 'activated_at' => $d(-1).' 10:10:00']);
     }
 
     private function engagement(array $emp, array $jobs, array $cands): void

@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\Candidate\MyApplicationController;
 use App\Http\Controllers\Api\Employee\ApprovalInboxController;
 use App\Http\Controllers\Api\Employee\MyDocumentsController;
 use App\Http\Controllers\Api\Employee\MyRequestsController;
+use App\Http\Controllers\Api\Employee\MyServicesController;
+use App\Http\Controllers\Api\Hr\PayrollController;
 use App\Http\Controllers\Api\Hr\LeaveAdminController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\FileController;
@@ -89,6 +91,12 @@ Route::middleware(['auth', 'fresh'])->prefix('me')->group(function () {
     Route::post('/approvals/{stepId}', [ApprovalInboxController::class, 'decide'])->whereNumber('stepId');
     Route::put('/delegate', [ApprovalInboxController::class, 'delegate']);
     Route::post('/overtime', [ApprovalInboxController::class, 'assignOvertime'])->middleware('throttle:30,1');
+    // خدماتي (D-16) وكشفي الشهري (D-01)
+    Route::get('/services', [MyServicesController::class, 'index']);
+    Route::post('/services', [MyServicesController::class, 'store'])->middleware('throttle:20,1');
+    Route::post('/services/{id}/cancel', [MyServicesController::class, 'cancel'])->whereNumber('id');
+    Route::get('/services/{id}/certificate', [MyServicesController::class, 'certificate'])->whereNumber('id');
+    Route::get('/payslips', [MyServicesController::class, 'payslips']);
 });
 
 Route::middleware(['auth', 'fresh'])->prefix('me/documents')->group(function () {
@@ -191,6 +199,15 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
 
     // M09 — الإجازات والتبريرات والتكليف بالإضافي (القرار من صندوق الاعتماد /me/approvals)
     Route::get('/leaves', [LeaveAdminController::class, 'index'])->middleware('perm:leaves,view');
+    Route::get('/services/{id}/certificate', [PayrollController::class, 'certificate'])->whereNumber('id')->middleware('perm:leaves,view');
+
+    // الكشف الشهري للدوام والمستحقات (D-01): مسودة ← محتسب ← معتمد ← مغلق
+    Route::middleware('perm:payroll,view')->group(function () {
+        Route::get('/payroll', [PayrollController::class, 'show']);
+        Route::post('/payroll', [PayrollController::class, 'open'])->middleware('perm:payroll,edit');
+        Route::post('/payroll/{id}/{action}', [PayrollController::class, 'act'])->whereNumber('id')->whereIn('action', ['calculate', 'approve', 'reopen', 'close']);
+        Route::get('/payroll/{id}/export', [PayrollController::class, 'export'])->whereNumber('id')->middleware('perm:payroll,export');
+    });
 
     // M16 — سياسات الدوام بتاريخ نفاذ والعطل الرسمية
     Route::middleware('perm:policies,view')->group(function () {

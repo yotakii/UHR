@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint } from 'lucide-react'
+import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { useRoute } from '../../lib/router'
 import { can, type SessionUser } from '../../lib/session'
@@ -32,6 +32,10 @@ import { Leaves } from './leaves/Leaves'
 import { MyRequests } from '../requests/MyRequests'
 import { MyAttendance } from '../requests/MyAttendance'
 import { TeamApprovals } from '../requests/TeamApprovals'
+import { Payroll } from './payroll/Payroll'
+import { MyServices } from '../requests/MyServices'
+import { MyPayslip } from '../requests/MyPayslip'
+import { CertificatePage } from '../requests/Certificate'
 
 type Page = { item: NavItem; module: string | ((u: SessionUser) => boolean); view?: () => ReactNode; task?: string }
 
@@ -64,13 +68,18 @@ export function HrApp({ user }: { user: SessionUser }) {
       view: () => route.parts[2] && /^\d+$/.test(route.parts[2]) ? <EmployeeFile id={Number(route.parts[2])} /> : <Employees /> },
     { item: { to: '/hr/org', icon: <Network size={17} />, label: L('الهيكل التنظيمي', 'Org chart'), group: g2 }, module: 'org', view: () => <OrgChart /> },
     { item: { to: '/hr/attendance', icon: <Clock size={18} />, label: L('الحضور والدوام', 'Attendance'), group: g2 }, module: 'attendance', view: () => <Attendance /> },
-    { item: { to: '/hr/leaves', icon: <CalendarCheck size={18} />, label: L('الإجازات والتبريرات', 'Leave & justifications'), count: count('leave', 'service'), group: g2 }, module: 'leaves', view: () => <Leaves /> },
+    { item: { to: '/hr/leaves', icon: <CalendarCheck size={18} />, label: L('الإجازات والتبريرات', 'Leave & justifications'), count: count('leave', 'service'), group: g2 }, module: 'leaves',
+      view: () => route.parts[2] === 'cert' && /^\d+$/.test(route.parts[3] ?? '') ? <CertificatePage id={Number(route.parts[3])} hr back="/hr/leaves?tab=services" /> : <Leaves /> },
+    { item: { to: '/hr/payroll', icon: <Wallet size={18} />, label: L('الكشف الشهري', 'Monthly sheet'), group: g2 }, module: 'payroll', view: () => <Payroll /> },
     { item: { to: '/hr/custody', icon: <Package size={18} />, label: L('العهد', 'Custody'), group: g2 }, module: 'assets', task: '08' },
     { item: { to: '/hr/offboarding', icon: <DoorOpen size={18} />, label: L('الاستقالات وإنهاء الخدمة', 'Resignations & exits'), count: count('resignation'), group: g2 }, module: 'employees', task: '08' },
     // موظفو الشركة أصحاب الحسابات الإدارية يوقّعون وثائقهم من هنا (M14)
     // موظفو الشركة أصحاب الحسابات الإدارية: إجازاتهم وحضورهم كأي موظف (M14)
     { item: { to: '/hr/my-requests', icon: <CalendarPlus size={17} />, label: L('إجازاتي وطلباتي', 'My leave & requests'), group: g2 }, module: u => !!u.employee, view: () => <MyRequests /> },
     { item: { to: '/hr/my-attendance', icon: <Fingerprint size={17} />, label: L('حضوري', 'My attendance'), group: g2 }, module: u => !!u.employee, view: () => <MyAttendance /> },
+    { item: { to: '/hr/my-services', icon: <ClipboardList size={17} />, label: L('خدماتي', 'My services'), group: g2 }, module: u => !!u.employee,
+      view: () => route.parts[2] && /^\d+$/.test(route.parts[2]) ? <CertificatePage id={Number(route.parts[2])} hr={false} back="/hr/my-services" /> : <MyServices base="/hr/my-services" /> },
+    { item: { to: '/hr/my-payslip', icon: <Receipt size={17} />, label: L('كشفي الشهري', 'My monthly sheet'), group: g2 }, module: u => !!u.employee, view: () => <MyPayslip /> },
     { item: { to: '/hr/my-documents', icon: <FileSignature size={17} />, label: L('وثائقي للتوقيع', 'My documents'), group: g2 }, module: u => !!u.employee, view: () => <MyDocuments /> },
     { item: { to: '/hr/performance', icon: <Target size={17} />, label: L('الأداء وتقييم 360', 'Performance & 360'), group: g3 }, module: 'performance', task: '09' },
     { item: { to: '/hr/analytics', icon: <BarChart3 size={17} />, label: L('التحليلات', 'Analytics'), group: g3 }, module: u => can(u, 'employees', 'export'), task: '09' },

@@ -9,10 +9,11 @@ export type ReqStatus = 'pending_manager' | 'pending_hr' | 'pending_exec' | 'app
 export interface Step { id: number; level: number; role: Bi; status: 'waiting' | 'pending' | 'approved' | 'rejected' | 'skipped' | 'cancelled'; by: Bi | null; owner: Bi | null; delegate_for: Bi | null; note: string | null; at: string | null; overdue: boolean }
 export interface Person { id: number; code: string; name: Bi; title: Bi }
 export interface ReqRow {
-  kind: 'leave' | 'justify' | 'overtime'; id: number; type: string; type_name: Bi; employee: Person | null; from: string; to: string; hours?: number | null; minutes?: number | null
+  kind: 'leave' | 'justify' | 'overtime' | 'service'; id: number; type: string; type_name: Bi; employee: Person | null; from: string; to: string; hours?: number | null; minutes?: number | null
   ref_date?: string | null; days?: number | null; reason: string; status: ReqStatus
   warnings: { over_balance?: { days: number; remaining: number }; conflict?: (Bi & { from: string; to: string })[]; issue?: string }
   substitute?: Bi | null; doc?: { id: number; name: string } | null; doc_required?: boolean; paid?: number | null; requested_by?: Bi | null
+  amount?: number | null; currency?: 'USD' | 'SYP'; addressee?: { name?: string; cr_no?: string; email?: string; phone?: string } | null; notify_consent?: boolean; data?: { phone?: string } | null; ref_no?: string | null; issued_at?: string | null
   created_at: string; steps: Step[]; step_id: number | null; can_act: boolean; can_cancel: boolean
 }
 export interface LeaveType { key: string; ar: string; en: string; unit: 'day' | 'hour'; max_days: number | null; notice: boolean; doc: 'none' | 'optional' | 'required'; paid: number; balance: string | null }
@@ -29,7 +30,7 @@ export interface Inbox {
   delegate: (Bi & { id: number }) | null; delegates: (Bi & { id: number })[]; overtime_max: number; assigned: ReqRow[]
 }
 
-const refresh = () => { for (const k of [['me', 'leave'], ['me', 'attendance'], ['me', 'approvals'], ['hr', 'leaves'], ['hr', 'dashboard'], ['hr', 'attendance'], ['hr', 'employee']]) queryClient.invalidateQueries({ queryKey: k }) }
+const refresh = () => { for (const k of [['me', 'leave'], ['me', 'attendance'], ['me', 'approvals'], ['me', 'services'], ['hr', 'leaves'], ['hr', 'dashboard'], ['hr', 'attendance'], ['hr', 'employee']]) queryClient.invalidateQueries({ queryKey: k }) }
 
 export const useMyLeave = () => useQuery({ queryKey: ['me', 'leave'], queryFn: () => api<MyLeave>('/me/leave') })
 export const checkLeave = (v: LeaveInput) => api<Check>('/me/leave/check', { json: { ...v, substitute_id: v.substitute_id || null } })
@@ -62,5 +63,5 @@ export const useAssignOvertime = () => useMutation({
   onSuccess: d => { queryClient.setQueryData(['me', 'approvals'], d); refresh() },
 })
 
-export type LeaveTab = 'pending' | 'justify' | 'overtime' | 'all'
-export const useHrLeaves = (tab: LeaveTab, q: string) => useQuery({ queryKey: ['hr', 'leaves', tab, q], queryFn: () => api<{ data: ReqRow[]; reject_min: number; counts: Record<'pending' | 'justify' | 'overtime', number> }>(`/hr/leaves?tab=${tab}${q ? `&q=${encodeURIComponent(q)}` : ''}`), placeholderData: p => p })
+export type LeaveTab = 'pending' | 'justify' | 'overtime' | 'services' | 'all'
+export const useHrLeaves = (tab: LeaveTab, q: string) => useQuery({ queryKey: ['hr', 'leaves', tab, q], queryFn: () => api<{ data: ReqRow[]; reject_min: number; counts: Record<'pending' | 'justify' | 'overtime' | 'services', number> }>(`/hr/leaves?tab=${tab}${q ? `&q=${encodeURIComponent(q)}` : ''}`), placeholderData: p => p })

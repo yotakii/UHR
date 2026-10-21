@@ -48,14 +48,14 @@ class DatabaseTest extends TestCase
         // قيم الشركة تُبذر عند إنشائها، وتبقى معزولة عن الشركات الأخرى
         $a = $this->makeCompany('acme');
         \App\Services\Platform\CompanyDefaults::seed($a);
-        $this->assertSame(5, ApprovalChain::count());   // + justification, overtime (07c)
+        $this->assertSame(7, ApprovalChain::count());   // + justification, overtime (07c), service, advance (07d)
         $this->assertSame(4, count(ApprovalChain::where('type', 'appointment')->first()->levels));
         $this->assertSame('UHR', Settings::prefix('employee'));
         $this->assertNotNull(Settings::policy('annual_leave'));
         $this->assertSame('شركة acme', Settings::company('name_ar'));
         $this->makeCompany('beta');
-        $this->assertSame(5, ApprovalChain::count());   // + justification, overtime (07c)
-        $this->assertSame(10, ApprovalChain::allCompanies()->count());
+        $this->assertSame(7, ApprovalChain::count());   // + justification, overtime (07c), service, advance (07d)
+        $this->assertSame(14, ApprovalChain::allCompanies()->count());
     }
 
     public function test_install_creates_admin_with_temporary_password(): void

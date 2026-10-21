@@ -38,6 +38,8 @@ export interface PolicyValues {
     reject_min: number; reminder_hours: number; justify_hours: number; probation_paid: boolean
   }
   leave_types: LeaveTypePolicy[]
+  payroll: { start_date: string | null; month_days: number; day_hours: number; absent_days: number; justified_absent_days: number; insurance_base: number; insurance_rate: number
+    advance_earned_ratio: number; advance_max_ratio: number; advance_per_month: number }
 }
 export interface LeaveTypePolicy {
   key: string; ar: string; en: string; paid: number; balance: 'annual' | 'sick' | 'unpaid' | null; unit: 'day' | 'hour'; max_days: number | null; notice: boolean

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Printer } from 'lucide-react'
 import { useL, useLang, bi, fmtDateTime, todayISO, addDays } from '../../lib/store'
 import { ApiError } from '../../lib/api'
 import { useAssignOvertime, useInbox, useSetDelegate, type ReqRow } from '../../lib/requests'
@@ -6,7 +7,7 @@ import { Btn, Empty, Field, PageHead, Panel, toast } from '../../ui/kit'
 import { DecideButtons, DocLink, LeaveStatus, Period, StepsPath, Warnings } from './parts'
 
 /** جدول طلبات المسار الموحد (Leaves في الديمو): الموظف، النوع، الفترة، السبب، المسار، الحالة، القرار */
-export function RequestTable({ rows, rejectMin, empty }: { rows: ReqRow[]; rejectMin: number; empty: string }) {
+export function RequestTable({ rows, rejectMin, empty, certHref }: { rows: ReqRow[]; rejectMin: number; empty: string; certHref?: (id: number) => string }) {
   const L = useL(); const lang = useLang()
   if (!rows.length) return <Empty title={empty}>{L('الطلبات الجديدة تظهر هنا.', 'New requests appear here.')}</Empty>
   return <table className="tbl"><thead><tr><th className="hidden sm:table-cell">{L('الموظف', 'Employee')}</th><th>{L('الطلب', 'Request')}</th><th className="hidden lg:table-cell">{L('السبب', 'Reason')}</th>
@@ -21,7 +22,7 @@ export function RequestTable({ rows, rejectMin, empty }: { rows: ReqRow[]; rejec
       <td className="hidden lg:table-cell text-ink-2 max-w-[220px]">{r.reason}</td>
       <td className="hidden md:table-cell"><StepsPath steps={r.steps} /></td>
       <td className="hidden sm:table-cell"><LeaveStatus s={r.status} /></td>
-      <td><DecideButtons r={r} rejectMin={rejectMin} /></td>
+      <td><DecideButtons r={r} rejectMin={rejectMin} />{certHref && r.ref_no && <a href={certHref(r.id)} className="inline-flex items-center gap-1 text-brand text-[12.5px] font-semibold"><Printer size={13} />{L('الشهادة', 'Certificate')}</a>}</td>
     </tr>)}</tbody></table>
 }
 

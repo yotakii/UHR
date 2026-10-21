@@ -8,6 +8,8 @@ use App\Models\Employee;
 use App\Models\LeaveRequest;
 use App\Models\OvertimeRequest;
 use App\Models\RequestStep;
+use App\Models\ServiceRequest;
+use App\Services\People\ServiceDesk;
 use App\Services\Leave\LeaveService;
 use App\Services\Leave\OvertimeService;
 use App\Services\Workflow\Workflow;
@@ -29,7 +31,11 @@ class ApprovalInboxController extends Controller
         $u = $request->user()->loadMissing('roles');
         $rows = Workflow::inbox($u)->map(function (RequestStep $s) use ($u) {
             $x = $s->subject;
-            return $x instanceof LeaveRequest ? RequestRow::leave($x->load(RequestRow::WITH), $u) : RequestRow::overtime($x->load(['employee', 'requester.employee', 'steps.actor.employee', 'steps.user.employee', 'steps.delegator.employee']), $u);
+            return match (true) {
+                $x instanceof LeaveRequest => RequestRow::leave($x->load(RequestRow::WITH), $u),
+                $x instanceof ServiceRequest => RequestRow::service($x->load(RequestRow::SERVICE_WITH), $u),
+                default => RequestRow::overtime($x->load(RequestRow::SERVICE_WITH), $u),
+            };
         })->values();
         $me = $u->employee_id ? Employee::with('delegate')->find($u->employee_id) : null;
         $team = $me ? Employee::current()->where('manager_id', $me->id)->orderBy('name')->get() : collect();
@@ -50,6 +56,7 @@ class ApprovalInboxController extends Controller
         $ok = $d['decision'] === 'approve';
         if ($x instanceof LeaveRequest) $this->leaves->decide($x, $u, $ok, $d['note'] ?? null);
         elseif ($x instanceof OvertimeRequest) $this->overtime->decide($x, $u, $ok, $d['note'] ?? null);
+        elseif ($x instanceof ServiceRequest) app(ServiceDesk::class)->decide($x->load('employee'), $u, $ok, $d['note'] ?? null);
         else abort(404);
         return $this->index($request);
     }

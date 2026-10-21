@@ -39,7 +39,7 @@ class NoticeController extends Controller
 
     /** وحدة كل رابط إشعار — إشعارات «الموارد البشرية» تظهر لمن يملك عرض وحدتها (مسؤول التوظيف لا يرى شؤون الموظفين) */
     private const LINK_MODULES = ['cand:' => 'candidates', 'approvals' => 'candidates', 'job:' => 'jobs', 'emp:' => 'employees', 'leaves' => 'leaves', 'referrals' => 'referrals',
-        'offboarding' => 'employees', 'custody' => 'assets', 'attendance' => 'attendance', 'onboard' => 'employees'];
+        'offboarding' => 'employees', 'custody' => 'assets', 'attendance' => 'attendance', 'onboard' => 'employees', 'payroll' => 'payroll'];
 
     private function visible(User $user): Builder
     {

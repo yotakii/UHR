@@ -6,7 +6,7 @@ import { useHrLeaves, type LeaveTab } from '../../../lib/requests'
 import { Empty, PageHead, Panel, Tabs } from '../../../ui/kit'
 import { RequestTable } from '../../requests/TeamApprovals'
 
-const TABS: LeaveTab[] = ['pending', 'justify', 'overtime', 'all']
+const TABS: LeaveTab[] = ['pending', 'justify', 'overtime', 'services', 'all']
 
 /** M09 — الإجازات والتبريرات والتكليف بالإضافي (Leaves في الديمو) ضمن نطاق صلاحية «الإجازات»؛ القرار لمن عليه الدور فقط */
 export function Leaves() {
@@ -20,11 +20,11 @@ export function Leaves() {
     <div className="flex flex-wrap items-end justify-between gap-3">
       <Tabs value={tab} onChange={v => setQuery({ ...route.query, tab: v === 'pending' ? undefined : v })} tabs={[
         { v: 'pending', label: L('بانتظار الاعتماد', 'Pending'), count: d?.counts.pending }, { v: 'justify', label: L('تبريرات التأخير والغياب', 'Justifications'), count: d?.counts.justify },
-        { v: 'overtime', label: L('التكليف بالإضافي', 'Overtime'), count: d?.counts.overtime }, { v: 'all', label: L('كل الطلبات', 'All requests') }]} />
+        { v: 'overtime', label: L('التكليف بالإضافي', 'Overtime'), count: d?.counts.overtime }, { v: 'services', label: L('طلبات الخدمات', 'Service requests'), count: d?.counts.services }, { v: 'all', label: L('كل الطلبات', 'All requests') }]} />
       <label className="relative w-full sm:w-64 mb-1"><Search size={15} className="absolute top-1/2 -translate-y-1/2 start-3 text-ink-3" />
         <input className="field !ps-9" placeholder={L('بحث بالاسم أو الرقم', 'Search name or code')} value={q} onChange={e => setQ(e.target.value)} /></label>
     </div>
-    <Panel pad={false} className="mt-4">{d ? <RequestTable rows={d.data} rejectMin={d.reject_min} empty={tab === 'pending' ? L('لا توجد طلبات معلقة', 'Nothing pending') : L('لا توجد طلبات', 'No requests')} />
+    <Panel pad={false} className="mt-4">{d ? <RequestTable rows={d.data} rejectMin={d.reject_min} certHref={id => `/hr/leaves/cert/${id}`} empty={tab === 'pending' ? L('لا توجد طلبات معلقة', 'Nothing pending') : L('لا توجد طلبات', 'No requests')} />
       : <Empty title={r.isError ? L('تعذّر التحميل', 'Could not load') : L('جارٍ التحميل…', 'Loading…')} />}</Panel>
   </div>
 }
