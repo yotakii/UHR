@@ -223,4 +223,22 @@ class AttendanceTest extends TestCase
         $this->login('basel.atassi@alfarada.sy');
         $this->getJson("/api/hr/employees/{$e->id}/card/last-read")->assertForbidden();
     }
+
+    public function test_ready_made_bridge_package_carries_a_fresh_key_and_the_system_url(): void
+    {
+        $this->login('hr@alfarada.sy');
+        $res = $this->postJson('/api/hr/devices', ['name_ar' => 'قارئ', 'name_en' => 'Reader', 'kind' => 'bridge'])->json();
+        $r = $this->post("/api/hr/devices/{$res['data']['id']}/package", [], ['Origin' => 'http://localhost:5180'])->assertOk();
+        $path = tempnam(sys_get_temp_dir(), 'z'); file_put_contents($path, file_get_contents($r->baseResponse->getFile()->getPathname()));
+        $zip = new \ZipArchive(); $zip->open($path);
+        foreach (['bridge.ps1', 'install.bat', 'uninstall.bat', 'run-visible.bat', 'uhr-bridge.ini'] as $f) $this->assertNotFalse($zip->locateName("UHR-NFC-Bridge/{$f}"), $f);
+        $ini = $zip->getFromName('UHR-NFC-Bridge/uhr-bridge.ini'); $zip->close();
+        $this->assertStringContainsString('URL=http://localhost:5180', $ini);
+        preg_match('/KEY=(\S+)/', $ini, $m);
+        $this->postJson('/api/auth/logout');
+        $this->getJson('/api/device/me', ['X-Device-Key' => $res['key']])->assertUnauthorized();      // المفتاح القديم توقف
+        $this->getJson('/api/device/me', ['X-Device-Key' => $m[1]])->assertOk();
+        $this->login('hr@alfarada.sy');
+        $this->assertTrue($this->getJson('/api/hr/devices')->json('data.0.online'));
+    }
 }

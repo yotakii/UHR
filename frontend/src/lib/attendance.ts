@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { api } from './api'
+import { api, xsrf } from './api'
 import { queryClient } from './session'
 import type { Bi } from './types'
 
@@ -51,13 +51,24 @@ export const useDeleteHoliday = () => useMutation({ mutationFn: (id: number) => 
 
 /* ---------- الأجهزة ---------- */
 export type DeviceKind = 'reader' | 'sunmi' | 'mobile' | 'bridge'
-export interface DeviceRow { id: number; name: Bi; name_ar: string; name_en: string; kind: DeviceKind; location_id: number | null; location: Bi | null; active: boolean; key_hint: string | null; last_seen_at: string | null; last_ip: string | null }
+export interface DeviceRow { id: number; name: Bi; name_ar: string; name_en: string; kind: DeviceKind; location_id: number | null; location: Bi | null; active: boolean; online: boolean; key_hint: string | null; last_seen_at: string | null; last_ip: string | null }
 export interface DeviceInput { name_ar: string; name_en: string; kind: DeviceKind; location_id: number | null; active?: boolean }
 export const useDevices = () => useQuery({ queryKey: ['hr', 'devices'], queryFn: () => api<{ data: DeviceRow[]; locations: (Bi & { id: number })[] }>('/hr/devices') })
 const devs = () => queryClient.invalidateQueries({ queryKey: ['hr', 'devices'] })
 export const useAddDevice = () => useMutation({ mutationFn: (v: DeviceInput) => api<{ data: DeviceRow; key: string }>('/hr/devices', { json: v }), onSuccess: devs })
 export const useUpdateDevice = () => useMutation({ mutationFn: (v: DeviceInput & { id: number; active: boolean }) => api<{ data: DeviceRow }>(`/hr/devices/${v.id}`, { method: 'PUT', json: v }), onSuccess: devs })
 export const useRotateDevice = () => useMutation({ mutationFn: (id: number) => api<{ data: DeviceRow; key: string }>(`/hr/devices/${id}/rotate`, { json: {} }), onSuccess: devs })
+
+/** تنزيل الجسر جاهزاً (zip بعنوان النظام ومفتاح جديد للجهاز) — POST لأن المفتاح يتجدد */
+export async function downloadBridge(id: number) {
+  if (!xsrf()) await fetch('/api/auth/me', { credentials: 'same-origin' })
+  const res = await fetch(`/api/hr/devices/${id}/package`, { method: 'POST', credentials: 'same-origin', headers: { 'X-XSRF-TOKEN': xsrf(), Accept: 'application/zip' } })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const url = URL.createObjectURL(await res.blob())
+  const a = document.createElement('a'); a.href = url; a.download = 'UHR-NFC-Bridge.zip'; document.body.appendChild(a); a.click(); a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 5000)
+  queryClient.invalidateQueries({ queryKey: ['hr', 'devices'] })
+}
 
 /** دقائق اليوم ↔ «HH:MM» */
 export const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`

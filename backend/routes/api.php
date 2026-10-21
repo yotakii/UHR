@@ -168,6 +168,7 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
         Route::post('/devices', [DeviceController::class, 'store']);
         Route::put('/devices/{id}', [DeviceController::class, 'update'])->whereNumber('id');
         Route::post('/devices/{id}/rotate', [DeviceController::class, 'rotate'])->whereNumber('id');
+        Route::post('/devices/{id}/package', [DeviceController::class, 'package'])->whereNumber('id');
     });
 
     // M16 — سياسات الدوام بتاريخ نفاذ والعطل الرسمية

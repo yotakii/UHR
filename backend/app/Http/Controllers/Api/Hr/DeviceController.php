@@ -9,6 +9,7 @@ use App\Support\Audit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /** M16 — أجهزة الحضور المسجّلة: الإضافة تعطي مفتاحاً يظهر مرة واحدة، والإيقاف/تجديد المفتاح يقطع الجهاز فوراً */
 class DeviceController extends Controller
@@ -48,6 +49,28 @@ class DeviceController extends Controller
         return response()->json(['data' => self::row($dev->load('location')), 'key' => $key]);
     }
 
+    /**
+     * الجسر جاهزاً للتثبيت: zip فيه bridge.ps1 وinstall.bat وملف الإعداد بعنوان النظام ومفتاح جديد لهذا الجهاز
+     * (تجديد المفتاح يقطع أي نسخة سابقة من الجسر). التثبيت مرة واحدة ثم يعمل مع إقلاع ويندوز.
+     */
+    public function package(Request $request, int $id): BinaryFileResponse
+    {
+        $dev = Device::findOrFail($id);
+        $key = Str::random(48);
+        $dev->update(['key_hash' => hash('sha256', $key), 'key_hint' => substr($key, -4), 'kind' => 'bridge', 'active' => true]);
+        Audit::record('device.bridge_package', $dev);
+        $origin = $request->headers->get('origin') ?: (($r = $request->headers->get('referer')) ? preg_replace('#^(https?://[^/]+).*$#', '$1', $r) : null) ?: config('app.frontend_url');
+        $src = resource_path('nfc-bridge');
+        $path = tempnam(sys_get_temp_dir(), 'brg').'.zip';
+        $zip = new \ZipArchive(); $zip->open($path, \ZipArchive::CREATE);
+        foreach (scandir($src) as $f) if (is_file("{$src}/{$f}")) $zip->addFile("{$src}/{$f}", "UHR-NFC-Bridge/{$f}");
+        $zip->addFromString('UHR-NFC-Bridge/uhr-bridge.ini', implode("\r\n", [
+            '; UHR NFC Bridge — '.$dev->name_en.' ('.now()->toDateString().')',
+            '; MODE=api يرسل للنظام مباشرة · MODE=keys يكتب الرقم في شاشة /kiosk المفتوحة', 'MODE=api', 'URL='.rtrim($origin, '/'), 'KEY='.$key, '']));
+        $zip->close();
+        return response()->download($path, 'UHR-NFC-Bridge.zip', ['Content-Type' => 'application/zip'])->deleteFileAfterSend();
+    }
+
     private function valid(Request $request): array
     {
         return $request->validate(['name_ar' => ['required', 'string', 'max:120'], 'name_en' => ['required', 'string', 'max:120'],
@@ -58,6 +81,6 @@ class DeviceController extends Controller
     {
         return ['id' => $d->id, 'name' => ['ar' => $d->name_ar, 'en' => $d->name_en], 'name_ar' => $d->name_ar, 'name_en' => $d->name_en, 'kind' => $d->kind,
             'location_id' => $d->location_id, 'location' => $d->location ? ['ar' => $d->location->name_ar, 'en' => $d->location->name_en] : null,
-            'active' => $d->active, 'key_hint' => $d->key_hint, 'last_seen_at' => $d->last_seen_at?->toIso8601String(), 'last_ip' => $d->last_ip];
+            'active' => $d->active, 'online' => $d->last_seen_at && $d->last_seen_at->gt(now()->subMinutes(3)), 'key_hint' => $d->key_hint, 'last_seen_at' => $d->last_seen_at?->toIso8601String(), 'last_ip' => $d->last_ip];
     }
 }

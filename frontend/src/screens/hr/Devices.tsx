@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { Copy, KeyRound, Loader2, Monitor, Plus, RefreshCw, Download } from 'lucide-react'
+import { Copy, KeyRound, Loader2, Monitor, Plus, RefreshCw, Download, Usb, CheckCircle2 } from 'lucide-react'
 import { useL, useLang, bi, fmtDateTime } from '../../lib/store'
 import { ApiError } from '../../lib/api'
-import { useAddDevice, useDevices, useRotateDevice, useUpdateDevice, type DeviceInput, type DeviceKind, type DeviceRow } from '../../lib/attendance'
+import { downloadBridge, useAddDevice, useDevices, useRotateDevice, useUpdateDevice, type DeviceInput, type DeviceKind, type DeviceRow } from '../../lib/attendance'
 import { Badge, Btn, Empty, Field, Modal, PageHead, Panel, Seg, toast } from '../../ui/kit'
 
 /**
@@ -15,10 +15,12 @@ export function Devices() {
   const [edit, setEdit] = useState<DeviceRow | 'new' | null>(null)
   const [key, setKey] = useState<{ name: string; key: string } | null>(null)
   const rotate = useRotateDevice()
+  const [reader, setReader] = useState(false)
+  const bridge = (id: number) => downloadBridge(id).then(() => toast(L('نُزّل الجسر — شغّل install.bat على الحاسوب الموصول به القارئ', 'Bridge downloaded — run install.bat on the PC with the reader'))).catch(x => toast((x as Error).message))
   const kind: Record<DeviceKind, string> = { reader: L('حاسوب + قارئ USB', 'PC + USB reader'), sunmi: L('جهاز Sunmi', 'Sunmi device'), mobile: L('جوال NFC', 'NFC phone'), bridge: L('جسر القارئ UHR-NFC-Bridge', 'UHR-NFC-Bridge') }
   return <div className="max-w-[1100px] mx-auto space-y-5">
     <PageHead title={L('أجهزة الحضور', 'Attendance devices')} sub={L('شاشة الجهاز تعمل فقط على جهاز مسجّل بمفتاحه. افتح /kiosk على الجهاز والصق المفتاح مرة واحدة.', 'The terminal screen only runs on a registered device. Open /kiosk on it and paste the key once.')}
-      actions={<><a href="/downloads/UHR-NFC-Bridge.zip" download className="inline-flex items-center gap-2 h-9 px-3.5 rounded-lg border border-line bg-surface font-semibold text-[14px] hover:bg-sub"><Download size={15} />UHR-NFC-Bridge</a>
+      actions={<><Btn icon={<Usb size={15} />} onClick={() => setReader(true)}>{L('قارئ ACS على حاسوب', 'ACS reader on a PC')}</Btn>
         <Btn kind="primary" icon={<Plus size={15} />} onClick={() => setEdit('new')}>{L('إضافة جهاز', 'Add device')}</Btn></>} />
     <Panel pad={false}>{!data ? <div className="grid place-items-center py-12"><Loader2 className="animate-spin text-brand" /></div> : data.data.length === 0 ? <Empty title={L('لا توجد أجهزة', 'No devices')}>{L('أضف جهاز البوابة أو جهاز Sunmi لتبدأ تسجيل الحضور بالبطاقات.', 'Add the gate PC or a Sunmi device to start card attendance.')}</Empty> :
       <table className="tbl"><thead><tr><th>{L('الجهاز', 'Device')}</th><th className="hidden md:table-cell">{L('النوع', 'Kind')}</th><th className="hidden lg:table-cell">{L('آخر اتصال', 'Last seen')}</th><th>{L('الحالة', 'Status')}</th><th /></tr></thead>
@@ -26,12 +28,14 @@ export function Devices() {
           <td><div className="font-medium flex items-center gap-2"><Monitor size={15} className="text-ink-3" />{bi(d.name, lang)}</div><div className="text-[12px] text-ink-3">{d.location ? bi(d.location, lang) : ''}{d.key_hint && <> · <span className="ltr">…{d.key_hint}</span></>}<span className="md:hidden"> · {kind[d.kind]}</span></div></td>
           <td className="hidden md:table-cell text-[13px]">{kind[d.kind]}</td>
           <td className="hidden lg:table-cell num text-[13px]">{d.last_seen_at ? fmtDateTime(d.last_seen_at, lang) : '—'}{d.last_ip && <div className="text-ink-3 ltr">{d.last_ip}</div>}</td>
-          <td>{d.active ? <Badge tone="brand">{L('فعّال', 'Active')}</Badge> : <Badge>{L('موقوف', 'Disabled')}</Badge>}</td>
+          <td>{!d.active ? <Badge>{L('موقوف', 'Disabled')}</Badge> : d.online ? <Badge tone="brand" dot>{L('متصل', 'Online')}</Badge> : <Badge tone="warn">{L('غير متصل', 'Offline')}</Badge>}</td>
           <td><div className="flex justify-end gap-1">
+            {d.kind === 'bridge' && <Btn size="sm" kind="ghost" icon={<Download size={13} />} onClick={() => bridge(d.id)}>{L('تنزيل الجسر', 'Download bridge')}</Btn>}
             <Btn size="sm" kind="ghost" onClick={() => setEdit(d)}>{L('تعديل', 'Edit')}</Btn>
             <Btn size="sm" kind="ghost" icon={<RefreshCw size={13} />} disabled={rotate.isPending} onClick={() => rotate.mutate(d.id, { onSuccess: r => setKey({ name: bi(r.data.name, lang), key: r.key }) })}>{L('مفتاح جديد', 'New key')}</Btn>
           </div></td></tr>)}</tbody></table>}</Panel>
     {edit && data && <DeviceForm d={edit === 'new' ? null : edit} locations={data.locations} kinds={kind} onClose={() => setEdit(null)} onKey={(name, k) => setKey({ name, key: k })} />}
+    {reader && data && <ReaderSetup locations={data.locations} onClose={() => setReader(false)} />}
     {key && <Modal open onClose={() => setKey(null)} title={<span className="flex items-center gap-2"><KeyRound size={17} className="text-brand" />{L('مفتاح الجهاز', 'Device key')} — {key.name}</span>} width={560}
       footer={<Btn kind="primary" onClick={() => setKey(null)}>{L('حفظته', 'I saved it')}</Btn>}>
       <p className="text-[13.5px] text-ink-2">{L('يظهر المفتاح هذه المرة فقط. افتح الرابط على الجهاز، أو الصق المفتاح في شاشة /kiosk أو في ملف إعداد UHR-NFC-Bridge.', 'The key is shown only this time. Open the link on the device, or paste the key in the /kiosk screen or the UHR-NFC-Bridge config file.')}</p>
@@ -59,5 +63,41 @@ function DeviceForm({ d, locations, kinds, onClose, onKey }: { d: DeviceRow | nu
         <option value="">—</option>{locations.map(l => <option key={l.id} value={l.id}>{bi(l, lang)}</option>)}</select></Field>
       {d && <Field label={L('الحالة', 'Status')} div className="sm:col-span-2"><Seg value={v.active ? 'on' : 'off'} onChange={x => setV({ ...v, active: x === 'on' })} options={[{ v: 'on', label: L('فعّال', 'Active') }, { v: 'off', label: L('موقوف', 'Disabled') }]} /></Field>}
     </div>
+  </Modal>
+}
+
+/**
+ * قارئ ACS (PC/SC) على حاسوب: المتصفح لا يصل لقارئ البطاقات الذكية مباشرة، فيُنزَّل جسر صغير معدّ بعنوان النظام ومفتاحه،
+ * ويُثبَّت مرة واحدة (install.bat) ليعمل بالخلفية مع إقلاع ويندوز.
+ */
+function ReaderSetup({ locations, onClose }: { locations: { id: number; ar: string; en: string }[]; onClose: () => void }) {
+  const L = useL(); const lang = useLang()
+  const add = useAddDevice()
+  const [v, setV] = useState<{ name_ar: string; name_en: string; location_id: number | null }>({ name_ar: 'قارئ الحضور — المقر', name_en: 'Attendance reader — HQ', location_id: locations[0]?.id ?? null })
+  const [done, setDone] = useState(false); const [busy, setBusy] = useState(false)
+  const go = async () => {
+    setBusy(true)
+    try { const r = await add.mutateAsync({ ...v, kind: 'bridge' }); await downloadBridge(r.data.id); setDone(true) } catch (x) { toast((x as Error).message) } finally { setBusy(false) }
+  }
+  return <Modal open onClose={() => !busy && onClose()} title={<span className="flex items-center gap-2"><Usb size={17} className="text-brand" />{L('قارئ ACS على حاسوب', 'ACS reader on a PC')}</span>} width={560}
+    footer={done ? <Btn kind="primary" onClick={onClose}>{L('تم', 'Done')}</Btn> : <><Btn onClick={onClose} disabled={busy}>{L('إلغاء', 'Cancel')}</Btn>
+      <Btn kind="primary" icon={busy ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} disabled={busy || !v.name_ar.trim() || !v.name_en.trim()} onClick={go}>{L('تنزيل الجسر جاهزاً', 'Download ready-made bridge')}</Btn></>}>
+    {!done ? <div className="space-y-3">
+      <p className="text-[13.5px] text-ink-2">{L('المتصفحات تمنع أي موقع من الوصول المباشر لقارئ البطاقات الذكية (ACR122U / ACR1252U). لذلك يُنزَّل جسر صغير معدّ لنظامك، يُثبَّت مرة واحدة ويعمل بالخلفية مع إقلاع ويندوز — لا نوافذ ولا تشغيل يومي.', 'Browsers block websites from reaching smart-card readers (ACR122U / ACR1252U) directly. A small bridge, pre-configured for your system, is installed once and runs in the background with Windows — no windows, nothing to start daily.')}</p>
+      <div className="grid sm:grid-cols-2 gap-3">
+        <Field label={L('اسم القارئ', 'Reader name')} req><input className="field" value={v.name_ar} onChange={e => setV({ ...v, name_ar: e.target.value })} /></Field>
+        <Field label={L('الاسم بالإنكليزية', 'Name (EN)')} req><input className="field ltr text-start" value={v.name_en} onChange={e => setV({ ...v, name_en: e.target.value })} /></Field>
+        <Field label={L('المقر', 'Location')} className="sm:col-span-2"><select className="field" value={v.location_id ?? ''} onChange={e => setV({ ...v, location_id: e.target.value ? Number(e.target.value) : null })}>
+          <option value="">—</option>{locations.map(l => <option key={l.id} value={l.id}>{bi(l, lang)}</option>)}</select></Field>
+      </div>
+    </div> : <div className="space-y-3 text-[14px]">
+      <div className="flex items-center gap-2 font-semibold text-brand"><CheckCircle2 size={18} />{L('نُزّل الملف UHR-NFC-Bridge.zip', 'UHR-NFC-Bridge.zip downloaded')}</div>
+      <ol className="list-decimal ps-5 space-y-1.5 text-ink-2">
+        <li>{L('على الحاسوب الموصول به القارئ: فك الضغط (Extract).', 'On the PC with the reader: extract the zip.')}</li>
+        <li>{L('دبل كليك على install.bat — مرة واحدة فقط.', 'Double-click install.bat — once.')}</li>
+        <li>{L('مرّر بطاقة: تظهر الحالة هنا «متصل» وتُسجَّل الحركة في الحضور.', 'Tap a card: the status here turns “Online” and the tap is recorded.')}</li>
+      </ol>
+      <p className="text-[12.5px] text-ink-3">{L('الملف يحمل مفتاح هذا الجهاز — لا تشاركه. تنزيله مجدداً يجدد المفتاح ويوقف النسخة القديمة.', 'The file carries this device’s key — do not share it. Downloading again renews the key and stops the old copy.')}</p>
+    </div>}
   </Modal>
 }

@@ -4,4 +4,4 @@ artisan text eol=lf
 
 # سكربتات ويندوز تحتاج CRLF
 *.bat text eol=crlf
-tools/UHR-NFC-Bridge/* text eol=crlf
+backend/resources/nfc-bridge/* text eol=crlf
