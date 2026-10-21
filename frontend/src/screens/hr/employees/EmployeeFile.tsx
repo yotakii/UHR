@@ -86,8 +86,8 @@ export function AttendanceTable({ rows }: { rows: DayRow[] }) {
   const L = useL(); const lang = useLang(); const P = lang === 'ar' ? '٪' : '%'
   const badge = (r: DayRow) => ({
     before_start: <span className="text-ink-3 text-[12px]">{L('قبل المباشرة', 'Before start')}</span>, leave: <Badge>{L('إجازة', 'Leave')}</Badge>, holiday: <Badge>{L('عطلة رسمية', 'Holiday')}</Badge>,
-    not_in: <Badge tone="warn">{L('لم يسجل بعد', 'Not in yet')}</Badge>, weekend: <Badge>{L('عطلة', 'Weekend')}</Badge>, absent: <Badge tone="danger">{L('غياب', 'Absent')}</Badge>,
-    justified: <Badge tone="brand">{L('تأخير مبرر', 'Justified')}</Badge>, late: <Badge tone="warn">{L('متأخر', 'Late')}</Badge>, present: <Badge tone="brand">{L('حاضر', 'Present')}</Badge>,
+    not_in: <Badge tone="warn">{L('لم يسجل بعد', 'Not in yet')}</Badge>, weekend: <Badge>{L('عطلة', 'Weekend')}</Badge>, absent: <Badge tone="danger">{L('غياب', 'Absent')}</Badge>, incomplete: <Badge tone="danger">{L('ناقص — بلا خروج', 'Incomplete — no out')}</Badge>,
+    justified: <Badge tone="brand">{L('مبرر', 'Justified')}</Badge>, late: <Badge tone="warn">{L('متأخر', 'Late')}</Badge>, present: <Badge tone="brand">{L('حاضر', 'Present')}</Badge>,
   }[r.status])
   return <table className="tbl"><thead><tr><th>{L('التاريخ', 'Date')}</th><th>{L('الدخول', 'In')}<span className="sm:hidden"> / {L('الخروج', 'Out')}</span></th><th className="hidden sm:table-cell">{L('الخروج', 'Out')}</th><th className="hidden sm:table-cell">{L('ساعات العمل', 'Worked')}</th>
     <th className="hidden md:table-cell">{L('تأخير', 'Late')}</th><th className="hidden md:table-cell">{L('إضافي', 'Overtime')}</th><th>{L('الحالة', 'Status')}</th></tr></thead>
@@ -103,7 +103,8 @@ export function AttendanceTable({ rows }: { rows: DayRow[] }) {
 export function LeaveStatus({ s }: { s: string }) {
   const L = useL()
   return s === 'approved' ? <Badge tone="brand">{L('معتمد', 'Approved')}</Badge> : s === 'rejected' ? <Badge tone="danger">{L('مرفوض', 'Rejected')}</Badge> : s === 'cancelled' ? <Badge>{L('ملغى', 'Cancelled')}</Badge>
-    : s === 'pending_hr' ? <Badge tone="brass">{L('بانتظار الموارد البشرية', 'Awaiting HR')}</Badge> : <Badge tone="info">{L('بانتظار المدير المباشر', 'Awaiting manager')}</Badge>
+    : s === 'pending_hr' ? <Badge tone="brass">{L('بانتظار الموارد البشرية', 'Awaiting HR')}</Badge> : s === 'pending_exec' ? <Badge tone="brass">{L('بانتظار الإدارة العليا', 'Awaiting executive')}</Badge>
+    : <Badge tone="info">{L('بانتظار المدير المباشر', 'Awaiting manager')}</Badge>
 }
 
 function Requests({ e }: { e: EmpFile }) {

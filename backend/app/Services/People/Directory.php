@@ -29,17 +29,19 @@ class Directory
     }
 
     /**
-     * الاستحقاق السنوي — annualEntitlement في الديمو، بقيم سياسة annual_leave النافذة:
-     * senior لمن خدم senior_years أو بلغ senior_age، standard بعد سنة، وإلا first_year.
+     * الاستحقاق السنوي — annualEntitlement في الديمو بقيم سياسة annual_leave النافذة (HR.01-01):
+     * senior لمن خدم senior_years أو بلغ senior_age، standard بعد standard_years، وإلا first_year (بالنسبة لأقل من سنة إن prorate_first_year).
      */
-    public static function entitlement(Employee $e, ?string $on = null): int
+    public static function entitlement(Employee $e, ?string $on = null): float
     {
         $on ??= now()->toDateString();
         $p = Settings::policy('annual_leave', $on);
         $years = self::days($e->hire_date?->toDateString(), $on) / 365;
         $age = $e->dob ? self::days($e->dob->toDateString(), $on) / 365 : 0;
-        if ($years >= $p['senior_years'] || $age >= $p['senior_age']) return (int) $p['senior'];
-        return (int) ($years >= 1 ? $p['standard'] : $p['first_year']);
+        if ($years >= $p['senior_years'] || $age >= $p['senior_age']) return (float) $p['senior'];
+        if ($years >= $p['standard_years']) return (float) $p['standard'];
+        if ($p['prorate_first_year'] && $years < 1) return max(0, floor($p['first_year'] * $years * 2) / 2);   // لأقرب نصف يوم
+        return (float) $p['first_year'];
     }
 
     /** أيام الخدمة حتى اليوم (سالبة = لم يباشر بعد) */

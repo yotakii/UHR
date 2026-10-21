@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { CalendarPlus, Eye, Loader2, Plus, RotateCcw, Save, Trash2 } from 'lucide-react'
 import { useL, useLang, bi, fmtDate } from '../../lib/store'
 import { ApiError } from '../../lib/api'
-import { hhmm, toMins, useAddHoliday, useDeleteHoliday, useDeletePolicy, useFixedHolidays, useHolidays, usePolicies, usePreviewPolicy, useSavePolicy, type PolicyKey, type PolicyValues, type PreviewSum, type Version } from '../../lib/attendance'
+import { hhmm, toMins, useAddHoliday, useDeleteHoliday, useDeletePolicy, useFixedHolidays, useHolidays, usePolicies, usePreviewPolicy, useSavePolicy, type PolicyKey, type PolicyValues, type LeaveTypePolicy, type PreviewSum, type Version } from '../../lib/attendance'
 import { minsLabel } from '../../lib/employees'
 import { Badge, Btn, Field, PageHead, Panel, toast } from '../../ui/kit'
 
@@ -25,7 +25,7 @@ export function PolicySettings() {
     return (v as PolicyValues[K]) ?? data.current[k]
   }
   return <div className="max-w-[1200px] mx-auto space-y-5">
-    <PageHead title={L('سياسات الدوام والإجازات', 'Work & leave policies')} sub={L('كل تعديل يُحفظ نسخة بتاريخ نفاذ — الأيام الماضية تبقى محسوبة على نسختها. سياسات الإجازات تأتي مع وحدة الإجازات.', 'Each change is saved as a version with an effective date — past days keep their version. Leave policies arrive with the leave module.')} />
+    <PageHead title={L('سياسات الدوام والإجازات', 'Work & leave policies')} sub={L('كل تعديل يُحفظ نسخة بتاريخ نفاذ — الأيام الماضية تبقى محسوبة على نسختها. الطلبات المرسلة تبقى على قواعد يوم إرسالها.', 'Each change is saved as a version with an effective date — past days keep their version. Submitted requests keep the rules of their day.')} />
     {!ed && <Badge>{L('عرض فقط — التعديل لمسؤولي السياسات', 'Read only — policy managers can edit')}</Badge>}
 
     <div className="grid lg:grid-cols-2 gap-5">
@@ -62,6 +62,89 @@ export function PolicySettings() {
         {num(v.incomplete_after, x => set({ ...v, incomplete_after: x }), L('«ناقص» بلا خروج بعد نهاية الوردية بـ', '"Incomplete" without out after shift end +'), ed, L('دقيقة', 'min'))}</>} />
       <Holidays editable={ed} />
     </div>
+
+    <h2 className="font-display font-bold text-[17px] pt-2">{L('الإجازات', 'Leave')}</h2>
+    <div className="grid lg:grid-cols-2 gap-5">
+      <PolicyCard k="annual_leave" title={L('استحقاق الإجازة السنوية', 'Annual leave entitlement')} data={data} editable={ed} render={(v, set) => <>
+        {num(v.first_year, x => set({ ...v, first_year: x }), L('السنة الأولى', 'First year'), ed, L('يوم', 'days'))}
+        {num(v.standard, x => set({ ...v, standard: x }), L('بعد سنوات الخدمة', 'After service years'), ed, L('يوم', 'days'))}
+        {num(v.standard_years, x => set({ ...v, standard_years: x }), L('— عدد سنوات الخدمة', '— service years'), ed, L('سنة', 'yrs'))}
+        {num(v.senior, x => set({ ...v, senior: x }), L('الأقدمية أو السن', 'Seniority or age'), ed, L('يوم', 'days'))}
+        {num(v.senior_years, x => set({ ...v, senior_years: x }), L('— بعد سنوات خدمة', '— after service years'), ed, L('سنة', 'yrs'))}
+        {num(v.senior_age, x => set({ ...v, senior_age: x }), L('— أو عند بلوغ سن', '— or from age'), ed, L('سنة', 'yrs'))}
+        <Toggle on={v.prorate_first_year} set={x => set({ ...v, prorate_first_year: x })} editable={ed} label={L('السنة الأولى تُحسب نسبةً لأشهر الخدمة', 'Prorate the first year by months served')} /></>} />
+      <PolicyCard k="leave_rules" title={L('قواعد طلب الإجازة', 'Leave request rules')} data={data} editable={ed} render={(v, set) => <LeaveRulesEditor v={v} set={set} editable={ed} />} />
+    </div>
+    <PolicyCard k="leave_types" title={L('أنواع الإجازات', 'Leave types')} data={data} editable={ed} render={(v, set) => <LeaveTypesEditor v={v} set={set} editable={ed} />}
+      hint={L('الأجر والرصيد والحد والمستند وشروط الخدمة لكل نوع. نوع عليه طلبات قيد الاعتماد لا يُحذف.', 'Pay, balance, limit, document and service conditions per type. A type with pending requests cannot be removed.')} />
+  </div>
+}
+
+function LeaveRulesEditor({ v, set, editable }: { v: PolicyValues['leave_rules']; set: (v: PolicyValues['leave_rules']) => void; editable: boolean }) {
+  const L = useL()
+  const n = (k: keyof PolicyValues['leave_rules'], label: string, suffix: string) => num(v[k] as number, x => set({ ...v, [k]: x }), label, editable, suffix)
+  const t = (k: keyof PolicyValues['leave_rules'], label: string) => <Toggle on={v[k] as boolean} set={x => set({ ...v, [k]: x })} editable={editable} label={label} />
+  const notice = (i: number, p: Partial<PolicyValues['leave_rules']['notice'][number]>) => set({ ...v, notice: v.notice.map((x, j) => j === i ? { ...x, ...p } : x) })
+  return <>
+    <div className="text-[13px] font-semibold text-ink-2 pt-1">{L('مهلة التقديم حسب مدة الإجازة', 'Notice by leave length')}</div>
+    {v.notice.map((x, i) => <div key={i} className="flex flex-wrap items-center gap-2 py-1 text-[13px]">
+      <span>{L('حتى', 'Up to')}</span><input type="number" min={1} disabled={!editable} className="field !h-9 !w-16 num text-center" value={x.max_days} onChange={e => notice(i, { max_days: Number(e.target.value) })} />
+      <span>{L('يوم ← قبل', 'days → ')}</span><input type="number" min={0} disabled={!editable} className="field !h-9 !w-16 num text-center" value={x.days_before} onChange={e => notice(i, { days_before: Number(e.target.value) })} />
+      <span>{L('يوم', 'days before')}</span>
+      {editable && v.notice.length > 1 && <button className="p-1 rounded hover:bg-sub text-ink-3" onClick={() => set({ ...v, notice: v.notice.filter((_, j) => j !== i) })} aria-label={L('حذف', 'Delete')}><Trash2 size={14} /></button>}
+    </div>)}
+    {editable && v.notice.length < 10 && <button className="text-brand text-[12.5px] font-semibold" onClick={() => set({ ...v, notice: [...v.notice, { max_days: (v.notice.at(-1)?.max_days ?? 0) + 7, days_before: 14 }] })}>+ {L('شريحة', 'Tier')}</button>}
+    {n('hourly_notice_days', L('مهلة الإجازة الساعية', 'Hourly leave notice'), L('يوم', 'days'))}
+    {n('hourly_max_per_day', L('أقصى ساعات في اليوم', 'Max hours a day'), L('ساعة', 'h'))}
+    {n('hourly_day_hours', L('ساعات تعادل يوماً من الرصيد', 'Hours that equal one day'), L('ساعة', 'h'))}
+    {n('emergency_per_year', L('الطارئة في السنة', 'Emergency per year'), L('يوم', 'days'))}
+    {n('emergency_report_hours', L('الإبلاغ عن الطارئة خلال', 'Report emergency within'), L('ساعة', 'h'))}
+    {n('unpaid_max_per_year', L('غير المدفوعة في السنة', 'Unpaid per year'), L('يوم', 'days'))}
+    {n('exec_after_days', L('مستوى الإدارة العليا لما يزيد على', 'Executive level above'), L('يوم', 'days'))}
+    {n('reject_min', L('أقل طول لسبب الرفض', 'Min rejection reason'), L('حرف', 'chars'))}
+    {n('reminder_hours', L('تذكير المعتمِد بعد', 'Remind approver after'), L('ساعة', 'h'))}
+    {n('justify_hours', L('مهلة تبرير التأخير/الغياب', 'Justification window'), L('ساعة', 'h'))}
+    {t('substitute_required', L('الموظف البديل إلزامي', 'Substitute is required'))}
+    {t('conflict_note_required', L('ملاحظة إلزامية عند تعارض الإجازات في الإدارة', 'Note required on a department clash'))}
+    {t('probation_paid', L('إجازة مأجورة أثناء فترة التجربة', 'Paid leave during probation'))}
+  </>
+}
+
+function LeaveTypesEditor({ v, set, editable }: { v: LeaveTypePolicy[]; set: (v: LeaveTypePolicy[]) => void; editable: boolean }) {
+  const L = useL(); const lang = useLang()
+  const [open, setOpen] = useState<number | null>(null)
+  const up = (i: number, p: Partial<LeaveTypePolicy>) => set(v.map((x, j) => j === i ? { ...x, ...p } : x))
+  const add = () => { set([...v, { key: `type_${v.length + 1}`, ar: 'نوع جديد', en: 'New type', paid: 100, balance: null, unit: 'day', max_days: null, notice: true, doc: 'none', after_months: 0, confirmed: false, once: false, calendar: false, exec: false }]); setOpen(v.length) }
+  const bal = (b: LeaveTypePolicy['balance']) => b === 'annual' ? L('من السنوية', 'annual') : b === 'sick' ? L('رصيد مرضي', 'sick') : b === 'unpaid' ? L('بلا راتب', 'unpaid') : L('بلا رصيد', 'no balance')
+  return <div className="grid [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))] gap-3">
+    {v.map((x, i) => <div key={i} className="rounded-xl border border-line p-3 text-[13px]">
+      <div className="flex items-start justify-between gap-2"><div className="min-w-0"><div className="font-semibold truncate">{bi(x, lang)}</div><div className="text-[12px] text-ink-3 ltr text-start">{x.key}</div></div>
+        <span className="flex gap-1 shrink-0">{editable && <button className="text-brand text-[12.5px] font-semibold px-1" onClick={() => setOpen(open === i ? null : i)}>{open === i ? L('إغلاق', 'Close') : L('تعديل', 'Edit')}</button>}
+          {editable && <button className="p-1 rounded hover:bg-sub text-ink-3" onClick={() => set(v.filter((_, j) => j !== i))} aria-label={L('حذف', 'Delete')}><Trash2 size={14} /></button>}</span></div>
+      <div className="mt-1 flex flex-wrap gap-1"><Badge>{x.paid}{lang === 'ar' ? '٪' : '%'}</Badge><Badge>{bal(x.balance)}</Badge>{x.max_days && <Badge>≤ {x.max_days} {x.unit === 'hour' ? L('س', 'h') : L('يوم', 'd')}</Badge>}
+        {x.doc !== 'none' && <Badge tone={x.doc === 'required' ? 'warn' : 'neutral'}>{x.doc === 'required' ? L('مستند إلزامي', 'doc required') : L('مستند اختياري', 'doc optional')}</Badge>}
+        {x.after_months > 0 && <Badge>{L(`بعد ${x.after_months} شهر`, `after ${x.after_months} mo`)}</Badge>}{x.exec && <Badge tone="info">{L('إدارة عليا', 'executive')}</Badge>}</div>
+      {open === i && <div className="mt-3 space-y-2 border-t border-line-2 pt-3">
+        <div className="grid grid-cols-2 gap-2"><input className="field !h-9" value={x.ar} onChange={e => up(i, { ar: e.target.value })} aria-label="ar" /><input className="field !h-9 ltr" value={x.en} onChange={e => up(i, { en: e.target.value })} aria-label="en" /></div>
+        <input className="field !h-9 ltr" value={x.key} onChange={e => up(i, { key: e.target.value.toLowerCase() })} aria-label={L('المفتاح', 'Key')} />
+        {num(x.paid, p => up(i, { paid: p }), L('نسبة الأجر', 'Paid'), true, '%')}
+        {num(x.max_days ?? 0, p => up(i, { max_days: p || null }), L('الحد للطلب (0 = بلا حد)', 'Max per request (0 = none)'), true, x.unit === 'hour' ? L('ساعة', 'h') : L('يوم', 'days'))}
+        {num(x.after_months, p => up(i, { after_months: p }), L('بعد خدمة', 'After service of'), true, L('شهر', 'mo'))}
+        <div className="grid grid-cols-3 gap-2">
+          <select className="field !h-9" value={x.balance ?? ''} onChange={e => up(i, { balance: (e.target.value || null) as LeaveTypePolicy['balance'] })} aria-label={L('الرصيد', 'Balance')}>
+            {(['annual', 'sick', 'unpaid', ''] as const).map(b => <option key={b} value={b}>{bal(b || null)}</option>)}</select>
+          <select className="field !h-9" value={x.unit} onChange={e => up(i, { unit: e.target.value as 'day' | 'hour' })} aria-label={L('الوحدة', 'Unit')}><option value="day">{L('أيام', 'Days')}</option><option value="hour">{L('ساعات', 'Hours')}</option></select>
+          <select className="field !h-9" value={x.doc} onChange={e => up(i, { doc: e.target.value as LeaveTypePolicy['doc'] })} aria-label={L('المستند', 'Document')}>
+            <option value="none">{L('بلا مستند', 'No doc')}</option><option value="optional">{L('اختياري', 'Optional')}</option><option value="required">{L('إلزامي', 'Required')}</option></select>
+        </div>
+        <Toggle on={x.notice} set={b => up(i, { notice: b })} editable label={L('تطبيق مهلة التقديم', 'Apply the notice period')} />
+        <Toggle on={x.calendar} set={b => up(i, { calendar: b })} editable label={L('أيام تقويمية (تشمل العطل)', 'Calendar days (incl. rest days)')} />
+        <Toggle on={x.confirmed} set={b => up(i, { confirmed: b })} editable label={L('بعد التثبيت فقط', 'Only after confirmation')} />
+        <Toggle on={x.once} set={b => up(i, { once: b })} editable label={L('مرة واحدة طوال الخدمة', 'Once during service')} />
+        <Toggle on={x.exec} set={b => up(i, { exec: b })} editable label={L('تحتاج الإدارة العليا دائماً', 'Always needs the executive')} />
+      </div>}
+    </div>)}
+    {editable && <button className="rounded-xl border border-dashed border-line p-3 text-brand text-[13px] font-semibold hover:border-brand/50" onClick={add}>+ {L('نوع إجازة', 'Leave type')}</button>}
   </div>
 }
 

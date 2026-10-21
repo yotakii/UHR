@@ -41,6 +41,7 @@ class Attendance
         $hire = $e->hire_date?->toDateString();
         if ($hire && $hire > $date) return 'before_start';
         if ($onLeave || $r?->status === 'leave') return 'leave';
+        if ($r?->justified && ! $c['rest'] && (! $r->in_at || ! $r->out_at)) return 'justified';   // غياب أو يوم ناقص مبرر
         if (! $r?->in_at) return $c['rest'] ? ($c['holiday'] ? 'holiday' : 'weekend') : ($date === $today ? 'not_in' : ($date > $today ? 'not_in' : 'absent'));
         if (! $r->out_at) {
             $shift = Settings::schedule('shift', $date, $e->department_id);

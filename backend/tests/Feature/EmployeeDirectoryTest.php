@@ -90,7 +90,7 @@ class EmployeeDirectoryTest extends TestCase
         $this->assertSame('UHR-1004', $this->emp('UHR-1004')->code);
         $this->assertSame($this->emp('UHR-1004')->id, $d['manager']['id']);
         $this->assertSame('08:00 – 16:00', $d['shift']);
-        $this->assertSame(Directory::entitlement($e), $d['leave']['entitlement']);
+        $this->assertEquals(Directory::entitlement($e), $d['leave']['entitlement']);
         $this->assertEquals($d['leave']['entitlement'] - $e->leave_used, $d['leave']['remaining']);
         $this->assertCount(14, $d['attendance']);
         $this->assertSame('2026-10-12', $d['attendance'][0]['date']);
@@ -105,14 +105,22 @@ class EmployeeDirectoryTest extends TestCase
     {
         Tenant::set($this->emp('UHR-1012')->company);
         $e = new Employee(['hire_date' => '2026-03-01', 'dob' => '1995-01-01']);
-        $this->assertSame(14, Directory::entitlement($e, '2026-10-12'));            // أقل من سنة
+        $this->assertEquals(14, Directory::entitlement($e, '2026-10-12'));            // أقل من سنة (الديمو: بلا نسبة)
         $e->hire_date = '2024-01-01';
-        $this->assertSame(21, Directory::entitlement($e, '2026-10-12'));
+        $this->assertEquals(21, Directory::entitlement($e, '2026-10-12'));
         $e->dob = '1970-01-01';
-        $this->assertSame(30, Directory::entitlement($e, '2026-10-12'));            // عمر 50+
-        \App\Models\Policy::create(['key' => 'annual_leave', 'effective_from' => '2026-01-01', 'value' => ['first_year' => 10, 'standard' => 18, 'senior' => 28, 'senior_years' => 10, 'senior_age' => 60]]);
+        $this->assertEquals(30, Directory::entitlement($e, '2026-10-12'));            // عمر 50+
+        \App\Models\Policy::create(['key' => 'annual_leave', 'effective_from' => '2026-01-01', 'value' => ['first_year' => 10, 'standard' => 18, 'senior' => 28, 'standard_years' => 1, 'senior_years' => 10, 'senior_age' => 60, 'prorate_first_year' => false]]);
         Settings::flush();
-        $this->assertSame(18, Directory::entitlement($e, '2026-10-12'));            // السياسة الجديدة نافذة
+        $this->assertEquals(18, Directory::entitlement($e, '2026-10-12'));            // السياسة الجديدة نافذة
+        // سياسة الشركة: 14 حتى 5 سنوات، والسنة الأولى بالنسبة
+        \App\Models\Policy::create(['key' => 'annual_leave', 'effective_from' => '2026-06-01', 'value' => Settings::POLICY_DEFAULTS['annual_leave']]);
+        Settings::flush();
+        $this->assertEquals(30, Directory::entitlement($e, '2026-10-12'));            // عمر 50+
+        $e->dob = '1995-01-01';
+        $this->assertEquals(14, Directory::entitlement($e, '2026-10-12'));
+        $e->hire_date = '2026-04-12';
+        $this->assertEquals(7, Directory::entitlement($e, '2026-10-12'));             // نصف سنة ← نصف الاستحقاق
     }
 
     public function test_edit_profile_logs_moves_and_refuses_loops(): void

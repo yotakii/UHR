@@ -25,6 +25,7 @@ class Employee extends Model
     public function department(): BelongsTo { return $this->belongsTo(Department::class); }
     public function location(): BelongsTo { return $this->belongsTo(Location::class); }
     public function manager(): BelongsTo { return $this->belongsTo(Employee::class, 'manager_id'); }
+    public function delegate(): BelongsTo { return $this->belongsTo(Employee::class, 'delegate_id'); }
     public function reports(): HasMany { return $this->hasMany(Employee::class, 'manager_id'); }
     public function candidate(): BelongsTo { return $this->belongsTo(Candidate::class); }
     public function user(): HasOne { return $this->hasOne(User::class); }

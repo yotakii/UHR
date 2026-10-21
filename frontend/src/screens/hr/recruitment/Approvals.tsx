@@ -28,9 +28,14 @@ export function ApprovalActions({ ap, who }: { ap: HrAppointment; who: string })
 }
 
 /** «اعتماداتي»: قرارات التعيين F-31 التي دورها عندك الآن — لكل أصحاب المستويات (المالية، التنفيذي…) */
-export function MyApprovals() {
+export function MyApprovals({ embedded = false }: { embedded?: boolean }) {
   const L = useL(); const lang = useLang()
   const { data, isLoading } = useMyApprovals()
+  // داخل «اعتماداتي» الموحدة: قسم قرارات التعيين يظهر فقط حين يوجد ما ينتظر
+  if (embedded) return data?.length ? <div className="max-w-[1200px] mx-auto space-y-4"><h2 className="font-display font-bold text-[17px]">{L('قرارات التعيين F-31', 'Appointment decisions F-31')}</h2>
+    {data.map(it => <Panel key={it.appointment.id} title={<span className="flex flex-wrap items-center gap-2">{bi(it.candidate.name, lang)}<span className="text-ink-3 text-[13px] font-normal">{bi(it.job.title, lang)} · {bi(it.job.dept, lang)}</span></span>}
+      sub={<span className="ltr inline-block">{it.appointment.decision_no}</span>} action={<div className="flex flex-wrap gap-2"><ApprovalActions ap={it.appointment} who={bi(it.candidate.name, lang)} /></div>}>
+      <DecisionDoc c={{ name: it.candidate.name_ar }} ap={it.appointment} jobTitle={bi(it.job.title, lang)} deptName={bi(it.job.dept, lang)} /></Panel>)}</div> : null
   return <div className="max-w-[1100px] mx-auto space-y-5">
     <PageHead title={L('اعتماداتي', 'My approvals')} sub={L('قرارات التعيين التي تنتظر توقيعك. كل مستوى يُعتمد من حساب صاحبه، بالترتيب.', 'Appointment decisions waiting for your signature. Each level is approved from its owner’s account, in order.')} />
     {isLoading ? <div className="grid place-items-center py-24"><Loader2 className="animate-spin text-brand" /></div>

@@ -39,3 +39,11 @@ Artisan::command('docs:sweep', function () {
     $this->info("Expired {$t['expired']}, alerted {$t['alerted']} document(s).");
 })->purpose('Expire employee documents and alert before expiry');
 Schedule::command('docs:sweep')->dailyAt('07:30');
+
+// المسار الموحد: تذكير أصحاب الطلبات المتأخرة بعد reminder_hours ويتكرر (SRS §10.1) — كل ساعة
+Artisan::command('requests:remind', function () {
+    $n = 0;
+    foreach (\App\Models\Company::pluck('id') as $id) $n += \App\Support\Tenant::run($id, fn () => app(\App\Services\Workflow\Workflow::class)->remind());
+    $this->info("Sent {$n} reminder(s).");
+})->purpose('Remind approvers of requests waiting longer than the reminder period');
+Schedule::command('requests:remind')->hourly();

@@ -31,6 +31,17 @@ export interface PolicyValues {
   late_deduction: { tiers: Tier[]; exempt_upto: number; exempt_per_month: number; absent_after: number }
   overtime: { weekly_hours: number; daily_max: number; requires_assignment: boolean; max_continuous_hours: number }
   terminal: { cooldown: number; incomplete_after: number }
+  annual_leave: { first_year: number; standard: number; senior: number; standard_years: number; senior_years: number; senior_age: number; prorate_first_year: boolean }
+  leave_rules: {
+    notice: { max_days: number; days_before: number }[]; hourly_notice_days: number; exec_after_days: number; substitute_required: boolean; conflict_note_required: boolean
+    emergency_per_year: number; emergency_report_hours: number; hourly_max_per_day: number; hourly_day_hours: number; unpaid_max_per_year: number
+    reject_min: number; reminder_hours: number; justify_hours: number; probation_paid: boolean
+  }
+  leave_types: LeaveTypePolicy[]
+}
+export interface LeaveTypePolicy {
+  key: string; ar: string; en: string; paid: number; balance: 'annual' | 'sick' | 'unpaid' | null; unit: 'day' | 'hour'; max_days: number | null; notice: boolean
+  doc: 'none' | 'optional' | 'required'; after_months: number; confirmed: boolean; once: boolean; calendar: boolean; exec: boolean
 }
 export type PolicyKey = keyof PolicyValues
 export interface Version { id: number; effective_from: string; value: unknown; state: 'past' | 'current' | 'future' }

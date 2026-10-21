@@ -30,6 +30,9 @@ class FileAccess
         if ($b = Onboarding::with('employee.user')->where('f22_signature_file_id', $f->id)->orWhere('f20_signature_file_id', $f->id)->first()) {
             return ['module' => 'employees', 'owner' => $b->employee?->user?->id, 'label' => 'onboarding-signature:'.$b->employee?->code];
         }
+        if ($l = \App\Models\LeaveRequest::with('employee.user')->where('doc_file_id', $f->id)->first()) {
+            return ['module' => 'leaves', 'owner' => $l->employee?->user?->id, 'label' => 'leave-doc:'.$l->employee?->code, 'employee_id' => $l->employee_id];
+        }
         if ($d = EmployeeDocument::with('employee.user')->where('file_id', $f->id)->first()) {
             return ['module' => 'employees', 'owner' => $d->employee?->user?->id, 'label' => 'employee-doc:'.$d->employee?->code, 'employee_id' => $d->employee_id, 'sensitive' => $d->sensitive];
         }
@@ -42,7 +45,7 @@ class FileAccess
         if ($owner['owner'] && $owner['owner'] === $user->id) return true;
         if (! $user->company_id || $user->company_id !== $f->company_id || ! Perm::can($user, $owner['module'])) return false;
         // مستندات الموظف: ضمن نطاق رؤية المستخدم (خاصته/فريقه/الكل)، والحساس لأدواره فقط
-        if (isset($owner['employee_id']) && ! Directory::visible($user, $owner['employee_id'])) return false;
+        if (isset($owner['employee_id']) && ! Directory::visible($user, $owner['employee_id'], $owner['module'])) return false;
         return empty($owner['sensitive']) || EmployeeDocs::canSensitive($user);
     }
 }

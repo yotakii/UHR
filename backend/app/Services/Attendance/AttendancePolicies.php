@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Validator;
 class AttendancePolicies
 {
     /** المفاتيح التي تديرها صفحة «سياسات الدوام» — وما يقبل تجاوزاً لإدارة */
-    public const KEYS = ['shift', 'work_days', 'late_deduction', 'overtime_rates', 'overtime', 'terminal'];
+    public const KEYS = ['shift', 'work_days', 'late_deduction', 'overtime_rates', 'overtime', 'terminal', 'annual_leave', 'leave_rules', 'leave_types'];
     public const DEPT_KEYS = ['shift', 'work_days'];
 
     /** كل النسخ لكل مفتاح (والإدارات)، والنافذة اليوم، والقيم الافتراضية */
@@ -97,7 +97,38 @@ class AttendancePolicies
                 'tiers.*.factor' => ['required', 'numeric', 'between:0,10'], 'exempt_upto' => ['required', 'integer', 'between:0,120'], 'exempt_per_month' => ['required', 'integer', 'between:0,31'], 'absent_after' => ['required', 'integer', 'between:1,600']],
             'overtime' => ['weekly_hours' => ['required', 'integer', 'between:1,84'], 'daily_max' => ['required', 'integer', 'between:0,720'], 'requires_assignment' => ['required', 'boolean'], 'max_continuous_hours' => ['required', 'integer', 'between:1,24']],
             'terminal' => ['cooldown' => ['required', 'integer', 'between:0,3600'], 'incomplete_after' => ['required', 'integer', 'between:0,720']],
+            'annual_leave' => ['first_year' => ['required', 'numeric', 'between:0,60'], 'standard' => ['required', 'numeric', 'between:0,60'], 'senior' => ['required', 'numeric', 'between:0,60'],
+                'standard_years' => ['required', 'numeric', 'between:0,40'], 'senior_years' => ['required', 'numeric', 'between:0,50', 'gte:standard_years'], 'senior_age' => ['required', 'integer', 'between:18,80'], 'prorate_first_year' => ['required', 'boolean']],
+            'leave_rules' => ['notice' => ['required', 'array', 'min:1', 'max:10'], 'notice.*.max_days' => ['required', 'integer', 'between:1,365', 'distinct'], 'notice.*.days_before' => ['required', 'integer', 'between:0,90'],
+                'hourly_notice_days' => ['required', 'integer', 'between:0,30'], 'exec_after_days' => ['required', 'integer', 'between:1,365'], 'substitute_required' => ['required', 'boolean'], 'conflict_note_required' => ['required', 'boolean'],
+                'emergency_per_year' => ['required', 'integer', 'between:0,30'], 'emergency_report_hours' => ['required', 'integer', 'between:1,168'], 'hourly_max_per_day' => ['required', 'integer', 'between:1,12'],
+                'hourly_day_hours' => ['required', 'integer', 'between:1,12'], 'unpaid_max_per_year' => ['required', 'integer', 'between:0,365'], 'reject_min' => ['required', 'integer', 'between:1,200'],
+                'reminder_hours' => ['required', 'integer', 'between:1,168'], 'justify_hours' => ['required', 'integer', 'between:1,720'], 'probation_paid' => ['required', 'boolean']],
+            'leave_types' => ['types' => ['required', 'array', 'min:1', 'max:40'], 'types.*.key' => ['required', 'string', 'regex:/^[a-z][a-z0-9_]{1,19}$/', 'distinct', 'not_in:justify'], 'types.*.ar' => ['required', 'string', 'max:80'],
+                'types.*.en' => ['required', 'string', 'max:80'], 'types.*.paid' => ['required', 'integer', 'between:0,100'], 'types.*.balance' => ['nullable', 'in:annual,sick,unpaid'], 'types.*.unit' => ['required', 'in:day,hour'],
+                'types.*.max_days' => ['nullable', 'integer', 'between:1,365'], 'types.*.notice' => ['required', 'boolean'], 'types.*.doc' => ['required', 'in:none,optional,required'], 'types.*.after_months' => ['required', 'integer', 'between:0,600'],
+                'types.*.confirmed' => ['required', 'boolean'], 'types.*.once' => ['required', 'boolean'], 'types.*.calendar' => ['required', 'boolean'], 'types.*.exec' => ['required', 'boolean']],
         };
+        if ($key === 'leave_types') {
+            $d = Validator::make(['types' => $v], $rules)->validate();
+            $used = \App\Models\LeaveRequest::whereIn('status', \App\Models\LeaveRequest::PENDING)->where('type', '!=', 'justify')->distinct()->pluck('type')->diff(array_column($d['types'], 'key'));
+            if ($used->isNotEmpty()) throw ApiException::field('types', L::t('نوع عليه طلبات قيد الاعتماد لا يُحذف: ', 'A type with pending requests cannot be removed: ').$used->implode(', '), 'type_in_use');
+            $keys = array_keys(Settings::POLICY_DEFAULTS['leave_types'][0]);
+            return array_map(function ($t) use ($keys) {
+                $o = [];
+                foreach ($keys as $k) $o[$k] = match ($k) { 'key', 'ar', 'en', 'unit', 'doc' => trim((string) $t[$k]), 'balance' => $t[$k] ?? null, 'max_days' => isset($t[$k]) ? (int) $t[$k] : null,
+                    'paid', 'after_months' => (int) $t[$k], default => (bool) $t[$k] };
+                return $o;
+            }, $d['types']);
+        }
+        if ($key === 'leave_rules') {
+            $d = Validator::make($v, $rules)->validate();
+            $out = [];
+            foreach (Settings::POLICY_DEFAULTS['leave_rules'] as $k => $x) $out[$k] = $k === 'notice'
+                ? collect($d['notice'])->map(fn ($n) => ['max_days' => (int) $n['max_days'], 'days_before' => (int) $n['days_before']])->sortBy('max_days')->values()->all()
+                : (is_bool($x) ? (bool) $d[$k] : (int) $d[$k]);
+            return $out;
+        }
         $d = Validator::make($key === 'work_days' ? ['days' => $v] : $v, $rules)->validate();
         if ($key === 'work_days') { $days = array_map('intval', $d['days']); sort($days); return $days; }
         if ($key === 'late_deduction') {
@@ -110,6 +141,7 @@ class AttendancePolicies
         }
         $def = Settings::POLICY_DEFAULTS[$key];
         $out = [];
+        if ($key === 'annual_leave') { foreach ($def as $k => $x) $out[$k] = is_bool($x) ? (bool) $d[$k] : (float) $d[$k] + 0; return $out; }
         foreach ($def as $k => $x) $out[$k] = match (true) {
             $k === 'tiers' => $tiers, is_bool($x) => (bool) $d[$k], is_float($x) => (float) $d[$k], default => is_numeric($d[$k]) && floor((float) $d[$k]) == $d[$k] && ! is_float($x) ? (int) $d[$k] : $d[$k],
         };

@@ -43,6 +43,9 @@ class CompanyDefaults
         $hr = ['role_ar' => 'الموارد البشرية', 'role_en' => 'Human Resources', 'role_key' => 'hr_director'];
         ApprovalChain::firstOrCreate(['type' => 'leave'], ['levels' => [$mgr, $hr]]);
         ApprovalChain::firstOrCreate(['type' => 'resignation'], ['levels' => [$mgr, $hr]]);
+        // المسار الموحد (SRS §10.1): التبرير المدير ← HR، والتكليف بالإضافي (يطلبه المدير) ← HR
+        ApprovalChain::firstOrCreate(['type' => 'justification'], ['levels' => [$mgr, $hr]]);
+        ApprovalChain::firstOrCreate(['type' => 'overtime'], ['levels' => [$hr]]);
         ApprovalChain::firstOrCreate(['type' => 'appointment'], ['levels' => [
             $hr + ['user_id' => null],
             ['role_ar' => 'الإدارة المالية', 'role_en' => 'Finance', 'role_key' => 'finance', 'user_id' => null],

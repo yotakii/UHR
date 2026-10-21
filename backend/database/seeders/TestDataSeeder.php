@@ -93,6 +93,8 @@ class TestDataSeeder extends Seeder
         'work_days' => [0, 1, 2, 3, 4],
         'shift' => ['start' => 480, 'end' => 960, 'grace' => 15, 'break' => 60, 'break_after' => 300, 'ot_threshold' => 30, 'night_from' => 1320],
         'overtime_rates' => ['day' => 0.25, 'night' => 0.5, 'rest' => 1.0, 'holiday' => 2.0],
+        // annualEntitlement في الديمو: 14 قبل سنة، 21 بعدها، 30 بعد 10 سنوات أو بعمر 50 — بلا نسبة للسنة الأولى
+        'annual_leave' => ['first_year' => 14, 'standard' => 21, 'senior' => 30, 'standard_years' => 1, 'senior_years' => 10, 'senior_age' => 50, 'prorate_first_year' => false],
     ];
 
     public static function demoPolicies(): void
@@ -401,7 +403,7 @@ class TestDataSeeder extends Seeder
     {
         $mgr = ['role' => ['ar' => 'المدير المباشر', 'en' => 'Direct manager']]; $hr = ['role' => ['ar' => 'الموارد البشرية', 'en' => 'Human Resources']];
         $d = fn (int $n) => $this->addDays($this->today, $n);
-        LeaveRequest::query()->delete();
+        LeaveRequest::query()->delete(); \App\Models\RequestStep::where('subject_type', (new LeaveRequest)->getMorphClass())->delete();
         $L = [
             ['e1015', 'annual', $d(5), $d(9), null, null, null, 'سفر عائلي', $d(-1).' 10:00:00', 'pending_manager', [$mgr, $hr]],
             ['e1021', 'mission', $d(1), $d(3), null, null, null, 'استلام موقع مشروع حماة', $d(-1).' 15:20:00', 'pending_hr', [$mgr + ['by' => 'طارق الحكيم', 'at' => $d(0).'T08:40:00', 'decision' => 'approved'], $hr]],
@@ -409,7 +411,10 @@ class TestDataSeeder extends Seeder
             ['e1013', 'sick', $d(-6), $d(-5), null, null, null, 'تقرير طبي مرفق', $d(-6).' 07:30:00', 'approved', [$mgr + ['by' => 'باسل الأتاسي', 'at' => $d(-6).'T09:00:00', 'decision' => 'approved'], $hr + ['by' => 'رشا الخطيب', 'at' => $d(-6).'T10:00:00', 'decision' => 'approved']]],
             ['e1010', 'hourly', $this->today, $this->today, 2, null, null, 'مراجعة دائرة رسمية', $this->today.' 08:05:00', 'pending_manager', [$mgr, $hr]],
         ];
-        foreach ($L as $l) LeaveRequest::create(['employee_id' => $emp[$l[0]]->id, 'type' => $l[1], 'from' => $l[2], 'to' => $l[3], 'hours' => $l[4], 'minutes' => $l[5], 'ref_date' => $l[6], 'reason' => $l[7], 'created_at' => $l[8], 'status' => $l[9], 'chain' => $l[10]]);
+        foreach ($L as $l) {
+            $x = LeaveRequest::create(['employee_id' => $emp[$l[0]]->id, 'type' => $l[1], 'from' => $l[2], 'to' => $l[3], 'hours' => $l[4], 'minutes' => $l[5], 'ref_date' => $l[6], 'reason' => $l[7], 'created_at' => $l[8], 'status' => $l[9], 'chain' => $l[10]]);
+            \App\Services\Workflow\Workflow::backfill($x);   // مسار الديمو ← خطوات المسار الموحد
+        }
 
         Resignation::query()->delete();
         Resignation::create(['employee_id' => $emp['e1028']->id, 'created_at' => $d(-3).' 11:00:00', 'last_day' => $d(27), 'reason_key' => 'travel', 'status' => 'pending_hr',

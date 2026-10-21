@@ -12,7 +12,7 @@ export interface DeptRef extends Bi { id: number; code: string; color: string }
 export interface EmpRow { id: number; code: string; name: Bi; email: string; gender: 'M' | 'F'; title: Bi; dept: DeptRef; city: Bi; hire_date: string; status: EmpStatus }
 export interface Directory { data: EmpRow[]; current: number; departments: number; depts: DeptRef[]; can: { create: boolean; export: boolean } }
 
-export type DayStatus = 'before_start' | 'leave' | 'holiday' | 'not_in' | 'weekend' | 'absent' | 'justified' | 'late' | 'present'
+export type DayStatus = 'before_start' | 'leave' | 'holiday' | 'not_in' | 'weekend' | 'absent' | 'incomplete' | 'justified' | 'late' | 'present'
 export interface DayRow { date: string; in: string | null; out: string | null; on_shift: boolean; worked: number; late: number; ot: number; ot_rate: number; status: DayStatus }
 export interface LeaveRow { id: number; type: string; type_name: Bi; from: string; to: string; hours: number | null; reason: string; status: string }
 export interface ServiceRow { id: number; kind: string; note: string; status: string; at: string }

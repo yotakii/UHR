@@ -3,7 +3,10 @@
 use App\Http\Controllers\Api\ApplicationController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Candidate\MyApplicationController;
+use App\Http\Controllers\Api\Employee\ApprovalInboxController;
 use App\Http\Controllers\Api\Employee\MyDocumentsController;
+use App\Http\Controllers\Api\Employee\MyRequestsController;
+use App\Http\Controllers\Api\Hr\LeaveAdminController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\FileController;
 use App\Http\Controllers\Api\FormController;
@@ -73,6 +76,21 @@ Route::middleware(['auth', 'fresh', 'portal:candidate'])->prefix('me')->group(fu
 });
 
 // M14 — «وثائق للتوقيع»: لكل حساب مرتبط بموظف (ومنهم موظفو الموارد البشرية أنفسهم)
+// المسار الموحد للطلبات (SRS §10.1): طلباتي وحضوري لكل حساب له ملف موظف، وصندوق الاعتماد لكل معتمِد (المدير، HR، المستويات العليا)
+Route::middleware(['auth', 'fresh'])->prefix('me')->group(function () {
+    Route::get('/leave', [MyRequestsController::class, 'index']);
+    Route::post('/leave/check', [MyRequestsController::class, 'check'])->middleware('throttle:60,1');
+    Route::post('/leave', [MyRequestsController::class, 'store'])->middleware('throttle:20,1');
+    Route::post('/leave/{id}/cancel', [MyRequestsController::class, 'cancel'])->whereNumber('id');
+    Route::post('/leave/{id}/document', [MyRequestsController::class, 'attach'])->whereNumber('id')->middleware('throttle:20,1');
+    Route::get('/attendance', [MyRequestsController::class, 'attendance']);
+    Route::post('/justifications', [MyRequestsController::class, 'justify'])->middleware('throttle:20,1');
+    Route::get('/approvals', [ApprovalInboxController::class, 'index']);
+    Route::post('/approvals/{stepId}', [ApprovalInboxController::class, 'decide'])->whereNumber('stepId');
+    Route::put('/delegate', [ApprovalInboxController::class, 'delegate']);
+    Route::post('/overtime', [ApprovalInboxController::class, 'assignOvertime'])->middleware('throttle:30,1');
+});
+
 Route::middleware(['auth', 'fresh'])->prefix('me/documents')->group(function () {
     Route::get('/', [MyDocumentsController::class, 'index']);
     Route::post('/sign', [MyDocumentsController::class, 'sign'])->middleware('throttle:30,1');
@@ -170,6 +188,9 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
         Route::post('/devices/{id}/rotate', [DeviceController::class, 'rotate'])->whereNumber('id');
         Route::post('/devices/{id}/package', [DeviceController::class, 'package'])->whereNumber('id');
     });
+
+    // M09 — الإجازات والتبريرات والتكليف بالإضافي (القرار من صندوق الاعتماد /me/approvals)
+    Route::get('/leaves', [LeaveAdminController::class, 'index'])->middleware('perm:leaves,view');
 
     // M16 — سياسات الدوام بتاريخ نفاذ والعطل الرسمية
     Route::middleware('perm:policies,view')->group(function () {

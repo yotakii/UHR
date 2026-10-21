@@ -108,7 +108,7 @@ class HrDashboard
         if ($this->can('leaves', 'decide')) {
             LeaveRequest::with('employee')->pending()->get()->each(function ($l) use ($add, $en) {
                 $type = LeaveRequest::TYPES[$l->type] ?? [$l->type, $l->type];
-                $lvl = $l->status === 'pending_hr' ? ['اعتماد الموارد البشرية', 'HR approval'] : ['اعتماد المدير المباشر', 'manager approval'];
+                $lvl = ['pending_hr' => ['اعتماد الموارد البشرية', 'HR approval'], 'pending_exec' => ['اعتماد الإدارة العليا', 'executive approval']][$l->status] ?? ['اعتماد المدير المباشر', 'manager approval'];
                 $add("lv{$l->id}", $en($l->employee), ["{$type[0]} · {$lvl[0]}", "{$type[1]} · {$lvl[1]}"], 'F-03', $l->created_at, 'leaves', 'leave');
             });
         }

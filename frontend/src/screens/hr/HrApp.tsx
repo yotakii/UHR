@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react'
-import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc } from 'lucide-react'
+import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { useRoute } from '../../lib/router'
 import { can, type SessionUser } from '../../lib/session'
 import { useDashboard } from '../../lib/console'
+import { useInbox } from '../../lib/requests'
 import { hrLink } from '../../lib/hr'
 import { Empty, PageHead } from '../../ui/kit'
 import { Shell, type NavItem } from '../console/Shell'
@@ -27,6 +28,10 @@ import { DocumentSettings } from './DocumentSettings'
 import { Attendance } from './attendance/Attendance'
 import { PolicySettings } from './PolicySettings'
 import { Devices } from './Devices'
+import { Leaves } from './leaves/Leaves'
+import { MyRequests } from '../requests/MyRequests'
+import { MyAttendance } from '../requests/MyAttendance'
+import { TeamApprovals } from '../requests/TeamApprovals'
 
 type Page = { item: NavItem; module: string | ((u: SessionUser) => boolean); view?: () => ReactNode; task?: string }
 
@@ -38,6 +43,7 @@ export function HrApp({ user }: { user: SessionUser }) {
   const L = useL(); const lang = useLang()
   const route = useRoute()
   const dash = useDashboard().data
+  const inbox = useInbox().data
   const count = (...kinds: string[]) => dash?.tasks.filter(t => kinds.includes(t.kind)).length
   const g1 = L('التوظيف والتعيين', 'Hiring'), g2 = L('شؤون الموظفين', 'People'), g3 = L('الرؤى', 'Insights'), g4 = L('الإعدادات', 'Settings')
 
@@ -48,9 +54,9 @@ export function HrApp({ user }: { user: SessionUser }) {
     { item: { to: '/hr/candidates', icon: <Kanban size={18} />, label: L('المتقدمون', 'Applicants'), count: dash?.funnel?.find(f => f.stage === 'new')?.count, group: g1 }, module: 'candidates',
       view: () => route.parts[2] && /^\d+$/.test(route.parts[2]) ? <CandidateFile id={Number(route.parts[2])} /> : <Board /> },
     { item: { to: '/hr/cv', icon: <FileSearch size={18} />, label: L('قاعدة السير الذاتية', 'CV database'), group: g1 }, module: 'candidates', view: () => <CvDatabase /> },
-    // «اعتماداتي» لكل حساب في الشركة: يظهر عندما يصل لمستواه قرار تعيين (أو لمن يتابع التوظيف)
-    { item: { to: '/hr/approvals', icon: <Stamp size={18} />, label: L('اعتماداتي', 'My approvals'), count: dash?.tasks.filter(t => t.link === 'approvals').length, group: g1 },
-      module: () => true, view: () => <MyApprovals /> },
+    // «اعتماداتي» لكل حساب في الشركة: طلبات المسار الموحد (إجازات، تبريرات، إضافي) وقرارات التعيين F-31 حين تصل لمستواه
+    { item: { to: '/hr/approvals', icon: <Stamp size={18} />, label: L('اعتماداتي', 'My approvals'), count: (inbox?.data.length ?? 0) + (dash?.tasks.filter(t => t.link === 'approvals' && t.kind === 'appointment').length ?? 0) || undefined, group: g1 },
+      module: () => true, view: () => <div className="space-y-6"><TeamApprovals /><MyApprovals embedded /></div> },
     { item: { to: '/hr/onboarding', icon: <UserPlus size={18} />, label: L('التعيين والمباشرة', 'Appointment & onboarding'), count: count('appointment', 'onboarding'), group: g1 }, module: 'employees',
       view: () => route.parts[2] && /^\d+$/.test(route.parts[2]) ? <OnboardPage id={Number(route.parts[2])} /> : <OnboardingList user={user} /> },
     { item: { to: '/hr/referrals', icon: <Trophy size={17} />, label: L('الإحالات والمكافآت', 'Referrals & rewards'), group: g1 }, module: 'referrals', task: '09' },
@@ -58,10 +64,13 @@ export function HrApp({ user }: { user: SessionUser }) {
       view: () => route.parts[2] && /^\d+$/.test(route.parts[2]) ? <EmployeeFile id={Number(route.parts[2])} /> : <Employees /> },
     { item: { to: '/hr/org', icon: <Network size={17} />, label: L('الهيكل التنظيمي', 'Org chart'), group: g2 }, module: 'org', view: () => <OrgChart /> },
     { item: { to: '/hr/attendance', icon: <Clock size={18} />, label: L('الحضور والدوام', 'Attendance'), group: g2 }, module: 'attendance', view: () => <Attendance /> },
-    { item: { to: '/hr/leaves', icon: <CalendarCheck size={18} />, label: L('الإجازات والتبريرات', 'Leave & justifications'), count: count('leave', 'service'), group: g2 }, module: 'leaves', task: '07' },
+    { item: { to: '/hr/leaves', icon: <CalendarCheck size={18} />, label: L('الإجازات والتبريرات', 'Leave & justifications'), count: count('leave', 'service'), group: g2 }, module: 'leaves', view: () => <Leaves /> },
     { item: { to: '/hr/custody', icon: <Package size={18} />, label: L('العهد', 'Custody'), group: g2 }, module: 'assets', task: '08' },
     { item: { to: '/hr/offboarding', icon: <DoorOpen size={18} />, label: L('الاستقالات وإنهاء الخدمة', 'Resignations & exits'), count: count('resignation'), group: g2 }, module: 'employees', task: '08' },
     // موظفو الشركة أصحاب الحسابات الإدارية يوقّعون وثائقهم من هنا (M14)
+    // موظفو الشركة أصحاب الحسابات الإدارية: إجازاتهم وحضورهم كأي موظف (M14)
+    { item: { to: '/hr/my-requests', icon: <CalendarPlus size={17} />, label: L('إجازاتي وطلباتي', 'My leave & requests'), group: g2 }, module: u => !!u.employee, view: () => <MyRequests /> },
+    { item: { to: '/hr/my-attendance', icon: <Fingerprint size={17} />, label: L('حضوري', 'My attendance'), group: g2 }, module: u => !!u.employee, view: () => <MyAttendance /> },
     { item: { to: '/hr/my-documents', icon: <FileSignature size={17} />, label: L('وثائقي للتوقيع', 'My documents'), group: g2 }, module: u => !!u.employee, view: () => <MyDocuments /> },
     { item: { to: '/hr/performance', icon: <Target size={17} />, label: L('الأداء وتقييم 360', 'Performance & 360'), group: g3 }, module: 'performance', task: '09' },
     { item: { to: '/hr/analytics', icon: <BarChart3 size={17} />, label: L('التحليلات', 'Analytics'), group: g3 }, module: u => can(u, 'employees', 'export'), task: '09' },
