@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Download, Loader2, Pencil, Nfc, Settings2 } from 'lucide-react'
+import { Download, Loader2, Pencil, Nfc, Settings2, LogIn, LogOut } from 'lucide-react'
 import { useL, useLang, bi } from '../../../lib/store'
 import { navigate, setQuery, useRoute } from '../../../lib/router'
 import { minsLabel } from '../../../lib/employees'
@@ -26,7 +26,7 @@ export function Attendance() {
   const view = route.query.view === 'period' ? 'period' : 'day'
   const date = route.query.date ?? today(); const dept = route.query.dept ?? ''
   const to = route.query.to ?? today(); const from = route.query.from ?? minus(to, 13)
-  const day = useDaily(date, dept)
+  const day = useDaily(date, dept, view === 'day' && date === today())
   const period = usePeriod(from, to, dept, view === 'period')
   const meta = (view === 'day' ? day.data : period.data) ?? day.data
   const [fix, setFix] = useState<{ p: Person; r: AttRow } | null>(null)
@@ -54,6 +54,14 @@ export function Attendance() {
           [L('ناقص', 'Incomplete'), day.data.counts.incomplete, 'text-danger'], [L('إجازات', 'On leave'), day.data.counts.leave, 'text-ink-2']] as const).map(([k, v, c]) =>
           <div key={k} className="bg-surface px-4 py-3"><div className="text-[12px] text-ink-3">{k}</div><div className={`text-[22px] font-bold num ${c}`}>{v}</div></div>)}
       </div>
+      {day.data.latest.length > 0 && <Panel title={<span className="flex items-center gap-2">{date === today() && <span className="size-2 rounded-full bg-brand live-dot" />}{L('آخر الحركات', 'Latest taps')}</span>} className="mb-4"
+        sub={date === today() ? L('تتحدث تلقائياً من أجهزة الحضور', 'Updates automatically from the attendance devices') : undefined}>
+        <ul className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(220px,1fr))]">{day.data.latest.map((t, i) => <li key={t.id} className={`flex items-center gap-3 rounded-xl border border-line px-3 py-2 ${i === 0 && date === today() ? 'bg-brand-soft fadeup' : ''}`}>
+          <span className={`size-8 shrink-0 rounded-full grid place-items-center ${t.type === 'in' ? 'bg-brand/15 text-brand' : 'bg-brass/15 text-brass'}`}>{t.type === 'in' ? <LogIn size={15} /> : <LogOut size={15} />}</span>
+          <button className="min-w-0 flex-1 text-start" onClick={() => navigate(`/hr/employees/${t.employee.id}?tab=attendance`)}><span className="block text-[13.5px] font-semibold truncate">{bi(t.employee.name, lang)}</span>
+            <span className="block text-[11.5px] text-ink-3 truncate">{t.type === 'in' ? L('دخول', 'In') : L('خروج', 'Out')} · {bi(t.device, lang)}</span></button>
+          <span className="num ltr text-[13px] font-semibold">{t.time}</span></li>)}</ul>
+      </Panel>}
       <Panel pad={false}>{day.data.rows.length === 0 ? <Empty title={L('لا يوجد موظفون في هذا اليوم', 'No employees for this day')} /> : <table className="tbl">
         <thead><tr><th>{L('الموظف', 'Employee')}</th><th className="hidden lg:table-cell">{L('الإدارة', 'Dept')}</th><th>{L('الدخول', 'In')}<span className="sm:hidden"> / {L('الخروج', 'Out')}</span></th><th className="hidden sm:table-cell">{L('الخروج', 'Out')}</th>
           <th className="hidden md:table-cell">{L('العمل الفعلي', 'Worked')}</th><th className="hidden md:table-cell">{L('تأخير', 'Late')}</th><th className="hidden xl:table-cell">{L('مغادرة مبكرة', 'Early')}</th><th className="hidden lg:table-cell">{L('إضافي', 'OT')}</th><th>{L('الحالة', 'Status')}</th>{day.data.can.edit && <th />}</tr></thead>

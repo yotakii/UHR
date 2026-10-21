@@ -8,12 +8,14 @@ export type AttStatus = 'before_start' | 'leave' | 'holiday' | 'weekend' | 'not_
 export interface Person { id: number; code: string; name: Bi; title: Bi; dept: (Bi & { id: number }) | null }
 export interface AttRow { date: string; in: string | null; out: string | null; on_shift: boolean; worked: number; late: number; early: number; ot: number; ot_rate: number; deduct: number; status: AttStatus; source: string | null; corrected: boolean; note: string | null }
 export interface Meta { depts: (Bi & { id: number })[]; can: { edit: boolean; export: boolean; devices: boolean; policies: boolean } }
-export interface Daily extends Meta { date: string; rows: (AttRow & { employee: Person })[]; counts: { present: number; late: number; absent: number; leave: number; incomplete: number } }
+export interface Tap { id: number; employee: { id: number; code: string; name: Bi }; type: 'in' | 'out'; time: string; device: Bi; via: string }
+export interface Daily extends Meta { date: string; latest: Tap[]; rows: (AttRow & { employee: Person })[]; counts: { present: number; late: number; absent: number; leave: number; incomplete: number } }
 export interface PeriodRow { employee: Person; present: number; absent: number; late: number; late_days: number; deduct: number; ot: number; incomplete: number; leave: number }
 export interface Period extends Meta { from: string; to: string; rows: PeriodRow[] }
 
 const qs = (o: Record<string, string | number | undefined>) => new URLSearchParams(Object.entries(o).filter(([, v]) => v !== undefined && v !== '') as [string, string][]).toString()
-export const useDaily = (date: string, dept: string) => useQuery({ queryKey: ['hr', 'attendance', 'day', date, dept], queryFn: () => api<Daily>(`/hr/attendance?${qs({ date, dept })}`), placeholderData: p => p })
+/** سجل اليوم: يتحدث تلقائياً كل 10 ثوانٍ لليوم الحالي حتى تظهر حركات الأجهزة فوراً */
+export const useDaily = (date: string, dept: string, live = false) => useQuery({ queryKey: ['hr', 'attendance', 'day', date, dept], queryFn: () => api<Daily>(`/hr/attendance?${qs({ date, dept })}`), placeholderData: p => p, refetchInterval: live ? 10_000 : false })
 export const usePeriod = (from: string, to: string, dept: string, enabled = true) => useQuery({ queryKey: ['hr', 'attendance', 'period', from, to, dept], queryFn: () => api<Period>(`/hr/attendance/period?${qs({ from, to, dept })}`), enabled, placeholderData: p => p })
 export const periodExportUrl = (from: string, to: string, dept: string) => `/api/hr/attendance/export?${qs({ from, to, dept })}`
 export const useCorrect = () => useMutation({

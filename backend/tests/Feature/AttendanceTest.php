@@ -173,6 +173,12 @@ class AttendanceTest extends TestCase
         $this->assertSame(150, $in['late']);
         $this->assertTrue(Onboarding::where('employee_id', $e->id)->first()->checklist[14]);
         $this->postJson('/api/device/scan', ['uid' => $e->nfc_uid], $h)->assertOk()->assertJsonPath('kind', 'dup');   // خلال مهلة التكرار
+        // الحركة تظهر فوراً في «آخر الحركات» وفي سجل اليوم
+        $this->login('hr@alfarada.sy');
+        $day = $this->getJson('/api/hr/attendance')->assertOk()->json();
+        $this->assertSame(['UHR-1007', 'in', '10:30', 'HQ gate'], [$day['latest'][0]['employee']['code'], $day['latest'][0]['type'], $day['latest'][0]['time'], $day['latest'][0]['device']['en']]);
+        $this->assertSame('10:30', collect($day['rows'])->firstWhere('employee.code', 'UHR-1007')['in']);
+        $this->postJson('/api/auth/logout');
 
         Carbon::setTestNow(Carbon::parse('2026-10-12 17:05:00', 'Asia/Damascus'));
         $out = $this->postJson('/api/device/scan', ['uid' => strtolower($e->nfc_uid)], $h)->assertOk()->json();
@@ -232,7 +238,9 @@ class AttendanceTest extends TestCase
         $path = tempnam(sys_get_temp_dir(), 'z'); file_put_contents($path, file_get_contents($r->baseResponse->getFile()->getPathname()));
         $zip = new \ZipArchive(); $zip->open($path);
         foreach (['bridge.ps1', 'install.bat', 'uninstall.bat', 'run-visible.bat', 'uhr-bridge.ini'] as $f) $this->assertNotFalse($zip->locateName("UHR-NFC-Bridge/{$f}"), $f);
-        $ini = $zip->getFromName('UHR-NFC-Bridge/uhr-bridge.ini'); $zip->close();
+        $ini = $zip->getFromName('UHR-NFC-Bridge/uhr-bridge.ini');
+        $this->assertStringNotContainsString("\n", str_replace("\r\n", '', $zip->getFromName('UHR-NFC-Bridge/install.bat')));   // CRLF
+        $zip->close();
         $this->assertStringContainsString('URL=http://localhost:5180', $ini);
         preg_match('/KEY=(\S+)/', $ini, $m);
         $this->postJson('/api/auth/logout');

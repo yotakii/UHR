@@ -63,7 +63,8 @@ class DeviceController extends Controller
         $src = resource_path('nfc-bridge');
         $path = tempnam(sys_get_temp_dir(), 'brg').'.zip';
         $zip = new \ZipArchive(); $zip->open($path, \ZipArchive::CREATE);
-        foreach (scandir($src) as $f) if (is_file("{$src}/{$f}")) $zip->addFile("{$src}/{$f}", "UHR-NFC-Bridge/{$f}");
+        // ملفات ويندوز بنهايات CRLF مهما كانت نسخة المستودع (cmd يفشل مع LF أحياناً)
+        foreach (scandir($src) as $f) if (is_file("{$src}/{$f}")) $zip->addFromString("UHR-NFC-Bridge/{$f}", preg_replace("/\r?\n/", "\r\n", file_get_contents("{$src}/{$f}")));
         $zip->addFromString('UHR-NFC-Bridge/uhr-bridge.ini', implode("\r\n", [
             '; UHR NFC Bridge — '.$dev->name_en.' ('.now()->toDateString().')',
             '; MODE=api يرسل للنظام مباشرة · MODE=keys يكتب الرقم في شاشة /kiosk المفتوحة', 'MODE=api', 'URL='.rtrim($origin, '/'), 'KEY='.$key, '']));

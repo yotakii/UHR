@@ -1,10 +1,10 @@
 @echo off
 chcp 65001 >nul
-title UHR NFC Bridge - install
+title UHR Setup - install bridge
 set "DEST=%LOCALAPPDATA%\UHR-NFC-Bridge"
 set "STARTUP=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup"
-taskkill /f /fi "WINDOWTITLE eq UHR NFC Bridge*" >nul 2>&1
-powershell -NoProfile -Command "Get-CimInstance Win32_Process -Filter \"Name='powershell.exe'\" | Where-Object { $_.CommandLine -like '*UHR-NFC-Bridge\bridge.ps1*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }" >nul 2>&1
+taskkill /f /t /fi "WINDOWTITLE eq UHR NFC Bridge*" >nul 2>&1
+powershell -NoProfile -Command "Get-CimInstance Win32_Process -Filter \"Name='powershell.exe'\" | Where-Object { ($_.CommandLine -like '*UHR-NFC-Bridge\bridge.ps1*' -or $_.CommandLine -like '*UHR-NFC-Bridge.bat*') } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }" >nul 2>&1
 if not exist "%DEST%" mkdir "%DEST%"
 copy /y "%~dp0bridge.ps1" "%DEST%\bridge.ps1" >nul
 copy /y "%~dp0uhr-bridge.ini" "%DEST%\uhr-bridge.ini" >nul

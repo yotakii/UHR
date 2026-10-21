@@ -69,7 +69,11 @@ class Attendance
         $leave = self::onLeave($emps->pluck('id'), $date, $date);
         $rows = $emps->map(fn (Employee $e) => ['employee' => self::person($e)] + self::row($e, $date, $days->get($e->id), isset($leave[$e->id][$date])))->values();
         $count = fn (array $s) => $rows->whereIn('status', $s)->count();
-        return ['date' => $date, 'rows' => $rows->sortBy(fn ($r) => $r['in'] ?? 'z')->values(),
+        // آخر الحركات من الأجهزة في ذلك اليوم (الأحدث أولاً) — تظهر فوراً مع التحديث التلقائي للصفحة
+        $latest = Scan::with('employee', 'device')->whereIn('employee_id', $emps->pluck('id'))->whereBetween('ts', [Carbon::parse($date, config('app.timezone'))->startOfDay(), Carbon::parse($date, config('app.timezone'))->endOfDay()])
+            ->latest('ts')->limit(12)->get()->map(fn (Scan $s) => ['id' => $s->id, 'employee' => ['id' => $s->employee_id, 'code' => $s->employee->code, 'name' => ['ar' => $s->employee->name, 'en' => $s->employee->name_en]],
+                'type' => $s->type, 'time' => $s->ts->copy()->setTimezone(config('app.timezone'))->format('H:i'), 'device' => ['ar' => $s->device_ar, 'en' => $s->device_en], 'via' => $s->via])->values();
+        return ['date' => $date, 'latest' => $latest, 'rows' => $rows->sortBy(fn ($r) => $r['in'] ?? 'z')->values(),
             'counts' => ['present' => $rows->whereNotNull('in')->count(), 'late' => $count(['late', 'justified']), 'absent' => $count(['absent']), 'leave' => $count(['leave']), 'incomplete' => $count(['incomplete'])]];
     }
 
