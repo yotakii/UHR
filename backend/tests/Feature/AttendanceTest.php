@@ -207,4 +207,20 @@ class AttendanceTest extends TestCase
         $rows = $this->getJson("/api/hr/employees/{$e->id}")->json('data.attendance');
         $this->assertSame('incomplete', collect($rows)->firstWhere('date', '2026-10-11')['status']);
     }
+
+    public function test_card_tapped_on_a_bridge_reaches_the_link_card_window(): void
+    {
+        $this->login('hr@alfarada.sy');
+        $key = $this->postJson('/api/hr/devices', ['name_ar' => 'جسر', 'name_en' => 'Bridge', 'kind' => 'bridge'])->json('key');
+        $e = $this->emp('UHR-1012');
+        $now = $this->getJson("/api/hr/employees/{$e->id}/card/last-read")->assertOk()->json('now');
+        $this->getJson("/api/hr/employees/{$e->id}/card/last-read?since=".urlencode($now))->assertOk()->assertJsonPath('data', null);
+        Carbon::setTestNow(Carbon::parse('2026-10-12 10:30:05', 'Asia/Damascus'));
+        $this->postJson('/api/device/scan', ['uid' => 'A1B2C3D4E5', 'via' => 'bridge'], ['X-Device-Key' => $key])->assertOk()->assertJsonPath('kind', 'unknown');
+        $r = $this->getJson("/api/hr/employees/{$e->id}/card/last-read?since=".urlencode($now))->assertOk()->json('data');
+        $this->assertSame(['A1:B2:C3:D4:E5', false, 'جسر'], [$r['uid'], $r['known'], $r['device']['ar']]);
+        $this->putJson("/api/hr/employees/{$e->id}/card", ['uid' => $r['uid']])->assertOk()->assertJsonPath('data.nfc_uid', 'A1:B2:C3:D4:E5');
+        $this->login('basel.atassi@alfarada.sy');
+        $this->getJson("/api/hr/employees/{$e->id}/card/last-read")->assertForbidden();
+    }
 }

@@ -58,6 +58,10 @@ export const useLinkCard = (id: number) => useMutation({
   mutationFn: (uid: string | null) => api<{ data: EmpFile }>(`/hr/employees/${id}/card`, { method: 'PUT', json: { uid } }).then(r => r.data), onSuccess: settle,
 })
 
+/** آخر بطاقة مُرّرت على جسر/جهاز للشركة بعد since — لقارئ ACS (PC/SC) الذي لا يكتب في المتصفح */
+export interface CardRead { uid: string; known: boolean; at: string; device: Bi }
+export const lastCardRead = (id: number, since?: string) => api<{ data: CardRead | null; now: string }>(`/hr/employees/${id}/card/last-read${since ? `?since=${encodeURIComponent(since)}` : ''}`)
+
 const refetchFile = (id: number) => () => queryClient.invalidateQueries({ queryKey: ['hr', 'employee', id] })
 export const useUploadDoc = (id: number) => useMutation({
   mutationFn: (v: { file: File; type: string; title: string; expires_at: string; sensitive: boolean; note: string }) => {

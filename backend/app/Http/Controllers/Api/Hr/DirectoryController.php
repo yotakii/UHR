@@ -57,6 +57,14 @@ class DirectoryController extends Controller
         return $this->show($request, $id);
     }
 
+    /** آخر بطاقة مُرّرت على جهاز/جسر للشركة بعد since (وقت الخادم عند فتح نافذة الربط — يُعاد في now) */
+    public function lastCard(Request $request): JsonResponse
+    {
+        $since = $request->validate(['since' => ['nullable', 'date']])['since'] ?? null;
+        $r = \App\Services\Attendance\Attendance::lastRead();
+        return response()->json(['data' => $r && (! $since || \Illuminate\Support\Carbon::parse($r['at'])->gt(\Illuminate\Support\Carbon::parse($since))) ? $r : null, 'now' => now()->toIso8601String()]);
+    }
+
     public function export(Request $request): BinaryFileResponse
     {
         $rows = $this->filtered($request)->with([...HrEmployee::WITH, 'manager'])->orderBy('code')->limit(10000)->get();

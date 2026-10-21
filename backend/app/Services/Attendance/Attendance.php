@@ -18,6 +18,8 @@ use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use App\Support\Tenant;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -133,6 +135,7 @@ class Attendance
         $uid = CardUid::format($raw);
         $e = CardUid::match(Employee::query(), $raw)->with('department')->first();
         $device->update(['last_seen_at' => now(), 'last_ip' => request()?->ip()]);
+        self::rememberRead($device, $uid ?? CardUid::norm($raw), (bool) $e);
         if (! $e) return ['kind' => 'unknown', 'uid' => $uid ?? CardUid::norm($raw)];
         if (in_array($e->status, ['terminated'], true)) return ['kind' => 'inactive', 'employee' => self::person($e), 'uid' => $uid];
         $cool = (int) Settings::policy('terminal')['cooldown'];
@@ -162,6 +165,17 @@ class Attendance
         $ob->update(['checklist' => $list]);
         $e->log('أول تسجيل على جهاز الحضور — إنجاز البند 15 من F-19', 'First tap on the attendance terminal — F-19 item 15 done', 'ok', 'F-19');
     }
+
+    /**
+     * آخر بطاقة قُرئت على أي جهاز للشركة (دقيقتان): قارئ ACS الموصول بالحاسوب (PC/SC) لا يكتب في المتصفح،
+     * فيرسل الجسر للخادم، وتلتقط نافذة «ربط البطاقة» في ملف الموظف الرقم من هنا.
+     */
+    public static function rememberRead(Device $device, string $uid, bool $known): void
+    {
+        Cache::put('card-read:'.Tenant::id(), ['uid' => $uid, 'known' => $known, 'at' => now()->toIso8601String(), 'device' => ['ar' => $device->name_ar, 'en' => $device->name_en]], 120);
+    }
+
+    public static function lastRead(): ?array { return Cache::get('card-read:'.Tenant::id()); }
 
     /** آخر الحركات على جهاز (شاشة الجهاز) */
     public static function feed(Device $device, int $n = 7): Collection

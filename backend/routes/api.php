@@ -149,6 +149,7 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
     Route::middleware('perm:employees,edit')->prefix('employees/{id}')->whereNumber('id')->group(function () {
         Route::put('/', [DirectoryController::class, 'update']);
         Route::put('/card', [DirectoryController::class, 'card']);
+        Route::get('/card/last-read', [DirectoryController::class, 'lastCard']);
         Route::post('/documents', [EmployeeDocController::class, 'store'])->middleware('throttle:30,1');
         Route::post('/documents/{docId}/archive', [EmployeeDocController::class, 'archive'])->whereNumber('docId');
     });

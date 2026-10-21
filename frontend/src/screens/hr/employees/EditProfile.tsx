@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Loader2, Nfc, Unlink } from 'lucide-react'
-import { useL, useLang } from '../../../lib/store'
+import { useL, useLang, bi } from '../../../lib/store'
 import { ApiError } from '../../../lib/api'
 import { useLookups } from '../../../lib/onboarding'
-import { useLinkCard, useUpdateProfile, type EmpFile, type ProfileInput } from '../../../lib/employees'
+import { lastCardRead, useLinkCard, useUpdateProfile, type CardRead, type EmpFile, type ProfileInput } from '../../../lib/employees'
 import { Btn, Field, Modal, Seg, toast } from '../../../ui/kit'
 import { analyse, normUid, useCardReader } from '../../../lib/cardReader'
 
@@ -54,13 +54,31 @@ export function CardModal({ e, onClose }: { e: EmpFile; onClose: () => void }) {
   const link = useLinkCard(e.id)
   const [got, setGot] = useState<string | null>(null); const [sig, setSig] = useState(''); const [manual, setManual] = useState('')
   useCardReader(raw => { setGot(normUid(raw)); link.reset() }, !got, b => setSig(b))
+  // قارئ ACS الموصول بالحاسوب لا يكتب في المتصفح: الجسر يرسل للخادم ونلتقط آخر بطاقة من هناك
+  const [via, setVia] = useState<CardRead['device'] | null>(null)
+  const since = useRef<string | null>(null)
+  useEffect(() => {
+    if (got) return
+    let stop = false
+    const tick = async () => {
+      try {
+        const r = await lastCardRead(e.id, since.current ?? undefined)
+        if (stop) return
+        if (!since.current) since.current = r.now
+        else if (r.data) { setGot(normUid(r.data.uid)); setVia(r.data.device); link.reset(); return }
+      } catch { /* يُعاد بعد لحظة */ }
+      if (!stop) t = window.setTimeout(tick, 1500)
+    }
+    let t = window.setTimeout(tick, 0)
+    return () => { stop = true; clearTimeout(t) }
+  }, [got, e.id])   // eslint-disable-line react-hooks/exhaustive-deps
   const err = link.error instanceof ApiError ? link.error : null
   const msg = err && (err.field('uid') ?? err.message)
   const run = (v: string | null) => link.mutate(v, { onSuccess: () => { toast(v ? L('رُبطت البطاقة', 'Card linked') : L('أُلغي ربط البطاقة', 'Card unlinked')); onClose() } })
   return <Modal open onClose={() => !link.isPending && onClose()} title={e.nfc_uid ? L('تغيير بطاقة الحضور', 'Change attendance card') : L('ربط بطاقة الحضور', 'Link attendance card')} width={440}
     footer={<>{e.nfc_uid && <Btn kind="ghost" icon={<Unlink size={15} />} disabled={link.isPending} onClick={() => run(null)} className="me-auto text-danger">{L('إلغاء الربط', 'Unlink')}</Btn>}
       <Btn onClick={onClose} disabled={link.isPending}>{L('إلغاء', 'Cancel')}</Btn>
-      {got && <Btn onClick={() => { setGot(null); link.reset() }} disabled={link.isPending}>{L('إعادة', 'Retry')}</Btn>}
+      {got && <Btn onClick={() => { setGot(null); setVia(null); link.reset() }} disabled={link.isPending}>{L('إعادة', 'Retry')}</Btn>}
       <Btn kind="primary" disabled={!got || link.isPending} onClick={() => got && run(got)}>{L('ربط البطاقة', 'Link card')}</Btn></>}>
     <div className="text-center">
       <div className="relative mx-auto size-24 grid place-items-center"><span className="absolute inset-0 rounded-full border-2 border-brand/60" />{!got && <span className="absolute inset-0 rounded-full scan-pulse" style={{ animationIterationCount: 'infinite' }} />}<Nfc size={40} className="text-brand" /></div>
@@ -69,6 +87,7 @@ export function CardModal({ e, onClose }: { e: EmpFile; onClose: () => void }) {
         <div className="mt-3 font-display font-bold text-[17px]">{L('مرّر البطاقة الآن', 'Tap the card now')}</div>
         <div className="text-[13px] text-ink-3 mt-1">{L(`ستُربط البطاقة بـ ${e.name.ar}`, `The card will be linked to ${e.name.en}`)}</div>
         <div className={`mt-2 text-[12px] ltr font-mono ${sig ? 'text-brand' : 'text-ink-3'}`}>{sig ? `… ${sig}` : L('بانتظار إشارة من القارئ', 'Waiting for reader')}</div>
+        <div className="mt-1 text-[11.5px] text-ink-3">{L('قارئ ACS الموصول بالحاسوب يعمل عبر UHR-NFC-Bridge (أجهزة الحضور).', 'An ACS reader on this PC works through UHR-NFC-Bridge (Attendance devices).')}</div>
         <form className="mt-4 flex gap-2" onSubmit={v => { v.preventDefault(); if (manual.trim()) setGot(normUid(manual)) }}>
           <input data-manual="1" className="field ltr flex-1 num" placeholder={L('أو أدخل رقم البطاقة', 'or type the card number')} value={manual} onChange={v => setManual(v.target.value)} />
           <Btn type="submit" disabled={!manual.trim()}>{L('إدخال', 'Enter')}</Btn></form>
@@ -76,6 +95,7 @@ export function CardModal({ e, onClose }: { e: EmpFile; onClose: () => void }) {
         <div className="mt-3 font-display font-bold text-[17px]">{L('تمت قراءة البطاقة', 'Card read')}</div>
         <div className="mt-1 ltr num text-[15px] font-semibold">{analyse(got).hex}</div>
         {analyse(got).format === 'DEC' && <div className="text-[11.5px] text-ink-3 ltr">DEC {got}</div>}
+        {via && <div className="text-[12px] text-ink-3 mt-1">{L('من', 'From')} {bi(via, lang)}</div>}
       </>}
       {msg && <div role="alert" className="mt-3 text-[13px] text-danger bg-danger-soft rounded px-3 py-2">{msg}</div>}
       <p className="mt-3 text-[12px] text-ink-3">{lang === 'ar' ? 'نفس البطاقة تُعرف من قارئ USB أو من NFC الجوال/Sunmi.' : 'The same card is recognised from a USB reader or phone/Sunmi NFC.'}</p>
