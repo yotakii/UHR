@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>UHR — دليل الجاهزية والتجربة</title>
+<style>
+@font-face { font-family: "UHR Arabic"; src: url("../../frontend/src/assets/fonts/uhr-arabic-400.woff2") format("woff2"); font-weight: 400; }
+@font-face { font-family: "UHR Arabic"; src: url("../../frontend/src/assets/fonts/uhr-arabic-500.woff2") format("woff2"); font-weight: 500; }
+@font-face { font-family: "UHR Arabic"; src: url("../../frontend/src/assets/fonts/uhr-arabic-600.woff2") format("woff2"); font-weight: 600; }
+@font-face { font-family: "UHR Arabic"; src: url("../../frontend/src/assets/fonts/uhr-arabic-700.woff2") format("woff2"); font-weight: 700 900; }
+@font-face { font-family: Figtree; src: url("../../frontend/src/assets/fonts/figtree-400.woff2") format("woff2"); font-weight: 400 600; }
+@font-face { font-family: Figtree; src: url("../../frontend/src/assets/fonts/figtree-700.woff2") format("woff2"); font-weight: 700 900; }
+:root { --brand: #0f8b78; --brand-soft: #e3f4f1; --ink: #17242f; --ink2: #44505c; --ink3: #6b7680; --line: #d8dee3; --sub: #f4f6f8; --brass: #b7791f; --brass-soft: #fbf1df; --danger: #c0392b; --info: #4f5bd5; --info-soft: #eceefd; }
+@page { size: A4; margin: 16mm 14mm 18mm; }
+* { box-sizing: border-box; }
+body { font-family: "UHR Arabic", Figtree, sans-serif; color: var(--ink); font-size: 10.6pt; line-height: 1.75; margin: 0; }
+.ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; font-family: Figtree, "UHR Arabic", sans-serif; }
+h1, h2, h3 { line-height: 1.45; margin: 0; }
+h2 { font-size: 17pt; color: var(--brand); border-bottom: 2px solid var(--brand); padding-bottom: 4px; margin: 0 0 10px; break-after: avoid; }
+h3 { font-size: 12.5pt; margin: 14px 0 6px; break-after: avoid; }
+p { margin: 4px 0 8px; }
+ul { margin: 4px 0 8px; padding-inline-start: 18px; }
+li { margin: 2px 0; }
+section { break-before: page; }
+section.flow { break-before: auto; margin-top: 18px; }
+table { width: 100%; border-collapse: collapse; margin: 6px 0 12px; font-size: 9.6pt; }
+th, td { border: 1px solid var(--line); padding: 5px 7px; vertical-align: top; text-align: start; }
+th { background: var(--sub); font-weight: 700; }
+tr { break-inside: avoid; }
+.cover { height: 255mm; display: flex; flex-direction: column; justify-content: space-between; break-after: page; }
+.cover .top { display: flex; align-items: center; gap: 14px; }
+.cover .top img { height: 54px; }
+.cover h1 { font-size: 30pt; color: var(--ink); margin-top: 60mm; }
+.cover .sub { font-size: 14pt; color: var(--ink2); margin-top: 6px; }
+.cover .meta { border-top: 2px solid var(--brand); padding-top: 10px; color: var(--ink2); font-size: 10.5pt; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 20px; }
+.box { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; margin: 8px 0 12px; background: #fff; break-inside: avoid; }
+.box.brand { background: var(--brand-soft); border-color: #b9e2db; }
+.box.warn { background: var(--brass-soft); border-color: #efd7a8; }
+.box.info { background: var(--info-soft); border-color: #cfd3fa; }
+.box b.t { display: block; margin-bottom: 2px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.mod { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; break-inside: avoid; }
+.mod h4 { margin: 0 0 2px; font-size: 11pt; color: var(--brand); }
+.mod ul { font-size: 9.6pt; margin: 0; }
+.tag { display: inline-block; font-size: 8.5pt; padding: 0 7px; border-radius: 5px; background: var(--sub); color: var(--ink2); margin-inline-start: 4px; font-weight: 600; }
+.flowline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 4px; margin: 8px 0 10px; }
+.st { border: 1.5px solid var(--brand); color: var(--ink); background: #fff; border-radius: 8px; padding: 3px 9px; font-size: 9.4pt; font-weight: 600; line-height: 1.5; text-align: center; }
+.st small { display: block; font-weight: 400; color: var(--ink3); font-size: 8pt; }
+.st.alt { border-color: var(--brass); background: var(--brass-soft); }
+.st.end { background: var(--brand); color: #fff; }
+.st.end small { color: #e3f4f1; }
+.st.bad { border-color: var(--danger); color: var(--danger); }
+.ar { color: var(--brand); font-weight: 700; font-size: 11pt; }
+.shot { border: 1px solid var(--line); border-radius: 8px; width: 100%; display: block; margin: 6px 0 4px; }
+.cap { text-align: center; color: var(--ink3); font-size: 9pt; margin-bottom: 10px; }
+.tc td:first-child { white-space: nowrap; font-weight: 700; color: var(--brand); font-family: Figtree, sans-serif; }
+.tc td:nth-child(3) { width: 21%; }
+.tc td:nth-child(4) { width: 33%; }
+.tc td:nth-child(5) { width: 25%; }
+.acc td:first-child { white-space: nowrap; }
+.toc li { margin: 3px 0; }
+.small { font-size: 9pt; color: var(--ink3); }
+.chk { display: inline-block; width: 11px; height: 11px; border: 1.3px solid var(--ink3); border-radius: 3px; vertical-align: -1px; }
+</style>
+</head>
+<body>
+
+<!-- الغلاف -->
+<div class="cover">
+  <div class="top"><img src="../../frontend/src/assets/logo.png" alt=""><div><b>Atmata Group</b><br><span class="small">لصالح شركة الفرادة للتطوير والاستثمار</span></div></div>
+  <div>
+    <h1>UHR — دليل الجاهزية والتجربة</h1>
+    <div class="sub">ما أصبح جاهزاً في النظام، ومسارات العمل، وحالات التجربة خطوة بخطوة</div>
+    <div class="box brand" style="margin-top:14mm">
+      <b class="t">للفريق والمختبِر</b>
+      يشرح هذا الدليل كل وحدة جاهزة حتى نهاية المهمة 07، مع حسابات التجربة. كل حالة تجربة فيها خطوات ونتيجة متوقعة.
+      سجّل نتيجة كل حالة في عمود «النتيجة» وأرسل الملاحظات بالطريقة المشروحة في القسم الأخير.
+    </div>
+  </div>
+  <div class="meta">
+    <span>الإصدار: نهاية المهمة 07 (07a–07d)</span><span>التاريخ: 22 تشرين الأول 2026</span>
+    <span>رابط سيرفر التجربة: <span class="ltr">https://uhr.37.60.249.71.nip.io</span></span><span>كلمة سر كل حسابات التجربة: <span class="ltr">123456</span></span>
+  </div>
+</div>
+
+<!-- المحتويات -->
+<h2>المحتويات</h2>
+<ol class="toc">
+  <li>نظرة عامة: البوابات والروابط</li>
+  <li>حسابات التجربة</li>
+  <li>ما أصبح جاهزاً (حسب الوحدة)</li>
+  <li>مسارات العمل (Workflow)</li>
+  <li>حالات التجربة</li>
+  <li>ملاحظات مهمة أثناء التجربة</li>
+  <li>ما بقي في الخطة</li>
+  <li>طريقة الإبلاغ عن مشكلة</li>
+</ol>
+
+<div class="box info"><b class="t">بيانات سيرفر التجربة</b>
+السيرفر محمّل ببيانات الديمو: شركة «الفرادة» فيها 8 إدارات و32 موظفاً و6 شواغر و10 متقدمين، مع أسبوعين من سجلات الحضور، وإجازات وطلبات.
+التواريخ في البيانات نسبية: تُبنى حول يوم تحميلها على السيرفر.
+سياسة الدوام في بيانات الديمو هي سياسة الديمو: الأحد–الخميس، 08:00–16:00، مع سماح 15 دقيقة.
+أي شركة جديدة تُنشأ تأخذ سياسة الشركة الحقيقية HR.01-01: السبت–الخميس، 09:00–17:00.</div>
+
+<!-- 1 -->
+<section>
+<h2>1. نظرة عامة: البوابات والروابط</h2>
+<p>UHR نظام موارد بشرية متعدد الشركات بخمس واجهات، كلها على نفس الرابط، وكل حساب يدخل واجهته تلقائياً:</p>
+<table>
+  <tr><th>الواجهة</th><th>الرابط</th><th>لمن</th></tr>
+  <tr><td>بوابة فرص العمل العامة</td><td><span class="ltr">/</span> و <span class="ltr">/jobs</span> و <span class="ltr">/c/alfarada</span></td><td>الزوار والمتقدمون: تصفّح شواغر كل الشركات والتقديم</td></tr>
+  <tr><td>بوابة المتقدم</td><td><span class="ltr">/my</span></td><td>المتقدم: متابعة طلباته، العرض الوظيفي، الاختبار الأولي، حذف بياناته</td></tr>
+  <tr><td>نظام الشركة (مركز عمليات الموارد البشرية)</td><td><span class="ltr">/hr</span></td><td>الموارد البشرية والإدارة ومسؤول التوظيف — كل عنصر حسب صلاحية الدور</td></tr>
+  <tr><td>بوابة الموظف</td><td><span class="ltr">/me/…</span></td><td>كل موظف: طلباته، حضوره، خدماته، كشفه، وثائقه، واعتماداته إن كان مديراً</td></tr>
+  <tr><td>لوحة المنصة</td><td><span class="ltr">/platform</span></td><td>مدير منصة Atmata: الشركات، مراجعة الشواغر العامة، نصوص البوابة</td></tr>
+  <tr><td>جهاز الحضور</td><td><span class="ltr">/kiosk</span></td><td>جهاز لوحي أو حاسوب مسجّل من «أجهزة الحضور» — يقرأ بطاقات NFC</td></tr>
+</table>
+<img class="shot" src="img/portal.jpg" alt=""><div class="cap">بوابة فرص العمل العامة</div>
+<img class="shot" src="img/dashboard.jpg" alt=""><div class="cap">لوحة المتابعة في نظام الشركة (حساب الموارد البشرية)</div>
+<div class="box"><b class="t">في كل الشاشات</b>
+تبديل اللغة عربي/English، و3 ثيمات (داكن مزرق، داكن، فاتح)، والعمل على الجوال بدون تمرير أفقي.
+البحث السريع <span class="ltr">Ctrl K</span>، وجرس الإشعارات.
+كل قرار (رفض، اعتماد، إغلاق) يمر بنافذة تأكيد من خطوتين، والرفض يحتاج سبباً مكتوباً.</div>
+</section>
+
+<!-- 2 -->
+<section>
+<h2>2. حسابات التجربة</h2>
+<p>كلمة السر لكل الحسابات: <b class="ltr">123456</b>.</p>
+<table class="acc">
+  <tr><th>الحساب</th><th>الشخص / الدور</th><th>يُستخدم لتجربة</th></tr>
+  <tr><td class="ltr">hr@alfarada.sy</td><td>رشا الخطيب — مديرة الموارد البشرية (+ مديرة إدارتها)</td><td>كل نظام الشركة، المستوى الأول من قرار التعيين، اعتماد الموارد البشرية للطلبات</td></tr>
+  <tr><td class="ltr">admin@alfarada.sy</td><td>مدير نظام الفرادة</td><td>الصلاحيات والإعدادات (لا يعتمد عن غيره)</td></tr>
+  <tr><td class="ltr">nour.hassan@alfarada.sy</td><td>نور الحسن — أخصائية توظيف (hr_officer)</td><td>الموارد البشرية بدور الأخصائي</td></tr>
+  <tr><td class="ltr">reem.kabbani@alfarada.sy</td><td>ريم قباني — أخصائية رواتب (hr_officer)</td><td>الحضور والكشف الشهري</td></tr>
+  <tr><td class="ltr">basel.atassi@alfarada.sy</td><td>باسل الأتاسي — المدير المالي (finance)</td><td>المستوى الثاني من قرار التعيين F-31</td></tr>
+  <tr><td class="ltr">mazen.droubi@alfarada.sy</td><td>مازن الدروبي — المدير التنفيذي (executive)</td><td>المستوى الثالث من F-31، ومستوى الإدارة العليا للإجازات الطويلة</td></tr>
+  <tr><td class="ltr">hani.samman@alfarada.sy</td><td>هاني السمان — الرئيس التنفيذي (ceo)</td><td>المستوى الأخير من F-31، وإجازة المدير التنفيذي</td></tr>
+  <tr><td class="ltr">alaa.sheikhani@alfarada.sy</td><td>علاء شيخاني — مدير تقنية المعلومات (manager)</td><td>المدير المباشر لسامر: اعتماد طلبات فريقه، النائب، التكليف بالإضافي</td></tr>
+  <tr><td class="ltr">samer.halabi@alfarada.sy</td><td>سامر الحلبي — موظف</td><td>بوابة الموظف: الإجازات، الحضور والتبرير، الخدمات، الكشف، الوثائق</td></tr>
+  <tr><td class="ltr">leen.ali@mail.sy</td><td>لين العلي — متقدمة لديها عرض عمل</td><td>بوابة المتقدم: قبول العرض بالتوقيع ← بدء قرار التعيين</td></tr>
+  <tr><td class="ltr">cand1@mail.sy … cand10@mail.sy</td><td>متقدمون آخرون</td><td>بوابة المتقدم والحذف والاختبار</td></tr>
+  <tr><td class="ltr">platform@atmata.sy</td><td>مدير منصة Atmata</td><td>مراجعة الشواغر العامة، الشركات، نصوص البوابة</td></tr>
+  <tr><td class="ltr">hr@atmata.sy</td><td>الموارد البشرية في Atmata</td><td>شركة ثانية منفصلة البيانات (عزل الشركات)</td></tr>
+  <tr><td class="ltr">jobs@atmata.sy</td><td>مسؤول توظيف (recruiter)</td><td>يرى التوظيف فقط — بلا بيانات الموظفين</td></tr>
+</table>
+<div class="box warn"><b class="t">تنبيه</b>
+بقية الموظفين لهم حسابات بنفس النمط <span class="ltr">first.last@alfarada.sy</span>، مثلاً <span class="ltr">firas.jundi@alfarada.sy</span> مدير المبيعات.
+لا تغيّر كلمة سر الحسابات المشتركة، لأن غيرك يستخدمها.</div>
+</section>
+
+<!-- 3 -->
+<section>
+<h2>3. ما أصبح جاهزاً</h2>
+<div class="grid2">
+  <div class="mod"><h4>البنية الأساسية <span class="tag">00–02، 05</span></h4><ul>
+    <li>عدة شركات على منصة واحدة، وبيانات كل شركة معزولة عن غيرها</li>
+    <li>مصفوفة صلاحيات قابلة للتعديل: دور × وحدة × إجراء × نطاق (نفسه / فريقه / الكل)</li>
+    <li>سجل تدقيق تلقائي لكل إضافة وتعديل وحذف وتنزيل ملف</li>
+    <li>سجل النماذج وقالب الطباعة: الشعار، العنوان، وتذييل رمز النموذج والإصدار</li>
+    <li>الإشعارات (الجرس)، والبحث السريع، ولوحة المتابعة حسب الصلاحية</li></ul></div>
+  <div class="mod"><h4>الدخول والحساب <span class="tag">03</span></h4><ul>
+    <li>دخول بجلسة آمنة، وقفل بعد 5 محاولات فاشلة</li>
+    <li>«نسيت كلمة المرور» برابط بالبريد</li>
+    <li>كلمة سر مؤقتة يجب تغييرها عند أول دخول</li></ul></div>
+  <div class="mod"><h4>بوابة الشواغر والتقديم <span class="tag">04، 05b</span></h4><ul>
+    <li>بوابة لكل الشركات، وصفحة لكل شركة وكل شاغر، وروابط قابلة للمشاركة وخريطة موقع</li>
+    <li>معالج التقديم F-28 بعدة خطوات: السيرة، الموافقة على البيانات، والصورة إن طُلبت</li>
+    <li>المطابقة الآلية: ≥50 فرز، 41–49 مراجعة، ≤40 رفض تلقائي مع بريد مهذب</li>
+    <li>حساب متقدم واحد يقدّم لأي شركة، وكشف التقديم المكرر</li>
+    <li>إخفاء الشاغر (داخلي / للشركة / عام) ومراجعة المنصة للشواغر العامة</li></ul></div>
+  <div class="mod"><h4>التوظيف <span class="tag">06a، 06c</span></h4><ul>
+    <li>لوحة المتقدمين بسبعة أعمدة والسحب والإفلات، ومهلة كل مرحلة</li>
+    <li>ملف المرشح: تقييم المقابلة F-25، العرض الرسمي F-29</li>
+    <li>قرار التعيين F-31 بأربعة مستويات بالترتيب، كل مستوى من حساب صاحبه</li>
+    <li>قاعدة السير الذاتية بالبحث والتصدير والأرشفة، وحذف بيانات المتقدم بطلبه</li>
+    <li>الاختبار الأولي بالذكاء الاصطناعي (Claude) وتصحيح الموارد البشرية</li>
+    <li>قواعد المطابقة والأوزان قابلة للتعديل، مع معاينة قبل الحفظ</li></ul></div>
+  <div class="mod"><h4>التعيين والمباشرة <span class="tag">06b</span></h4><ul>
+    <li>قائمة إجراءات المباشرة F-19 (28 بنداً)، والبنود التلقائية تُقفل وحدها</li>
+    <li>مذكرة الترحيب F-32 تصل كإشعار لكل الموظفين</li>
+    <li>العهد وسند الاستلام، وتعهدات F-22 وF-20 وميثاق السلوك بتوقيع الموظف</li>
+    <li>إضافة موظف بمعالج من 4 خطوات، واستيراد Excel مع معاينة الأخطاء</li>
+    <li>نقاط الإحالة المرحلية 10/20/30/40، والتثبيت بعد التجربة</li></ul></div>
+  <div class="mod"><h4>الموظفون <span class="tag">07a</span></h4><ul>
+    <li>الدليل بالفلاتر، وتصدير Excel بدون رواتب</li>
+    <li>ملف الموظف بالتبويبات، وتعديل البيانات مع سجل زمني</li>
+    <li>ربط بطاقة NFC بالموظف</li>
+    <li>الملفات الإضافية: النوع، الانتهاء، الحساسية، الأرشفة، سجل المشاهدة</li>
+    <li>الهيكل التنظيمي</li></ul></div>
+  <div class="mod"><h4>الحضور والدوام <span class="tag">07b</span></h4><ul>
+    <li>السجل اليومي يتحدث تلقائياً، و«آخر الحركات»، وملخص الفترة مع تصدير Excel</li>
+    <li>جهاز الحضور <span class="ltr">/kiosk</span> على جهاز مسجّل، وجسر قارئ ACS لحواسيب Windows</li>
+    <li>اليوم «الناقص» (دخول بلا خروج)، والتصحيح اليدوي بسبب مكتوب</li>
+    <li>سياسات الدوام بنسخ بتاريخ نفاذ: الوردية، أيام العمل، جدول لإدارة، حسم التأخير، الإضافي، العطل الرسمية</li></ul></div>
+  <div class="mod"><h4>الإجازات والطلبات <span class="tag">07c</span></h4><ul>
+    <li>12 نوع إجازة حسب سياسة الشركة: الإشعار المسبق، البديل الإلزامي، الرصيد، والمستند</li>
+    <li>المسار الموحد: المدير ← الموارد البشرية ← الإدارة العليا عند اللزوم</li>
+    <li>النائب أثناء إجازة المدير، والتذكير بعد 24 ساعة</li>
+    <li>تبرير التأخير والغياب خلال 48 ساعة</li>
+    <li>التكليف بالعمل الإضافي F-04 من المدير</li></ul></div>
+  <div class="mod"><h4>الكشف الشهري والخدمات <span class="tag">07d</span></h4><ul>
+    <li>كشف الدوام والمستحقات: مسودة ← محتسب ← معتمد ← مغلق، بمبالغ تقديرية</li>
+    <li>إعفاء التأخير المبرر 3 مرات بالشهر، والإضافي بعد 48 ساعة وبحد التكليف</li>
+    <li>الأيام الناقصة تمنع الإغلاق، والإغلاق يُبلغ كل موظف بكشفه</li>
+    <li>السلفة ضمن المستحق، وتُخصم عند الإغلاق</li>
+    <li>شهادة راتب أو عمل برقم تسلسلي وبيانات الجهة، وتحديث البيانات</li></ul></div>
+  <div class="mod"><h4>كل القواعد قابلة للتعديل</h4><ul>
+    <li>لا يوجد رقم أو مهلة أو نسبة مكتوبة داخل الكود</li>
+    <li>كل قاعدة لها شاشة إعدادات فيها تحقق من القيم، وزر «الافتراضي»، ومعاينة قبل الحفظ حيث تؤثر على الحساب، وتسجيل في التدقيق</li>
+    <li>صفحات: سياسات الدوام والإجازات، قواعد التوظيف والمطابقة، الملفات الإضافية، الصلاحيات، النماذج</li></ul></div>
+</div>
+</section>
+
+<!-- 4 -->
+<section>
+<h2>4. مسارات العمل (Workflow)</h2>
+
+<h3>4.1 من الشاغر إلى الموظف المثبّت</h3>
+<div class="flowline">
+  <span class="st">شاغر<small>مسودة / مفتوح</small></span><span class="ar">←</span>
+  <span class="st alt">مراجعة المنصة<small>للشاغر العام إن فُعّلت</small></span><span class="ar">←</span>
+  <span class="st">تقديم F-28<small>مطابقة آلية</small></span><span class="ar">←</span>
+  <span class="st">فرز أولي<small>≥ 50</small></span><span class="ar">←</span>
+  <span class="st">مقابلة F-25</span><span class="ar">←</span>
+  <span class="st">تقييم فني</span><span class="ar">←</span>
+  <span class="st">عرض F-29<small>يوقّعه المتقدم</small></span>
+</div>
+<div class="flowline">
+  <span class="ar">←</span>
+  <span class="st">قرار التعيين F-31<small>الموارد البشرية</small></span><span class="ar">←</span>
+  <span class="st">الإدارة المالية</span><span class="ar">←</span>
+  <span class="st">المدير التنفيذي</span><span class="ar">←</span>
+  <span class="st">الرئيس التنفيذي</span><span class="ar">←</span>
+  <span class="st">موظف + مباشرة F-19</span><span class="ar">←</span>
+  <span class="st">فترة التجربة</span><span class="ar">←</span>
+  <span class="st end">مثبّت</span>
+</div>
+<ul>
+  <li>مطابقة 41–49 تذهب لـ«مراجعة»، و≤ 40 تُرفض تلقائياً ويصل المتقدم بريد مهذب. الحدود قابلة للتعديل.</li>
+  <li>الرفض في أي مرحلة يحتاج سبباً. لا يمكن الانتقال لـ«عرض» بدون عرض صادر، ولا لـ«تم التعيين» إلا عبر F-31.</li>
+  <li>كل مستوى من F-31 يُعتمد من حساب صاحبه وبالترتيب. مدير النظام لا يعتمد عن أحد. رفض أي مستوى يغلق الطلب.</li>
+  <li>عند الاعتماد الأخير: يأخذ الموظف رقماً وظيفياً، ويصبح حساب المتقدم حساب موظف، وتُفتح قائمة المباشرة، وتُحتسب نقاط الإحالة.</li>
+</ul>
+<img class="shot" src="img/board.jpg" alt=""><div class="cap">لوحة المتقدمين — السحب بين المراحل</div>
+
+<h3>4.2 المسار الموحد للطلبات (إجازة، تبرير، إضافي، خدمة)</h3>
+<div class="flowline">
+  <span class="st">الموظف يقدّم<small>فحص فوري للقواعد</small></span><span class="ar">←</span>
+  <span class="st">المدير المباشر<small>أو نائبه إن كان بإجازة</small></span><span class="ar">←</span>
+  <span class="st">الموارد البشرية</span><span class="ar">←</span>
+  <span class="st alt">الإدارة العليا<small>إجازة &gt; 7 أيام أو بلا راتب</small></span><span class="ar">←</span>
+  <span class="st end">معتمد<small>يُحدَّث الرصيد / اليوم</small></span>
+</div>
+<table>
+  <tr><th>نوع الطلب</th><th>المسار</th><th>عند الاعتماد النهائي</th></tr>
+  <tr><td>إجازة (HR.01-01-F-03)</td><td>المدير ← الموارد البشرية (← الإدارة العليا)</td><td>ينقص الرصيد، تظهر الإجازة بالحضور، ويُبلغ البديل</td></tr>
+  <tr><td>تبرير تأخير / غياب / يوم ناقص</td><td>المدير ← الموارد البشرية</td><td>يصبح اليوم «مبرراً»</td></tr>
+  <tr><td>تكليف بعمل إضافي F-04</td><td>المدير يكلّف ← الموارد البشرية</td><td>يُحتسب الإضافي في الكشف الشهري بحد التكليف</td></tr>
+  <tr><td>شهادة راتب / شهادة عمل</td><td>الموارد البشرية</td><td>تصدر برقم تسلسلي <span class="ltr">CRT-2026-0001</span> وتُطبع</td></tr>
+  <tr><td>سلفة</td><td>الموارد البشرية</td><td>تُسجَّل على كشف الشهر وتُخصم عند إغلاقه</td></tr>
+  <tr><td>تحديث بيانات</td><td>الموارد البشرية</td><td>يُحدَّث الجوال تلقائياً</td></tr>
+</table>
+<div class="box"><b class="t">قواعد المسار</b>
+<ul>
+  <li>الإلغاء من مقدّم الطلب فقط، وقبل قرار المستوى الأول.</li>
+  <li>الرفض يحتاج سبباً من 10 أحرف على الأقل، ويصل للموظف مع السبب.</li>
+  <li>الموارد البشرية ترى كل الطلبات، لكنها لا تقرر قبل دورها.</li>
+  <li>إذا تجاوز الطلب الرصيد أو تعارض مع إجازة زميل في نفس الإدارة، يكتب المعتمِد ملاحظة إلزامية يتحمل بها المسؤولية.</li>
+  <li>طلب بلا قرار بعد 24 ساعة يُرسل تذكيراً لصاحب الدور، ويتكرر.</li>
+</ul></div>
+<img class="shot" src="img/my-requests.jpg" alt=""><div class="cap">إجازاتي وطلباتي — بوابة الموظف</div>
+
+<h3>4.3 من بطاقة الحضور إلى الكشف الشهري</h3>
+<div class="flowline">
+  <span class="st">تمرير البطاقة<small>دخول ثم خروج</small></span><span class="ar">←</span>
+  <span class="st">السجل اليومي<small>حاضر / متأخر / غائب</small></span><span class="ar">←</span>
+  <span class="st alt">يوم ناقص؟<small>تصحيح بسبب</small></span><span class="ar">←</span>
+  <span class="st alt">تبرير خلال 48 س</span><span class="ar">←</span>
+  <span class="st">الكشف: مسودة</span><span class="ar">←</span>
+  <span class="st">محتسب</span><span class="ar">←</span>
+  <span class="st">معتمد</span><span class="ar">←</span>
+  <span class="st end">مُغلق<small>إشعار «كشفك جاهز»</small></span>
+</div>
+<ul>
+  <li>التأخير يُحسم حسب الجدول: 1–30 دقيقة الدقيقة بدقيقة، 31–60 ×1.5، 61–120 ×2، وأكثر من 120 يُعد غياباً.</li>
+  <li>التأخير المبرر حتى 15 دقيقة يُعفى منه 3 مرات بالشهر.</li>
+  <li>الإضافي في أيام العمل يُحتسب فقط بعد 48 ساعة حضور في الأسبوع، وبحد التكليف المعتمد F-04 وبحد يومي.</li>
+  <li>العمل في يوم الراحة يُحتسب بنسبته (+100٪)، وفي العطلة الرسمية (+200٪).</li>
+  <li>الإغلاق ممنوع ما دام في الشهر يوم ناقص. بعد الإغلاق لا يُعدَّل الكشف، وتُخصم السلف.</li>
+</ul>
+<img class="shot" src="img/payroll.jpg" alt=""><div class="cap">الكشف الشهري للدوام والمستحقات</div>
+</section>
+
+<!-- 5 -->
+<section>
+<h2>5. حالات التجربة</h2>
+<p class="small">الأعمدة: الرقم، الحالة، الحساب، الخطوات، النتيجة المتوقعة، والنتيجة (✓ أو ✗ مع ملاحظة).</p>
+
+<h3>أ. البوابة العامة والمتقدم</h3>
+<table class="tc">
+<tr><th>#</th><th>الحالة</th><th>الحساب</th><th>الخطوات</th><th>المتوقع</th><th>النتيجة</th></tr>
+<tr><td>A1</td><td>تصفح الشواغر</td><td>زائر</td><td>افتح <span class="ltr">/</span> ثم «كل الشواغر»، وفلتر بالشركة والمدينة والبحث</td><td>تظهر شواغر Atmata والفرادة، والفلاتر تبقى في الرابط</td><td><span class="chk"></span></td></tr>
+<tr><td>A2</td><td>صفحة شاغر ومشاركته</td><td>زائر</td><td>افتح شاغراً ← «نسخ الرابط»، ثم افتح الرابط في نافذة خاصة</td><td>تفتح نفس الصفحة مباشرة</td><td><span class="chk"></span></td></tr>
+<tr><td>A3</td><td>التقديم على شاغر</td><td>زائر ببريد جديد</td><td>«قدّم الآن» ← أكمل الخطوات، وارفع سيرة PDF، ولا تضع إشارة على الموافقة على البيانات</td><td>يُمنع الإرسال حتى توافق. بعد الإرسال تظهر رسالة نجاح، ويصل بريد تأكيد</td><td><span class="chk"></span></td></tr>
+<tr><td>A4</td><td>الرفض التلقائي</td><td>زائر</td><td>قدّم بخبرة 0 وشهادة أدنى من المطلوب وراتب متوقع مرتفع</td><td>مطابقة ≤ 40: الطلب «غير مقبول» وبريد اعتذار مهذب</td><td><span class="chk"></span></td></tr>
+<tr><td>A5</td><td>تقديم مكرر</td><td>زائر</td><td>قدّم مرة ثانية ببريد <span class="ltr">cand1@mail.sy</span></td><td>يطلب كلمة سر الحساب الموجود ليدمج الطلب</td><td><span class="chk"></span></td></tr>
+<tr><td>A6</td><td>قبول العرض</td><td class="ltr">leen.ali@mail.sy</td><td>«طلباتي» ← العرض ← وقّع واقبل</td><td>يتحول الطلب لـ«قرار تعيين»، ويظهر لرشا في «اعتماداتي»</td><td><span class="chk"></span></td></tr>
+<tr><td>A7</td><td>حذف بياناتي</td><td class="ltr">cand2@mail.sy</td><td>من صفحة الطلب ← «حذف بياناتي» ← كلمة السر</td><td>تُمسح البيانات والملفات ويخرج الحساب. ويُمنع الحذف بعد بدء التعيين</td><td><span class="chk"></span></td></tr>
+</table>
+
+<h3>ب. التوظيف (نظام الشركة)</h3>
+<table class="tc">
+<tr><th>#</th><th>الحالة</th><th>الحساب</th><th>الخطوات</th><th>المتوقع</th><th>النتيجة</th></tr>
+<tr><td>B1</td><td>نشر شاغر عام</td><td>hr@alfarada.sy ثم platform@atmata.sy</td><td>«الوظائف الشاغرة» ← شاغر جديد ظاهر «عام» ← احفظ. ثم من حساب المنصة ← المراجعة ← اعتماد أو رفض بسبب</td><td>يبقى «بانتظار المراجعة» ولا يظهر بالبوابة قبل الاعتماد. الرفض يحتاج سبباً ≥ 10 أحرف</td><td><span class="chk"></span></td></tr>
+<tr><td>B2</td><td>لوحة المتقدمين</td><td>hr@alfarada.sy</td><td>اسحب متقدماً من «جديد» إلى «فرز»، ثم اسحبه إلى «عرض العمل» مباشرة</td><td>الأول ينجح. الثاني يُرفض لعدم وجود عرض صادر</td><td><span class="chk"></span></td></tr>
+<tr><td>B3</td><td>الرفض</td><td>hr@alfarada.sy</td><td>اسحب متقدماً إلى «غير مقبول»</td><td>نافذة سبب (اختيارات جاهزة) ثم تأكيد ثانٍ، ويصل المتقدم بريد</td><td><span class="chk"></span></td></tr>
+<tr><td>B4</td><td>تقييم المقابلة F-25 والعرض F-29</td><td>hr@alfarada.sy</td><td>افتح ملف مرشح ← تبويب المقابلة ← قيّم وأوصِ. ثم تبويب العرض ← أصدره</td><td>التوصية تنقله للتقييم الفني. العرض يصل بريداً للمتقدم</td><td><span class="chk"></span></td></tr>
+<tr><td>B5</td><td>قرار التعيين F-31</td><td>رشا ← باسل ← مازن ← هاني</td><td>بعد A6: كل واحد من حسابه ← «اعتماداتي» ← اعتماد. جرّب الاعتماد من admin</td><td>كل مستوى بدوره فقط، وadmin لا يرى الدور. بعد هاني تصبح لين موظفة ويُفتح ملف مباشرتها</td><td><span class="chk"></span></td></tr>
+<tr><td>B6</td><td>قاعدة السير الذاتية</td><td>hr@alfarada.sy</td><td>«قاعدة السير الذاتية» ← بحث بالتخصص وسنوات الخبرة ← تصدير</td><td>نتائج من وافقوا على حفظ سيرتهم فقط، وملف Excel</td><td><span class="chk"></span></td></tr>
+<tr><td>B7</td><td>قواعد المطابقة</td><td>hr@alfarada.sy</td><td>«قواعد التوظيف والمطابقة» ← غيّر وزن الخبرة ← «معاينة» ← احفظ</td><td>المعاينة تعرض الدرجة قبل وبعد. الحفظ يعيد حساب الطلبات المفتوحة. مجموع الأوزان لازم يكون 100</td><td><span class="chk"></span></td></tr>
+<tr><td>B8</td><td>مسؤول التوظيف</td><td class="ltr">jobs@atmata.sy</td><td>ادخل وتفقّد القائمة</td><td>يرى الوظائف والمتقدمين وقاعدة السير فقط، بلا الموظفين والحضور</td><td><span class="chk"></span></td></tr>
+<tr><td>B9</td><td>الاختبار الأولي (AI)</td><td>hr@alfarada.sy</td><td>شاغر ← «الاختبار» ← «اقتراح الأسئلة بالذكاء الاصطناعي» (يحتاج مفتاح Claude) ← اعتماد ← إرسال لمتقدم</td><td>8 أسئلة قابلة للتعديل. المتقدم يحل بمؤقت، والموارد البشرية تصحح الإجابات المفتوحة</td><td><span class="chk"></span></td></tr>
+</table>
+
+<h3>ج. التعيين والمباشرة</h3>
+<table class="tc">
+<tr><th>#</th><th>الحالة</th><th>الحساب</th><th>الخطوات</th><th>المتوقع</th><th>النتيجة</th></tr>
+<tr><td>C1</td><td>قائمة F-19</td><td>hr@alfarada.sy</td><td>«التعيين والمباشرة» ← موظف جديد ← أشّر بنوداً</td><td>البنود التلقائية (المذكرة، التعهدات، العهدة، التثبيت) مقفلة وتكتمل وحدها</td><td><span class="chk"></span></td></tr>
+<tr><td>C2</td><td>مذكرة الترحيب F-32</td><td>hr@alfarada.sy</td><td>تبويب المذكرة ← «إرسال»</td><td>إشعار بالجرس لكل موظفي الشركة</td><td><span class="chk"></span></td></tr>
+<tr><td>C3</td><td>العهدة والتوقيع</td><td>hr ثم حساب الموظف</td><td>سلّم عهدة (حاسوب)، ثم من حساب الموظف ← «وثائق للتوقيع» ← وقّع</td><td>العهدة بحالة «بانتظار التوقيع» ثم «مستلمة» مع سند قابل للطباعة</td><td><span class="chk"></span></td></tr>
+<tr><td>C4</td><td>إضافة موظف</td><td>hr@alfarada.sy</td><td>«إضافة موظف» ← المعالج بأربع خطوات</td><td>رقم وظيفي جديد، وحساب بكلمة سر مؤقتة، وبريد ترحيب</td><td><span class="chk"></span></td></tr>
+<tr><td>C5</td><td>استيراد Excel</td><td>hr@alfarada.sy</td><td>«استيراد من Excel» ← نزّل القالب، واملأ 3 صفوف أحدها خاطئ ← معاينة</td><td>تظهر الأخطاء لكل صف ولا يُستورد شيء حتى يصح الكل</td><td><span class="chk"></span></td></tr>
+</table>
+
+<h3>د. الموظفون</h3>
+<table class="tc">
+<tr><th>#</th><th>الحالة</th><th>الحساب</th><th>الخطوات</th><th>المتوقع</th><th>النتيجة</th></tr>
+<tr><td>D1</td><td>الدليل والتصدير</td><td>hr@alfarada.sy</td><td>«الموظفون» ← فلتر بالإدارة والحالة ← تصدير</td><td>ملف Excel بدون رواتب، والعملية مسجلة في التدقيق</td><td><span class="chk"></span></td></tr>
+<tr><td>D2</td><td>تعديل البيانات</td><td>hr@alfarada.sy</td><td>ملف موظف ← تعديل ← غيّر الإدارة والمدير. جرّب جعل المدير أحد مرؤوسيه</td><td>التغيير يظهر في السجل الزمني. الحلقة (مدير تابع لمرؤوسه) مرفوضة</td><td><span class="chk"></span></td></tr>
+<tr><td>D3</td><td>الملفات الإضافية</td><td>hr@alfarada.sy</td><td>تبويب الملفات ← ارفع «هوية» بتاريخ انتهاء وحساسية ← اعرضه ← أرشفه</td><td>سجل يبين من رفع ومن شاهد. الحساس لا يظهر لمن لا يملك الصلاحية</td><td><span class="chk"></span></td></tr>
+<tr><td>D4</td><td>الهيكل التنظيمي</td><td>hr@alfarada.sy</td><td>«الهيكل التنظيمي» على الحاسوب والجوال</td><td>كامل الهيكل بدون تمرير أفقي</td><td><span class="chk"></span></td></tr>
+</table>
+<img class="shot" src="img/employee.jpg" alt=""><div class="cap">ملف الموظف</div>
+
+<h3>هـ. الحضور والدوام</h3>
+<table class="tc">
+<tr><th>#</th><th>الحالة</th><th>الحساب</th><th>الخطوات</th><th>المتوقع</th><th>النتيجة</th></tr>
+<tr><td>E1</td><td>تسجيل جهاز حضور</td><td>hr@alfarada.sy</td><td>«أجهزة الحضور» ← جهاز جديد ← انسخ المفتاح ← افتح <span class="ltr">/kiosk</span> على جهاز آخر والصق المفتاح</td><td>المفتاح يظهر مرة واحدة فقط، والجهاز يعرض اسم الشركة والساعة</td><td><span class="chk"></span></td></tr>
+<tr><td>E2</td><td>تمرير بطاقة</td><td>جهاز الحضور</td><td>اربط بطاقة بموظف (ملف الموظف ← ربط بطاقة)، ثم مرّرها مرتين بينهما دقيقة، ومرة ثالثة فوراً</td><td>الأولى دخول، والثانية خروج، والتكرار خلال 10 ثوانٍ يُتجاهل. التمريرات تظهر في «آخر الحركات»</td><td><span class="chk"></span></td></tr>
+<tr><td>E3</td><td>جسر قارئ ACS</td><td>hr@alfarada.sy</td><td>«أجهزة الحضور» ← «قارئ ACS على حاسوب» ← نزّل وشغّل <span class="ltr">install.bat</span> على Windows</td><td>يعمل بالخلفية بدون نافذة، والجهاز يظهر «متصل»</td><td><span class="chk"></span></td></tr>
+<tr><td>E4</td><td>اليوم الناقص والتصحيح</td><td>hr@alfarada.sy</td><td>السجل اليومي ← يوم «ناقص» ← تصحيح بوقت خروج وسبب قصير ثم سبب واضح</td><td>السبب القصير مرفوض. بعد التصحيح يُسجَّل في التدقيق ويُبلغ الموظف</td><td><span class="chk"></span></td></tr>
+<tr><td>E5</td><td>سياسات الدوام</td><td>hr@alfarada.sy</td><td>«سياسات الدوام والإجازات» ← غيّر جدول التأخير ← «معاينة» ← احفظ بتاريخ قادم</td><td>المعاينة تعرض أثر آخر 14 يوماً. النسخة القادمة قابلة للتعديل والحذف، والنافذة لا تُحذف</td><td><span class="chk"></span></td></tr>
+<tr><td>E6</td><td>العطل الرسمية</td><td>hr@alfarada.sy</td><td>العطل ← «العطل الثابتة لسوريا» ← أضف عطلة متعددة الأيام</td><td>أيام العطلة تظهر «عطلة رسمية»، والعمل فيها إضافي بنسبة العطلة</td><td><span class="chk"></span></td></tr>
+</table>
+<img class="shot" src="img/attendance.jpg" alt=""><div class="cap">السجل اليومي للحضور</div>
+
+<h3>و. الإجازات والطلبات</h3>
+<table class="tc">
+<tr><th>#</th><th>الحالة</th><th>الحساب</th><th>الخطوات</th><th>المتوقع</th><th>النتيجة</th></tr>
+<tr><td>F1</td><td>قواعد طلب الإجازة</td><td class="ltr">samer.halabi@alfarada.sy</td><td>«إجازاتي وطلباتي» ← سنوية بعد 3 أيام ليومين، بلا بديل</td><td>خطأ مهلة الإشعار المسبق، وخطأ البديل الإلزامي، والإرسال معطّل</td><td><span class="chk"></span></td></tr>
+<tr><td>F2</td><td>المسار والرصيد</td><td>سامر ← علاء ← رشا</td><td>سامر يطلب بعد أسبوعين مع بديل. رشا تحاول الاعتماد قبل علاء. علاء يعتمد، ثم رشا</td><td>رشا تُرفض قبل دورها. بعد اعتمادها ينقص رصيد سامر ويُبلغ البديل</td><td><span class="chk"></span></td></tr>
+<tr><td>F3</td><td>الإلغاء</td><td class="ltr">samer.halabi@alfarada.sy</td><td>طلب جديد ← إلغاء. ثم طلب آخر يعتمده المدير ← حاول الإلغاء</td><td>الأول يُلغى. الثاني لا يمكن إلغاؤه بعد قرار المدير</td><td><span class="chk"></span></td></tr>
+<tr><td>F4</td><td>تجاوز الرصيد أو التعارض</td><td>سامر ثم علاء</td><td>اطلب أكثر من الرصيد، أو بنفس فترة زميل من الإدارة</td><td>تحذير ظاهر للمعتمِد، والاعتماد يحتاج ملاحظة إلزامية</td><td><span class="chk"></span></td></tr>
+<tr><td>F5</td><td>الإدارة العليا</td><td>سامر ← علاء ← رشا ← مازن</td><td>إجازة بلا راتب أو أطول من 7 أيام</td><td>يُضاف مستوى «الإدارة العليا»</td><td><span class="chk"></span></td></tr>
+<tr><td>F6</td><td>النائب</td><td class="ltr">alaa.sheikhani@alfarada.sy</td><td>«اعتماداتي» ← اختر نائباً من إدارتك ← (علاء في إجازة معتمدة اليوم) ← سامر يقدّم طلباً</td><td>الطلب يذهب للنائب ويظهر «نائباً عن علاء»</td><td><span class="chk"></span></td></tr>
+<tr><td>F7</td><td>المستند الإلزامي</td><td>سامر ← علاء ← رشا</td><td>إجازة مرضية بدون مستند ← المدير يعتمد ← الموارد البشرية تحاول الاعتماد النهائي ← سامر يرفق المستند</td><td>الاعتماد النهائي ممنوع حتى يُرفق المستند</td><td><span class="chk"></span></td></tr>
+<tr><td>F8</td><td>تبرير التأخير</td><td>موظف متأخر ← مديره ← رشا</td><td>«حضوري» ← «تقديم تبرير» ← سبب + مستند اختياري</td><td>بعد الاعتماد يصبح اليوم «مبرراً». بعد 48 ساعة يظهر «انتهت المهلة»</td><td><span class="chk"></span></td></tr>
+<tr><td>F9</td><td>التكليف بالإضافي F-04</td><td>علاء ← رشا</td><td>«اعتماداتي» ← «تكليف بعمل إضافي» لسامر ليوم قادم 90 دقيقة ← رشا تعتمد</td><td>تكليف أكثر من الحد اليومي أو بتاريخ ماضٍ مرفوض. المعتمد يظهر في «تكليفاتي»</td><td><span class="chk"></span></td></tr>
+<tr><td>F10</td><td>سياسات الإجازات</td><td>hr@alfarada.sy</td><td>«سياسات الدوام والإجازات» ← الإجازات ← عدّل نوعاً (الحد، الأجر، المستند) واحفظ بتاريخ</td><td>القواعد الجديدة تُطبَّق على الطلبات الجديدة. نوع عليه طلبات معلقة لا يُحذف</td><td><span class="chk"></span></td></tr>
+</table>
+<img class="shot" src="img/leaves.jpg" alt=""><div class="cap">الإجازات والتبريرات — الموارد البشرية</div>
+
+<h3>ز. الكشف الشهري والخدمات</h3>
+<table class="tc">
+<tr><th>#</th><th>الحالة</th><th>الحساب</th><th>الخطوات</th><th>المتوقع</th><th>النتيجة</th></tr>
+<tr><td>G1</td><td>فتح الكشف</td><td>hr@alfarada.sy</td><td>«الكشف الشهري» ← «فتح الكشف واحتسابه» ← اضغط على موظف</td><td>لكل موظف: الأيام، التأخير، المعفى، الإضافي (المسجل / المكلّف / المعتمد)، والمبالغ والصافي</td><td><span class="chk"></span></td></tr>
+<tr><td>G2</td><td>الأيام الناقصة</td><td>hr@alfarada.sy</td><td>في وجود يوم ناقص ← «تصحيح» ← أعد الاحتساب</td><td>قائمة «أيام ناقصة» تختفي بعد التصحيح وإعادة الاحتساب</td><td><span class="chk"></span></td></tr>
+<tr><td>G3</td><td>الاعتماد والإغلاق</td><td>hr@alfarada.sy</td><td>اعتماد ← إغلاق لكشف الشهر الجاري. ثم «إرجاع للاحتساب» بسبب</td><td>الشهر الجاري لا يُغلق قبل انتهائه. الإرجاع يحتاج سبباً. الكشف المغلق لا يُعدَّل ويُبلغ كل موظف</td><td><span class="chk"></span></td></tr>
+<tr><td>G4</td><td>تصدير الكشف</td><td>hr@alfarada.sy</td><td>زر Excel</td><td>ملف بكل الأعمدة، والعملية مسجلة في التدقيق</td><td><span class="chk"></span></td></tr>
+<tr><td>G5</td><td>السلفة</td><td>سامر ← رشا</td><td>«خدماتي» ← سلفة بأكثر من «المتاح الآن»، ثم ضمنه ← رشا تعتمد ← سلفة ثانية</td><td>الأكثر من المتاح مرفوض، والثانية بالشهر غير متاحة. المعتمدة تظهر خصماً في «كشفي الشهري»</td><td><span class="chk"></span></td></tr>
+<tr><td>G6</td><td>شهادة راتب</td><td>سامر ← رشا</td><td>شهادة راتب بدون رقم السجل التجاري ثم كاملة ← رشا تعتمد ← «عرض الشهادة» ← طباعة</td><td>الناقصة لا تُرسل. الصادرة برقم <span class="ltr">CRT-…</span>، فيها بيانات الجهة، وتُطبع على نموذج الشركة</td><td><span class="chk"></span></td></tr>
+<tr><td>G7</td><td>تحديث البيانات</td><td>سامر ← رشا</td><td>«تحديث بيانات شخصية» بجوال جديد ← اعتماد</td><td>يتحدث الجوال في ملف الموظف ويُسجَّل بالسجل الزمني</td><td><span class="chk"></span></td></tr>
+<tr><td>G8</td><td>قواعد الكشف</td><td>hr@alfarada.sy</td><td>السياسات ← «قواعد الكشف الشهري» ← غيّر حسم الغياب ← احفظ ← أعد احتساب الكشف</td><td>المبالغ تتغير حسب القاعدة الجديدة من تاريخ نفاذها</td><td><span class="chk"></span></td></tr>
+</table>
+<img class="shot" src="img/my-services.jpg" alt=""><div class="cap">خدماتي — بوابة الموظف</div>
+
+<h3>ح. الصلاحيات والإعدادات والواجهة</h3>
+<table class="tc">
+<tr><th>#</th><th>الحالة</th><th>الحساب</th><th>الخطوات</th><th>المتوقع</th><th>النتيجة</th></tr>
+<tr><td>H1</td><td>مصفوفة الصلاحيات</td><td class="ltr">admin@alfarada.sy</td><td>«الصلاحيات» ← أزل «عرض الموظفين» عن دور، ثم جرّب إزالة صلاحيات الإدارة عن دورك</td><td>القائمة تتغير لأصحاب الدور. إزالة صلاحيتك عن نفسك مرفوضة</td><td><span class="chk"></span></td></tr>
+<tr><td>H2</td><td>عزل الشركات</td><td class="ltr">hr@atmata.sy</td><td>ابحث عن موظفي الفرادة بـ <span class="ltr">Ctrl K</span></td><td>لا يظهر أي شيء من شركة أخرى</td><td><span class="chk"></span></td></tr>
+<tr><td>H3</td><td>الدخول والأمان</td><td>أي حساب</td><td>5 كلمات سر خاطئة. «نسيت كلمة المرور» ← الرابط بالبريد</td><td>قفل مؤقت بعد 5 محاولات. الرابط يعيد التعيين ويعمل مرة واحدة</td><td><span class="chk"></span></td></tr>
+<tr><td>H4</td><td>اللغة والثيمات والجوال</td><td>أي حساب</td><td>بدّل EN/AR والثيمات الثلاثة، وافتح من الجوال</td><td>كل النصوص مترجمة، ولا تمرير أفقي في أي شاشة</td><td><span class="chk"></span></td></tr>
+<tr><td>H5</td><td>النماذج والطباعة</td><td>hr@alfarada.sy</td><td>«النماذج وقالب الطباعة» ← غيّر الإصدار والتاريخ ← اطبع شهادة</td><td>التذييل يعرض الرمز والإصدار الجديد. طباعة النماذج الحساسة تُسجَّل</td><td><span class="chk"></span></td></tr>
+</table>
+</section>
+
+<!-- 6 -->
+<section>
+<h2>6. ملاحظات مهمة أثناء التجربة</h2>
+<ul>
+  <li><b>البريد:</b> سيرفر التجربة لا يرسل بريداً حقيقياً. كل الرسائل تُلتقط في صندوق بريد تجريبي يفتحه فريق Atmata. اطلب منه رابط إعادة التعيين أو بريد العرض إن احتجته.</li>
+  <li><b>المبالغ في الكشف تقديرية</b>، إلى أن يتم الربط مع النظام المالي (ZERP) لاحقاً.</li>
+  <li><b>الذكاء الاصطناعي</b> (اقتراح أسئلة الاختبار والتصحيح المقترح) يحتاج مفتاح Claude API من صفحة اختبار الوظيفة. لا تُرسل أي بيانات شخصية للمتقدمين للذكاء الاصطناعي.</li>
+  <li><b>جهاز الحضور:</b> قارئ USB من نوع لوحة مفاتيح يعمل مباشرة في <span class="ltr">/kiosk</span>. قارئ ACS (ACR122U/ACR1252U) يحتاج «جسر القارئ» على حاسوب Windows.</li>
+  <li><b>الوقت:</b> كل الأوقات بتوقيت دمشق.</li>
+  <li><b>البيانات المشتركة:</b> كل المختبرين على نفس البيانات. الأفضل أن يأخذ كل مختبِر موظفين مختلفين، ويكتب أسماء من استخدمهم في ملاحظاته.</li>
+</ul>
+</section>
+
+<!-- 7 -->
+<section class="flow">
+<h2>7. ما بقي في الخطة</h2>
+<table>
+  <tr><th>المهمة</th><th>المحتوى</th></tr>
+  <tr><td>08</td><td>العهد كاملة (الجرد، الاستيراد، التسليم)، المخالفات والإنذارات M17 (F-01، F-02)، والاستقالة وإنهاء الخدمة حسب HR.01-03 (F-02…F-07، براءة الذمة، المخالصة)</td></tr>
+  <tr><td>09</td><td>الأداء وتقييم 360، المكافآت، التحليلات، واستكمال بوابة الموظف</td></tr>
+  <tr><td>10</td><td>حماية الرواتب بالتحقق الثنائي</td></tr>
+  <tr><td>11</td><td>استكمال إعدادات M16 (بيانات الشركة، الإدارات، سلاسل الاعتماد)، والإشعارات الفورية</td></tr>
+  <tr><td>12</td><td>التحقق النهائي الشامل</td></tr>
+  <tr><td>لاحقاً</td><td>وكيل قفل Windows بالبطاقة (UHR-Agent)، والربط مع ZERP، ومزوّد رسائل SMS</td></tr>
+</table>
+</section>
+
+<!-- 8 -->
+<section class="flow">
+<h2>8. طريقة الإبلاغ عن مشكلة</h2>
+<div class="box brand">
+<b class="t">كل ملاحظة تحتوي على:</b>
+<ol>
+  <li>رقم الحالة من هذا الدليل (مثلاً F2)، أو اسم الشاشة إن كانت خارج الحالات.</li>
+  <li>الحساب المستخدم، واللغة والثيم، والجهاز (حاسوب أو جوال).</li>
+  <li>الخطوات بالترتيب.</li>
+  <li>ما توقعته، وما حدث فعلاً.</li>
+  <li>لقطة شاشة (والوقت التقريبي، لنرجع للسجلات).</li>
+</ol>
+</div>
+<p class="small">كل إجراء في النظام مسجّل في سجل التدقيق مع اسم المستخدم والوقت. هذا يساعدنا على تتبع أي ملاحظة بسرعة.</p>
+</section>
+
+</body>
+</html>
