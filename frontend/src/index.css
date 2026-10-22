@@ -67,6 +67,8 @@ h1, h2, h3, .font-display { font-family: "UHR Arabic", Outfit, sans-serif; lette
 html[lang="en"] h1, html[lang="en"] h2, html[lang="en"] h3, html[lang="en"] .font-display { font-family: Outfit, "UHR Arabic", sans-serif; }
 .num { font-variant-numeric: tabular-nums; }
 .ltr { direction: ltr; unicode-bidi: isolate; }
+/* خلية جدول بأرقام/رموز لاتينية (ltr): تبقى محاذاتها مع عنوان العمود في الواجهة العربية */
+html[dir="rtl"] td.ltr, html[dir="rtl"] th.ltr { text-align: right; }
 :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 @layer base { input, select, textarea, button { font: inherit; color: inherit; } }
 
