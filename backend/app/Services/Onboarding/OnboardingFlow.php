@@ -64,7 +64,8 @@ class OnboardingFlow
         return DB::transaction(function () use ($e, $assetId, $by) {
             $a = Asset::whereKey($assetId)->lockForUpdate()->first();
             if (! $a || $a->status !== 'available') throw ApiException::field('asset_id', L::t('هذا الأصل غير متاح في المستودع.', 'This asset is not available in stock.'), 'asset_unavailable');
-            $a->update(['employee_id' => $e->id, 'status' => 'pending_ack', 'assigned_at' => now(), 'signed_at' => null, 'signature_file_id' => null]);
+            $a->update(['employee_id' => $e->id, 'status' => 'pending_ack', 'assigned_at' => now(), 'signed_at' => null, 'signature_file_id' => null, 'returned_at' => null]);
+            \App\Services\Assets\Custody::move($a, 'issued', $e->id, $by, null, $a->condition);
             $e->log("تسليم عهدة: {$a->name_ar} ({$a->tag}) — بانتظار توقيع الاستلام ({$by->displayName('ar')})", "Custody issued: {$a->name_en} ({$a->tag}) — awaiting signature ({$by->displayName('en')})");
             Notify::user($e->user()->value('id'), "سُلّمت لك عهدة: {$a->name_ar} — وقّع سند الاستلام", "Asset issued to you: {$a->name_en} — please sign the receipt", 'docs');
             $this->syncCustody($e);
@@ -80,6 +81,7 @@ class OnboardingFlow
             if (! $a) throw new ApiException(L::t('الأصل غير مسلّم لهذا الموظف.', 'This asset is not issued to this employee.'), 'not_found', 404);
             if ($a->status !== 'pending_ack') throw new ApiException(L::t('وقّع الموظف استلام هذا الأصل — تتم إعادته من وحدة العهد.', 'The employee signed for this asset — return it from the custody module.'), 'asset_signed');
             $a->update(['employee_id' => null, 'status' => 'available', 'assigned_at' => null]);
+            \App\Services\Assets\Custody::move($a, 'cancelled', $e->id, $by);
             $e->log("إلغاء تسليم عهدة: {$a->name_ar} ({$a->tag}) ({$by->displayName('ar')})", "Custody issue cancelled: {$a->name_en} ({$a->tag}) ({$by->displayName('en')})", 'warn');
             $this->syncCustody($e);
         });
@@ -146,11 +148,15 @@ class OnboardingFlow
         $file = Signature::store($signature);
         DB::transaction(function () use ($e, $a, $file) {
             $a->update(['status' => 'assigned', 'signed_at' => now(), 'signature_file_id' => $file->id]);
+            \App\Services\Assets\Custody::move($a, 'signed', $e->id, $e->user()->first());
             $e->log("توقيع استلام العهدة: {$a->name_ar} ({$a->tag})", "Custody receipt signed: {$a->name_en} ({$a->tag})", 'ok');
             Notify::hr("{$e->name} وقّع استلام {$a->name_ar}", "{$e->name_en} signed for {$a->name_en}", $e->onboarding()->exists() ? "onboard:{$e->id}" : 'custody');
             $this->syncCustody($e);
         });
     }
+
+    /** للاستدعاء من وحدة العهد بعد تسليم أو استرجاع */
+    public static function syncCustodyFor(Employee $e): void { app(self::class)->syncCustody($e); }
 
     /** البند 23: كل عهد الموظف موقّعة (وله عهدة واحدة على الأقل) */
     private function syncCustody(Employee $e): void

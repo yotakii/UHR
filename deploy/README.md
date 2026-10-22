@@ -85,7 +85,7 @@ nano deploy/.env            # راجع APP_URL و FRONTEND_URL (الدومين)
 
   | الحقل | القيمة |
   |---|---|
-  | Domain Names | `uhr.37.60.249.71.nip.io` (أو `uhr.atmata-group.com` بعد إضافة سجل DNS) |
+  | Domain Names | `atmata-uhr.duckdns.org` (سجل DuckDNS → `37.60.249.71`)، أو `uhr.atmata-group.com` بعد إضافة سجل A في Hostinger |
   | Scheme | `http` |
   | Forward Hostname / IP | `37.60.249.71` |
   | Forward Port | `8190` |
@@ -99,7 +99,13 @@ nano deploy/.env            # راجع APP_URL و FRONTEND_URL (الدومين)
   client_max_body_size 25m;
   ```
 
-الدومين لازم يطابق `APP_URL` في `deploy/.env`. إذا غيّرته، شغّل `./deploy/deploy.sh` من جديد.
+الدومين لازم يطابق `APP_URL` و`FRONTEND_URL` في `deploy/.env`. عند تغييره:
+
+```bash
+docker compose -f deploy/docker-compose.yml up -d --force-recreate api worker scheduler
+```
+
+الدومين الحالي: **https://atmata-uhr.duckdns.org** (حساب DuckDNS؛ الـIP ثابت `37.60.249.71`).
 
 ---
 

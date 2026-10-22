@@ -356,11 +356,13 @@ class TestDataSeeder extends Seeder
             ['هاتف Samsung Galaxy A55', 'Samsung Galaxy A55 phone', 'phones', 380], ['هاتف IP Yeastar', 'Yeastar IP phone', 'phones', 120], ['بطاقة NFC للحضور', 'NFC attendance card', 'cards', 5],
             ['سيارة خدمة Kia Rio', 'Kia Rio service car', 'vehicles', 14000], ['شاشة Dell 24 بوصة', 'Dell 24" monitor', 'peripherals', 160]];
         $cat = AssetCategory::pluck('id', 'code');
+        \App\Models\AssetMovement::query()->delete();
         $ai = 1;
         $make = function (int $t, ?Employee $e) use ($T, $cat, &$ai) {
             $a = $T[$t]; $serial = 'SN'.$this->f(1e7 + $this->r() * 8.9e7);
-            Asset::updateOrCreate(['tag' => 'AST-'.str_pad((string) $ai, 4, '0', STR_PAD_LEFT)], ['name_ar' => $a[0], 'name_en' => $a[1], 'asset_category_id' => $cat[$a[2]], 'serial' => $serial, 'value' => $a[3],
+            $x = Asset::updateOrCreate(['tag' => 'AST-'.str_pad((string) $ai, 4, '0', STR_PAD_LEFT)], ['name_ar' => $a[0], 'name_en' => $a[1], 'asset_category_id' => $cat[$a[2]], 'serial' => $serial, 'value' => $a[3],
                 'employee_id' => $e?->id, 'status' => $e ? 'assigned' : 'available', 'assigned_at' => $e?->hire_date, 'signed_at' => $e?->hire_date]);
+            \App\Models\AssetMovement::create(['asset_id' => $x->id, 'employee_id' => $e?->id, 'action' => $e ? 'signed' : 'created', 'at' => $e?->hire_date ?? now()]);
             $ai++;
         };
         foreach ($employees as $i => $e) {

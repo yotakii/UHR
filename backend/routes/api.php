@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\Employee\MyDocumentsController;
 use App\Http\Controllers\Api\Employee\MyRequestsController;
 use App\Http\Controllers\Api\Employee\MyServicesController;
 use App\Http\Controllers\Api\Hr\PayrollController;
+use App\Http\Controllers\Api\Hr\CustodyController;
 use App\Http\Controllers\Api\Hr\LeaveAdminController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\FileController;
@@ -200,6 +201,23 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
     // M09 — الإجازات والتبريرات والتكليف بالإضافي (القرار من صندوق الاعتماد /me/approvals)
     Route::get('/leaves', [LeaveAdminController::class, 'index'])->middleware('perm:leaves,view');
     Route::get('/services/{id}/certificate', [PayrollController::class, 'certificate'])->whereNumber('id')->middleware('perm:leaves,view');
+
+    // M10 — العهد: السجل، التسليم والاسترجاع، الصيانة، الاستيراد من Excel (D-13)
+    Route::prefix('custody')->group(function () {
+        Route::get('/', [CustodyController::class, 'index'])->middleware('perm:assets,view');
+        Route::get('/export', [CustodyController::class, 'export'])->middleware('perm:assets,export');
+        Route::get('/import/template', [CustodyController::class, 'template'])->middleware('perm:assets,create');
+        Route::post('/import/preview', [CustodyController::class, 'preview'])->middleware(['perm:assets,create', 'throttle:30,1']);
+        Route::post('/import', [CustodyController::class, 'import'])->middleware(['perm:assets,create', 'throttle:10,1']);
+        Route::post('/', [CustodyController::class, 'store'])->middleware('perm:assets,create');
+        Route::get('/{id}', [CustodyController::class, 'history'])->whereNumber('id')->middleware('perm:assets,view');
+        Route::middleware('perm:assets,edit')->group(function () {
+            Route::put('/{id}', [CustodyController::class, 'update'])->whereNumber('id');
+            Route::post('/{id}/issue', [CustodyController::class, 'issue'])->whereNumber('id');
+            Route::post('/{id}/return', [CustodyController::class, 'takeBack'])->whereNumber('id');
+            Route::post('/{id}/status', [CustodyController::class, 'status'])->whereNumber('id');
+        });
+    });
 
     // الكشف الشهري للدوام والمستحقات (D-01): مسودة ← محتسب ← معتمد ← مغلق
     Route::middleware('perm:payroll,view')->group(function () {
