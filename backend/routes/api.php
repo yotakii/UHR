@@ -9,6 +9,8 @@ use App\Http\Controllers\Api\Employee\MyRequestsController;
 use App\Http\Controllers\Api\Employee\MyServicesController;
 use App\Http\Controllers\Api\Hr\PayrollController;
 use App\Http\Controllers\Api\Hr\CustodyController;
+use App\Http\Controllers\Api\Hr\DisciplineController;
+use App\Http\Controllers\Api\Employee\MyDisciplineController;
 use App\Http\Controllers\Api\Hr\LeaveAdminController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\FileController;
@@ -98,6 +100,12 @@ Route::middleware(['auth', 'fresh'])->prefix('me')->group(function () {
     Route::post('/services/{id}/cancel', [MyServicesController::class, 'cancel'])->whereNumber('id');
     Route::get('/services/{id}/certificate', [MyServicesController::class, 'certificate'])->whereNumber('id');
     Route::get('/payslips', [MyServicesController::class, 'payslips']);
+    // M17 — إنذاراتي (الأقوال، الإقرار) وشكاواي F-02، والمدير يفتح حالة لفريقه
+    Route::get('/discipline', [MyDisciplineController::class, 'index']);
+    Route::post('/discipline', [MyDisciplineController::class, 'open'])->middleware('throttle:20,1');
+    Route::post('/discipline/{id}/defense', [MyDisciplineController::class, 'defend'])->whereNumber('id')->middleware('throttle:20,1');
+    Route::post('/discipline/{id}/acknowledge', [MyDisciplineController::class, 'acknowledge'])->whereNumber('id')->middleware('throttle:20,1');
+    Route::post('/complaints', [MyDisciplineController::class, 'complain'])->middleware('throttle:10,1');
 });
 
 Route::middleware(['auth', 'fresh'])->prefix('me/documents')->group(function () {
@@ -216,6 +224,30 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
             Route::post('/{id}/issue', [CustodyController::class, 'issue'])->whereNumber('id');
             Route::post('/{id}/return', [CustodyController::class, 'takeBack'])->whereNumber('id');
             Route::post('/{id}/status', [CustodyController::class, 'status'])->whereNumber('id');
+        });
+    });
+
+    // M17 — المخالفات والجزاءات (بنطاق own/team/all)، دليل المخالفات، والشكاوى السرية (نطاق «الكل»)
+    Route::prefix('discipline')->group(function () {
+        Route::middleware('perm:discipline,view')->group(function () {
+            Route::get('/', [DisciplineController::class, 'index']);
+            Route::get('/suggestions', [DisciplineController::class, 'suggestions']);
+            Route::get('/catalog', [DisciplineController::class, 'catalog']);
+            Route::get('/complaints', [DisciplineController::class, 'complaints']);
+            Route::get('/{id}', [DisciplineController::class, 'show'])->whereNumber('id');
+        });
+        Route::get('/{id}/warning', [DisciplineController::class, 'warning'])->whereNumber('id')->middleware('perm:discipline,print');
+        Route::post('/', [DisciplineController::class, 'store'])->middleware('perm:discipline,create');
+        Route::post('/{id}/investigate', [DisciplineController::class, 'investigate'])->whereNumber('id')->middleware('perm:discipline,edit');
+        Route::post('/complaints/{id}', [DisciplineController::class, 'complaint'])->whereNumber('id')->middleware('perm:discipline,edit');
+        Route::middleware('perm:discipline,decide')->group(function () {
+            Route::post('/{id}/decide', [DisciplineController::class, 'decide'])->whereNumber('id');
+            Route::post('/{id}/dismiss', [DisciplineController::class, 'dismiss'])->whereNumber('id');
+        });
+        Route::middleware('perm:settings,edit')->group(function () {
+            Route::post('/catalog', [DisciplineController::class, 'saveType']);
+            Route::put('/catalog/{id}', [DisciplineController::class, 'updateType'])->whereNumber('id');
+            Route::post('/catalog/reset', [DisciplineController::class, 'resetCatalog']);
         });
     });
 

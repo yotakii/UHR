@@ -35,7 +35,7 @@ class Workflow
     public static function chain(string $type): array
     {
         $levels = ApprovalChain::where('type', $type)->value('levels');
-        return $levels ?: (in_array($type, ['overtime', 'service', 'advance'], true) ? [self::level('hr_director')] : [self::level('manager'), self::level('hr_director')]);
+        return $levels ?: ($type === 'penalty' ? [self::level('ceo')] : (in_array($type, ['overtime', 'service', 'advance'], true) ? [self::level('hr_director')] : [self::level('manager'), self::level('hr_director')]));
     }
 
     public static function level(string $role, ?int $userId = null): array

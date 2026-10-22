@@ -49,6 +49,9 @@ class CompanyDefaults
         // طلبات الخدمات والشهادات والسلفة (D-16، D-01) ← الموارد البشرية
         ApprovalChain::firstOrCreate(['type' => 'service'], ['levels' => [$hr]]);
         ApprovalChain::firstOrCreate(['type' => 'advance'], ['levels' => [$hr]]);
+        // M17: الجزاءات الأشد (حسم فوق صلاحية HR، الترفيع، الفصل) ← المدير العام
+        ApprovalChain::firstOrCreate(['type' => 'penalty'], ['levels' => [['role_ar' => 'المدير العام', 'role_en' => 'General manager', 'role_key' => 'ceo']]]);
+        \App\Support\ViolationCatalog::seed();
         ApprovalChain::firstOrCreate(['type' => 'appointment'], ['levels' => [
             $hr + ['user_id' => null],
             ['role_ar' => 'الإدارة المالية', 'role_en' => 'Finance', 'role_key' => 'finance', 'user_id' => null],

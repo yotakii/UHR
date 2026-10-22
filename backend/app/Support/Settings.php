@@ -121,6 +121,9 @@ class Settings
         // وبحد advance_max_ratio من الراتب، وadvance_per_month سلفة بالشهر؛ start_date = بدء احتساب الدوام في النظام (ما قبله لا يُعدّ غياباً)
         'payroll' => ['start_date' => null, 'month_days' => 30, 'day_hours' => 8, 'absent_days' => 1, 'justified_absent_days' => 0, 'insurance_base' => 0.72, 'insurance_rate' => 0.07,
             'advance_earned_ratio' => 0.5, 'advance_max_ratio' => 0.5, 'advance_per_month' => 1],
+        // المخالفات M17 (SRS §10.7): سقف الحسم أيام أجر بالشهر، مهلة القرار من الاكتشاف، مدة احتساب التكرار، صلاحية HR حتى حسم hr_max_days
+        // (ما فوقه وتأخير/حرمان الترفيع والفصل للمدير العام)، والاقتراح الآلي من الحضور بعد عدد مرات بالشهر
+        'discipline' => ['cap_days' => 5, 'deadline_days' => 15, 'repeat_months' => 6, 'hr_max_days' => 3, 'suggest_late' => 3, 'suggest_absent' => 1, 'suggest_early' => 2],
         'sick_leave' => ['full' => 30, 'p80' => 30, 'p75' => 30],
         'probation_days' => 90,
         'notice_days' => 30,

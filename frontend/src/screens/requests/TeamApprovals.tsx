@@ -17,6 +17,8 @@ export function RequestTable({ rows, rejectMin, empty, certHref }: { rows: ReqRo
       <td><div className="sm:hidden font-semibold">{r.employee ? bi(r.employee.name, lang) : '—'}</div><div>{bi(r.type_name, lang)}</div><div className="text-[12.5px]"><Period r={r} /></div>
         {r.substitute && <div className="text-[12px] text-ink-3">{L('البديل', 'Substitute')}: {bi(r.substitute, lang)}</div>}
         {r.requested_by && r.kind === 'overtime' && <div className="text-[12px] text-ink-3">{L('بتكليف', 'Assigned by')}: {bi(r.requested_by, lang)}</div>}
+        {r.kind === 'penalty' && r.case && r.penalty && <div className="text-[12.5px]"><b>{bi(r.penalty.label, lang)}</b> · <span className="ltr inline-block num text-ink-3">{r.case.ref_no}</span> · {L(`المرة ${r.case.occurrence}`, `occurrence ${r.case.occurrence}`)}
+          {r.case.type && <div className="text-[12px] text-ink-3 max-w-[300px]">{bi(r.case.type, lang)}</div>}{r.requested_by && <div className="text-[12px] text-ink-3">{L('اقتراح', 'Proposed by')}: {bi(r.requested_by, lang)}</div>}</div>}
         <div className="lg:hidden text-[12px] text-ink-2 max-w-[260px] break-words">{r.reason}</div>
         <Warnings r={r} /><DocLink r={r} /><div className="md:hidden mt-1"><StepsPath steps={r.steps} /></div><div className="sm:hidden mt-1"><LeaveStatus s={r.status} /></div></td>
       <td className="hidden lg:table-cell text-ink-2 max-w-[220px]">{r.reason}</td>

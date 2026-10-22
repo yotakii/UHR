@@ -4,6 +4,7 @@ namespace App\Services\Payroll;
 
 use App\Models\Advance;
 use App\Models\AttendanceDay;
+use App\Models\DisciplineCase;
 use App\Models\Employee;
 use App\Models\LeaveRequest;
 use App\Models\OvertimeRequest;
@@ -19,6 +20,7 @@ use Illuminate\Support\Carbon;
  * - التأخير بجدول late_deduction، مع إعفاء exempt_per_month مرة بالشهر لتأخير مبرر حتى exempt_upto دقيقة (HR.01-01).
  * - الإضافي: يوم الراحة/العطلة بنسبته؛ وأيام العمل فقط ما تجاوز weekly_hours ساعة حضور بالأسبوع، وكله بحد التكليف المعتمد F-04
  *   (إن كان requires_assignment) وبحد daily_max يومياً.
+ * - حسم المخالفات (M17) المقرر لهذا الشهر بأيام أجر.
  * - المبالغ تقديرية (حتى التكامل مع ZERP): الأجر اليومي = الراتب ÷ month_days، والساعة ÷ day_hours.
  */
 class MonthCalc
@@ -108,11 +110,13 @@ class MonthCalc
         $employed = $firstPaid > $to ? 0 : Carbon::parse($firstPaid)->diffInDays(Carbon::parse($to)) + 1;
         $ratio = min(1, $employed / $monthLen);
         $base = $salary * $ratio;
+        // M17: حسم المخالفات المقرر لهذا الشهر (بعد سقف cap_days)
+        $t['discipline_days'] = round((float) DisciplineCase::where('employee_id', $e->id)->where('month', $month)->where('status', 'decided')->sum('deduct_days'), 2);
         $advance = (float) Advance::where('employee_id', $e->id)->where('month', $month)->whereIn('status', ['open', 'deducted'])->sum('amount');
         $m = ['base' => $base, 'ot_pay' => $t['ot_weighted'] / 60 * $hour, 'late' => $t['deduct'] / 60 * $hour,
             'absent' => ($t['absent'] * (float) $pay['absent_days'] + $t['justified_absent'] * (float) $pay['justified_absent_days']) * $dayWage,
-            'leave' => $t['leave_unpaid'] * $dayWage, 'insurance' => $base * (float) $pay['insurance_base'] * (float) $pay['insurance_rate'], 'advance' => $advance];
-        $m['net'] = $m['base'] + $m['ot_pay'] - $m['late'] - $m['absent'] - $m['leave'] - $m['insurance'] - $m['advance'];
+            'leave' => $t['leave_unpaid'] * $dayWage, 'insurance' => $base * (float) $pay['insurance_base'] * (float) $pay['insurance_rate'], 'advance' => $advance, 'discipline' => $t['discipline_days'] * $dayWage];
+        $m['net'] = $m['base'] + $m['ot_pay'] - $m['late'] - $m['absent'] - $m['leave'] - $m['insurance'] - $m['advance'] - $m['discipline'];
         $m = array_map(fn ($v) => round($v, 2), $m) + ['day' => round($dayWage, 2), 'hour' => round($hour, 2), 'currency' => $e->currency];
         return ['data' => $t, 'money' => $m];
     }

@@ -39,12 +39,14 @@ class NoticeController extends Controller
 
     /** وحدة كل رابط إشعار — إشعارات «الموارد البشرية» تظهر لمن يملك عرض وحدتها (مسؤول التوظيف لا يرى شؤون الموظفين) */
     private const LINK_MODULES = ['cand:' => 'candidates', 'approvals' => 'candidates', 'job:' => 'jobs', 'emp:' => 'employees', 'leaves' => 'leaves', 'referrals' => 'referrals',
-        'offboarding' => 'employees', 'custody' => 'assets', 'attendance' => 'attendance', 'onboard' => 'employees', 'payroll' => 'payroll'];
+        'offboarding' => 'employees', 'custody' => 'assets', 'attendance' => 'attendance', 'onboard' => 'employees', 'payroll' => 'payroll',
+        'discipline' => 'discipline', 'complaint:' => 'discipline'];
 
     private function visible(User $user): Builder
     {
         $perms = $user->portal() === 'hr' ? Perm::for($user) : [];
-        $allowed = array_keys(array_filter(self::LINK_MODULES, fn ($m) => isset($perms[$m])));
+        // الشكاوى سرية: لنطاق «الكل» في المخالفات فقط (لا يراها المدير)
+        $allowed = array_keys(array_filter(self::LINK_MODULES, fn ($m, $prefix) => isset($perms[$m]) && ($prefix !== 'complaint:' || Perm::scope($user, 'discipline') === 'all'), ARRAY_FILTER_USE_BOTH));
         $general = isset($perms['employees']);   // إشعار عام بلا رابط ← لمن يدير شؤون الموظفين
         return Notice::query()->where(function ($q) use ($user, $allowed, $general) {
             $q->where(fn ($w) => $w->where('audience', 'user')->where('user_id', $user->id));

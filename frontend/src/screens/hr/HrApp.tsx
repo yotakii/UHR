@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt } from 'lucide-react'
+import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { useRoute } from '../../lib/router'
 import { can, type SessionUser } from '../../lib/session'
@@ -37,6 +37,9 @@ import { Custody } from './custody/Custody'
 import { MyServices } from '../requests/MyServices'
 import { MyPayslip } from '../requests/MyPayslip'
 import { CertificatePage } from '../requests/Certificate'
+import { Discipline } from './discipline/Discipline'
+import { ViolationSettings } from './ViolationSettings'
+import { MyDiscipline } from '../discipline/MyDiscipline'
 
 type Page = { item: NavItem; module: string | ((u: SessionUser) => boolean); view?: () => ReactNode; task?: string }
 
@@ -73,6 +76,7 @@ export function HrApp({ user }: { user: SessionUser }) {
       view: () => route.parts[2] === 'cert' && /^\d+$/.test(route.parts[3] ?? '') ? <CertificatePage id={Number(route.parts[3])} hr back="/hr/leaves?tab=services" /> : <Leaves /> },
     { item: { to: '/hr/payroll', icon: <Wallet size={18} />, label: L('الكشف الشهري', 'Monthly sheet'), group: g2 }, module: 'payroll', view: () => <Payroll /> },
     { item: { to: '/hr/custody', icon: <Package size={18} />, label: L('العهد', 'Custody'), group: g2 }, module: 'assets', view: () => <Custody /> },
+    { item: { to: '/hr/discipline', icon: <Gavel size={18} />, label: L('المخالفات والجزاءات', 'Violations & penalties'), count: count('discipline'), group: g2 }, module: 'discipline', view: () => <Discipline /> },
     { item: { to: '/hr/offboarding', icon: <DoorOpen size={18} />, label: L('الاستقالات وإنهاء الخدمة', 'Resignations & exits'), count: count('resignation'), group: g2 }, module: 'employees', task: '08' },
     // موظفو الشركة أصحاب الحسابات الإدارية يوقّعون وثائقهم من هنا (M14)
     // موظفو الشركة أصحاب الحسابات الإدارية: إجازاتهم وحضورهم كأي موظف (M14)
@@ -81,6 +85,7 @@ export function HrApp({ user }: { user: SessionUser }) {
     { item: { to: '/hr/my-services', icon: <ClipboardList size={17} />, label: L('خدماتي', 'My services'), group: g2 }, module: u => !!u.employee,
       view: () => route.parts[2] && /^\d+$/.test(route.parts[2]) ? <CertificatePage id={Number(route.parts[2])} hr={false} back="/hr/my-services" /> : <MyServices base="/hr/my-services" /> },
     { item: { to: '/hr/my-payslip', icon: <Receipt size={17} />, label: L('كشفي الشهري', 'My monthly sheet'), group: g2 }, module: u => !!u.employee, view: () => <MyPayslip /> },
+    { item: { to: '/hr/my-discipline', icon: <ShieldAlert size={17} />, label: L('إنذاراتي وشكاواي', 'Warnings & complaints'), group: g2 }, module: u => !!u.employee, view: () => <MyDiscipline /> },
     { item: { to: '/hr/my-documents', icon: <FileSignature size={17} />, label: L('وثائقي للتوقيع', 'My documents'), group: g2 }, module: u => !!u.employee, view: () => <MyDocuments /> },
     { item: { to: '/hr/performance', icon: <Target size={17} />, label: L('الأداء وتقييم 360', 'Performance & 360'), group: g3 }, module: 'performance', task: '09' },
     { item: { to: '/hr/analytics', icon: <BarChart3 size={17} />, label: L('التحليلات', 'Analytics'), group: g3 }, module: u => can(u, 'employees', 'export'), task: '09' },
@@ -88,6 +93,7 @@ export function HrApp({ user }: { user: SessionUser }) {
     { item: { to: '/hr/settings/devices', icon: <Nfc size={18} />, label: L('أجهزة الحضور', 'Attendance devices'), group: g4 }, module: u => can(u, 'attendance', 'edit'), view: () => <Devices /> },
     { item: { to: '/hr/settings/recruitment', icon: <Scale size={18} />, label: L('قواعد التوظيف والمطابقة', 'Recruitment & matching rules'), group: g4 }, module: u => can(u, 'settings') || can(u, 'candidates'), view: () => <RecruitmentSettings /> },
     { item: { to: '/hr/settings/documents', icon: <FolderCog size={18} />, label: L('الملفات الإضافية للموظفين', 'Employee documents'), group: g4 }, module: u => can(u, 'settings') && can(u, 'employees'), view: () => <DocumentSettings /> },
+    { item: { to: '/hr/settings/violations', icon: <BookOpen size={18} />, label: L('دليل المخالفات', 'Violations catalogue'), group: g4 }, module: 'discipline', view: () => <ViolationSettings /> },
     { item: { to: '/hr/settings/permissions', icon: <ShieldCheck size={18} />, label: L('الصلاحيات', 'Permissions'), group: g4 }, module: 'users', view: () => <Permissions user={user} /> },
     { item: { to: '/hr/settings/forms', icon: <FileText size={18} />, label: L('النماذج وقالب الطباعة', 'Forms & print template'), group: g4 }, module: 'settings', view: () => <Forms /> },
   ]

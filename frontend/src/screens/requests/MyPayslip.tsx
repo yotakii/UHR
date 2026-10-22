@@ -31,6 +31,7 @@ export function MyPayslip() {
         {m.late > 0 && row(L(`تأخير (${minsLabel(Math.round(t.deduct), 'ar')} حسم)`, `Lateness (${minsLabel(Math.round(t.deduct), 'en')} deducted)`), m.late, true)}
         {m.absent > 0 && row(L(`غياب (${t.absent} يوم)`, `Absence (${t.absent} d)`), m.absent, true)}
         {m.leave > 0 && row(L(`إجازات بلا أجر (${t.leave_unpaid} يوم)`, `Unpaid leave (${t.leave_unpaid} d)`), m.leave, true)}
+        {!!m.discipline && row(L(`جزاءات المخالفات (${t.discipline_days ?? 0} يوم)`, `Disciplinary deductions (${t.discipline_days ?? 0} d)`), m.discipline, true)}
         {m.advance > 0 && row(L('سلفة', 'Advance'), m.advance, true)}
         <div className="flex justify-between pt-3 mt-1 text-[17px] font-bold"><span>{L('الصافي', 'Net')}</span><span className="num text-brand">{money(m.net, cur, lang)}</span></div>
         <p className="text-[11.5px] text-ink-3 mt-3">{L('كشف تقديري محسوب من بيانات الحضور؛ الكشف الرسمي يصدر عن الإدارة المالية.', 'Estimate from attendance data; the official payslip is issued by Finance.')}</p>

@@ -112,6 +112,12 @@ class HrDashboard
                 $add("lv{$l->id}", $en($l->employee), ["{$type[0]} · {$lvl[0]}", "{$type[1]} · {$lvl[1]}"], 'F-03', $l->created_at, 'leaves', 'leave');
             });
         }
+        // M17: حالات مفتوحة تنتظر التحقيق أو القرار — بتاريخ مهلتها
+        if ($this->can('discipline', 'decide')) {
+            \App\Models\DisciplineCase::with('employee')->whereIn('status', ['open', 'investigated'])->whereIn('employee_id', \App\Services\People\Directory::scoped($this->user, 'discipline')->select('id'))->get()
+                ->each(fn ($c) => $add("dc{$c->id}", $en($c->employee), [$c->status === 'open' ? "مخالفة {$c->ref_no} · محضر التحقيق — المهلة {$c->deadline->toDateString()}" : "مخالفة {$c->ref_no} · القرار — المهلة {$c->deadline->toDateString()}",
+                    $c->status === 'open' ? "Case {$c->ref_no} · investigation — due {$c->deadline->toDateString()}" : "Case {$c->ref_no} · decision — due {$c->deadline->toDateString()}"], 'M17', $c->created_at, "discipline:{$c->id}", 'discipline'));
+        }
         if ($this->can('employees')) {
             ServiceRequest::with('employee')->whereIn('status', \App\Models\LeaveRequest::PENDING)->get()->each(function ($x) use ($add, $en) {
                 $k = ServiceRequest::KINDS[$x->kind] ?? [$x->kind, $x->kind];

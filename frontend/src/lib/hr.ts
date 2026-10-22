@@ -52,5 +52,8 @@ export function hrLink(link: string): string {
   if (k === 'docs') return '/hr/my-documents'
   if (k === 'requests') return '/hr/my-requests'
   if (k === 'payslip') return '/hr/my-payslip'
+  if (k === 'discipline') return id ? `/hr/discipline?case=${id}` : '/hr/my-discipline'
+  if (k === 'complaint') return '/hr/discipline?tab=complaints'
+  if (k === 'complaints') return '/hr/my-discipline'
   return `/hr/${k}`
 }

@@ -9,11 +9,12 @@ export type ReqStatus = 'pending_manager' | 'pending_hr' | 'pending_exec' | 'app
 export interface Step { id: number; level: number; role: Bi; status: 'waiting' | 'pending' | 'approved' | 'rejected' | 'skipped' | 'cancelled'; by: Bi | null; owner: Bi | null; delegate_for: Bi | null; note: string | null; at: string | null; overdue: boolean }
 export interface Person { id: number; code: string; name: Bi; title: Bi }
 export interface ReqRow {
-  kind: 'leave' | 'justify' | 'overtime' | 'service'; id: number; type: string; type_name: Bi; employee: Person | null; from: string; to: string; hours?: number | null; minutes?: number | null
+  kind: 'leave' | 'justify' | 'overtime' | 'service' | 'penalty'; id: number; type: string; type_name: Bi; employee: Person | null; from: string; to: string; hours?: number | null; minutes?: number | null
   ref_date?: string | null; days?: number | null; reason: string; status: ReqStatus
   warnings: { over_balance?: { days: number; remaining: number }; conflict?: (Bi & { from: string; to: string })[]; issue?: string }
   substitute?: Bi | null; doc?: { id: number; name: string } | null; doc_required?: boolean; paid?: number | null; requested_by?: Bi | null
   amount?: number | null; currency?: 'USD' | 'SYP'; addressee?: { name?: string; cr_no?: string; email?: string; phone?: string } | null; notify_consent?: boolean; data?: { phone?: string } | null; ref_no?: string | null; issued_at?: string | null
+  penalty?: { kind: string; days?: number; label: Bi }; case?: { id: number; ref_no: string; occurrence: number; description: string; type: Bi | null } | null
   created_at: string; steps: Step[]; step_id: number | null; can_act: boolean; can_cancel: boolean
 }
 export interface LeaveType { key: string; ar: string; en: string; unit: 'day' | 'hour'; max_days: number | null; notice: boolean; doc: 'none' | 'optional' | 'required'; paid: number; balance: string | null }

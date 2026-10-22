@@ -104,7 +104,7 @@ class Payroll
         $sum = fn (string $k) => round($rows->sum(fn ($r) => $r->money[$k] ?? 0), 2);
         return ['employees' => $rows->count(), 'incomplete' => $rows->sum(fn ($r) => $r->data['incomplete']), 'absent' => $rows->sum(fn ($r) => $r->data['absent']),
             'late' => $rows->sum(fn ($r) => $r->data['late']), 'deduct' => round($rows->sum(fn ($r) => $r->data['deduct']), 1), 'ot_paid' => $rows->sum(fn ($r) => $r->data['ot_paid']),
-            'base' => $sum('base'), 'ot_pay' => $sum('ot_pay'), 'deductions' => round($sum('late') + $sum('absent') + $sum('leave') + $sum('insurance'), 2), 'advance' => $sum('advance'), 'net' => $sum('net')];
+            'base' => $sum('base'), 'ot_pay' => $sum('ot_pay'), 'deductions' => round($sum('late') + $sum('absent') + $sum('leave') + $sum('insurance') + $sum('discipline'), 2), 'advance' => $sum('advance'), 'net' => $sum('net')];
     }
 
     /**

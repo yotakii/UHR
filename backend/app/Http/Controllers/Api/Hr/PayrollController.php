@@ -62,11 +62,11 @@ class PayrollController extends Controller
         $w->getCurrentSheet()->setName($s->month)->setSheetView((new SheetView())->setRightToLeft(true)->setFreezeRow(2));
         $w->addRow(Row::fromValues(["كشف الدوام والمستحقات — {$s->month} (تقديري)"], (new Style())->setFontBold()));
         $w->addRow(Row::fromValues(['الرقم', 'الموظف', 'الإدارة', 'أيام العمل', 'الحضور', 'غياب', 'غياب مبرر', 'ناقص', 'إجازات', 'أيام بلا أجر', 'التأخير (د)', 'معفى (د)', 'الحسم (د)', 'الإضافي المسجل (د)', 'الإضافي المعتمد (د)',
-            'الراتب', 'أجر الإضافي', 'حسم التأخير', 'حسم الغياب', 'حسم الإجازات', 'التأمينات', 'السلفة', 'الصافي', 'العملة'], (new Style())->setFontBold()));
+            'الراتب', 'أجر الإضافي', 'حسم التأخير', 'حسم الغياب', 'حسم الإجازات', 'حسم المخالفات (أيام)', 'حسم المخالفات', 'التأمينات', 'السلفة', 'الصافي', 'العملة'], (new Style())->setFontBold()));
         foreach ($rows as $r) {
             [$d, $m] = [$r['data'], $r['money']];
             $w->addRow(Row::fromValues([$r['employee']['code'], $r['employee']['name']['ar'], $r['employee']['dept']['ar'] ?? '', $d['work_days'], $d['present'], $d['absent'], $d['justified_absent'], $d['incomplete'], $d['leave'], $d['leave_unpaid'],
-                $d['late'], $d['exempt_min'], $d['deduct'], $d['ot_raw'], $d['ot_paid'], $m['base'], $m['ot_pay'], $m['late'], $m['absent'], $m['leave'], $m['insurance'], $m['advance'], $m['net'], $m['currency']]));
+                $d['late'], $d['exempt_min'], $d['deduct'], $d['ot_raw'], $d['ot_paid'], $m['base'], $m['ot_pay'], $m['late'], $m['absent'], $m['leave'], $d['discipline_days'] ?? 0, $m['discipline'] ?? 0, $m['insurance'], $m['advance'], $m['net'], $m['currency']]));
         }
         $w->close();
         Audit::record('payroll.export', $s, null, ['month' => $s->month, 'count' => count($rows)]);

@@ -47,3 +47,11 @@ Artisan::command('requests:remind', function () {
     $this->info("Sent {$n} reminder(s).");
 })->purpose('Remind approvers of requests waiting longer than the reminder period');
 Schedule::command('requests:remind')->hourly();
+
+// المخالفات M17: لا جزاء بعد deadline_days من اكتشاف المخالفة ← «انقضت المهلة» (SRS §10.7) — يومياً
+Artisan::command('discipline:expire', function () {
+    $n = 0;
+    foreach (\App\Models\Company::pluck('id') as $id) $n += \App\Support\Tenant::run($id, fn () => app(\App\Services\Discipline\Discipline::class)->expire());
+    $this->info("Expired {$n} case(s).");
+})->purpose('Expire disciplinary cases past their decision deadline');
+Schedule::command('discipline:expire')->dailyAt('00:30');

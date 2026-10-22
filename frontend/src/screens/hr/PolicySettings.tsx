@@ -96,6 +96,23 @@ export function PolicySettings() {
           {num(v.advance_max_ratio * 100, x => set({ ...v, advance_max_ratio: x / 100 }), L('سقف السلفة من الراتب', 'Advance cap of salary'), ed, '%')}
           {num(v.advance_per_month, x => set({ ...v, advance_per_month: x }), L('عدد السلف بالشهر', 'Advances per month'), ed, L('سلفة', 'adv.'))}
         </div></div>} />
+    <h2 className="font-display font-bold text-[17px] pt-2">{L('المخالفات والجزاءات', 'Violations & penalties')}</h2>
+    <PolicyCard k="discipline" title={L('قواعد المخالفات', 'Discipline rules')} data={data} editable={ed}
+      hint={L('لائحة الجزاءات (المادة 98): جزاء واحد للمخالفة، لا جزاء قبل سماع أقوال العامل ولا بعد مهلة القرار. الجزاءات لكل مخالفة في «دليل المخالفات».', 'Penalty rules (art. 98): one penalty per violation, none before hearing the employee or after the decision period. Penalties per violation live in the violations catalogue.')}
+      render={(v, set) => <div className="grid lg:grid-cols-2 gap-x-8">
+        <div>
+          {num(v.cap_days, x => set({ ...v, cap_days: x }), L('سقف الحسم بالشهر', 'Monthly deduction cap'), ed, L('يوم أجر', 'day wage'), 0.25)}
+          {num(v.deadline_days, x => set({ ...v, deadline_days: x }), L('مهلة القرار من اكتشاف المخالفة', 'Decision period from discovery'), ed, L('يوم', 'days'))}
+          {num(v.repeat_months, x => set({ ...v, repeat_months: x }), L('مدة احتساب التكرار', 'Repeat window'), ed, L('شهر', 'months'))}
+          {num(v.hr_max_days, x => set({ ...v, hr_max_days: x }), L('صلاحية الموارد البشرية حتى حسم', 'HR may deduct up to'), ed, L('يوم', 'days'), 0.25)}
+        </div>
+        <div>
+          <p className="text-[12.5px] text-ink-3 py-1.5">{L('الاقتراح الآلي من الحضور خلال الشهر:', 'Monthly suggestions from attendance:')}</p>
+          {num(v.suggest_late, x => set({ ...v, suggest_late: x }), L('تأخر غير مبرر', 'Unjustified lateness'), ed, L('مرة', 'times'))}
+          {num(v.suggest_absent, x => set({ ...v, suggest_absent: x }), L('غياب غير مبرر', 'Unjustified absence'), ed, L('يوم', 'days'))}
+          {num(v.suggest_early, x => set({ ...v, suggest_early: x }), L('خروج مبكر', 'Early leave'), ed, L('مرة', 'times'))}
+          <p className="text-[12.5px] text-ink-3 py-1.5">{L('ما فوق صلاحية الموارد البشرية (والترفيع والفصل) يُرسل للمدير العام — سلسلة «penalty».', 'Anything above HR’s authority (and promotion/dismissal) goes to the general manager — the «penalty» chain.')}</p>
+        </div></div>} />
   </div>
 }
 

@@ -107,6 +107,7 @@ function RowDetail({ r }: { r: SheetRow }) {
       {line(L('الراتب', 'Salary'), money(m.base, c, lang))}{line(L('أجر الإضافي', 'Overtime pay'), money(m.ot_pay, c, lang), 'text-brand')}
       {line(L('حسم التأخير', 'Lateness'), money(m.late, c, lang), 'text-danger')}{line(L('حسم الغياب', 'Absence'), money(m.absent, c, lang), 'text-danger')}
       {line(L('إجازات بلا أجر', 'Unpaid leave'), money(m.leave, c, lang), 'text-danger')}{line(L('التأمينات', 'Insurance'), money(m.insurance, c, lang), 'text-danger')}
+      {!!m.discipline && line(L(`جزاءات المخالفات (${t.discipline_days ?? 0} يوم)`, `Disciplinary deductions (${t.discipline_days ?? 0} d)`), money(m.discipline, c, lang), 'text-danger')}
       {line(L('السلفة', 'Advance'), money(m.advance, c, lang), 'text-danger')}
       <div className="flex justify-between pt-3 text-[16px] font-bold"><span>{L('الصافي', 'Net')}</span><span className="num text-brand">{money(m.net, c, lang)}</span></div>
     </div>

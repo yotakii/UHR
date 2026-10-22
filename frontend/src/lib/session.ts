@@ -23,7 +23,7 @@ export function useMe() {
 }
 
 // تبديل المستخدم: نُسقط كل بيانات المستخدم السابق، ونحدّث ['me'] في مكانه (لا clear حتى لا ينفصل مراقب useMe)
-const setMe = (r: { user: SessionUser | null }) => { queryClient.removeQueries({ predicate: q => q.queryKey[0] !== 'me' && q.queryKey[0] !== 'public' }); queryClient.setQueryData(['me'], r.user) }
+const setMe = (r: { user: SessionUser | null }) => { queryClient.removeQueries({ predicate: q => !(q.queryKey[0] === 'me' && q.queryKey.length === 1) && q.queryKey[0] !== 'public' }); queryClient.setQueryData(['me'], r.user) }
 
 export function useLogin() {
   return useMutation({ mutationFn: (v: { email: string; password: string }) => api<{ user: SessionUser }>('/auth/login', { json: v }), onSuccess: setMe })

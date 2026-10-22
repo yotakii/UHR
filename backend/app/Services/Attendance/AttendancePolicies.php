@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Validator;
 class AttendancePolicies
 {
     /** المفاتيح التي تديرها صفحة «سياسات الدوام» — وما يقبل تجاوزاً لإدارة */
-    public const KEYS = ['shift', 'work_days', 'late_deduction', 'overtime_rates', 'overtime', 'terminal', 'annual_leave', 'leave_rules', 'leave_types', 'payroll'];
+    public const KEYS = ['shift', 'work_days', 'late_deduction', 'overtime_rates', 'overtime', 'terminal', 'annual_leave', 'leave_rules', 'leave_types', 'payroll', 'discipline'];
     public const DEPT_KEYS = ['shift', 'work_days'];
 
     /** كل النسخ لكل مفتاح (والإدارات)، والنافذة اليوم، والقيم الافتراضية */
@@ -97,6 +97,8 @@ class AttendancePolicies
                 'tiers.*.factor' => ['required', 'numeric', 'between:0,10'], 'exempt_upto' => ['required', 'integer', 'between:0,120'], 'exempt_per_month' => ['required', 'integer', 'between:0,31'], 'absent_after' => ['required', 'integer', 'between:1,600']],
             'overtime' => ['weekly_hours' => ['required', 'integer', 'between:1,84'], 'daily_max' => ['required', 'integer', 'between:0,720'], 'requires_assignment' => ['required', 'boolean'], 'max_continuous_hours' => ['required', 'integer', 'between:1,24']],
             'terminal' => ['cooldown' => ['required', 'integer', 'between:0,3600'], 'incomplete_after' => ['required', 'integer', 'between:0,720']],
+            'discipline' => ['cap_days' => ['required', 'numeric', 'between:0,30'], 'deadline_days' => ['required', 'integer', 'between:1,90'], 'repeat_months' => ['required', 'integer', 'between:1,36'],
+                'hr_max_days' => ['required', 'numeric', 'between:0,30'], 'suggest_late' => ['required', 'integer', 'between:1,31'], 'suggest_absent' => ['required', 'integer', 'between:1,31'], 'suggest_early' => ['required', 'integer', 'between:1,31']],
             'payroll' => ['start_date' => ['nullable', 'date_format:Y-m-d'], 'month_days' => ['required', 'integer', 'between:20,31'], 'day_hours' => ['required', 'integer', 'between:1,12'], 'absent_days' => ['required', 'numeric', 'between:0,5'],
                 'justified_absent_days' => ['required', 'numeric', 'between:0,5'], 'insurance_base' => ['required', 'numeric', 'between:0,1'], 'insurance_rate' => ['required', 'numeric', 'between:0,0.5'],
                 'advance_earned_ratio' => ['required', 'numeric', 'between:0,1'], 'advance_max_ratio' => ['required', 'numeric', 'between:0,1'], 'advance_per_month' => ['required', 'integer', 'between:0,5']],

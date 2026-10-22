@@ -13,4 +13,10 @@ describe('hrLink — روابط الإشعارات والمهام', () => {
     expect(hrLink('leaves')).toBe('/hr/leaves')
     expect(hrLink('custody')).toBe('/hr/custody')
   })
+  it('maps discipline links: a case for HR, the own page for the employee', () => {
+    expect(hrLink('discipline:7')).toBe('/hr/discipline?case=7')
+    expect(hrLink('discipline')).toBe('/hr/my-discipline')
+    expect(hrLink('complaint:3')).toBe('/hr/discipline?tab=complaints')
+    expect(hrLink('complaints')).toBe('/hr/my-discipline')
+  })
 })

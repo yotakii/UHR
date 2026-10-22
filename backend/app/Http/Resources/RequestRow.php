@@ -4,10 +4,12 @@ namespace App\Http\Resources;
 
 use App\Models\LeaveRequest;
 use App\Models\OvertimeRequest;
+use App\Models\PenaltyApproval;
 use App\Models\ServiceRequest;
 use App\Models\User;
 use App\Services\Leave\LeaveService;
 use App\Services\Workflow\Workflow;
+use App\Support\ViolationCatalog;
 
 /** صف طلب في المسار الموحد (إجازة، تبرير، تكليف إضافي) مع خطواته وهل ينتظر قرار المشاهد */
 class RequestRow
@@ -47,6 +49,23 @@ class RequestRow
             'created_at' => $x->created_at?->toIso8601String(), 'steps' => Workflow::steps($x), 'step_id' => $cur?->id, 'can_act' => $viewer && $cur ? Workflow::canAct($viewer, $cur, $x) : false,
             'can_cancel' => $viewer && $cur && ($viewer->employee_id === $x->employee_id || $viewer->id === $x->requested_by) && $cur->level === (int) $x->steps->whereNotIn('status', ['skipped'])->min('level')];
     }
+
+    /** طلب موافقة المدير العام على جزاء (M17) */
+    public static function penalty(PenaltyApproval $x, ?User $viewer = null): array
+    {
+        $cur = Workflow::current($x);
+        $c = $x->case;
+        $label = ['ar' => ViolationCatalog::label($x->penalty), 'en' => ViolationCatalog::label($x->penalty, 'en')];
+        return ['kind' => 'penalty', 'id' => $x->id, 'type' => 'penalty', 'type_name' => ['ar' => $x->workflowLabel('ar'), 'en' => $x->workflowLabel('en')],
+            'employee' => self::person($x->employee), 'from' => $c?->occurred_on?->toDateString(), 'to' => $c?->occurred_on?->toDateString(), 'status' => $x->status,
+            'reason' => trim(($c?->type ? $c->type->title_ar : '').' — '.$label['ar'].($x->reason ? ' — '.$x->reason : ''), ' —'),
+            'penalty' => $x->penalty + ['label' => $label], 'case' => $c ? ['id' => $c->id, 'ref_no' => $c->ref_no, 'occurrence' => $c->occurrence, 'description' => $c->description,
+                'type' => $c->type ? ['ar' => $c->type->title_ar, 'en' => $c->type->title_en] : null] : null, 'warnings' => [],
+            'requested_by' => $x->requester ? ['ar' => $x->requester->displayName('ar'), 'en' => $x->requester->displayName('en')] : null,
+            'created_at' => $x->created_at?->toIso8601String(), 'steps' => Workflow::steps($x), 'step_id' => $cur?->id, 'can_act' => $viewer && $cur ? Workflow::canAct($viewer, $cur, $x) : false, 'can_cancel' => false];
+    }
+
+    public const PENALTY_WITH = ['employee', 'case.type', 'requester.employee', 'steps.actor.employee', 'steps.user.employee', 'steps.delegator.employee'];
 
     public const SERVICE_WITH = ['employee', 'requester.employee', 'steps.actor.employee', 'steps.user.employee', 'steps.delegator.employee'];
 
