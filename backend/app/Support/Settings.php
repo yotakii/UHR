@@ -59,6 +59,55 @@ class Settings
             'extensions' => ['pdf', 'jpg', 'jpeg', 'png', 'docx'], 'max_mb' => 10, 'alert_days' => 30, 'sensitive_roles' => ['hr_director', 'hr_officer'],
         ],
         'stage_sla' => ['new' => 2, 'screening' => 3, 'interview' => 5, 'technical' => 5, 'offer' => 4],
+        // الخروج M11 (HR.01-03، SRS §10.8): أسباب الاستقالة، أسباب انتهاء الخدمة (م37) والفصل (F-03)، أسئلة الاستبيان ومقابلة الخروج،
+        // وجهات تسليم العهدة F-07 وبنودها (auto = يُحسب من النظام: handover من F-05، assets من سجل العهد، leave من الرصيد)
+        'offboarding' => [
+            'reasons' => [
+                ['key' => 'offer', 'ar' => 'فرصة عمل أخرى', 'en' => 'Another job offer'], ['key' => 'travel', 'ar' => 'السفر', 'en' => 'Travel'],
+                ['key' => 'family', 'ar' => 'ظروف عائلية أو شخصية', 'en' => 'Family or personal reasons'], ['key' => 'study', 'ar' => 'أسباب صحية أو دراسية', 'en' => 'Health or study reasons'],
+                ['key' => 'conditions', 'ar' => 'الراتب أو شروط العمل', 'en' => 'Pay or working conditions'], ['key' => 'other', 'ar' => 'أسباب أخرى', 'en' => 'Other reasons'],
+            ],
+            'causes' => [
+                ['key' => 'dismissal', 'ar' => 'فصل من العمل', 'en' => 'Dismissal'], ['key' => 'transfer', 'ar' => 'إنهاء عقد ونقله لشركة أخرى', 'en' => 'Transfer to another company'],
+                ['key' => 'contract_end', 'ar' => 'انتهاء العقد المحدد المدة', 'en' => 'End of fixed-term contract'], ['key' => 'agreement', 'ar' => 'الاتفاق بين الطرفين', 'en' => 'Mutual agreement'],
+                ['key' => 'probation', 'ar' => 'خلال فترة التجربة', 'en' => 'During probation'], ['key' => 'disability', 'ar' => 'العجز عن العمل', 'en' => 'Inability to work'],
+                ['key' => 'retirement', 'ar' => 'التقاعد', 'en' => 'Retirement'], ['key' => 'death', 'ar' => 'الوفاة', 'en' => 'Death'],
+                ['key' => 'residence', 'ar' => 'إلغاء الإقامة', 'en' => 'Residence cancelled'], ['key' => 'harassment', 'ar' => 'التحرش', 'en' => 'Harassment'],
+                ['key' => 'force_majeure', 'ar' => 'القوة القاهرة', 'en' => 'Force majeure'],
+            ],
+            'dismissal_reasons' => [
+                ['key' => 'performance', 'ar' => 'ضعف الأداء', 'en' => 'Poor performance'], ['key' => 'rules', 'ar' => 'مخالفة الأنظمة الداخلية للشركة', 'en' => 'Breach of company rules'],
+                ['key' => 'conduct', 'ar' => 'التصرف بطريقة غير احترافية', 'en' => 'Unprofessional conduct'], ['key' => 'attendance', 'ar' => 'عدم الالتزام بالدوام', 'en' => 'Poor attendance'],
+                ['key' => 'other', 'ar' => 'أسباب أخرى', 'en' => 'Other reasons'],
+            ],
+            'questions' => [
+                ['key' => 'why', 'ar' => 'لماذا تترك العمل؟', 'en' => 'Why are you leaving?'],
+                ['key' => 'keep', 'ar' => 'هل هناك تغييرات أو تحسينات كانت ستجعلك تبقى؟', 'en' => 'What changes would have made you stay?'],
+                ['key' => 'liked', 'ar' => 'ما أكثر شيء أحببته خلال عملك في الشركة؟', 'en' => 'What did you like most about working here?'],
+                ['key' => 'disliked', 'ar' => 'ما أقل شيء أحببته خلال عملك في الشركة؟', 'en' => 'What did you like least?'],
+                ['key' => 'managers', 'ar' => 'كيف تقيّم أداء مشرفك ومديرك المباشر؟', 'en' => 'How do you rate your supervisor and direct manager?'],
+                ['key' => 'relations', 'ar' => 'كيف تقيّم علاقتك بمديرك وزملائك وبيئة العمل؟', 'en' => 'How was your relationship with your manager, colleagues and the work environment?'],
+                ['key' => 'growth', 'ar' => 'هل قدّمت لك الشركة تدريباً كافياً وفرصاً للتقدم ومكافآت جيدة؟', 'en' => 'Did the company give you enough training, advancement and rewards?'],
+                ['key' => 'ideas', 'ar' => 'هل لديك اقتراحات تجعل العمل في الشركة أكثر فائدة وإنتاجية؟', 'en' => 'Any suggestions to make work here more useful and productive?'],
+            ],
+            'sections' => [
+                ['key' => 'manager', 'ar' => 'إدارة الموظف', 'en' => 'Employee’s department', 'role' => 'manager', 'items' => [
+                    ['key' => 'handover', 'ar' => 'تسليم المهام حسب نموذج F-05', 'en' => 'Tasks handed over (F-05)', 'auto' => 'handover'], ['key' => 'stamps', 'ar' => 'الأختام', 'en' => 'Stamps']]],
+                ['key' => 'it', 'ar' => 'تقانة المعلومات', 'en' => 'IT', 'role' => 'admin', 'items' => [
+                    ['key' => 'devices', 'ar' => 'استلام الأجهزة وحالتها', 'en' => 'Devices returned and their condition'], ['key' => 'accounts', 'ar' => 'توقيف الحسابات (البرامج، النظام الأمني، Windows)', 'en' => 'Accounts stopped (software, security system, Windows)'],
+                    ['key' => 'backup', 'ar' => 'نسخ البيانات (backup)', 'en' => 'Data backed up']]],
+                ['key' => 'legal', 'ar' => 'القانوني / التنفيذي', 'en' => 'Legal / executive', 'role' => 'executive', 'items' => [['key' => 'powers', 'ar' => 'التفويضات والوكالات', 'en' => 'Delegations and powers of attorney']]],
+                ['key' => 'admin', 'ar' => 'الشؤون الإدارية', 'en' => 'Administrative affairs', 'role' => 'hr_director', 'items' => [
+                    ['key' => 'assets', 'ar' => 'كل الأصول من سجل العهد', 'en' => 'All assets in the custody register', 'auto' => 'assets'], ['key' => 'mobile', 'ar' => 'خط الموبايل', 'en' => 'Mobile line'],
+                    ['key' => 'internet', 'ar' => 'خط الإنترنت', 'en' => 'Internet line'], ['key' => 'vehicle', 'ar' => 'المركبة ومستنداتها', 'en' => 'Vehicle and its papers'], ['key' => 'keys', 'ar' => 'المفاتيح', 'en' => 'Keys']]],
+                ['key' => 'finance', 'ar' => 'المالية', 'en' => 'Finance', 'role' => 'finance', 'items' => [
+                    ['key' => 'work_advances', 'ar' => 'سلف العمل', 'en' => 'Work advances', 'amount' => true], ['key' => 'personal_advances', 'ar' => 'سلف شخصية', 'en' => 'Personal advances', 'amount' => true],
+                    ['key' => 'loans', 'ar' => 'قروض', 'en' => 'Loans', 'amount' => true], ['key' => 'guarantee', 'ar' => 'كفالة موظف آخر', 'en' => 'Guarantee for another employee', 'amount' => true]]],
+                ['key' => 'hr', 'ar' => 'الموارد البشرية', 'en' => 'Human Resources', 'role' => 'hr_director', 'items' => [
+                    ['key' => 'leave', 'ar' => 'الإجازات المستحقة والمستخدمة والمتبقية', 'en' => 'Leave earned, used and remaining', 'auto' => 'leave'], ['key' => 'health', 'ar' => 'بطاقات التأمين الصحي', 'en' => 'Health insurance cards'],
+                    ['key' => 'id_card', 'ar' => 'البطاقة التعريفية', 'en' => 'Staff ID card'], ['key' => 'grants', 'ar' => 'منح الدراسة والتدريب', 'en' => 'Study and training grants']]],
+            ],
+        ],
     ];
 
     /** إعدادات المنصة (بلا شركة): نصوص بوابة فرص العمل العامة — SRS §10.15 */
@@ -126,7 +175,8 @@ class Settings
         'discipline' => ['cap_days' => 5, 'deadline_days' => 15, 'repeat_months' => 6, 'hr_max_days' => 3, 'suggest_late' => 3, 'suggest_absent' => 1, 'suggest_early' => 2],
         'sick_leave' => ['full' => 30, 'p80' => 30, 'p75' => 30],
         'probation_days' => 90,
-        'notice_days' => 30,
+        // الخروج (HR.01-03): الإخطار، مهلة قرار المدير العام، بدل الإشعار عند مخالفته (أشهر أجر)، إعانة الوفاة، مهلة الانفكاك من التأمينات
+        'exit' => ['notice_days' => 60, 'decision_days' => 30, 'notice_pay_months' => 2, 'death_grant_months' => 2, 'insurance_days' => 15],
         'payslip' => ['basic' => 0.72, 'housing' => 0.14, 'transport' => 0.08, 'insurance' => 0.07, 'pay_day' => 28],
         'advance_max_ratio' => 0.5,
         'unlock_minutes' => 5,
@@ -173,6 +223,12 @@ class Settings
     public static function docs(): array
     {
         return array_merge(self::DEFAULTS['docs'], array_intersect_key(self::get('docs') ?? [], self::DEFAULTS['docs']));
+    }
+
+    /** إعدادات الخروج (M11): القوائم المحفوظة فوق الافتراضي */
+    public static function offboarding(): array
+    {
+        return array_merge(self::DEFAULTS['offboarding'], array_intersect_key(self::get('offboarding') ?? [], self::DEFAULTS['offboarding']));
     }
 
     public static function rule(string $key): mixed { return self::get('rules')[$key] ?? self::DEFAULTS['rules'][$key]; }

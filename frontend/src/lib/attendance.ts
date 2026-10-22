@@ -40,6 +40,7 @@ export interface PolicyValues {
   leave_types: LeaveTypePolicy[]
   payroll: { start_date: string | null; month_days: number; day_hours: number; absent_days: number; justified_absent_days: number; insurance_base: number; insurance_rate: number
     advance_earned_ratio: number; advance_max_ratio: number; advance_per_month: number }
+  exit: { notice_days: number; decision_days: number; notice_pay_months: number; death_grant_months: number; insurance_days: number }
   discipline: { cap_days: number; deadline_days: number; repeat_months: number; hr_max_days: number; suggest_late: number; suggest_absent: number; suggest_early: number }
 }
 export interface LeaveTypePolicy {

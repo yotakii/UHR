@@ -8,6 +8,9 @@ use App\Models\Employee;
 use App\Models\LeaveRequest;
 use App\Models\OvertimeRequest;
 use App\Models\PenaltyApproval;
+use App\Models\Resignation;
+use App\Http\Resources\ExitCase;
+use App\Services\Exit\ExitFlow;
 use App\Services\Discipline\Discipline;
 use App\Models\RequestStep;
 use App\Models\ServiceRequest;
@@ -36,6 +39,7 @@ class ApprovalInboxController extends Controller
             return match (true) {
                 $x instanceof LeaveRequest => RequestRow::leave($x->load(RequestRow::WITH), $u),
                 $x instanceof ServiceRequest => RequestRow::service($x->load(RequestRow::SERVICE_WITH), $u),
+                $x instanceof Resignation => RequestRow::exit($x->load(ExitCase::WITH), $u),
                 $x instanceof PenaltyApproval => RequestRow::penalty($x->load(RequestRow::PENALTY_WITH), $u),
                 default => RequestRow::overtime($x->load(RequestRow::SERVICE_WITH), $u),
             };
@@ -60,6 +64,7 @@ class ApprovalInboxController extends Controller
         if ($x instanceof LeaveRequest) $this->leaves->decide($x, $u, $ok, $d['note'] ?? null);
         elseif ($x instanceof OvertimeRequest) $this->overtime->decide($x, $u, $ok, $d['note'] ?? null);
         elseif ($x instanceof ServiceRequest) app(ServiceDesk::class)->decide($x->load('employee'), $u, $ok, $d['note'] ?? null);
+        elseif ($x instanceof Resignation) app(ExitFlow::class)->decide($x, $u, $ok, $d['note'] ?? null);
         elseif ($x instanceof PenaltyApproval) app(Discipline::class)->decideApproval($x, $u, $ok, $d['note'] ?? null);
         else abort(404);
         return $this->index($request);

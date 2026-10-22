@@ -10,13 +10,13 @@
     <p style="margin:0 0 6px;line-height:1.8">@if($name)مرحباً {{ $name }}، @endif{{ $ar['body'] }}</p>
     @isset($ref)<p style="margin:12px 0;font-size:18px;font-weight:bold;letter-spacing:.05em" dir="ltr">{{ $ref }}</p>@endisset
     <p style="margin:0 0 18px;line-height:1.8;color:#5b6863">{{ $ar['hint'] }}</p>
-    <a href="{{ $url }}" style="display:inline-block;background:#0f7a5c;color:#fff;text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:10px">{{ $ar['action'] }}</a>
+    @if($url)<a href="{{ $url }}" style="display:inline-block;background:#0f7a5c;color:#fff;text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:10px">{{ $ar['action'] }}</a>@endif
   </td></tr>
   <tr><td style="padding:22px 28px;border-top:1px solid #eef1ef" dir="ltr">
     <h2 style="margin:0 0 8px;font-size:16px">{{ $en['title'] }}</h2>
     <p style="margin:0 0 8px;line-height:1.6;color:#5b6863">{{ $en['body'] }}</p>
     <p style="margin:0 0 16px;line-height:1.6;color:#5b6863">{{ $en['hint'] }}</p>
-    <a href="{{ $url }}" style="color:#0f7a5c;font-weight:bold">{{ $en['action'] }} →</a>
+    @if($url)<a href="{{ $url }}" style="color:#0f7a5c;font-weight:bold">{{ $en['action'] }} →</a>@endif
   </td></tr>
   <tr><td style="padding:14px 28px;font-size:11px;color:#8a9691;border-top:1px solid #eef1ef" dir="ltr">{{ $company['ar'] }} · {{ $company['en'] }}</td></tr>
 </table></td></tr></table>

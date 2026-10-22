@@ -19,4 +19,9 @@ describe('hrLink — روابط الإشعارات والمهام', () => {
     expect(hrLink('complaint:3')).toBe('/hr/discipline?tab=complaints')
     expect(hrLink('complaints')).toBe('/hr/my-discipline')
   })
+  it('maps exit links', () => {
+    expect(hrLink('offboarding:4')).toBe('/hr/offboarding?status=all&id=4')
+    expect(hrLink('handover:4')).toBe('/hr/my-resignation')
+    expect(hrLink('resignation')).toBe('/hr/my-resignation')
+  })
 })

@@ -42,7 +42,10 @@ class CompanyDefaults
         $mgr = ['role_ar' => 'المدير المباشر', 'role_en' => 'Direct manager', 'role_key' => 'manager'];
         $hr = ['role_ar' => 'الموارد البشرية', 'role_en' => 'Human Resources', 'role_key' => 'hr_director'];
         ApprovalChain::firstOrCreate(['type' => 'leave'], ['levels' => [$mgr, $hr]]);
-        ApprovalChain::firstOrCreate(['type' => 'resignation'], ['levels' => [$mgr, $hr]]);
+        // الاستقالة وإنهاء العقد (HR.01-03): المدير ← HR (مقابلة) ← المدير العام
+        $gm = ['role_ar' => 'المدير العام', 'role_en' => 'General manager', 'role_key' => 'ceo'];
+        ApprovalChain::firstOrCreate(['type' => 'resignation'], ['levels' => [$mgr, $hr, $gm]]);
+        ApprovalChain::firstOrCreate(['type' => 'termination'], ['levels' => [$mgr, $hr, $gm]]);
         // المسار الموحد (SRS §10.1): التبرير المدير ← HR، والتكليف بالإضافي (يطلبه المدير) ← HR
         ApprovalChain::firstOrCreate(['type' => 'justification'], ['levels' => [$mgr, $hr]]);
         ApprovalChain::firstOrCreate(['type' => 'overtime'], ['levels' => [$hr]]);

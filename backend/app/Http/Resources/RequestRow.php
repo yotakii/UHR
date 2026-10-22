@@ -5,6 +5,7 @@ namespace App\Http\Resources;
 use App\Models\LeaveRequest;
 use App\Models\OvertimeRequest;
 use App\Models\PenaltyApproval;
+use App\Models\Resignation;
 use App\Models\ServiceRequest;
 use App\Models\User;
 use App\Services\Leave\LeaveService;
@@ -63,6 +64,18 @@ class RequestRow
                 'type' => $c->type ? ['ar' => $c->type->title_ar, 'en' => $c->type->title_en] : null] : null, 'warnings' => [],
             'requested_by' => $x->requester ? ['ar' => $x->requester->displayName('ar'), 'en' => $x->requester->displayName('en')] : null,
             'created_at' => $x->created_at?->toIso8601String(), 'steps' => Workflow::steps($x), 'step_id' => $cur?->id, 'can_act' => $viewer && $cur ? Workflow::canAct($viewer, $cur, $x) : false, 'can_cancel' => false];
+    }
+
+    /** طلب استقالة / إنهاء عقد (M11) في صندوق الاعتماد */
+    public static function exit(Resignation $x, ?User $viewer = null): array
+    {
+        $c = ExitCase::card($x, $viewer);
+        return ['kind' => 'exit', 'id' => $x->id, 'type' => $x->kind, 'type_name' => ['ar' => $x->workflowLabel('ar'), 'en' => $x->workflowLabel('en')],
+            'employee' => self::person($x->employee), 'from' => $x->created_at?->toDateString(), 'to' => $x->last_day->toDateString(), 'status' => $x->status,
+            'reason' => implode('، ', array_map(fn ($r) => $r['ar'], $c['reasons'])).($x->kind === 'termination' ? ' — '.$x->text : ''), 'ref_no' => $x->ref_no, 'last_day' => $x->last_day->toDateString(),
+            'notice_short' => $c['notice_short'], 'warnings' => [], 'interview_needed' => $x->kind === 'resignation' && empty($x->hr_interview),
+            'requested_by' => $x->requester ? ['ar' => $x->requester->displayName('ar'), 'en' => $x->requester->displayName('en')] : null,
+            'created_at' => $x->created_at?->toIso8601String(), 'steps' => Workflow::steps($x), 'step_id' => $c['step_id'], 'can_act' => $c['can_act'], 'can_cancel' => false];
     }
 
     public const PENALTY_WITH = ['employee', 'case.type', 'requester.employee', 'steps.actor.employee', 'steps.user.employee', 'steps.delegator.employee'];

@@ -123,8 +123,14 @@ class HrDashboard
                 $k = ServiceRequest::KINDS[$x->kind] ?? [$x->kind, $x->kind];
                 $add("sv{$x->id}", $en($x->employee), ["طلب خدمة: {$k[0]}", "Service: {$k[1]}"], null, $x->created_at, 'leaves', 'service');
             });
-            Resignation::with('employee')->whereNotIn('status', ['closed', 'rejected'])->get()->each(fn ($r) => $add("rs{$r->id}", $en($r->employee),
-                $r->status === 'clearance' ? ['إبراء ذمة قيد الإنجاز', 'Clearance in progress'] : ['طلب استقالة بانتظار الاعتماد', 'Resignation awaiting approval'], 'F-02', $r->created_at, 'offboarding', 'resignation'));
+            // M11: الطلبات المفتوحة، ومهام ما بعد الخروج (مديرية العمل، التأمينات بمهلتها)
+            Resignation::with('employee')->whereIn('status', Resignation::OPEN)->get()->each(fn ($r) => $add("rs{$r->id}", $en($r->employee),
+                $r->status === 'clearance' ? ['إجراءات الخروج: تسليم المهام والعهدة والمخالصة — آخر يوم '.$r->last_day->toDateString(), 'Exit procedures — last day '.$r->last_day->toDateString()]
+                    : [$r->workflowLabel('ar').' بانتظار الاعتماد', $r->workflowLabel('en').' awaiting approval'], $r->kind === 'termination' ? 'F-03' : 'F-02', $r->created_at, 'offboarding:'.$r->id, 'resignation'));
+            Resignation::with('employee')->where('status', 'closed')->where('closed_at', '>=', now()->subMonths(3))->get()
+                ->filter(fn ($r) => ! ($r->followups['labor']['done'] ?? true) || ! ($r->followups['insurance']['done'] ?? true))
+                ->each(fn ($r) => $add("rf{$r->id}", $en($r->employee), ['متابعة بعد الخروج: توثيق مديرية العمل والانفكاك من التأمينات حتى '.($r->followups['insurance']['due'] ?? ''),
+                    'After exit: labour office and insurance by '.($r->followups['insurance']['due'] ?? '')], null, $r->closed_at, 'offboarding:'.$r->id, 'resignation'));
             Employee::with('onboarding')->where('status', 'onboarding')->get()->each(fn ($e) => $add("ob{$e->id}", $en($e),
                 ['إجراءات المباشرة '.($e->onboarding?->doneCount() ?? 0).'/28', 'Onboarding '.($e->onboarding?->doneCount() ?? 0).'/28'], 'F-19', $e->hire_date, "onboard:{$e->id}", 'onboarding'));
         }

@@ -421,10 +421,18 @@ class TestDataSeeder extends Seeder
             \App\Services\Workflow\Workflow::backfill($x);   // مسار الديمو ← خطوات المسار الموحد
         }
 
-        Resignation::query()->delete();
-        Resignation::create(['employee_id' => $emp['e1028']->id, 'created_at' => $d(-3).' 11:00:00', 'last_day' => $d(27), 'reason_key' => 'travel', 'status' => 'pending_hr',
-            'text' => 'أتقدم بطلب قبول استقالتي بسبب السفر خارج القطر، مع التزامي بإتمام فترة الإخطار وتسليم المهام.',
-            'clearance' => ['custody' => false, 'it' => false, 'finance' => false, 'hr' => false], 'chain' => [$mgr + ['by' => 'ميس الكردي', 'at' => $d(-2).'T09:30:00'], $hr]]);
+        Resignation::query()->delete(); \App\Models\RequestStep::where('subject_type', (new Resignation)->getMorphClass())->delete();
+        // طلب الديمو: اعتمده المدير المباشر وينتظر مقابلة HR ← ثم المدير العام (HR.01-03)
+        $rs = Resignation::create(['employee_id' => $emp['e1028']->id, 'created_at' => $d(-3).' 11:00:00', 'last_day' => $d(27), 'reason_key' => 'travel', 'reasons' => ['travel'], 'status' => 'pending_hr',
+            'kind' => 'resignation', 'ref_no' => 'RSG-'.substr($d(-3), 0, 4).'-0001', 'prev_status' => 'active', 'notice_until' => \Illuminate\Support\Carbon::parse($d(-3))->addDays(60)->toDateString(),
+            'text' => 'أتقدم بطلب قبول استقالتي بسبب السفر خارج القطر، مع التزامي بإتمام فترة الإخطار وتسليم المهام.', 'clearance' => [],
+            'requested_by' => \App\Models\User::where('employee_id', $emp['e1028']->id)->value('id')]);
+        \App\Support\Counters::atLeast('rsg-'.substr($d(-3), 0, 4), 1);
+        $mgrUser = \App\Models\User::where('employee_id', $emp['e1028']->manager_id)->value('id');
+        foreach ([[1, 'manager', 'المدير المباشر', 'Direct manager', 'approved', $mgrUser], [2, 'hr_director', 'الموارد البشرية', 'Human Resources', 'pending', null], [3, 'ceo', 'المدير العام', 'General manager', 'waiting', null]] as [$lv, $key, $ar, $en, $st, $by]) {
+            \App\Models\RequestStep::create(['subject_type' => $rs->getMorphClass(), 'subject_id' => $rs->id, 'level' => $lv, 'role_key' => $key, 'role_ar' => $ar, 'role_en' => $en, 'user_id' => $key === 'manager' ? $mgrUser : null,
+                'status' => $st, 'acted_by' => $by, 'decided_at' => $st === 'approved' ? $d(-2).' 09:30:00' : null, 'activated_at' => $st === 'pending' ? $d(-2).' 09:30:00' : ($st === 'approved' ? $d(-3).' 11:00:00' : null)]);
+        }
 
         \App\Models\MonthSheet::query()->delete(); \App\Models\Advance::query()->delete(); \App\Models\OvertimeRequest::query()->delete();
         \App\Models\RequestStep::whereIn('subject_type', [(new ServiceRequest)->getMorphClass(), (new \App\Models\OvertimeRequest)->getMorphClass()])->delete();

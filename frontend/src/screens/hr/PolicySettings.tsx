@@ -96,6 +96,19 @@ export function PolicySettings() {
           {num(v.advance_max_ratio * 100, x => set({ ...v, advance_max_ratio: x / 100 }), L('سقف السلفة من الراتب', 'Advance cap of salary'), ed, '%')}
           {num(v.advance_per_month, x => set({ ...v, advance_per_month: x }), L('عدد السلف بالشهر', 'Advances per month'), ed, L('سلفة', 'adv.'))}
         </div></div>} />
+    <h2 className="font-display font-bold text-[17px] pt-2">{L('الاستقالة وإنهاء الخدمة', 'Resignation & end of service')}</h2>
+    <PolicyCard k="exit" title={L('قواعد الخروج', 'Exit rules')} data={data} editable={ed}
+      hint={L('إجراء الشركة HR.01-03. القوائم (الأسباب، الأسئلة، جهات تسليم العهدة) في «إعدادات الخروج».', 'Company procedure HR.01-03. Lists (reasons, questions, clearance sections) live in «Exit settings».')}
+      render={(v, set) => <div className="grid lg:grid-cols-2 gap-x-8">
+        <div>
+          {num(v.notice_days, x => set({ ...v, notice_days: x }), L('فترة الإخطار للاستقالة', 'Resignation notice period'), ed, L('يوم', 'days'))}
+          {num(v.decision_days, x => set({ ...v, decision_days: x }), L('مهلة قرار المدير العام من التقديم', 'General manager decision period'), ed, L('يوم', 'days'))}
+          {num(v.notice_pay_months, x => set({ ...v, notice_pay_months: x }), L('بدل الإشعار عند مخالفة الإخطار', 'Notice pay when the notice is not served'), ed, L('شهر أجر', 'months'), 0.5)}
+        </div>
+        <div>
+          {num(v.death_grant_months, x => set({ ...v, death_grant_months: x }), L('إعانة الوفاة (فوق أجر شهر الوفاة)', 'Death grant (plus the month’s pay)'), ed, L('شهر أجر', 'months'), 0.5)}
+          {num(v.insurance_days, x => set({ ...v, insurance_days: x }), L('مهلة الانفكاك من التأمينات بعد آخر يوم', 'Insurance disengagement after the last day'), ed, L('يوم', 'days'))}
+        </div></div>} />
     <h2 className="font-display font-bold text-[17px] pt-2">{L('المخالفات والجزاءات', 'Violations & penalties')}</h2>
     <PolicyCard k="discipline" title={L('قواعد المخالفات', 'Discipline rules')} data={data} editable={ed}
       hint={L('لائحة الجزاءات (المادة 98): جزاء واحد للمخالفة، لا جزاء قبل سماع أقوال العامل ولا بعد مهلة القرار. الجزاءات لكل مخالفة في «دليل المخالفات».', 'Penalty rules (art. 98): one penalty per violation, none before hearing the employee or after the decision period. Penalties per violation live in the violations catalogue.')}

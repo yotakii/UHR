@@ -43,7 +43,7 @@ class HrEmployee
             'tenure_days' => Directory::tenureDays($e),
             'leave' => ['entitlement' => $ent, 'used' => $e->leave_used, 'remaining' => round($ent - $e->leave_used, 1), 'sick' => $e->sick_used],
             // مسار الحياة: ملف مباشرة (F-19) غير مثبّت بعد، واستقالة قائمة
-            'onboarding' => (bool) $e->onboarding, 'resigned' => $e->resignations->contains(fn ($r) => $r->status !== 'rejected'),
+            'onboarding' => (bool) $e->onboarding, 'resigned' => $e->resignations->contains(fn ($r) => ! in_array($r->status, ['rejected', 'cancelled'], true)),
             'attendance' => RecentDays::rows($e),
             'leaves' => LeaveRequest::where('employee_id', $e->id)->orderByDesc('from')->orderByDesc('id')->limit(100)->get()->map(fn (LeaveRequest $l) => [
                 'id' => $l->id, 'type' => $l->type, 'type_name' => ['ar' => LeaveRequest::TYPES[$l->type][0] ?? $l->type, 'en' => LeaveRequest::TYPES[$l->type][1] ?? $l->type],

@@ -10,6 +10,8 @@ use App\Http\Controllers\Api\Employee\MyServicesController;
 use App\Http\Controllers\Api\Hr\PayrollController;
 use App\Http\Controllers\Api\Hr\CustodyController;
 use App\Http\Controllers\Api\Hr\DisciplineController;
+use App\Http\Controllers\Api\Hr\OffboardingController;
+use App\Http\Controllers\Api\Employee\MyExitController;
 use App\Http\Controllers\Api\Employee\MyDisciplineController;
 use App\Http\Controllers\Api\Hr\LeaveAdminController;
 use App\Http\Controllers\Api\HealthController;
@@ -106,6 +108,14 @@ Route::middleware(['auth', 'fresh'])->prefix('me')->group(function () {
     Route::post('/discipline/{id}/defense', [MyDisciplineController::class, 'defend'])->whereNumber('id')->middleware('throttle:20,1');
     Route::post('/discipline/{id}/acknowledge', [MyDisciplineController::class, 'acknowledge'])->whereNumber('id')->middleware('throttle:20,1');
     Route::post('/complaints', [MyDisciplineController::class, 'complain'])->middleware('throttle:10,1');
+    // M11 — طلب الاستقالة F-02، الرجوع عنها، تسليم المهام F-05 (المسلِّم والمستلم)
+    Route::get('/exit', [MyExitController::class, 'index']);
+    Route::post('/exit', [MyExitController::class, 'store'])->middleware('throttle:10,1');
+    Route::post('/exit/{id}/withdraw', [MyExitController::class, 'withdraw'])->whereNumber('id')->middleware('throttle:10,1');
+    Route::put('/exit/{id}/handover', [MyExitController::class, 'handover'])->whereNumber('id');
+    Route::post('/exit/{id}/handover/sign', [MyExitController::class, 'sign'])->whereNumber('id')->middleware('throttle:20,1');
+    Route::post('/exit/{id}/clearance/{section}/sign', [MyExitController::class, 'signSection'])->whereNumber('id')->where('section', '[a-z0-9_]+');
+    Route::post('/exit/{id}/clearance/{section}/{item}', [MyExitController::class, 'markItem'])->whereNumber('id')->where(['section' => '[a-z0-9_]+', 'item' => '[a-z0-9_]+']);
 });
 
 Route::middleware(['auth', 'fresh'])->prefix('me/documents')->group(function () {
@@ -225,6 +235,33 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
             Route::post('/{id}/return', [CustodyController::class, 'takeBack'])->whereNumber('id');
             Route::post('/{id}/status', [CustodyController::class, 'status'])->whereNumber('id');
         });
+    });
+
+    // M11 — الاستقالات وإنهاء الخدمة (HR.01-03): الإجراءات حسب الدور تُفحص في ExitFlow (المدير، الجهات، مدير النظام)
+    Route::prefix('offboarding')->group(function () {
+        Route::middleware('perm:employees,view')->group(function () {
+            Route::get('/', [OffboardingController::class, 'index']);
+            Route::get('/report', [OffboardingController::class, 'report']);
+            Route::get('/settings', [OffboardingController::class, 'settings']);
+            Route::get('/{id}', [OffboardingController::class, 'show'])->whereNumber('id');
+            Route::post('/', [OffboardingController::class, 'terminate']);
+            Route::post('/{id}/waive', [OffboardingController::class, 'waive'])->whereNumber('id');
+            Route::post('/{id}/handover/sign', [OffboardingController::class, 'signHandover'])->whereNumber('id');
+            Route::post('/{id}/clearance/{section}/sign', [OffboardingController::class, 'signSection'])->whereNumber('id')->where('section', '[a-z0-9_]+');
+            Route::post('/{id}/clearance/{section}/{item}', [OffboardingController::class, 'markItem'])->whereNumber('id')->where(['section' => '[a-z0-9_]+', 'item' => '[a-z0-9_]+']);
+            Route::post('/{id}/successor', [OffboardingController::class, 'successor'])->whereNumber('id');
+        });
+        Route::middleware('perm:employees,edit')->prefix('{id}')->whereNumber('id')->group(function () {
+            Route::post('/interview', [OffboardingController::class, 'interview']);
+            Route::post('/withdrawal', [OffboardingController::class, 'withdrawal']);
+            Route::put('/handover', [OffboardingController::class, 'handover']);
+            Route::post('/exit', [OffboardingController::class, 'exitInterview']);
+            Route::post('/close', [OffboardingController::class, 'close']);
+            Route::post('/certificate', [OffboardingController::class, 'certificate']);
+            Route::post('/followups/{key}', [OffboardingController::class, 'followup'])->whereIn('key', ['labor', 'insurance']);
+            Route::post('/notices/{noticeId}/send', [OffboardingController::class, 'sendNotice'])->whereNumber('noticeId');
+        });
+        Route::put('/settings', [OffboardingController::class, 'saveSettings'])->middleware('perm:settings,edit');
     });
 
     // M17 — المخالفات والجزاءات (بنطاق own/team/all)، دليل المخالفات، والشكاوى السرية (نطاق «الكل»)
