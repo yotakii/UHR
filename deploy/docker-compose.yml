@@ -1,0 +1,109 @@
+# UHR — نسخة السيرفر (إنتاج/تجربة). تُشغَّل وتُحدَّث بـ deploy/deploy.sh
+# الدخول من الخارج عبر Nginx Proxy Manager → http://<IP السيرفر>:${UHR_HTTP_PORT} (مع شهادة Let's Encrypt)
+name: uhr
+
+x-api: &api
+  image: uhr-api:prod
+  restart: unless-stopped
+  env_file: .env
+  environment:
+    TZ: Asia/Damascus
+  volumes:
+    - uhr-storage:/var/www/storage            # الملفات المرفوعة والسجلات — تبقى بين التحديثات
+
+services:
+  db:
+    image: postgres:18-alpine
+    container_name: uhr-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-uhr}
+      POSTGRES_USER: ${DB_USERNAME:-uhr}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      TZ: Asia/Damascus
+      PGTZ: Asia/Damascus
+    volumes:
+      - uhr-db:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-uhr} -d ${DB_DATABASE:-uhr}"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    container_name: uhr-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - uhr-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  api:
+    <<: *api
+    build:
+      context: ..
+      dockerfile: deploy/api.Dockerfile
+    container_name: uhr-api
+    environment:
+      TZ: Asia/Damascus
+      UHR_ROLE: app
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/uhr-ready"]
+      interval: 5s
+      timeout: 3s
+      start_period: 180s
+      retries: 60
+
+  # طابور المهام (البريد…) والمهام المجدولة (إغلاق الشواغر، التذكيرات، أرشفة السير…)
+  worker:
+    <<: *api
+    container_name: uhr-worker
+    command: ["php", "artisan", "queue:work", "--tries=3", "--backoff=10", "--sleep=2", "--max-time=3600"]
+    environment:
+      TZ: Asia/Damascus
+      UHR_ROLE: worker
+    depends_on:
+      api: { condition: service_healthy }
+
+  scheduler:
+    <<: *api
+    container_name: uhr-scheduler
+    command: ["php", "artisan", "schedule:work"]
+    environment:
+      TZ: Asia/Damascus
+      UHR_ROLE: scheduler
+    depends_on:
+      api: { condition: service_healthy }
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/web.Dockerfile
+    image: uhr-web:prod
+    container_name: uhr-web
+    restart: unless-stopped
+    depends_on:
+      api: { condition: service_healthy }
+    ports:
+      - "${UHR_HTTP_PORT:-8190}:80"
+
+  # بريد السيرفر التجريبي: كل الرسائل تُلتقط هنا ولا تخرج (127.0.0.1 فقط — افتحه بنفق SSH)
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: uhr-mail
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${UHR_MAIL_PORT:-8126}:8025"
+
+volumes:
+  uhr-db:
+  uhr-redis:
+  uhr-storage:

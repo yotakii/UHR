@@ -3,3 +3,11 @@ frontend/node_modules
 frontend/dist
 reference
 docs
+.git
+.github
+backend/.env
+backend/storage/logs
+backend/storage/app
+backend/storage/framework
+backend/bootstrap/cache/*.php
+deploy/.env

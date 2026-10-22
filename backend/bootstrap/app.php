@@ -22,6 +22,8 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
             \App\Http\Middleware\ResolveTenant::class,
         ]);
+        // على السيرفر: Nginx Proxy Manager أمام التطبيق (HTTPS) — نثق برؤوس X-Forwarded-* لمعرفة البروتوكول والعنوان الحقيقي
+        $middleware->trustProxies(at: '*');
         $middleware->alias([
             'fresh' => \App\Http\Middleware\EnsurePasswordChanged::class,
             'portal' => \App\Http\Middleware\RequirePortal::class,

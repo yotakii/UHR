@@ -1,0 +1,51 @@
+# نشر UHR على السيرفر تلقائياً: كل push على فرع release (أو يدوياً من تبويب Actions ← Run workflow)
+# يحتاج أسرار المستودع: SSH_HOST · SSH_USER · SSH_KEY (مفتاح خاص يدخل السيرفر) · SSH_PORT (اختياري) · UHR_PATH (اختياري)
+name: Deploy UHR
+
+on:
+  push:
+    branches: [release]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Branch to deploy
+        default: release
+        required: true
+
+concurrency:
+  group: deploy-uhr
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Typecheck & frontend tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --no-audit --no-fund
+        working-directory: frontend
+      - run: npm run typecheck && npm test
+        working-directory: frontend
+
+  deploy:
+    name: Deploy to server
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          command_timeout: 30m
+          script: |
+            cd "${{ secrets.UHR_PATH || '/root/uhr' }}"
+            ./deploy/deploy.sh "${{ github.event.inputs.branch || github.ref_name }}"

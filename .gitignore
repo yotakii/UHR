@@ -3,3 +3,5 @@ node_modules/
 dist/
 backend/vendor/
 backend/.env
+deploy/.env
+deploy/deployed.log
