@@ -5,3 +5,4 @@ backend/vendor/
 backend/.env
 deploy/.env
 deploy/deployed.log
+dump.rdb
