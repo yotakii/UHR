@@ -85,11 +85,25 @@ class PerformanceTest extends TestCase
             $this->assertSame($pts + 50, $low->employee->fresh()->points);
         }
 
-        // الموظف يرى نتيجته ومكافأته
+        // الموظف يرى نتيجته ومكافأته (وزالت نماذج الدورة المغلقة)
         $this->login('samer.halabi@alfarada.sy');
         $me = $this->getJson('/api/me/reviews')->assertOk()->json();
         $this->assertEquals(3.5, $me['results'][0]['score']);
+        $this->assertSame([], $me['forms']);
         $this->assertSame('approved', $me['results'][0]['award']['status']);
+    }
+
+    public function test_seeded_cycle_leaves_a_form_to_try_without_changing_scores(): void
+    {
+        $this->login('samer.halabi@alfarada.sy');
+        $me = $this->getJson('/api/me/reviews')->assertOk()->json();
+        $pending = collect($me['forms'])->where('status', 'pending')->values();
+        $this->assertCount(1, $pending);
+        $this->assertSame('peer', $pending[0]['role']);
+        $this->assertCount(1, $me['cycles']['open']);
+        $all = collect($me['competencies'])->mapWithKeys(fn ($x) => [$x['id'] => 5])->all();
+        $this->postJson("/api/me/reviews/{$pending[0]['id']}", ['ratings' => $all, 'comment' => 'زميل متعاون', 'submit' => true])->assertOk()
+            ->assertJsonPath('forms.0.status', 'submitted');
     }
 
     public function test_new_cycle_forms_score_calibration_and_peers(): void

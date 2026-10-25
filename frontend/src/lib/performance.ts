@@ -50,7 +50,7 @@ export const previewPerf = (v: { config: PerfConfig }) => api<{ data: { id: numb
 // ── الموظف ──
 export interface MyForm { id: number; role: Role; status: 'pending' | 'submitted'; ratings: Record<string, number>; potential: number | null; comment: string | null; cycle: { id: number; name: Bi; ends_on: string }; employee: { id: number; code: string; name: Bi; title: Bi; dept: Bi | null } }
 export interface MyResult { id: number; cycle: Bi; score: number | null; performance: number | null; potential: number | null; ratings: Record<string, CompRating>; approved_at: string | null; award: { kind: string | null; amount: number; currency: 'USD' | 'SYP'; points: number; status: string; month: string | null } | null }
-export interface MyReviews { forms: MyForm[]; results: MyResult[]; competencies: (Bi & { id: number })[]; scale: number }
+export interface MyReviews { forms: MyForm[]; results: MyResult[]; cycles: { open: (Bi & { ends_on: string })[]; draft: number }; competencies: (Bi & { id: number })[]; scale: number }
 export const useMyReviews = () => useQuery({ queryKey: ['me', 'reviews'], queryFn: () => api<MyReviews>('/me/reviews') })
 export const useFillReview = () => useMutation({
   mutationFn: (v: { id: number; ratings: Record<string, number>; potential?: number | null; comment?: string; submit: boolean }) => api<MyReviews>(`/me/reviews/${v.id}`, { json: v }),

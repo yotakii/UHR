@@ -471,6 +471,9 @@ class TestDataSeeder extends Seeder
             if ($peer = \App\Services\Performance\Reviews::pickPeers($e, $pool, 1)->first()) $forms[] = ['peer', $peer->id, $vals(fn ($i) => 2.8 + (($h >> ($i + 4)) % 3) * .6), null];
             foreach ($forms as [$role, $rid, $ratings, $pot]) \App\Models\PerformanceForm::create(['performance_review_id' => $r->id, 'employee_id' => $e->id, 'role' => $role, 'rater_employee_id' => $rid,
                 'rater_user_id' => $users[$rid] ?? null, 'ratings' => $ratings, 'potential' => $pot, 'status' => 'submitted', 'submitted_at' => $this->now]);
+            // زميل ثانٍ لم يُرسل بعد — ليجد كل حساب نموذجاً يجربه في «تقييماتي» (لا يغيّر نتيجة الديمو حتى يُرسل)
+            if ($second = \App\Services\Performance\Reviews::pickPeers($e, $pool, 2)->get(1)) \App\Models\PerformanceForm::create(['performance_review_id' => $r->id, 'employee_id' => $e->id, 'role' => 'peer',
+                'rater_employee_id' => $second->id, 'rater_user_id' => $users[$second->id] ?? null]);
             \App\Services\Performance\Reviews::recompute($r);
         }
     }

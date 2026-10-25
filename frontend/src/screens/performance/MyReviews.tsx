@@ -17,7 +17,10 @@ export function MyReviews() {
   return <div className="max-w-[1100px] mx-auto space-y-5">
     <PageHead title={L('تقييماتي', 'My reviews')} sub={L('قيّم بموضوعية — تقييم الزملاء يظهر مجمّعاً وبلا أسماء.', 'Be objective — peer scores are shown aggregated and anonymous.')} />
     <Panel title={<span className="flex items-center gap-2"><ClipboardCheck size={17} className="text-brand" />{L('نماذج بانتظارك', 'Forms waiting for you')}{pending.length > 0 && <Badge tone="warn">{pending.length}</Badge>}</span>} pad={false}>
-      {d.forms.length === 0 ? <Empty title={L('لا نماذج تقييم مفتوحة', 'No open review forms')} /> : <ul className="divide-y divide-line-2">{d.forms.map(f =>
+      {d.forms.length === 0 ? <Empty title={L('لا نماذج تقييم بانتظارك', 'No review forms for you')}>{d.cycles.open.length
+        ? L(`دورة «${d.cycles.open.map(c => c.ar).join('، ')}» مفتوحة لكن لم يُطلب منك فيها أي تقييم.`, `«${d.cycles.open.map(c => c.en).join(', ')}» is open but has no form for you.`)
+        : d.cycles.draft ? L('توجد دورة تقييم مسودة — تصلك النماذج عندما تفتحها الموارد البشرية.', 'A review cycle is in draft — forms reach you once HR opens it.')
+        : L('التقييم يتم ضمن دورة تفتحها الموارد البشرية، ولا دورة مفتوحة حالياً.', 'Reviews happen inside a cycle opened by HR; none is open now.')}</Empty> : <ul className="divide-y divide-line-2">{d.forms.map(f =>
         <li key={f.id} className="px-5 py-3 flex flex-wrap items-center gap-3"><Avatar name={f.employee.name.ar} size={36} />
           <div className="flex-1 min-w-[180px]"><div className="font-semibold">{f.role === 'self' ? L('أنا', 'Me') : bi(f.employee.name, lang)}</div>
             <div className="text-[12px] text-ink-3">{roleName[f.role]} · {bi(f.cycle.name, lang)} · {L('حتى', 'due')} <span className="num">{fmtDate(f.cycle.ends_on, lang)}</span></div></div>

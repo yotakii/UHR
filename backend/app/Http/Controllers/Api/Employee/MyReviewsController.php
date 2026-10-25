@@ -30,6 +30,9 @@ class MyReviewsController extends Controller
             'results' => $results->map(fn (PerformanceReview $r) => ['id' => $r->id, 'cycle' => ['ar' => $r->cycle->name_ar, 'en' => $r->cycle->name_en], 'score' => $r->score, 'performance' => $r->performance, 'potential' => $r->potential,
                 'ratings' => $r->ratings, 'approved_at' => $r->approved_at?->toIso8601String(),
                 'award' => $r->award && in_array($r->award->status, ['approved', 'paid'], true) ? ['kind' => $r->award->kind, 'amount' => $r->award->amount, 'currency' => $r->award->currency, 'points' => $r->award->points, 'status' => $r->award->status, 'month' => $r->award->month] : null]),
+            // سبب غياب النماذج: لا دورة مفتوحة، أو دورة مسودة بانتظار فتحها، أو أرسلت كل نماذجك
+            'cycles' => ['open' => \App\Models\PerformanceCycle::where('status', 'open')->get()->map(fn ($c) => ['ar' => $c->name_ar, 'en' => $c->name_en, 'ends_on' => $c->ends_on->toDateString()]),
+                'draft' => \App\Models\PerformanceCycle::where('status', 'draft')->count()],
             'competencies' => Reviews::competencies()->map(fn ($c) => ['id' => $c->id, 'ar' => $c->name_ar, 'en' => $c->name_en]), 'scale' => (int) Reviews::config()['scale']]);
     }
 
