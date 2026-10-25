@@ -172,6 +172,7 @@ class TestDataSeeder extends Seeder
             $this->engagement($emp, $jobs, $cands);
             $this->users($employees, $cands);
             $this->performance($emp);
+            $this->development($emp);
             Counters::atLeast('employee', 1000 + count($employees));
             Counters::atLeast('asset', Asset::count());
             Counters::atLeast('cand-app-'.now()->year, 48210 + 9 * 37);
@@ -476,6 +477,24 @@ class TestDataSeeder extends Seeder
                 'rater_employee_id' => $second->id, 'rater_user_id' => $users[$second->id] ?? null]);
             \App\Services\Performance\Reviews::recompute($r);
         }
+    }
+
+    /** D-23/D-24: منصب حرج (مدير سامر) بمرشح «خلال سنة» = فجوة، وخطة تطوير جارية لسامر بنشاط متأخر */
+    private function development(array $emp): void
+    {
+        \App\Models\SuccessionPlan::query()->delete(); \App\Models\DevelopmentPlan::query()->delete();
+        $samer = $emp['e1007']->fresh(); $mgr = Employee::find($samer->manager_id);
+        $comps = \App\Models\Competency::orderBy('sort')->limit(3)->pluck('id')->all();
+        $plan = \App\Models\DevelopmentPlan::create(['employee_id' => $samer->id, 'title' => "الاستعداد لمنصب {$mgr->title_ar}", 'source' => 'succession', 'status' => 'active',
+            'gaps' => 'إدارة الفريق، إعداد الموازنات، التفاوض مع الموردين', 'goals' => [['text' => 'قيادة مشروع واحد من البداية للنهاية', 'done' => false], ['text' => 'إتمام دورة إدارة مالية معتمدة', 'done' => false]],
+            'activated_at' => $this->now, 'next_review' => $this->addDays($this->today, 60)]);
+        foreach ([['دورة الإدارة المالية المتقدمة', 'course', null, -5, 'in_progress', 40], ['إرشاد أسبوعي مع المدير المباشر', 'mentoring', $mgr->id, 45, 'planned', 0], ['قيادة إعداد موازنة 2027', 'project', $samer->id, 70, 'planned', 0]] as [$t, $k, $o, $due, $st, $pr]) {
+            \App\Models\DevelopmentActivity::create(['development_plan_id' => $plan->id, 'title' => $t, 'kind' => $k, 'owner_employee_id' => $o, 'due_on' => $this->addDays($this->today, $due), 'status' => $st, 'progress' => $pr]);
+        }
+        $sp = \App\Models\SuccessionPlan::create(['title_ar' => $mgr->title_ar, 'title_en' => $mgr->title_en, 'department_id' => $mgr->department_id, 'incumbent_id' => $mgr->id, 'risk' => 'high',
+            'reason' => 'منصب لا بديل جاهزاً له ويؤثر على الإغلاق المالي الشهري', 'competencies' => $comps, 'status' => 'active', 'next_review' => $this->addDays($this->today, 300)]);
+        \App\Models\SuccessionCandidate::create(['succession_plan_id' => $sp->id, 'employee_id' => $samer->id, 'readiness' => '1y', 'gaps' => $plan->gaps, 'development_plan_id' => $plan->id,
+            'note' => 'يقود ملفات الموردين بكفاءة', 'nominated_by' => User::where('employee_id', $mgr->id)->value('id')]);
     }
 
     private function engagement(array $emp, array $jobs, array $cands): void

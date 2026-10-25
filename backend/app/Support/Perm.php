@@ -61,7 +61,7 @@ class Perm
             'performance' => 'v:own', 'succession' => 'v:own'],
         'manager' => ['attendance' => 'vp:team', 'leaves' => 'vdp:team', 'excuses' => 'vd:team', 'jobs' => 'v:team', 'candidates' => 'v:team', 'internal' => 'vd:team',
             'referrals' => 'v', 'announcements' => 'v', 'employees' => 'vp:team', 'assets' => 'v:team', 'policies' => 'v', 'org' => 'v', 'discipline' => 'cv:team',
-            'performance' => 'vc:team', 'succession' => 'vc:team'],
+            'performance' => 'vc:team', 'succession' => 'vce:team'],
         'hr_director' => ['attendance' => 'vexp', 'leaves' => 'vdxp', 'excuses' => 'vd', 'payroll' => 'vedxp', 'salary_cert' => 'vdp', 'jobs' => 'vce', 'candidates' => 'vcedxp',
             'internal' => 'v', 'referrals' => 've', 'announcements' => 'vcead', 'employees' => 'vcexp', 'assets' => 'vcex', 'policies' => 'vcea', 'org' => 'vexp',
             'discipline' => 'vcedxp', 'performance' => 'vcedx', 'succession' => 'vce', 'settings' => 've', 'audit' => 'v'],

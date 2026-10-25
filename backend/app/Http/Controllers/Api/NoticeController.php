@@ -41,7 +41,7 @@ class NoticeController extends Controller
     private const LINK_MODULES = ['cand:' => 'candidates', 'approvals' => 'candidates', 'job:' => 'jobs', 'emp:' => 'employees', 'leaves' => 'leaves', 'referrals' => 'referrals',
         'offboarding' => 'employees', 'custody' => 'assets', 'attendance' => 'attendance', 'onboard' => 'employees', 'payroll' => 'payroll',
         'discipline' => 'discipline', 'complaint:' => 'discipline',
-        'announcements' => 'announcements', 'performance' => 'performance'];
+        'announcements' => 'announcements', 'performance' => 'performance', 'development' => 'succession'];
 
     private function visible(User $user): Builder
     {

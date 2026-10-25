@@ -41,6 +41,9 @@ class Settings
         'announcements' => ['require_approval' => false, 'max_mb' => 10],
         // M13 تقييم 360 (SRS M13): أوزان الأدوار (مجموعها 100)، السلّم، عدد الزملاء، حدود مستوى الأداء على 9-Box،
         // وجدول المكافآت حسب النتيجة (D-28 — من المالية/HR، فارغ افتراضياً: كل نتيجة تُحوَّل للمراجعة)
+        // التعاقب وخطط التطوير (D-23، D-24 — SRS §10.14): مقياس الجاهزية، دورة مراجعة الخطة (ربعية)، ومراجعة خطط التعاقب
+        'development' => ['readiness' => [['key' => 'now', 'ar' => 'جاهز الآن', 'en' => 'Ready now'], ['key' => '1y', 'ar' => 'خلال سنة', 'en' => 'Within a year'], ['key' => '3y', 'ar' => 'خلال 3 سنوات', 'en' => 'Within 3 years']],
+            'review_months' => 3, 'succession_review_months' => 12],
         'performance' => ['weights' => ['manager' => 50, 'peers' => 30, 'self' => 20], 'scale' => 5, 'peers' => 3, 'high_from' => 4.0, 'mid_from' => 3.0, 'rewards' => []],
         // معايرة المطابقة (لكل شركة، والأوزان قابلة للتجاوز لكل شاغر) — القيم الافتراضية = الديمو، كلها نسب مئوية
         'match' => [
@@ -227,6 +230,16 @@ class Settings
     }
 
     /** إعدادات الملفات الإضافية: المحفوظ فوق الافتراضي مفتاحاً بمفتاح */
+    public static function development(): array
+    {
+        $d = self::DEFAULTS['development'];
+        $out = array_merge($d, array_intersect_key(self::get('development') ?? [], $d));
+        // مفاتيح الجاهزية ثابتة (now/1y/3y)، والتسميات قابلة للتعديل
+        $labels = collect($out['readiness'])->keyBy('key');
+        $out['readiness'] = array_map(fn ($r) => ['key' => $r['key'], 'ar' => $labels[$r['key']]['ar'] ?? $r['ar'], 'en' => $labels[$r['key']]['en'] ?? $r['en']], $d['readiness']);
+        return $out;
+    }
+
     public static function performance(): array
     {
         $saved = self::get('performance') ?? [];

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed, Megaphone, Gift, ClipboardCheck, SlidersHorizontal } from 'lucide-react'
+import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed, Megaphone, Gift, ClipboardCheck, SlidersHorizontal, Sprout } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { useRoute } from '../../lib/router'
 import { can, type SessionUser } from '../../lib/session'
@@ -48,6 +48,7 @@ import { Performance } from './performance/Performance'
 import { Analytics } from './performance/Analytics'
 import { PerformanceSettings } from './PerformanceSettings'
 import { MyReviews } from '../performance/MyReviews'
+import { Development } from '../development/Development'
 import { MyRewards } from '../rewards/MyRewards'
 import { AnnouncementsHR, MyAnnouncements } from '../rewards/Announcements'
 
@@ -102,6 +103,7 @@ export function HrApp({ user }: { user: SessionUser }) {
     { item: { to: '/hr/my-news', icon: <Megaphone size={17} />, label: L('إعلانات الشركة', 'Company news'), group: g2 }, module: u => !!u.employee && !can(u, 'announcements'), view: () => <MyAnnouncements /> },
     { item: { to: '/hr/my-documents', icon: <FileSignature size={17} />, label: L('وثائقي للتوقيع', 'My documents'), group: g2 }, module: u => !!u.employee, view: () => <MyDocuments /> },
     { item: { to: '/hr/performance', icon: <Target size={17} />, label: L('الأداء وتقييم 360', 'Performance & 360'), group: g3 }, module: 'performance', view: () => <Performance /> },
+    { item: { to: '/hr/development', icon: <Sprout size={17} />, label: L('التعاقب وخطط التطوير', 'Succession & development'), group: g3 }, module: 'succession', view: () => <Development /> },
     { item: { to: '/hr/analytics', icon: <BarChart3 size={17} />, label: L('التحليلات', 'Analytics'), group: g3 }, module: u => can(u, 'employees', 'export'), view: () => <Analytics /> },
     { item: { to: '/hr/settings/policies', icon: <Settings2 size={18} />, label: L('سياسات الدوام والإجازات', 'Work & leave policies'), group: g4 }, module: 'policies', view: () => <PolicySettings /> },
     { item: { to: '/hr/settings/performance', icon: <SlidersHorizontal size={17} />, label: L('إعدادات الأداء والتقييم', 'Performance settings'), group: g4 }, module: u => can(u, 'settings', 'edit') && can(u, 'performance'), view: () => <PerformanceSettings /> },

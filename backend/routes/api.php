@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\Hr\OffboardingController;
 use App\Http\Controllers\Api\Employee\MyExitController;
 use App\Http\Controllers\Api\Employee\MyRewardsController;
 use App\Http\Controllers\Api\Employee\MyReviewsController;
+use App\Http\Controllers\Api\DevelopmentController;
 use App\Http\Controllers\Api\Hr\ReferralsController;
 use App\Http\Controllers\Api\Hr\AnnouncementController;
 use App\Http\Controllers\Api\Hr\AnalyticsController;
@@ -134,6 +135,24 @@ Route::middleware(['auth', 'fresh'])->prefix('me')->group(function () {
     Route::post('/reviews/{id}', [MyReviewsController::class, 'fill'])->whereNumber('id')->middleware('throttle:60,1');
     Route::post('/exit/{id}/clearance/{section}/sign', [MyExitController::class, 'signSection'])->whereNumber('id')->where('section', '[a-z0-9_]+');
     Route::post('/exit/{id}/clearance/{section}/{item}', [MyExitController::class, 'markItem'])->whereNumber('id')->where(['section' => '[a-z0-9_]+', 'item' => '[a-z0-9_]+']);
+});
+
+// التعاقب وخطط التطوير (D-23، D-24): من البوابتين؛ النطاق والدور يُفحصان في الخدمات
+Route::middleware(['auth', 'fresh', 'perm:succession,view'])->prefix('development')->group(function () {
+    Route::get('/', [DevelopmentController::class, 'index']);
+    Route::post('/plans', [DevelopmentController::class, 'storePlan'])->middleware('perm:succession,create');
+    Route::put('/plans/{id}', [DevelopmentController::class, 'updatePlan'])->whereNumber('id')->middleware('perm:succession,edit');
+    Route::post('/plans/{id}/activate', [DevelopmentController::class, 'activate'])->whereNumber('id')->middleware('perm:succession,edit');
+    Route::post('/plans/{id}/review', [DevelopmentController::class, 'review'])->whereNumber('id')->middleware('perm:succession,edit');
+    Route::post('/activities/{id}', [DevelopmentController::class, 'progress'])->whereNumber('id')->middleware('throttle:60,1');
+    Route::post('/succession', [DevelopmentController::class, 'storeSuccession'])->middleware('perm:succession,create');
+    Route::put('/succession/{id}', [DevelopmentController::class, 'updateSuccession'])->whereNumber('id')->middleware('perm:succession,edit');
+    Route::post('/succession/{id}/activate', [DevelopmentController::class, 'activateSuccession'])->whereNumber('id')->middleware('perm:succession,edit');
+    Route::post('/succession/{id}/review', [DevelopmentController::class, 'reviewSuccession'])->whereNumber('id')->middleware('perm:succession,edit');
+    Route::post('/succession/{id}/candidates', [DevelopmentController::class, 'nominate'])->whereNumber('id')->middleware('perm:succession,create');
+    Route::put('/candidates/{id}', [DevelopmentController::class, 'assess'])->whereNumber('id')->middleware('perm:succession,edit');
+    Route::delete('/candidates/{id}', [DevelopmentController::class, 'removeCandidate'])->whereNumber('id')->middleware('perm:succession,create');
+    Route::put('/settings', [DevelopmentController::class, 'saveSettings'])->middleware('perm:settings,edit');
 });
 
 Route::middleware(['auth', 'fresh'])->prefix('me/documents')->group(function () {

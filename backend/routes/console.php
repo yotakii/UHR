@@ -63,3 +63,15 @@ Artisan::command('announcements:sweep', function () {
     $this->info("Published {$t['published']}, expired {$t['expired']} announcement(s).");
 })->purpose('Publish scheduled announcements and expire old ones');
 Schedule::command('announcements:sweep')->everyTenMinutes();
+
+// التعاقب وخطط التطوير (D-23، D-24): أنشطة متأخرة، مراجعات مستحقة، ومناصب بلا مرشح جاهز — يومياً
+Artisan::command('development:sweep', function () {
+    $t = ['overdue' => 0, 'review' => 0, 'gaps' => 0];
+    foreach (\App\Models\Company::pluck('id') as $id) \App\Support\Tenant::run($id, function () use (&$t) {
+        foreach (app(\App\Services\Development\DevelopmentPlans::class)->sweep() as $k => $n) $t[$k] += $n;
+        $s = app(\App\Services\Development\Succession::class)->sweep();
+        $t['gaps'] += $s['gaps']; $t['review'] += $s['review'];
+    });
+    $this->info("Overdue {$t['overdue']}, reviews {$t['review']}, gaps {$t['gaps']}.");
+})->purpose('Alert overdue development activities, due reviews and succession gaps');
+Schedule::command('development:sweep')->dailyAt('08:00');
