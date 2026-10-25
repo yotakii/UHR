@@ -83,6 +83,7 @@ class AppointmentFlow
     /** اكتمال القرار: ملف الموظف والمباشرة */
     private function hire(Appointment $ap, Candidate $c): Employee
     {
+        if ($c->internal_employee_id) return $this->transfer($ap, $c);
         $job = $c->jobOpening; $o = $c->offer;
         if ($c->national_id && Employee::where('national_id', $c->national_id)->exists()) {
             throw new ApiException(L::t('يوجد موظف مسجّل بنفس الرقم الوطني — راجع الملفات قبل الاعتماد النهائي.', 'An employee with the same national ID exists — check the records before the final approval.'), 'duplicate_employee', 409);
@@ -114,8 +115,26 @@ class AppointmentFlow
         Asset::whereHas('category', fn ($q) => $q->where('code', 'cards'))->where('status', 'available')->orderBy('id')->first()?->update(['employee_id' => $emp->id, 'status' => 'pending_ack', 'assigned_at' => now()]);
         // الإحالة: نقاط المرحلة 3 (توقيع العرض ومباشرة العمل) — والمرحلة 4 عند تثبيت التعيين
         (new ReferralPoints)->sync($c);
-        if ($c->internal_employee_id) Employee::find($c->internal_employee_id)?->log("قبول طلب النقل/الترقية الداخلي إلى {$job->title_ar}", "Internal move to {$job->title_en} approved", 'ok', 'F-27');
         Notify::hr("اكتمل قرار تعيين {$c->name} — بدأت إجراءات المباشرة", ($c->name_en ?: $c->name).' appointed — onboarding started', "onboard:{$emp->id}");
+        return $emp;
+    }
+
+    /** النقل/الترقية الداخلية (D-22): يُحدَّث ملف الموظف نفسه — المسمى والإدارة والمقر والراتب من العرض — بلا حساب أو مباشرة جديدة */
+    private function transfer(Appointment $ap, Candidate $c): Employee
+    {
+        $job = $c->jobOpening; $o = $c->offer;
+        $emp = Employee::findOrFail($c->internal_employee_id);
+        $mgr = Employee::where('department_id', $job->department_id)->where('id', '!=', $emp->id)->whereHas('user.roles', fn ($r) => $r->where('key', 'manager'))->value('id');
+        $before = ['title' => $emp->title_ar, 'dept' => $emp->department_id];
+        $emp->update(['title_ar' => $o?->title ?: $job->title_ar, 'title_en' => $job->title_en, 'department_id' => $job->department_id, 'location_id' => $job->location_id ?? $emp->location_id,
+            'salary' => $o?->total() ?: $emp->salary, 'currency' => $o?->currency ?? $emp->currency, 'manager_id' => $job->department_id === $before['dept'] ? $emp->manager_id : ($mgr ?? $emp->manager_id)]);
+        $emp->log("نقل/ترقية داخلية بقرار {$ap->decision_no}: {$before['title']} ← {$emp->title_ar}", "Internal move by decision {$ap->decision_no}: now {$emp->title_en}", 'ok', 'F-27');
+        $ap->update(['employee_id' => $emp->id]);
+        $c->update(['stage' => 'hired', 'stage_at' => now()->toDateString()]);
+        $c->log("اعتُمد النقل الداخلي — {$emp->code}", "Internal move approved — {$emp->code}", 'ok');
+        \App\Models\InternalApplication::where('candidate_id', $c->id)->update(['decided_at' => now()]);
+        Notify::user(User::where('employee_id', $emp->id)->value('id'), "اعتُمد نقلك الداخلي إلى {$job->title_ar}", "Your internal move to {$job->title_en} is approved", null);
+        Notify::hr("اكتمل قرار النقل الداخلي لـ {$emp->name} إلى {$job->title_ar}", "Internal move of {$emp->name_en} to {$job->title_en} completed", 'emp:'.$emp->id);
         return $emp;
     }
 }

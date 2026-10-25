@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Home, FileSignature, ChevronLeft, ChevronRight, CalendarPlus, Fingerprint, Stamp, ClipboardList, Receipt, ShieldAlert, LogOut } from 'lucide-react'
+import { Home, FileSignature, ChevronLeft, ChevronRight, CalendarPlus, Fingerprint, Stamp, ClipboardList, Receipt, ShieldAlert, LogOut, Gift, Megaphone } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { useRoute } from '../../lib/router'
 import type { SessionUser } from '../../lib/session'
@@ -18,9 +18,11 @@ import { MyDiscipline } from '../discipline/MyDiscipline'
 import { useMyDiscipline } from '../../lib/discipline'
 import { MyResignation } from '../exit/MyResignation'
 import { useMyExit } from '../../lib/exit'
+import { MyRewards } from '../rewards/MyRewards'
+import { MyAnnouncements } from '../rewards/Announcements'
 
 /** روابط إشعارات الموظف ← مسارات بوابته */
-export const employeeLink = (link: string) => ({ docs: '/me/documents', requests: '/me/requests', approvals: '/me/approvals', attendance: '/me/attendance', payslip: '/me/payslip', services: '/me/services', discipline: '/me/discipline', complaints: '/me/discipline', resignation: '/me/resignation', handover: '/me/resignation' } as Record<string, string>)[link] ?? null
+export const employeeLink = (link: string) => ({ docs: '/me/documents', requests: '/me/requests', approvals: '/me/approvals', attendance: '/me/attendance', payslip: '/me/payslip', services: '/me/services', discipline: '/me/discipline', complaints: '/me/discipline', resignation: '/me/resignation', handover: '/me/resignation', rewards: '/me/rewards', internal: '/me/rewards', announcements: '/me/news' } as Record<string, string>)[link] ?? null
 
 /**
  * بوابة الموظف (M14): «الرئيسية» بما ينتظره، «إجازاتي وطلباتي»، «حضوري» مع التبرير، «اعتماداتي» للمدير (فريقه، نائبه، التكليف بالإضافي)
@@ -43,15 +45,17 @@ export function EmployeeApp({ user }: { user: SessionUser }) {
     { to: '/me/attendance', icon: <Fingerprint size={18} />, label: L('حضوري', 'My attendance'), count: issues.length || undefined },
     { to: '/me/services', icon: <ClipboardList size={18} />, label: L('خدماتي', 'My services') },
     { to: '/me/payslip', icon: <Receipt size={18} />, label: L('كشفي الشهري', 'My monthly sheet') },
+    { to: '/me/rewards', icon: <Gift size={18} />, label: L('المكافآت', 'Rewards') },
+    { to: '/me/news', icon: <Megaphone size={18} />, label: L('إعلانات الشركة', 'Company news') },
     { to: '/me/discipline', icon: <ShieldAlert size={18} />, label: L('إنذاراتي وشكاواي', 'Warnings & complaints'), count: toSign.length + toAnswer.length || undefined },
     { to: '/me/resignation', icon: <LogOut size={18} />, label: L('الاستقالة', 'Resignation'), count: toReceive.length || undefined },
     ...(approver ? [{ to: '/me/approvals', icon: <Stamp size={18} />, label: L('اعتماداتي', 'My approvals'), count: inbox!.data.length || undefined }] : []),
     { to: '/me/documents', icon: <FileSignature size={18} />, label: L('وثائق للتوقيع', 'Documents to sign'), count: n || undefined }]
   const sec = route.parts[0] === 'me' ? route.parts[1] : undefined
-  const page = sec === 'documents' ? 'docs' : sec === 'requests' || sec === 'attendance' || sec === 'services' || sec === 'payslip' || sec === 'discipline' || sec === 'resignation' || (sec === 'approvals' && approver) ? sec : 'home'
+  const page = sec === 'documents' ? 'docs' : sec === 'requests' || sec === 'attendance' || sec === 'services' || sec === 'payslip' || sec === 'discipline' || sec === 'resignation' || sec === 'rewards' || sec === 'news' || (sec === 'approvals' && approver) ? sec : 'home'
   const Next = lang === 'ar' ? ChevronLeft : ChevronRight
   return <Shell items={items} user={user} org={user.company ? bi(user.company.short, lang) : ''} sub={L('بوابة الموظف', 'Employee portal')} linkOf={employeeLink}>
-    {page === 'docs' ? <MyDocuments /> : page === 'requests' ? <MyRequests /> : page === 'attendance' ? <MyAttendance /> : page === 'approvals' ? <TeamApprovals /> : page === 'payslip' ? <MyPayslip /> : page === 'discipline' ? <MyDiscipline /> : page === 'resignation' ? <MyResignation base="/me/resignation" />
+    {page === 'docs' ? <MyDocuments /> : page === 'requests' ? <MyRequests /> : page === 'attendance' ? <MyAttendance /> : page === 'approvals' ? <TeamApprovals /> : page === 'payslip' ? <MyPayslip /> : page === 'discipline' ? <MyDiscipline /> : page === 'rewards' ? <MyRewards /> : page === 'news' ? <MyAnnouncements /> : page === 'resignation' ? <MyResignation base="/me/resignation" />
       : page === 'services' ? (route.parts[2] && /^\d+$/.test(route.parts[2]) ? <CertificatePage id={Number(route.parts[2])} hr={false} back="/me/services" /> : <MyServices base="/me/services" />) : <div className="max-w-[1000px] mx-auto space-y-5">
       <PageHead title={<>{L('أهلاً', 'Welcome')}، {bi(user.name, lang)}</>} sub={user.employee ? <>{bi(user.employee.title, lang)} · {bi(user.employee.dept, lang)} · <span className="ltr inline-block">{user.employee.code}</span></> : undefined} />
       <Panel title={L('بانتظارك', 'Waiting for you')} pad={false}>
@@ -67,7 +71,7 @@ export function EmployeeApp({ user }: { user: SessionUser }) {
           {docs?.undertakings && !docs.undertakings.conduct.signed_at && <Todo text={L('توقيع إقرار ميثاق السلوك المهني', 'Sign the code of conduct acknowledgment')} icon={<Next size={16} />} />}
         </ul>}
       </Panel>
-      <div className="rounded-2xl border border-dashed border-line bg-surface/60"><Empty title={L('بقية أقسام بوابة الموظف', 'More of the employee portal')}>{L('كشف الراتب والشهادات والمكافآت تُبنى في المهام القادمة.', 'Payslip, certificates and rewards come in the next tasks.')}</Empty></div>
+      <MyAnnouncements panel limit={3} />
     </div>}
   </Shell>
 }

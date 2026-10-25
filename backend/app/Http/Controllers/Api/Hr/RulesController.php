@@ -38,6 +38,7 @@ class RulesController extends Controller
             'rules.referral_stages' => ['required', 'array', 'size:4'], 'rules.referral_stages.*' => ['required', 'integer', 'between:0,10000'],
             'rules.hard_to_fill_x' => ['required', 'integer', 'between:1,5'],
             'rules.cv_retention_months' => ['sometimes', 'integer', 'between:1,120'], 'rules.probation_at' => ['sometimes', 'integer', 'between:1,28'],
+            'rules.internal_min_months' => ['sometimes', 'integer', 'between:0,120'], 'rules.internal_no_probation' => ['sometimes', 'boolean'], 'rules.internal_clean_months' => ['sometimes', 'integer', 'between:0,60'],
             'stage_sla' => ['required', 'array'], 'stage_sla.*' => ['integer', 'between:0,60'],
             'match' => ['sometimes', 'array'],
         ]);

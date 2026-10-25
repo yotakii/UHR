@@ -79,6 +79,8 @@ class PublicController extends Controller
         $out = PublicJob::full($j);
         if ($ref = strtoupper(trim((string) $request->query('ref')))) {
             $r = Referral::allCompanies()->with('employee')->where('company_id', $j->company_id)->whereRaw('upper(code) = ?', [$ref])->first();
+            // زيارة عبر رابط إحالة (مرة لكل جلسة)
+            if ($r && ! $request->session()->has("ref-click:{$r->id}")) { $r->increment('clicks'); $request->session()->put("ref-click:{$r->id}", 1); }
             $out['referral'] = $r ? ['valid' => true, 'code' => $r->code, 'by' => ['ar' => explode(' ', $r->employee->name)[0], 'en' => explode(' ', $r->employee->name_en)[0]]] : ['valid' => false, 'code' => $ref];
         }
         return response()->json(['data' => $out]);

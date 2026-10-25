@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed } from 'lucide-react'
+import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed, Megaphone, Gift } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { useRoute } from '../../lib/router'
 import { can, type SessionUser } from '../../lib/session'
@@ -43,6 +43,9 @@ import { MyDiscipline } from '../discipline/MyDiscipline'
 import { Offboarding } from './offboarding/Offboarding'
 import { ExitSettings } from './ExitSettings'
 import { MyResignation } from '../exit/MyResignation'
+import { ReferralsHR } from '../rewards/ReferralsHR'
+import { MyRewards } from '../rewards/MyRewards'
+import { AnnouncementsHR, MyAnnouncements } from '../rewards/Announcements'
 
 type Page = { item: NavItem; module: string | ((u: SessionUser) => boolean); view?: () => ReactNode; task?: string }
 
@@ -70,7 +73,7 @@ export function HrApp({ user }: { user: SessionUser }) {
       module: () => true, view: () => <div className="space-y-6"><TeamApprovals /><MyApprovals embedded /></div> },
     { item: { to: '/hr/onboarding', icon: <UserPlus size={18} />, label: L('التعيين والمباشرة', 'Appointment & onboarding'), count: count('appointment', 'onboarding'), group: g1 }, module: 'employees',
       view: () => route.parts[2] && /^\d+$/.test(route.parts[2]) ? <OnboardPage id={Number(route.parts[2])} /> : <OnboardingList user={user} /> },
-    { item: { to: '/hr/referrals', icon: <Trophy size={17} />, label: L('الإحالات والمكافآت', 'Referrals & rewards'), group: g1 }, module: 'referrals', task: '09' },
+    { item: { to: '/hr/referrals', icon: <Trophy size={17} />, label: L('الإحالات والمكافآت', 'Referrals & rewards'), count: count('redemption'), group: g1 }, module: 'referrals', view: () => <ReferralsHR /> },
     { item: { to: '/hr/employees', icon: <Users size={18} />, label: L('الموظفون', 'Employees'), group: g2 }, module: 'employees',
       view: () => route.parts[2] && /^\d+$/.test(route.parts[2]) ? <EmployeeFile id={Number(route.parts[2])} /> : <Employees /> },
     { item: { to: '/hr/org', icon: <Network size={17} />, label: L('الهيكل التنظيمي', 'Org chart'), group: g2 }, module: 'org', view: () => <OrgChart /> },
@@ -81,7 +84,7 @@ export function HrApp({ user }: { user: SessionUser }) {
     { item: { to: '/hr/custody', icon: <Package size={18} />, label: L('العهد', 'Custody'), group: g2 }, module: 'assets', view: () => <Custody /> },
     { item: { to: '/hr/discipline', icon: <Gavel size={18} />, label: L('المخالفات والجزاءات', 'Violations & penalties'), count: count('discipline'), group: g2 }, module: 'discipline', view: () => <Discipline /> },
     { item: { to: '/hr/offboarding', icon: <DoorOpen size={18} />, label: L('الاستقالات وإنهاء الخدمة', 'Resignations & exits'), count: count('resignation'), group: g2 }, module: 'employees', view: () => <Offboarding /> },
-    // موظفو الشركة أصحاب الحسابات الإدارية يوقّعون وثائقهم من هنا (M14)
+    { item: { to: '/hr/announcements', icon: <Megaphone size={17} />, label: L('الإعلانات', 'Announcements'), group: g2 }, module: 'announcements', view: () => <AnnouncementsHR /> },
     // موظفو الشركة أصحاب الحسابات الإدارية: إجازاتهم وحضورهم كأي موظف (M14)
     { item: { to: '/hr/my-requests', icon: <CalendarPlus size={17} />, label: L('إجازاتي وطلباتي', 'My leave & requests'), group: g2 }, module: u => !!u.employee, view: () => <MyRequests /> },
     { item: { to: '/hr/my-attendance', icon: <Fingerprint size={17} />, label: L('حضوري', 'My attendance'), group: g2 }, module: u => !!u.employee, view: () => <MyAttendance /> },
@@ -90,6 +93,8 @@ export function HrApp({ user }: { user: SessionUser }) {
     { item: { to: '/hr/my-payslip', icon: <Receipt size={17} />, label: L('كشفي الشهري', 'My monthly sheet'), group: g2 }, module: u => !!u.employee, view: () => <MyPayslip /> },
     { item: { to: '/hr/my-discipline', icon: <ShieldAlert size={17} />, label: L('إنذاراتي وشكاواي', 'Warnings & complaints'), group: g2 }, module: u => !!u.employee, view: () => <MyDiscipline /> },
     { item: { to: '/hr/my-resignation', icon: <LogOut size={17} />, label: L('الاستقالة', 'Resignation'), group: g2 }, module: u => !!u.employee, view: () => <MyResignation base="/hr/my-resignation" /> },
+    { item: { to: '/hr/my-rewards', icon: <Gift size={17} />, label: L('مكافآتي', 'My rewards'), group: g2 }, module: u => !!u.employee, view: () => <MyRewards /> },
+    { item: { to: '/hr/my-news', icon: <Megaphone size={17} />, label: L('إعلانات الشركة', 'Company news'), group: g2 }, module: u => !!u.employee && !can(u, 'announcements'), view: () => <MyAnnouncements /> },
     { item: { to: '/hr/my-documents', icon: <FileSignature size={17} />, label: L('وثائقي للتوقيع', 'My documents'), group: g2 }, module: u => !!u.employee, view: () => <MyDocuments /> },
     { item: { to: '/hr/performance', icon: <Target size={17} />, label: L('الأداء وتقييم 360', 'Performance & 360'), group: g3 }, module: 'performance', task: '09' },
     { item: { to: '/hr/analytics', icon: <BarChart3 size={17} />, label: L('التحليلات', 'Analytics'), group: g3 }, module: u => can(u, 'employees', 'export'), task: '09' },

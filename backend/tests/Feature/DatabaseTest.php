@@ -48,7 +48,7 @@ class DatabaseTest extends TestCase
         // قيم الشركة تُبذر عند إنشائها، وتبقى معزولة عن الشركات الأخرى
         $a = $this->makeCompany('acme');
         \App\Services\Platform\CompanyDefaults::seed($a);
-        $this->assertSame(9, ApprovalChain::count());   // + justification, overtime (07c), service, advance (07d), penalty (08b), termination (08c)
+        $this->assertSame(10, ApprovalChain::count());   // + justification, overtime (07c), service, advance (07d), penalty (08b), termination (08c), internal (09a)
         $this->assertSame(41, \App\Models\ViolationType::count());   // دليل المخالفات (08b)
         $this->assertSame(4, count(ApprovalChain::where('type', 'appointment')->first()->levels));
         $this->assertSame('UHR', Settings::prefix('employee'));

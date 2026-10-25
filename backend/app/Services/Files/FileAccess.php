@@ -36,6 +36,9 @@ class FileAccess
         if ($d = EmployeeDocument::with('employee.user')->where('file_id', $f->id)->first()) {
             return ['module' => 'employees', 'owner' => $d->employee?->user?->id, 'label' => 'employee-doc:'.$d->employee?->code, 'employee_id' => $d->employee_id, 'sensitive' => $d->sensitive];
         }
+        if ($n = \App\Models\Announcement::where('image_file_id', $f->id)->orWhere('attachment_file_id', $f->id)->first()) {
+            return ['module' => 'announcements', 'owner' => null, 'label' => 'announcement:'.$n->id, 'department_id' => $n->audience === 'department' ? $n->department_id : null];
+        }
         return null;
     }
 
@@ -45,6 +48,8 @@ class FileAccess
         if ($owner['owner'] && $owner['owner'] === $user->id) return true;
         if (! $user->company_id || $user->company_id !== $f->company_id || ! Perm::can($user, $owner['module'])) return false;
         // مستندات الموظف: ضمن نطاق رؤية المستخدم (خاصته/فريقه/الكل)، والحساس لأدواره فقط
+        // إعلان لإدارة: لموظفيها، ولمن يدير الإعلانات
+        if (! empty($owner['department_id']) && ! Perm::can($user, 'announcements', 'create') && \App\Models\Employee::whereKey($user->employee_id ?? 0)->value('department_id') !== $owner['department_id']) return false;
         if (isset($owner['employee_id']) && ! Directory::visible($user, $owner['employee_id'], $owner['module'])) return false;
         return empty($owner['sensitive']) || EmployeeDocs::canSensitive($user);
     }

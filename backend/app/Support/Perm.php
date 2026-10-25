@@ -63,7 +63,7 @@ class Perm
             'referrals' => 'v', 'announcements' => 'v', 'employees' => 'vp:team', 'assets' => 'v:team', 'policies' => 'v', 'org' => 'v', 'discipline' => 'cv:team',
             'performance' => 'vc:team', 'succession' => 'vc:team'],
         'hr_director' => ['attendance' => 'vexp', 'leaves' => 'vdxp', 'excuses' => 'vd', 'payroll' => 'vedxp', 'salary_cert' => 'vdp', 'jobs' => 'vce', 'candidates' => 'vcedxp',
-            'internal' => 'v', 'referrals' => 've', 'announcements' => 'vcea', 'employees' => 'vcexp', 'assets' => 'vcex', 'policies' => 'vcea', 'org' => 'vexp',
+            'internal' => 'v', 'referrals' => 've', 'announcements' => 'vcead', 'employees' => 'vcexp', 'assets' => 'vcex', 'policies' => 'vcea', 'org' => 'vexp',
             'discipline' => 'vcedxp', 'performance' => 'vdx', 'succession' => 'vce', 'settings' => 've', 'audit' => 'v'],
         'hr_officer' => ['attendance' => 'vexp', 'leaves' => 'vdxp', 'excuses' => 'vd', 'payroll' => 'vedxp', 'salary_cert' => 'vdp', 'jobs' => 'vce', 'candidates' => 'vcedxp',
             'internal' => 'v', 'referrals' => 've', 'announcements' => 'vcea', 'employees' => 'vcexp', 'assets' => 'vcex', 'policies' => 'vcea', 'org' => 'vexp',

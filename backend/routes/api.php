@@ -12,6 +12,9 @@ use App\Http\Controllers\Api\Hr\CustodyController;
 use App\Http\Controllers\Api\Hr\DisciplineController;
 use App\Http\Controllers\Api\Hr\OffboardingController;
 use App\Http\Controllers\Api\Employee\MyExitController;
+use App\Http\Controllers\Api\Employee\MyRewardsController;
+use App\Http\Controllers\Api\Hr\ReferralsController;
+use App\Http\Controllers\Api\Hr\AnnouncementController;
 use App\Http\Controllers\Api\Employee\MyDisciplineController;
 use App\Http\Controllers\Api\Hr\LeaveAdminController;
 use App\Http\Controllers\Api\HealthController;
@@ -114,6 +117,15 @@ Route::middleware(['auth', 'fresh'])->prefix('me')->group(function () {
     Route::post('/exit/{id}/withdraw', [MyExitController::class, 'withdraw'])->whereNumber('id')->middleware('throttle:10,1');
     Route::put('/exit/{id}/handover', [MyExitController::class, 'handover'])->whereNumber('id');
     Route::post('/exit/{id}/handover/sign', [MyExitController::class, 'sign'])->whereNumber('id')->middleware('throttle:20,1');
+    // M12 — المكافآت والإحالات، والاستقطاب الداخلي F-27، والإعلانات
+    Route::get('/rewards', [MyRewardsController::class, 'index']);
+    Route::post('/rewards/share', [MyRewardsController::class, 'share'])->middleware('throttle:30,1');
+    Route::post('/rewards/redeem', [MyRewardsController::class, 'redeem'])->middleware('throttle:10,1');
+    Route::get('/internal', [MyRewardsController::class, 'internal']);
+    Route::post('/internal', [MyRewardsController::class, 'applyInternal'])->middleware('throttle:10,1');
+    Route::post('/internal/{id}/cancel', [MyRewardsController::class, 'cancelInternal'])->whereNumber('id');
+    Route::post('/internal/{id}/offer-response', [MyRewardsController::class, 'offerResponse'])->whereNumber('id')->middleware('throttle:10,1');
+    Route::get('/announcements', [AnnouncementController::class, 'mine']);
     Route::post('/exit/{id}/clearance/{section}/sign', [MyExitController::class, 'signSection'])->whereNumber('id')->where('section', '[a-z0-9_]+');
     Route::post('/exit/{id}/clearance/{section}/{item}', [MyExitController::class, 'markItem'])->whereNumber('id')->where(['section' => '[a-z0-9_]+', 'item' => '[a-z0-9_]+']);
 });
@@ -235,6 +247,22 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
             Route::post('/{id}/return', [CustodyController::class, 'takeBack'])->whereNumber('id');
             Route::post('/{id}/status', [CustodyController::class, 'status'])->whereNumber('id');
         });
+    });
+
+    // M12 — الإحالات والمكافآت، والإعلانات (D-06)
+    Route::get('/referrals', [ReferralsController::class, 'index'])->middleware('perm:referrals,view');
+    Route::middleware('perm:referrals,edit')->group(function () {
+        Route::post('/referrals/redemptions/{id}', [ReferralsController::class, 'decide'])->whereNumber('id');
+        Route::post('/referrals/rewards', [ReferralsController::class, 'saveReward']);
+        Route::put('/referrals/rewards/{id}', [ReferralsController::class, 'updateReward'])->whereNumber('id');
+    });
+    Route::prefix('announcements')->group(function () {
+        Route::get('/', [AnnouncementController::class, 'index'])->middleware('perm:announcements,view');
+        Route::post('/', [AnnouncementController::class, 'store'])->middleware(['perm:announcements,create', 'throttle:30,1']);
+        Route::post('/{id}', [AnnouncementController::class, 'update'])->whereNumber('id')->middleware('perm:announcements,create');
+        Route::post('/{id}/decide', [AnnouncementController::class, 'decide'])->whereNumber('id')->middleware('perm:announcements,decide');
+        Route::post('/{id}/archive', [AnnouncementController::class, 'archive'])->whereNumber('id')->middleware('perm:announcements,archive');
+        Route::put('/settings', [AnnouncementController::class, 'saveSettings'])->middleware('perm:settings,edit');
     });
 
     // M11 — الاستقالات وإنهاء الخدمة (HR.01-03): الإجراءات حسب الدور تُفحص في ExitFlow (المدير، الجهات، مدير النظام)

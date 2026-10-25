@@ -46,6 +46,8 @@ class CompanyDefaults
         $gm = ['role_ar' => 'المدير العام', 'role_en' => 'General manager', 'role_key' => 'ceo'];
         ApprovalChain::firstOrCreate(['type' => 'resignation'], ['levels' => [$mgr, $hr, $gm]]);
         ApprovalChain::firstOrCreate(['type' => 'termination'], ['levels' => [$mgr, $hr, $gm]]);
+        // الطلب الداخلي F-27 (D-22): للمدير المباشر فقط، ولا يظهر لـ HR قبل قبوله
+        ApprovalChain::firstOrCreate(['type' => 'internal'], ['levels' => [$mgr]]);
         // المسار الموحد (SRS §10.1): التبرير المدير ← HR، والتكليف بالإضافي (يطلبه المدير) ← HR
         ApprovalChain::firstOrCreate(['type' => 'justification'], ['levels' => [$mgr, $hr]]);
         ApprovalChain::firstOrCreate(['type' => 'overtime'], ['levels' => [$hr]]);

@@ -55,3 +55,11 @@ Artisan::command('discipline:expire', function () {
     $this->info("Expired {$n} case(s).");
 })->purpose('Expire disciplinary cases past their decision deadline');
 Schedule::command('discipline:expire')->dailyAt('00:30');
+
+// الإعلانات (D-06): نشر المجدول وإشعار المستهدفين، وأرشفة المنتهي — كل 10 دقائق
+Artisan::command('announcements:sweep', function () {
+    $t = ['published' => 0, 'expired' => 0];
+    foreach (\App\Models\Company::pluck('id') as $id) foreach (\App\Support\Tenant::run($id, fn () => app(\App\Services\Engagement\Announcements::class)->sweep()) as $k => $n) $t[$k] += $n;
+    $this->info("Published {$t['published']}, expired {$t['expired']} announcement(s).");
+})->purpose('Publish scheduled announcements and expire old ones');
+Schedule::command('announcements:sweep')->everyTenMinutes();
