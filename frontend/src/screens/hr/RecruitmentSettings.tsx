@@ -39,7 +39,7 @@ export function RecruitmentSettings() {
     <label className="flex items-center justify-between gap-3 py-1.5 text-[13.5px]"><span className="min-w-0">{label}</span>
       <span className="flex items-center gap-1.5 shrink-0"><input type="number" min={0} max={o.max ?? 100} step={o.step ?? 1} disabled={!editable} value={value} onChange={e => on(Number(e.target.value))} className="field !h-9 !w-20 num text-center" />
         <span className="text-[12px] text-ink-3 w-8">{o.suffix ?? P}</span></span></label>
-  const tog = (k: 'auto_screen' | 'auto_reject' | 'sla_alerts' | 'whatsapp_nudge', label: string, hint: string) => <button type="button" disabled={!editable} onClick={() => setR({ ...r, [k]: !r[k] })} aria-pressed={r[k]}
+  const tog = (k: 'auto_screen' | 'auto_reject' | 'sla_alerts' | 'whatsapp_nudge' | 'internal_no_probation', label: string, hint: string) => <button type="button" disabled={!editable} onClick={() => setR({ ...r, [k]: !r[k] })} aria-pressed={r[k]}
     className="w-full flex items-center justify-between gap-4 py-2.5 border-b border-line-2 last:border-0 text-start disabled:cursor-default">
     <span><span className="block text-[14px] font-semibold">{label}</span><span className="block text-[12px] text-ink-3">{hint}</span></span>
     <span className={`w-11 h-6 shrink-0 rounded-full p-0.5 transition-colors ${r[k] ? 'bg-brand' : 'bg-sub border border-line'}`}><span className={`block size-5 rounded-full bg-white transition-transform ${r[k] ? 'translate-x-5 rtl:-translate-x-5' : ''}`} /></span></button>
@@ -126,6 +126,11 @@ export function RecruitmentSettings() {
         <Panel title={L('أخرى', 'Other')}>
           {num(r.cv_retention_months, v => setR({ ...r, cv_retention_months: v }), L('مدة الاحتفاظ بالسيرة قبل الأرشفة', 'Keep CVs before archiving'), { max: 120, suffix: L('شهر', 'mo') })}
           {num(r.probation_at, v => setR({ ...r, probation_at: v }), L('بنود F-19 المنجزة لبدء فترة التجربة', 'F-19 items done to start probation'), { max: 28, suffix: L('بند', 'items') })}
+        </Panel>
+        <Panel title={L('الترشيح الداخلي (F-27)', 'Internal applications (F-27)')}>
+          {num(r.internal_min_months, v => setR({ ...r, internal_min_months: v }), L('أقل مدة خدمة للترشيح', 'Minimum service to apply'), { max: 120, suffix: L('شهر', 'mo') })}
+          {num(r.internal_clean_months, v => setR({ ...r, internal_clean_months: v }), L('بلا جزاء خلال (0 = لا شرط)', 'No penalty within (0 = off)'), { max: 60, suffix: L('شهر', 'mo') })}
+          {tog('internal_no_probation', L('خارج فترة التجربة', 'Past probation'), L('من هو في التجربة لا يرشّح نفسه', 'Employees on probation cannot apply'))}
         </Panel>
       </div>
     </div>

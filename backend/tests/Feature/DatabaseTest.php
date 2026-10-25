@@ -55,9 +55,9 @@ class DatabaseTest extends TestCase
         $this->assertNotNull(Settings::policy('annual_leave'));
         $this->assertSame('شركة acme', Settings::company('name_ar'));
         $this->makeCompany('beta');
-        $this->assertSame(9, ApprovalChain::count());   // + justification, overtime (07c), service, advance (07d), penalty (08b), termination (08c)
+        $this->assertSame(10, ApprovalChain::count());   // + justification, overtime (07c), service, advance (07d), penalty (08b), termination (08c)
         $this->assertSame(41, \App\Models\ViolationType::count());   // دليل المخالفات (08b)
-        $this->assertSame(18, ApprovalChain::allCompanies()->count());
+        $this->assertSame(20, ApprovalChain::allCompanies()->count());
     }
 
     public function test_install_creates_admin_with_temporary_password(): void

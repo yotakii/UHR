@@ -39,7 +39,7 @@ export interface CandFile extends Omit<CandCard, 'offer' | 'appointment' | 'job'
   keep_cv: boolean; cv_status: 'active' | 'archived' | 'erased'; test_detail: import('./tests').CandTestDetail
 }
 export type OfferInput = Pick<HrOffer, 'title' | 'contract' | 'currency' | 'basic' | 'housing' | 'transport' | 'fuel' | 'leave_days' | 'start_date'>
-export interface Rules { match_threshold: number; review_min: number; reject_max: number; auto_reject: boolean; auto_screen: boolean; sla_alerts: boolean; whatsapp_nudge: boolean; referral_stages: number[]; hard_to_fill_x: number; cv_retention_months: number; probation_at: number }
+export interface Rules { match_threshold: number; review_min: number; reject_max: number; auto_reject: boolean; auto_screen: boolean; sla_alerts: boolean; whatsapp_nudge: boolean; referral_stages: number[]; hard_to_fill_x: number; cv_retention_months: number; probation_at: number; internal_min_months: number; internal_no_probation: boolean; internal_clean_months: number }
 /** معايرة المطابقة — كل القيم نسب مئوية (عدا السنوات ومعامل الخصم) */
 export interface MatchConfig {
   weights: Record<'exp' | 'deg' | 'sal' | 'eng' | 'file', number>
