@@ -13,8 +13,11 @@ use App\Http\Controllers\Api\Hr\DisciplineController;
 use App\Http\Controllers\Api\Hr\OffboardingController;
 use App\Http\Controllers\Api\Employee\MyExitController;
 use App\Http\Controllers\Api\Employee\MyRewardsController;
+use App\Http\Controllers\Api\Employee\MyReviewsController;
 use App\Http\Controllers\Api\Hr\ReferralsController;
 use App\Http\Controllers\Api\Hr\AnnouncementController;
+use App\Http\Controllers\Api\Hr\AnalyticsController;
+use App\Http\Controllers\Api\Hr\PerformanceController;
 use App\Http\Controllers\Api\Employee\MyDisciplineController;
 use App\Http\Controllers\Api\Hr\LeaveAdminController;
 use App\Http\Controllers\Api\HealthController;
@@ -126,6 +129,9 @@ Route::middleware(['auth', 'fresh'])->prefix('me')->group(function () {
     Route::post('/internal/{id}/cancel', [MyRewardsController::class, 'cancelInternal'])->whereNumber('id');
     Route::post('/internal/{id}/offer-response', [MyRewardsController::class, 'offerResponse'])->whereNumber('id')->middleware('throttle:10,1');
     Route::get('/announcements', [AnnouncementController::class, 'mine']);
+    // M13 — نماذج تقييم 360 المطلوبة مني ونتائجي
+    Route::get('/reviews', [MyReviewsController::class, 'index']);
+    Route::post('/reviews/{id}', [MyReviewsController::class, 'fill'])->whereNumber('id')->middleware('throttle:60,1');
     Route::post('/exit/{id}/clearance/{section}/sign', [MyExitController::class, 'signSection'])->whereNumber('id')->where('section', '[a-z0-9_]+');
     Route::post('/exit/{id}/clearance/{section}/{item}', [MyExitController::class, 'markItem'])->whereNumber('id')->where(['section' => '[a-z0-9_]+', 'item' => '[a-z0-9_]+']);
 });
@@ -264,6 +270,31 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
         Route::post('/{id}/archive', [AnnouncementController::class, 'archive'])->whereNumber('id')->middleware('perm:announcements,archive');
         Route::put('/settings', [AnnouncementController::class, 'saveSettings'])->middleware('perm:settings,edit');
     });
+
+    // M13 — الأداء وتقييم 360، المعايرة، الاعتماد ومكافآت التقييم (D-28)، والتحليلات
+    Route::prefix('performance')->group(function () {
+        Route::get('/', [PerformanceController::class, 'index'])->middleware('perm:performance,view');
+        Route::get('/reviews/{id}', [PerformanceController::class, 'review'])->whereNumber('id')->middleware('perm:performance,view');
+        Route::get('/settings', [PerformanceController::class, 'settings'])->middleware('perm:performance,view');
+        Route::put('/settings', [PerformanceController::class, 'saveSettings'])->middleware('perm:settings,edit');
+        Route::post('/settings/preview', [PerformanceController::class, 'preview'])->middleware('perm:settings,edit');
+        Route::post('/cycles', [PerformanceController::class, 'store'])->middleware('perm:performance,create');
+        Route::middleware('perm:performance,edit')->group(function () {
+            Route::put('/cycles/{id}', [PerformanceController::class, 'update'])->whereNumber('id');
+            Route::post('/cycles/{id}/open', [PerformanceController::class, 'open'])->whereNumber('id');
+            Route::post('/cycles/{id}/remind', [PerformanceController::class, 'remind'])->whereNumber('id')->middleware('throttle:6,1');
+            Route::post('/reviews/{id}/place', [PerformanceController::class, 'place'])->whereNumber('id');
+            Route::post('/reviews/{id}/peers', [PerformanceController::class, 'addPeer'])->whereNumber('id');
+            Route::delete('/reviews/{id}/peers/{form}', [PerformanceController::class, 'removePeer'])->whereNumber(['id', 'form']);
+        });
+        Route::middleware('perm:performance,decide')->group(function () {
+            Route::post('/cycles/{id}/approve', [PerformanceController::class, 'approve'])->whereNumber('id');
+            Route::post('/awards/{id}', [PerformanceController::class, 'decideAward'])->whereNumber('id');
+        });
+        Route::get('/cycles/{id}/export', [PerformanceController::class, 'export'])->whereNumber('id')->middleware('perm:performance,export');
+    });
+    Route::get('/analytics', [AnalyticsController::class, 'index'])->middleware('perm:employees,export');
+    Route::get('/analytics/export', [AnalyticsController::class, 'export'])->middleware('perm:employees,export');
 
     // M11 — الاستقالات وإنهاء الخدمة (HR.01-03): الإجراءات حسب الدور تُفحص في ExitFlow (المدير، الجهات، مدير النظام)
     Route::prefix('offboarding')->group(function () {

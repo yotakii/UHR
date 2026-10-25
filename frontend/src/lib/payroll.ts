@@ -11,7 +11,7 @@ export interface MonthData {
   late_days: number; late: number; exempted: number; exempt_min: number; deduct: number; worked: number
   ot_raw: number; ot_assigned: number; ot_paid: number; ot_weighted: number; incomplete_dates: string[]; from: string; to: string; discipline_days?: number
 }
-export interface MonthMoney { base: number; ot_pay: number; late: number; absent: number; leave: number; insurance: number; advance: number; discipline?: number; net: number; day: number; hour: number; currency: 'USD' | 'SYP' }
+export interface MonthMoney { base: number; ot_pay: number; late: number; absent: number; leave: number; insurance: number; advance: number; discipline?: number; bonus?: number; net: number; day: number; hour: number; currency: 'USD' | 'SYP' }
 export interface SheetRow { id: number; employee: { id: number; code: string; name: Bi; title: Bi; dept: (Bi & { id: number }) | null }; data: MonthData; money: MonthMoney; salary: number }
 export interface Totals { employees: number; incomplete: number; absent: number; late: number; deduct: number; ot_paid: number; base: number; ot_pay: number; deductions: number; advance: number; net: number }
 type Stamp = { at: string | null; by: Bi | null }

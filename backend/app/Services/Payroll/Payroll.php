@@ -81,6 +81,7 @@ class Payroll
         if (($s->totals['incomplete'] ?? 0) > 0) throw new ApiException(L::t('صُحّحت الأيام الناقصة بعد الاحتساب — أرجع الكشف وأعد احتسابه ثم اعتمده.', 'Incomplete days were corrected after calculating — send the sheet back, recalculate and approve it.'), 'sheet_stale', 409);
         return DB::transaction(function () use ($s, $by) {
             Advance::where('month', $s->month)->where('status', 'open')->update(['status' => 'deducted', 'month_sheet_id' => $s->id]);
+            \App\Models\PerformanceAward::where('month', $s->month)->where('status', 'approved')->update(['status' => 'paid', 'paid_at' => now(), 'month_sheet_id' => $s->id]);
             $s->update(['status' => 'closed', 'closed_at' => now(), 'closed_by' => $by->id]);
             Audit::record('payroll.closed', $s, null, ['month' => $s->month, 'net' => $s->totals['net'] ?? null]);
             $users = User::whereIn('employee_id', MonthSheetRow::where('month_sheet_id', $s->id)->pluck('employee_id'))->pluck('id');
@@ -104,7 +105,7 @@ class Payroll
         $sum = fn (string $k) => round($rows->sum(fn ($r) => $r->money[$k] ?? 0), 2);
         return ['employees' => $rows->count(), 'incomplete' => $rows->sum(fn ($r) => $r->data['incomplete']), 'absent' => $rows->sum(fn ($r) => $r->data['absent']),
             'late' => $rows->sum(fn ($r) => $r->data['late']), 'deduct' => round($rows->sum(fn ($r) => $r->data['deduct']), 1), 'ot_paid' => $rows->sum(fn ($r) => $r->data['ot_paid']),
-            'base' => $sum('base'), 'ot_pay' => $sum('ot_pay'), 'deductions' => round($sum('late') + $sum('absent') + $sum('leave') + $sum('insurance') + $sum('discipline'), 2), 'advance' => $sum('advance'), 'net' => $sum('net')];
+            'base' => $sum('base'), 'ot_pay' => $sum('ot_pay'), 'deductions' => round($sum('late') + $sum('absent') + $sum('leave') + $sum('insurance') + $sum('discipline'), 2), 'advance' => $sum('advance'), 'bonus' => $sum('bonus'), 'net' => $sum('net')];
     }
 
     /**

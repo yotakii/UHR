@@ -113,10 +113,12 @@ class MonthCalc
         // M17: حسم المخالفات المقرر لهذا الشهر (بعد سقف cap_days)
         $t['discipline_days'] = round((float) DisciplineCase::where('employee_id', $e->id)->where('month', $month)->where('status', 'decided')->sum('deduct_days'), 2);
         $advance = (float) Advance::where('employee_id', $e->id)->where('month', $month)->whereIn('status', ['open', 'deducted'])->sum('amount');
+        // M13 / D-28: مكافأة التقييم المعتمدة لهذا الشهر
+        $bonus = (float) \App\Models\PerformanceAward::where('employee_id', $e->id)->where('month', $month)->whereIn('status', ['approved', 'paid'])->sum('amount');
         $m = ['base' => $base, 'ot_pay' => $t['ot_weighted'] / 60 * $hour, 'late' => $t['deduct'] / 60 * $hour,
             'absent' => ($t['absent'] * (float) $pay['absent_days'] + $t['justified_absent'] * (float) $pay['justified_absent_days']) * $dayWage,
-            'leave' => $t['leave_unpaid'] * $dayWage, 'insurance' => $base * (float) $pay['insurance_base'] * (float) $pay['insurance_rate'], 'advance' => $advance, 'discipline' => $t['discipline_days'] * $dayWage];
-        $m['net'] = $m['base'] + $m['ot_pay'] - $m['late'] - $m['absent'] - $m['leave'] - $m['insurance'] - $m['advance'] - $m['discipline'];
+            'leave' => $t['leave_unpaid'] * $dayWage, 'insurance' => $base * (float) $pay['insurance_base'] * (float) $pay['insurance_rate'], 'advance' => $advance, 'discipline' => $t['discipline_days'] * $dayWage, 'bonus' => $bonus];
+        $m['net'] = $m['base'] + $m['ot_pay'] + $m['bonus'] - $m['late'] - $m['absent'] - $m['leave'] - $m['insurance'] - $m['advance'] - $m['discipline'];
         $m = array_map(fn ($v) => round($v, 2), $m) + ['day' => round($dayWage, 2), 'hour' => round($hour, 2), 'currency' => $e->currency];
         return ['data' => $t, 'money' => $m];
     }

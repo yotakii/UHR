@@ -77,7 +77,7 @@ class CompanyDefaults
         PerformanceCycle::firstOrCreate(['name_en' => "Q{$q} {$y} review cycle"], [
             'name_ar' => "دورة تقييم الربع ".['', 'الأول', 'الثاني', 'الثالث', 'الرابع'][$q]." {$y}",
             'starts_on' => now()->firstOfQuarter()->toDateString(), 'ends_on' => now()->lastOfQuarter()->toDateString(),
-            'status' => 'open', 'weights' => ['manager' => 0.5, 'peers' => 0.3, 'self' => 0.2],
+            'status' => 'draft', 'weights' => ['manager' => 0.5, 'peers' => 0.3, 'self' => 0.2],
         ]);
     }
 }

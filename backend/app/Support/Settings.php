@@ -39,6 +39,9 @@ class Settings
             'internal_min_months' => 12, 'internal_no_probation' => true, 'internal_clean_months' => 6],
         // الإعلانات (D-06): اعتماد قبل النشر (لا افتراضياً — HR ينشر مباشرة)، وأقصى حجم للصورة/المرفق
         'announcements' => ['require_approval' => false, 'max_mb' => 10],
+        // M13 تقييم 360 (SRS M13): أوزان الأدوار (مجموعها 100)، السلّم، عدد الزملاء، حدود مستوى الأداء على 9-Box،
+        // وجدول المكافآت حسب النتيجة (D-28 — من المالية/HR، فارغ افتراضياً: كل نتيجة تُحوَّل للمراجعة)
+        'performance' => ['weights' => ['manager' => 50, 'peers' => 30, 'self' => 20], 'scale' => 5, 'peers' => 3, 'high_from' => 4.0, 'mid_from' => 3.0, 'rewards' => []],
         // معايرة المطابقة (لكل شركة، والأوزان قابلة للتجاوز لكل شاغر) — القيم الافتراضية = الديمو، كلها نسب مئوية
         'match' => [
             'weights' => ['exp' => 30, 'deg' => 25, 'sal' => 20, 'eng' => 15, 'file' => 10],                // مجموعها 100، و0 يلغي المعيار
@@ -224,6 +227,15 @@ class Settings
     }
 
     /** إعدادات الملفات الإضافية: المحفوظ فوق الافتراضي مفتاحاً بمفتاح */
+    public static function performance(): array
+    {
+        $saved = self::get('performance') ?? [];
+        $d = self::DEFAULTS['performance'];
+        $out = array_merge($d, array_intersect_key($saved, $d));
+        $out['weights'] = array_merge($d['weights'], array_intersect_key($saved['weights'] ?? [], $d['weights']));
+        return $out;
+    }
+
     public static function docs(): array
     {
         return array_merge(self::DEFAULTS['docs'], array_intersect_key(self::get('docs') ?? [], self::DEFAULTS['docs']));

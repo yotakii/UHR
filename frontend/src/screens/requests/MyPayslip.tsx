@@ -25,7 +25,7 @@ export function MyPayslip() {
       <Panel title={<span className="flex flex-wrap items-center gap-2">{monthName(p.month, lang)}{p.status === 'estimate' ? <Badge tone="brass">{L('تقدير حتى أمس', 'Estimate to yesterday')}</Badge> : <Badge tone="brand">{L('مغلق', 'Closed')}</Badge>}</span>}
         action={<Btn size="sm" icon={<Printer size={14} />} onClick={() => window.print()}>{L('طباعة', 'Print')}</Btn>}>
         <div className="text-[12px] font-semibold text-ink-3 mb-1">{L('المستحقات', 'Earnings')}</div>
-        {row(L('الراتب', 'Salary'), m.base)}{m.ot_pay > 0 && row(L(`أجر العمل الإضافي (${minsLabel(t.ot_paid, lang)})`, `Overtime pay (${minsLabel(t.ot_paid, lang)})`), m.ot_pay)}
+        {row(L('الراتب', 'Salary'), m.base)}{m.ot_pay > 0 && row(L(`أجر العمل الإضافي (${minsLabel(t.ot_paid, lang)})`, `Overtime pay (${minsLabel(t.ot_paid, lang)})`), m.ot_pay)}{!!m.bonus && row(L('مكافأة التقييم', 'Performance reward'), m.bonus)}
         <div className="text-[12px] font-semibold text-ink-3 mt-4 mb-1">{L('الاقتطاعات', 'Deductions')}</div>
         {row(L('التأمينات الاجتماعية (حصة العامل)', 'Social insurance (employee)'), m.insurance, true)}
         {m.late > 0 && row(L(`تأخير (${minsLabel(Math.round(t.deduct), 'ar')} حسم)`, `Lateness (${minsLabel(Math.round(t.deduct), 'en')} deducted)`), m.late, true)}

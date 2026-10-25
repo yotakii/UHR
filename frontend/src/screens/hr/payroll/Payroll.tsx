@@ -104,7 +104,7 @@ function RowDetail({ r }: { r: SheetRow }) {
     </div>
     <div>
       <div className="text-[12px] font-semibold text-ink-3 mb-1">{L('المبالغ (تقديرية)', 'Amounts (estimate)')} <span className="num">· {L('الأجر اليومي', 'day')} {money(m.day, c, lang)} · {L('الساعة', 'hour')} {money(m.hour, c, lang)}</span></div>
-      {line(L('الراتب', 'Salary'), money(m.base, c, lang))}{line(L('أجر الإضافي', 'Overtime pay'), money(m.ot_pay, c, lang), 'text-brand')}
+      {line(L('الراتب', 'Salary'), money(m.base, c, lang))}{line(L('أجر الإضافي', 'Overtime pay'), money(m.ot_pay, c, lang), 'text-brand')}{!!m.bonus && line(L('مكافأة التقييم', 'Performance reward'), money(m.bonus, c, lang), 'text-brand')}
       {line(L('حسم التأخير', 'Lateness'), money(m.late, c, lang), 'text-danger')}{line(L('حسم الغياب', 'Absence'), money(m.absent, c, lang), 'text-danger')}
       {line(L('إجازات بلا أجر', 'Unpaid leave'), money(m.leave, c, lang), 'text-danger')}{line(L('التأمينات', 'Insurance'), money(m.insurance, c, lang), 'text-danger')}
       {!!m.discipline && line(L(`جزاءات المخالفات (${t.discipline_days ?? 0} يوم)`, `Disciplinary deductions (${t.discipline_days ?? 0} d)`), money(m.discipline, c, lang), 'text-danger')}

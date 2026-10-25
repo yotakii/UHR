@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Home, FileSignature, ChevronLeft, ChevronRight, CalendarPlus, Fingerprint, Stamp, ClipboardList, Receipt, ShieldAlert, LogOut, Gift, Megaphone } from 'lucide-react'
+import { Home, FileSignature, ChevronLeft, ChevronRight, CalendarPlus, Fingerprint, Stamp, ClipboardList, Receipt, ShieldAlert, LogOut, Gift, Megaphone, ClipboardCheck } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { useRoute } from '../../lib/router'
 import type { SessionUser } from '../../lib/session'
@@ -19,10 +19,12 @@ import { useMyDiscipline } from '../../lib/discipline'
 import { MyResignation } from '../exit/MyResignation'
 import { useMyExit } from '../../lib/exit'
 import { MyRewards } from '../rewards/MyRewards'
+import { MyReviews } from '../performance/MyReviews'
+import { useMyReviews } from '../../lib/performance'
 import { MyAnnouncements } from '../rewards/Announcements'
 
 /** روابط إشعارات الموظف ← مسارات بوابته */
-export const employeeLink = (link: string) => ({ docs: '/me/documents', requests: '/me/requests', approvals: '/me/approvals', attendance: '/me/attendance', payslip: '/me/payslip', services: '/me/services', discipline: '/me/discipline', complaints: '/me/discipline', resignation: '/me/resignation', handover: '/me/resignation', rewards: '/me/rewards', internal: '/me/rewards', announcements: '/me/news' } as Record<string, string>)[link] ?? null
+export const employeeLink = (link: string) => ({ docs: '/me/documents', requests: '/me/requests', approvals: '/me/approvals', attendance: '/me/attendance', payslip: '/me/payslip', services: '/me/services', discipline: '/me/discipline', complaints: '/me/discipline', resignation: '/me/resignation', handover: '/me/resignation', rewards: '/me/rewards', internal: '/me/rewards', announcements: '/me/news', reviews: '/me/reviews' } as Record<string, string>)[link] ?? null
 
 /**
  * بوابة الموظف (M14): «الرئيسية» بما ينتظره، «إجازاتي وطلباتي»، «حضوري» مع التبرير، «اعتماداتي» للمدير (فريقه، نائبه، التكليف بالإضافي)
@@ -40,11 +42,13 @@ export function EmployeeApp({ user }: { user: SessionUser }) {
   const toAnswer = disc?.data.filter(c => (c.status === 'open' || c.status === 'investigated') && !c.has_defense) ?? []
   const ex = useMyExit().data
   const toReceive = ex?.receiving.filter(r => !r.handover?.receiver_signed) ?? []
+  const reviews = useMyReviews().data?.forms.filter(f => f.status === 'pending') ?? []
   const items = [{ to: '/', icon: <Home size={18} />, label: L('الرئيسية', 'Home') },
     { to: '/me/requests', icon: <CalendarPlus size={18} />, label: L('إجازاتي وطلباتي', 'My leave & requests') },
     { to: '/me/attendance', icon: <Fingerprint size={18} />, label: L('حضوري', 'My attendance'), count: issues.length || undefined },
     { to: '/me/services', icon: <ClipboardList size={18} />, label: L('خدماتي', 'My services') },
     { to: '/me/payslip', icon: <Receipt size={18} />, label: L('كشفي الشهري', 'My monthly sheet') },
+    { to: '/me/reviews', icon: <ClipboardCheck size={18} />, label: L('تقييماتي', 'My reviews'), count: reviews.length || undefined },
     { to: '/me/rewards', icon: <Gift size={18} />, label: L('المكافآت', 'Rewards') },
     { to: '/me/news', icon: <Megaphone size={18} />, label: L('إعلانات الشركة', 'Company news') },
     { to: '/me/discipline', icon: <ShieldAlert size={18} />, label: L('إنذاراتي وشكاواي', 'Warnings & complaints'), count: toSign.length + toAnswer.length || undefined },
@@ -52,14 +56,15 @@ export function EmployeeApp({ user }: { user: SessionUser }) {
     ...(approver ? [{ to: '/me/approvals', icon: <Stamp size={18} />, label: L('اعتماداتي', 'My approvals'), count: inbox!.data.length || undefined }] : []),
     { to: '/me/documents', icon: <FileSignature size={18} />, label: L('وثائق للتوقيع', 'Documents to sign'), count: n || undefined }]
   const sec = route.parts[0] === 'me' ? route.parts[1] : undefined
-  const page = sec === 'documents' ? 'docs' : sec === 'requests' || sec === 'attendance' || sec === 'services' || sec === 'payslip' || sec === 'discipline' || sec === 'resignation' || sec === 'rewards' || sec === 'news' || (sec === 'approvals' && approver) ? sec : 'home'
+  const page = sec === 'documents' ? 'docs' : sec === 'requests' || sec === 'attendance' || sec === 'services' || sec === 'payslip' || sec === 'discipline' || sec === 'resignation' || sec === 'rewards' || sec === 'news' || sec === 'reviews' || (sec === 'approvals' && approver) ? sec : 'home'
   const Next = lang === 'ar' ? ChevronLeft : ChevronRight
   return <Shell items={items} user={user} org={user.company ? bi(user.company.short, lang) : ''} sub={L('بوابة الموظف', 'Employee portal')} linkOf={employeeLink}>
-    {page === 'docs' ? <MyDocuments /> : page === 'requests' ? <MyRequests /> : page === 'attendance' ? <MyAttendance /> : page === 'approvals' ? <TeamApprovals /> : page === 'payslip' ? <MyPayslip /> : page === 'discipline' ? <MyDiscipline /> : page === 'rewards' ? <MyRewards /> : page === 'news' ? <MyAnnouncements /> : page === 'resignation' ? <MyResignation base="/me/resignation" />
+    {page === 'docs' ? <MyDocuments /> : page === 'requests' ? <MyRequests /> : page === 'attendance' ? <MyAttendance /> : page === 'approvals' ? <TeamApprovals /> : page === 'payslip' ? <MyPayslip /> : page === 'discipline' ? <MyDiscipline /> : page === 'rewards' ? <MyRewards /> : page === 'reviews' ? <MyReviews /> : page === 'news' ? <MyAnnouncements /> : page === 'resignation' ? <MyResignation base="/me/resignation" />
       : page === 'services' ? (route.parts[2] && /^\d+$/.test(route.parts[2]) ? <CertificatePage id={Number(route.parts[2])} hr={false} back="/me/services" /> : <MyServices base="/me/services" />) : <div className="max-w-[1000px] mx-auto space-y-5">
       <PageHead title={<>{L('أهلاً', 'Welcome')}، {bi(user.name, lang)}</>} sub={user.employee ? <>{bi(user.employee.title, lang)} · {bi(user.employee.dept, lang)} · <span className="ltr inline-block">{user.employee.code}</span></> : undefined} />
       <Panel title={L('بانتظارك', 'Waiting for you')} pad={false}>
-        {n === 0 && !issues.length && !inbox?.data.length && !toSign.length && !toAnswer.length && !toReceive.length ? <Empty title={L('لا شيء بانتظارك الآن', 'Nothing waiting for you now')} /> : <ul className="divide-y divide-line-2">
+        {n === 0 && !issues.length && !reviews.length && !inbox?.data.length && !toSign.length && !toAnswer.length && !toReceive.length ? <Empty title={L('لا شيء بانتظارك الآن', 'Nothing waiting for you now')} /> : <ul className="divide-y divide-line-2">
+          {reviews.length > 0 && <Todo to="/me/reviews" text={L(`${reviews.length} نموذج تقييم بانتظارك`, `${reviews.length} review form(s) waiting for you`)} icon={<Next size={16} />} />}
           {inbox && inbox.data.length > 0 && <Todo to="/me/approvals" text={L(`${inbox.data.length} طلب بانتظار اعتمادك`, `${inbox.data.length} request(s) awaiting your approval`)} icon={<Next size={16} />} />}
           {toAnswer.map(c => <Todo key={'a' + c.id} to="/me/discipline" text={L(`إبلاغ بمخالفة ${c.ref_no} — اكتب أقوالك قبل ${c.deadline}`, `Violation notice ${c.ref_no} — reply before ${c.deadline}`)} icon={<Next size={16} />} />)}
           {toReceive.map(r => <Todo key={'h' + r.id} to="/me/resignation" text={L(`استلام مهام ${r.employee?.name.ar ?? ''} — راجع الجدول ووقّع الإقرار`, `Receive ${r.employee?.name.en ?? ''}'s tasks — review and acknowledge`)} icon={<Next size={16} />} />)}

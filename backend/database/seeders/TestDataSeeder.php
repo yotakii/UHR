@@ -171,6 +171,7 @@ class TestDataSeeder extends Seeder
             $this->requests($emp);
             $this->engagement($emp, $jobs, $cands);
             $this->users($employees, $cands);
+            $this->performance($emp);
             Counters::atLeast('employee', 1000 + count($employees));
             Counters::atLeast('asset', Asset::count());
             Counters::atLeast('cand-app-'.now()->year, 48210 + 9 * 37);
@@ -441,6 +442,37 @@ class TestDataSeeder extends Seeder
             'addressee' => ['name' => 'المصرف التجاري السوري', 'cr_no' => '12345', 'email' => 'loans@cbs.gov.sy', 'phone' => '+963 11 221 8890'], 'notify_consent' => true]);
         \App\Models\RequestStep::create(['subject_type' => $sv->getMorphClass(), 'subject_id' => $sv->id, 'level' => 1, 'role_key' => 'hr_director', 'role_ar' => 'الموارد البشرية', 'role_en' => 'Human Resources',
             'status' => 'pending', 'activated_at' => $d(-1).' 10:10:00']);
+    }
+
+    /**
+     * M13: دورة الربع الثالث بقيم الديمو (usePerf: hash(e.id) ← الأداء والإمكانات ودرجات ذاتي/مدير/زملاء لكل كفاءة)
+     * كنماذج مُرسلة حقيقية — النتيجة تُحسب من النماذج، والمربع كما في الديمو (معايرة).
+     */
+    private function performance(array $emp): void
+    {
+        $hash = function (string $s) { $h = 7; foreach (str_split($s) as $c) $h = ($h * 31 + ord($c)) % 10007; return $h; };
+        $cycle = \App\Models\PerformanceCycle::orderBy('id')->first();
+        $cycle->update(['name_ar' => 'دورة تقييم الربع الثالث 2026', 'name_en' => 'Q3 2026 review cycle', 'starts_on' => '2026-07-01', 'ends_on' => '2026-10-31',
+            'status' => 'open', 'opened_at' => $this->now, 'weights' => ['manager' => 0.5, 'peers' => 0.3, 'self' => 0.2]]);
+        \App\Models\PerformanceReview::where('performance_cycle_id', $cycle->id)->delete();   // إعادة البذر آمنة
+        $comps = \App\Models\Competency::where('active', true)->orderBy('sort')->orderBy('id')->get()->values();
+        $users = User::whereNotNull('employee_id')->pluck('id', 'employee_id');
+        $pool = Employee::whereNotIn('status', ['onboarding', 'terminated'])->get();
+        foreach ($emp as $key => $e) {
+            $e = $pool->firstWhere('id', $e->id);
+            if (! $e) continue;
+            $h = $hash($key);
+            $p = min(3, 1 + ($h % 7 > 4 ? 2 : ($h % 7 > 1 ? 1 : 0)));
+            $q = min(3, 1 + (($h >> 3) % 5 > 3 ? 2 : (($h >> 3) % 5 > 1 ? 1 : 0)));
+            $r = \App\Models\PerformanceReview::create(['performance_cycle_id' => $cycle->id, 'employee_id' => $e->id, 'ratings' => [], 'status' => 'open', 'performance' => $p, 'potential' => $q, 'calibrated' => true]);
+            $vals = fn (callable $f) => $comps->mapWithKeys(fn ($c, $i) => [$c->id => $f($i)])->all();
+            $forms = [['self', $e->id, $vals(fn ($i) => 3 + (($h >> $i) % 3) * .5), null]];
+            if ($e->manager_id && $e->manager_id !== $e->id) $forms[] = ['manager', $e->manager_id, $vals(fn ($i) => 2.5 + (($h >> ($i + 2)) % 4) * .55), $q];
+            if ($peer = \App\Services\Performance\Reviews::pickPeers($e, $pool, 1)->first()) $forms[] = ['peer', $peer->id, $vals(fn ($i) => 2.8 + (($h >> ($i + 4)) % 3) * .6), null];
+            foreach ($forms as [$role, $rid, $ratings, $pot]) \App\Models\PerformanceForm::create(['performance_review_id' => $r->id, 'employee_id' => $e->id, 'role' => $role, 'rater_employee_id' => $rid,
+                'rater_user_id' => $users[$rid] ?? null, 'ratings' => $ratings, 'potential' => $pot, 'status' => 'submitted', 'submitted_at' => $this->now]);
+            \App\Services\Performance\Reviews::recompute($r);
+        }
     }
 
     private function engagement(array $emp, array $jobs, array $cands): void
