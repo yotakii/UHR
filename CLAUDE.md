@@ -106,7 +106,8 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 | 09c succession D-23 + individual development plans D-24 | ✅ user said done |
 | 09d M14 employee portal (demo PortalShell: top tabs, mobile bottom bar, home, check-in from the portal, team, profile) — task 09 complete | ✅ user said next |
 | 10 salary 2FA (server-side vault: email code, passkey, TOTP + backup codes; every salary field masked until unlocked) | ✅ user tested (asked for easier methods) |
-| 10b phone approval, one-touch remembered method, sliding window, GM-approved renewable access to others' salaries | 📦 delivered, waiting for the user's test |
+| 10b phone approval, one-touch remembered method, sliding window, GM-approved renewable access to others' salaries | ✅ user said next |
+| 11a M16 admin: settings hub, company data, departments, approval chains with deputies, users & roles, notification channels & templates | 📦 delivered, waiting for the user's test |
 | 11 M16 + Reverb · 12 «الساحة» social space (Viva Engage-like) · 13 AI agent (Claude via `AiClient`, user-scoped tools, confirm before actions) · 14 final verification — plan updated Oct 26 at the user's request | |
 
 **Task 03 delivered:**
@@ -317,6 +318,16 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 - API: `/api/me/salary-access` GET/POST, `/{id}/cancel`; `/api/hr/vault-settings/grants` (settings,view) + `/{id}/revoke`. Settings page adds idle/max window, phone request validity, the grant section (required, hours, exempt roles) and the grants list with revoke.
 - Frontend: `Masked`/`ProtectedBlock` take `others` (after verification they show «طلب إذن» / «بانتظار الموافقة»), `openVault('others')`, dialog steps `link` and `grant`; the HR header lock opens with `others` for payroll viewers. `TestCase::unlockSalaries($grant = true)` also creates an approved grant.
 - Tests: `SalaryVaultTest` +3 (phone approval, sliding window, grants with department scope, expiry and revoke) — 178 backend, 34 frontend.
+
+**Task 11a delivered (Oct 26) — M16 administration (task 11 = 11a admin · 11b audit/backups/policy library/org PDF · 11c Reverb):**
+- **Settings hub** `/hr/settings` (`screens/hr/admin/SettingsHub.tsx`): every settings page the user may open, grouped (company & organisation / policies & rules / devices, forms & notifications). Settings pages carry `hidden: true` (NavItem) + `section` in `HrApp` — out of the sidebar, still in Ctrl K and the header title.
+- **Company data** `/hr/settings/company` (`Admin/CompanyController`, settings view/edit): Company record (names, short names, Latin brand, about, website, logo upload via `CompanyProvisioner::setLogo`) + settings `company` (form_prefix, HR department name, domain, careers URL — names synced), `site` hero texts, `prefixes` (2–6 capitals; new numbers only). Audit `settings.company`.
+- **Departments** `/hr/settings/departments` (`Admin/DepartmentController`, org view/edit): code (unique per company), names, head, approved headcount vs current, colour (brand|brass|info|danger|ink-3), sort, active (deactivating with current employees → 409 `dept_in_use`).
+- **Approval chains** `/hr/settings/chains` (`Admin/ChainController`, settings view/edit): 11 types (leave, justification, overtime, service, advance, internal, resignation, termination, penalty, appointment, salary_access), ≤ 6 levels of role (manager|hr_director|finance|executive|ceo|admin; no manager for appointment/salary_access), optional named owner (holder of the role) and **deputy**. Migration `2026_11_01_000001`: `request_steps.deputy_id`; `Workflow::start` copies it, `canAct` lets the deputy decide, `actors()` notifies them. Changes apply to new requests; audit `settings.chain`.
+- **Users & roles** `/hr/settings/users` (`Admin/UserController`, users view/create/edit — admin by default; **every User query is filtered by `company_id`**, users are not tenant-scoped): list (q, role, status active|inactive|locked; roles, last sign-in, temp password, 2FA), create (for an employee without an account — gets `employee` too — or standalone) with a temporary password shown once + `Notifications/AccountNotice`, roles (self admin removal → 409 `self_lockout`), actions reset-password (temp + mail), deactivate/activate (not yourself), unlock, reset-mfa (removes TOTP + passkeys; audit `mfa.reset_by_admin`).
+- **Notification channels** `/hr/settings/channels` (`Admin/ChannelController`, settings view/edit): email (always on; from name, reply-to), sms (provider, sender, api_key secret), whatsapp (provider, phone_id, token secret) — secrets encrypted, returned only as `set`, empty = keep; message templates per key × channel (labels, unknown `:placeholder` → 422; allowed :job :ref :code :link :name). Actual SMS/WhatsApp sending waits for a provider.
+- Frontend: `lib/admin.ts`, `screens/hr/admin/{SettingsHub,CompanySettings,Departments,Chains,Users,Channels}.tsx`.
+- Tests: `tests/Feature/AdminSettingsTest.php` (5); DatabaseTest chain counts 11/22 — 183 backend, 34 frontend.
 
 **Open questions in SRS** (ask the user only when you reach them):
 - SMS provider for OTP.

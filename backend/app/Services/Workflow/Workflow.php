@@ -49,7 +49,7 @@ class Workflow
     {
         foreach (array_values($levels) as $i => $lv) {
             RequestStep::create(['subject_type' => $subject->getMorphClass(), 'subject_id' => $subject->getKey(), 'level' => $i + 1, 'role_key' => $lv['role_key'],
-                'role_ar' => $lv['role_ar'], 'role_en' => $lv['role_en'], 'user_id' => $lv['user_id'] ?? null, 'status' => 'waiting']);
+                'role_ar' => $lv['role_ar'], 'role_en' => $lv['role_en'], 'user_id' => $lv['user_id'] ?? null, 'deputy_id' => $lv['deputy_id'] ?? null, 'status' => 'waiting']);
         }
         $this->advance($subject, $for);
         return $subject;
@@ -66,6 +66,7 @@ class Workflow
     {
         if ($s->status !== 'pending' || $u->company_id !== $s->company_id) return false;
         if ($u->id === $subject->requested_by || ($u->employee_id && $u->employee_id === $subject->employee_id)) return false;
+        if ($s->deputy_id && $s->deputy_id === $u->id) return true;   // نائب المستوى (M16)
         if ($s->user_id) return $s->user_id === $u->id;
         $u->loadMissing('roles');
         return in_array($s->role_key, self::HR_ROLES, true) ? $u->hasRole(...self::HR_ROLES) : $u->hasRole($s->role_key);
@@ -186,10 +187,11 @@ class Workflow
     /** المستخدمون الذين يُشعَرون بخطوة */
     private function actors(RequestStep $s, Model $subject): array
     {
-        if ($s->user_id) return [$s->user_id];
+        $deputy = $s->deputy_id && $s->deputy_id !== $subject->requested_by ? [$s->deputy_id] : [];
+        if ($s->user_id) return array_values(array_unique([$s->user_id, ...$deputy]));
         $roles = in_array($s->role_key, self::HR_ROLES, true) ? self::HR_ROLES : [$s->role_key];
         return User::whereHas('roles', fn ($q) => $q->whereIn('key', $roles))->where('company_id', $s->company_id)->where('active', true)
-            ->where(fn ($q) => $q->whereNull('employee_id')->orWhere('employee_id', '!=', $subject->employee_id))->pluck('id')->all();
+            ->where(fn ($q) => $q->whereNull('employee_id')->orWhere('employee_id', '!=', $subject->employee_id))->pluck('id')->merge($deputy)->unique()->values()->all();
     }
 
     public static function statusFor(string $role): string

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed, Megaphone, Gift, ClipboardCheck, SlidersHorizontal, Sprout, KeyRound } from 'lucide-react'
+import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed, Megaphone, Gift, ClipboardCheck, SlidersHorizontal, Sprout, KeyRound, Building, UserCog, GitBranch, BellRing } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { useRoute } from '../../lib/router'
 import { can, type SessionUser } from '../../lib/session'
@@ -52,8 +52,14 @@ import { MyReviews } from '../performance/MyReviews'
 import { Development } from '../development/Development'
 import { MyRewards } from '../rewards/MyRewards'
 import { AnnouncementsHR, MyAnnouncements } from '../rewards/Announcements'
+import { CompanySettings } from './admin/CompanySettings'
+import { Departments } from './admin/Departments'
+import { Chains } from './admin/Chains'
+import { Users as AdminUsers } from './admin/Users'
+import { Channels } from './admin/Channels'
+import { SettingsHub } from './admin/SettingsHub'
 
-type Page = { item: NavItem; module: string | ((u: SessionUser) => boolean); view?: () => ReactNode; task?: string }
+type Page = { item: NavItem; module: string | ((u: SessionUser) => boolean); view?: () => ReactNode; task?: string; section?: 'org' | 'rules' | 'system' }
 
 /**
  * نظام الشركة (M15): السايدبار بمجموعات الديمو وعداداته، كل عنصر يظهر حسب صلاحية «عرض» وحدته (SRS §10.2).
@@ -67,6 +73,8 @@ export function HrApp({ user }: { user: SessionUser }) {
   const count = (...kinds: string[]) => dash?.tasks.filter(t => kinds.includes(t.kind)).length
   const g1 = L('التوظيف والتعيين', 'Hiring'), g2 = L('شؤون الموظفين', 'People'), g3 = L('الرؤى', 'Insights'), g4 = L('الإعدادات', 'Settings')
 
+  // صفحات الإعدادات تُعرض في «الإعدادات» (لوحة M16) بدل السايدبار حتى لا يطول
+  const settingsPages = (u: SessionUser) => pages.filter(p => p.section && (typeof p.module === 'function' ? p.module(u) : can(u, p.module)))
   const pages: Page[] = [
     { item: { to: '/hr', icon: <LayoutGrid size={18} />, label: L('لوحة المتابعة', 'Overview') }, module: () => true, view: () => <Dashboard user={user} /> },
     { item: { to: '/hr/jobs', icon: <Briefcase size={18} />, label: L('الوظائف الشاغرة', 'Job openings'), group: g1 }, module: 'jobs',
@@ -106,16 +114,22 @@ export function HrApp({ user }: { user: SessionUser }) {
     { item: { to: '/hr/performance', icon: <Target size={17} />, label: L('الأداء وتقييم 360', 'Performance & 360'), group: g3 }, module: 'performance', view: () => <Performance /> },
     { item: { to: '/hr/development', icon: <Sprout size={17} />, label: L('التعاقب وخطط التطوير', 'Succession & development'), group: g3 }, module: 'succession', view: () => <Development /> },
     { item: { to: '/hr/analytics', icon: <BarChart3 size={17} />, label: L('التحليلات', 'Analytics'), group: g3 }, module: u => can(u, 'employees', 'export'), view: () => <Analytics /> },
-    { item: { to: '/hr/settings/policies', icon: <Settings2 size={18} />, label: L('سياسات الدوام والإجازات', 'Work & leave policies'), group: g4 }, module: 'policies', view: () => <PolicySettings /> },
-    { item: { to: '/hr/settings/performance', icon: <SlidersHorizontal size={17} />, label: L('إعدادات الأداء والتقييم', 'Performance settings'), group: g4 }, module: u => can(u, 'settings', 'edit') && can(u, 'performance'), view: () => <PerformanceSettings /> },
-    { item: { to: '/hr/settings/devices', icon: <Nfc size={18} />, label: L('أجهزة الحضور', 'Attendance devices'), group: g4 }, module: u => can(u, 'attendance', 'edit'), view: () => <Devices /> },
-    { item: { to: '/hr/settings/recruitment', icon: <Scale size={18} />, label: L('قواعد التوظيف والمطابقة', 'Recruitment & matching rules'), group: g4 }, module: u => can(u, 'settings') || can(u, 'candidates'), view: () => <RecruitmentSettings /> },
-    { item: { to: '/hr/settings/security', icon: <KeyRound size={18} />, label: L('حماية الرواتب', 'Salary protection'), group: g4 }, module: u => can(u, 'settings'), view: () => <VaultSettings /> },
-    { item: { to: '/hr/settings/documents', icon: <FolderCog size={18} />, label: L('الملفات الإضافية للموظفين', 'Employee documents'), group: g4 }, module: u => can(u, 'settings') && can(u, 'employees'), view: () => <DocumentSettings /> },
-    { item: { to: '/hr/settings/violations', icon: <BookOpen size={18} />, label: L('دليل المخالفات', 'Violations catalogue'), group: g4 }, module: 'discipline', view: () => <ViolationSettings /> },
-    { item: { to: '/hr/settings/exit', icon: <DoorClosed size={18} />, label: L('إعدادات الخروج', 'Exit settings'), group: g4 }, module: u => can(u, 'settings', 'edit'), view: () => <ExitSettings /> },
-    { item: { to: '/hr/settings/permissions', icon: <ShieldCheck size={18} />, label: L('الصلاحيات', 'Permissions'), group: g4 }, module: 'users', view: () => <Permissions user={user} /> },
-    { item: { to: '/hr/settings/forms', icon: <FileText size={18} />, label: L('النماذج وقالب الطباعة', 'Forms & print template'), group: g4 }, module: 'settings', view: () => <Forms /> },
+    { item: { to: '/hr/settings', icon: <Settings2 size={18} />, label: L('الإعدادات', 'Settings'), group: g4 }, module: u => settingsPages(u).length > 0, view: () => <SettingsHub pages={settingsPages(user)} /> },
+    { item: { to: '/hr/settings/company', icon: <Building size={18} />, label: L('بيانات الشركة', 'Company data'), group: g4, hidden: true }, section: 'org', module: 'settings', view: () => <CompanySettings /> },
+    { item: { to: '/hr/settings/departments', icon: <Network size={18} />, label: L('الإدارات', 'Departments'), group: g4, hidden: true }, section: 'org', module: 'org', view: () => <Departments /> },
+    { item: { to: '/hr/settings/users', icon: <UserCog size={18} />, label: L('المستخدمون والأدوار', 'Users & roles'), group: g4, hidden: true }, section: 'org', module: 'users', view: () => <AdminUsers /> },
+    { item: { to: '/hr/settings/chains', icon: <GitBranch size={18} />, label: L('سلاسل الاعتماد', 'Approval chains'), group: g4, hidden: true }, section: 'org', module: 'settings', view: () => <Chains /> },
+    { item: { to: '/hr/settings/channels', icon: <BellRing size={18} />, label: L('قنوات الإشعار والقوالب', 'Notification channels'), group: g4, hidden: true }, section: 'system', module: 'settings', view: () => <Channels /> },
+    { item: { to: '/hr/settings/policies', icon: <Settings2 size={18} />, label: L('سياسات الدوام والإجازات', 'Work & leave policies'), group: g4, hidden: true }, section: 'rules', module: 'policies', view: () => <PolicySettings /> },
+    { item: { to: '/hr/settings/performance', icon: <SlidersHorizontal size={17} />, label: L('إعدادات الأداء والتقييم', 'Performance settings'), group: g4, hidden: true }, section: 'rules', module: u => can(u, 'settings', 'edit') && can(u, 'performance'), view: () => <PerformanceSettings /> },
+    { item: { to: '/hr/settings/devices', icon: <Nfc size={18} />, label: L('أجهزة الحضور', 'Attendance devices'), group: g4, hidden: true }, section: 'system', module: u => can(u, 'attendance', 'edit'), view: () => <Devices /> },
+    { item: { to: '/hr/settings/recruitment', icon: <Scale size={18} />, label: L('قواعد التوظيف والمطابقة', 'Recruitment & matching rules'), group: g4, hidden: true }, section: 'rules', module: u => can(u, 'settings') || can(u, 'candidates'), view: () => <RecruitmentSettings /> },
+    { item: { to: '/hr/settings/security', icon: <KeyRound size={18} />, label: L('حماية الرواتب', 'Salary protection'), group: g4, hidden: true }, section: 'org', module: u => can(u, 'settings'), view: () => <VaultSettings /> },
+    { item: { to: '/hr/settings/documents', icon: <FolderCog size={18} />, label: L('الملفات الإضافية للموظفين', 'Employee documents'), group: g4, hidden: true }, section: 'rules', module: u => can(u, 'settings') && can(u, 'employees'), view: () => <DocumentSettings /> },
+    { item: { to: '/hr/settings/violations', icon: <BookOpen size={18} />, label: L('دليل المخالفات', 'Violations catalogue'), group: g4, hidden: true }, section: 'rules', module: 'discipline', view: () => <ViolationSettings /> },
+    { item: { to: '/hr/settings/exit', icon: <DoorClosed size={18} />, label: L('إعدادات الخروج', 'Exit settings'), group: g4, hidden: true }, section: 'rules', module: u => can(u, 'settings', 'edit'), view: () => <ExitSettings /> },
+    { item: { to: '/hr/settings/permissions', icon: <ShieldCheck size={18} />, label: L('الصلاحيات', 'Permissions'), group: g4, hidden: true }, section: 'org', module: 'users', view: () => <Permissions user={user} /> },
+    { item: { to: '/hr/settings/forms', icon: <FileText size={18} />, label: L('النماذج وقالب الطباعة', 'Forms & print template'), group: g4, hidden: true }, section: 'system', module: 'settings', view: () => <Forms /> },
   ]
   const allowed = pages.filter(p => typeof p.module === 'function' ? p.module(user) : can(user, p.module))
   // الصفحة الرئيسية لحساب الشركة = لوحة المتابعة

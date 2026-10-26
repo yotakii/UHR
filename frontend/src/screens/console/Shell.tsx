@@ -11,7 +11,7 @@ import { VaultButton, VaultDialog } from '../../ui/vault'
  * إطار لوحات الإدارة (M15 — منقول من Shell.tsx في الديمو بدون أدوات المعرض):
  * سايدبار 268px بمجموعاته وعداداته وبطاقة المستخدم، وهيدر 68px بعنوان الصفحة. يستخدمه نظام الشركة ولوحة المنصة.
  */
-export type NavItem = { to: string; icon: ReactNode; label: string; count?: number; group?: string }
+export type NavItem = { to: string; icon: ReactNode; label: string; count?: number; group?: string; hidden?: boolean }
 
 /** linkOf: يحوّل رابط الإشعار (cand:12، leaves…) لمسار — ويفعّل الجرس. search: البحث الشامل في بيانات الشركة (HR) */
 export function Shell({ items, user, org, sub, children, linkOf, search }: { items: NavItem[]; user: SessionUser; org: ReactNode; sub: string; children: ReactNode; linkOf?: (link: string) => string | null; search?: SearchTargets }) {
@@ -32,7 +32,7 @@ export function Shell({ items, user, org, sub, children, linkOf, search }: { ite
       <div className="px-5 pt-5 pb-4"><Logo h={34} onDark /></div>
       <div className="mx-4 flex items-center gap-1.5 border-y border-white/10 py-2.5 text-[12px] text-side-fg/75"><Building2 size={14} className="shrink-0" /><span className="truncate">{org}</span></div>
       <nav className="flex-1 overflow-y-auto px-3 py-3">
-        {items.map(it => {
+        {items.filter(it => !it.hidden).map(it => {
           const head = it.group !== lastGroup ? <div className="px-2 pt-3 pb-1.5 text-[11px] text-side-fg/45">{it.group ?? L('وحدات النظام', 'Platform modules')}</div> : null
           lastGroup = it.group
           const active = it === current

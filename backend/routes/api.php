@@ -47,6 +47,11 @@ use App\Http\Controllers\Api\Platform\PlatformController;
 use App\Http\Controllers\Api\PublicController;
 use App\Http\Controllers\Api\PublicTestController;
 use App\Http\Controllers\Api\Security\VaultController;
+use App\Http\Controllers\Api\Hr\Admin\ChainController as AdminChainController;
+use App\Http\Controllers\Api\Hr\Admin\ChannelController as AdminChannelController;
+use App\Http\Controllers\Api\Hr\Admin\CompanyController as AdminCompanyController;
+use App\Http\Controllers\Api\Hr\Admin\DepartmentController as AdminDepartmentController;
+use App\Http\Controllers\Api\Hr\Admin\UserController as AdminUserController;
 use Illuminate\Support\Facades\Route;
 
 // كل المسارات هنا تحت البادئة /api
@@ -473,4 +478,22 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr/vault-settings')->
     Route::put('/', [VaultController::class, 'saveSettings'])->middleware('perm:settings,edit');
     Route::get('/grants', [VaultController::class, 'allGrants'])->middleware('perm:settings,view');
     Route::post('/grants/{id}/revoke', [VaultController::class, 'revokeGrant'])->whereNumber('id');
+});
+
+// M16 — إدارة النظام (11a): بيانات الشركة، الإدارات، سلاسل الاعتماد، المستخدمون والأدوار، قنوات الإشعار وقوالبها
+Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr/admin')->group(function () {
+    Route::get('/company', [AdminCompanyController::class, 'show'])->middleware('perm:settings,view');
+    Route::post('/company', [AdminCompanyController::class, 'update'])->middleware('perm:settings,edit');
+    Route::get('/departments', [AdminDepartmentController::class, 'index'])->middleware('perm:org,view');
+    Route::post('/departments', [AdminDepartmentController::class, 'store'])->middleware('perm:org,edit');
+    Route::put('/departments/{id}', [AdminDepartmentController::class, 'update'])->whereNumber('id')->middleware('perm:org,edit');
+    Route::get('/chains', [AdminChainController::class, 'index'])->middleware('perm:settings,view');
+    Route::put('/chains/{type}', [AdminChainController::class, 'update'])->where('type', '[a-z_]+')->middleware('perm:settings,edit');
+    Route::get('/users', [AdminUserController::class, 'index'])->middleware('perm:users,view');
+    Route::post('/users', [AdminUserController::class, 'store'])->middleware('perm:users,create');
+    Route::put('/users/{id}', [AdminUserController::class, 'update'])->whereNumber('id')->middleware('perm:users,edit');
+    Route::post('/users/{id}/{action}', [AdminUserController::class, 'action'])->whereNumber('id')->where('action', 'reset-password|deactivate|activate|unlock|reset-mfa')->middleware(['perm:users,edit', 'throttle:30,1']);
+    Route::get('/channels', [AdminChannelController::class, 'index'])->middleware('perm:settings,view');
+    Route::put('/channels/{key}', [AdminChannelController::class, 'updateChannel'])->where('key', 'email|sms|whatsapp')->middleware('perm:settings,edit');
+    Route::put('/templates/{id}', [AdminChannelController::class, 'updateTemplate'])->whereNumber('id')->middleware('perm:settings,edit');
 });
