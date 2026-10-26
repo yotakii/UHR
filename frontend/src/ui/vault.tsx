@@ -107,7 +107,7 @@ const STORES = { android: 'https://play.google.com/store/apps/details?id=com.goo
 function GetApp() {
   const L = useL()
   return <div className="rounded-xl border border-line bg-sub/60 p-3">
-    <div className="text-[12.5px] font-semibold text-center">{L('ما عندك التطبيق؟ امسح بكاميرا الجوال لتنزيل Google Authenticator', 'No app yet? Scan with your phone camera to get Google Authenticator')}</div>
+    <div className="text-[12.5px] font-semibold text-center">{L('ليس لديك التطبيق؟ امسح الرمز بكاميرا الجوال لتنزيل Google Authenticator', 'No app yet? Scan with your phone camera to get Google Authenticator')}</div>
     <div className="mt-2 flex justify-center gap-6">{([['android', 'Android'], ['ios', 'iPhone']] as const).map(([k, t]) =>
       <a key={k} href={STORES[k]} target="_blank" rel="noreferrer" className="flex flex-col items-center gap-1 text-[12px] text-ink-2"><QR text={STORES[k]} size={92} />{t}</a>)}</div>
   </div>
@@ -203,8 +203,8 @@ function VaultFlow({ ctx }: { ctx: 'self' | 'others' }) {
     body = <>
       {head(<ShieldCheck size={26} />, L('تحقق من هويتك', 'Verify it’s you'), L('اختر طريقة التحقق لعرض بيانات الرواتب.', 'Choose how to verify before salary data is shown.'))}
       <div className="space-y-2.5">
-        {v.methods.link && item(<Smartphone size={22} />, L('موافقة من موبايلك', 'Approve on your phone'),
-          L('امسح QR بكاميرا الموبايل وأنت مسجّل دخولك، واكبس «موافق» — بدون رموز', 'Scan the QR with your signed-in phone and tap “Approve” — no codes'), () => { setStep('link'); setErr('') }, { badge: L('الأسهل', 'Easiest') })}
+        {v.methods.link && item(<Smartphone size={22} />, L('الموافقة من جوالك', 'Approve on your phone'),
+          L('امسح رمز QR بكاميرا الجوال وأنت مسجّل الدخول، ثم اضغط «موافق» — دون إدخال رموز', 'Scan the QR with your signed-in phone and tap “Approve” — no codes'), () => { setStep('link'); setErr('') }, { badge: L('الأسهل', 'Easiest') })}
         {v.methods.phone && item(<Mail size={22} />, L('رمز على بريدك', 'Code by email'),
           <>{L('نرسل رمزاً من 6 أرقام إلى', 'We send a 6-digit code to')} <span className="ltr inline-block">{v.destination}</span> {L(`— صالح لمدة ${v.otp_minutes} دقيقة ولمرة واحدة`, `— valid ${v.otp_minutes} min, once`)}</>,
           () => { setStep('phone'); setErr(''); if (!v.otp || v.otp.expires_in < 10) void sendOtp(); else setOtpLeft(v.otp.expires_in) })}
@@ -262,7 +262,7 @@ function VaultFlow({ ctx }: { ctx: 'self' | 'others' }) {
       <details className="mt-3 text-center text-[12.5px]"><summary className="cursor-pointer text-brand">{L('لا يمكنك المسح؟ أدخل المفتاح يدوياً', 'Can’t scan? Enter the key manually')}</summary>
         <div className="mt-2 inline-flex items-center gap-2 rounded-lg bg-sub px-3 py-2"><span className="ltr num tracking-wider text-[13px] break-all">{enrol.secret.match(/.{1,4}/g)?.join(' ')}</span>
           <button onClick={() => { void navigator.clipboard?.writeText(enrol.secret); setCopied(true); setTimeout(() => setCopied(false), 1500) }} className="text-ink-3 hover:text-brand" aria-label={L('نسخ', 'Copy')}>{copied ? <Check size={15} /> : <Copy size={15} />}</button></div></details>
-      <details className="mt-2 text-center text-[12.5px]"><summary className="cursor-pointer text-brand">{L('ما عندك تطبيق المصادقة؟', 'Don’t have the authenticator app?')}</summary><div className="mt-2 text-start"><GetApp /></div></details>
+      <details className="mt-2 text-center text-[12.5px]"><summary className="cursor-pointer text-brand">{L('ليس لديك تطبيق المصادقة؟', 'Don’t have the authenticator app?')}</summary><div className="mt-2 text-start"><GetApp /></div></details>
       <div className="mt-5 text-center text-[13px] font-semibold mb-2">{L('أدخل الرمز الظاهر في التطبيق', 'Enter the code shown in the app')}</div>
       <OtpInput resetKey={nonce} disabled={busy || locked} onDone={c => void run(async () => { const r = await vaultCall<VaultState & { backup: string[] }>('/totp/confirm', { code: c }); setCodes(r.backup); setStep('backup') }, () => {})} />
       <StepBar />{alert}
@@ -338,10 +338,10 @@ function LinkStep({ onDone, back }: { onDone: () => void; back: ReactNode }) {
   const over = st !== 'pending' || left <= 0
   return <>
     <div className="text-center mb-4"><span className="mx-auto size-14 rounded-2xl grid place-items-center bg-brand-soft text-brand"><Smartphone size={26} /></span>
-      <div className="mt-3 font-bold text-[17px]">{L('امسح الرمز بكاميرا موبايلك', 'Scan with your phone camera')}</div>
-      <p className="text-[13px] text-ink-3 mt-1 max-w-sm mx-auto">{L('يفتح الرابط على الموبايل وأنت مسجّل دخولك بنفس الحساب — اكبس «موافق» وتُفتح الرواتب هنا تلقائياً.', 'The link opens on your phone, signed in to the same account — tap “Approve” and salaries unlock here automatically.')}</p></div>
+      <div className="mt-3 font-bold text-[17px]">{L('امسح الرمز بكاميرا جوالك', 'Scan with your phone camera')}</div>
+      <p className="text-[13px] text-ink-3 mt-1 max-w-sm mx-auto">{L('يُفتح الرابط على الجوال وأنت مسجّل الدخول بالحساب نفسه — اضغط «موافق» فتُفتح الرواتب هنا تلقائياً.', 'The link opens on your phone, signed in to the same account — tap “Approve” and salaries unlock here automatically.')}</p></div>
     <div className="flex justify-center">{l && !over ? <a href={l.url} target="_blank" rel="noreferrer" aria-label="QR"><QR text={l.url} /></a>
-      : <div className="size-[200px] rounded-xl bg-sub grid place-items-center text-[13px] text-ink-3 text-center p-4">{st === 'rejected' ? L('رُفض الطلب من الموبايل', 'Declined on the phone') : st === 'error' ? msg : l ? L('انتهت صلاحية الرمز', 'Code expired') : L('جارٍ التحضير…', 'Preparing…')}</div>}</div>
+      : <div className="size-[200px] rounded-xl bg-sub grid place-items-center text-[13px] text-ink-3 text-center p-4">{st === 'rejected' ? L('رُفض الطلب من الجوال', 'Declined on the phone') : st === 'error' ? msg : l ? L('انتهت صلاحية الرمز', 'Code expired') : L('جارٍ التحضير…', 'Preparing…')}</div>}</div>
     <div className="mt-3 flex items-center justify-center gap-3 text-[12.5px]">
       {!over && <span className={`inline-flex items-center gap-1 num ${left < 20 ? 'text-danger' : 'text-ink-3'}`}><Timer size={14} />{mmss(left)}</span>}
       {!over && <span className="inline-flex items-center gap-1.5 text-ink-3"><span className="size-2 rounded-full bg-brand animate-pulse" />{L('بانتظار الموافقة…', 'Waiting for approval…')}</span>}

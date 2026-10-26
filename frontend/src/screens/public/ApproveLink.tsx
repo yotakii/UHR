@@ -30,7 +30,7 @@ export function ApproveLink({ token, user }: { token: string; user: SessionUser 
     <p className="mt-1 text-[13.5px] text-ink-3">{result === 'approved' ? L('ارجع إلى الحاسوب — الرواتب فُتحت هناك.', 'Go back to the computer — salaries are unlocked there.') : L('لم تُفتح الرواتب. إن لم تكن أنت، غيّر كلمة مرورك.', 'Salaries stay locked. If it wasn’t you, change your password.')}</p></div>
   else if (e || !q.data || left <= 0) body = <div className="text-center py-4">
     <span className="mx-auto size-16 rounded-2xl grid place-items-center bg-sub text-ink-3"><X size={30} /></span>
-    <div className="mt-4 font-bold text-[17px]">{e?.code === 'link_other_user' ? L('حساب مختلف', 'Different account') : e?.code === 'link_same_device' ? L('افتحه من موبايلك', 'Open it on your phone') : L('انتهت صلاحية الطلب', 'This request expired')}</div>
+    <div className="mt-4 font-bold text-[17px]">{e?.code === 'link_other_user' ? L('حساب مختلف', 'Different account') : e?.code === 'link_same_device' ? L('افتحه من جوالك', 'Open it on your phone') : L('انتهت صلاحية الطلب', 'This request expired')}</div>
     <p className="mt-1 text-[13.5px] text-ink-3">{e?.message ?? L('اطلب رمزاً جديداً من الحاسوب.', 'Start a new one on the computer.')}</p>
     {e?.code === 'link_other_user' && <Btn className="mt-4" onClick={() => logout.mutate()}>{L('تسجيل الخروج والدخول بحسابي', 'Sign out and use my account')}</Btn>}</div>
   else body = <>
@@ -52,7 +52,7 @@ export function ApproveLink({ token, user }: { token: string; user: SessionUser 
   </>
   return <div className="min-h-full app-glow grid place-items-center p-4">
     <div className="w-full max-w-[420px]">
-      <div className="flex items-center justify-center gap-2 mb-5"><Logo h={28} /><span className="text-[12px] text-ink-3 border-s border-line ps-2 inline-flex items-center gap-1"><Smartphone size={13} />{L('موافقة من الموبايل', 'Phone approval')}</span></div>
+      <div className="flex items-center justify-center gap-2 mb-5"><Logo h={28} /><span className="text-[12px] text-ink-3 border-s border-line ps-2 inline-flex items-center gap-1"><Smartphone size={13} />{L('الموافقة من الجوال', 'Phone approval')}</span></div>
       <div className="bg-surface border border-line rounded-2xl p-6 shadow-xl">{body}</div>
     </div>
   </div>

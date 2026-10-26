@@ -33,7 +33,7 @@ export function Chains() {
   if (!d) return <div className="grid place-items-center py-24"><Loader2 className="animate-spin text-brand" /></div>
   const groups: [string, string][] = [['staff', L('طلبات الموظفين', 'Employee requests')], ['pay', L('الرواتب', 'Pay')], ['hiring', L('التوظيف والتعيين', 'Hiring')], ['exit', L('الخروج والانضباط', 'Exit & discipline')]]
   return <div className="max-w-[1100px] mx-auto space-y-6">
-    <PageHead title={L('سلاسل الاعتماد', 'Approval chains')} sub={L('مين بيوافق على كل نوع طلب، وبأي ترتيب. التعديل بيسري على الطلبات الجديدة فقط.', 'Who approves each kind of request, in what order. Changes apply to new requests only.')} />
+    <PageHead title={L('سلاسل الاعتماد', 'Approval chains')} sub={L('من يعتمد كل نوع من الطلبات، وبأي ترتيب. يسري التعديل على الطلبات الجديدة فقط.', 'Who approves each kind of request, in what order. Changes apply to new requests only.')} />
     {groups.map(([g, title]) => <section key={g}>
       <h2 className="text-[13px] font-semibold text-ink-3 mb-2">{title}</h2>
       <div className="grid [grid-template-columns:repeat(auto-fill,minmax(320px,1fr))] gap-3">{d.data.filter(c => (INFO[c.type]?.group ?? 'staff') === g).map(c =>
@@ -88,7 +88,7 @@ function ChainEditor({ chain, roles, users, onClose }: { chain: Chain; roles: Op
     <ol className="space-y-2.5">{lv.map((x, i) => <li key={i} className="rounded-xl border border-line p-3">
       <div className="flex items-center gap-2">
         <span className="size-7 rounded-full bg-brand text-on-brand grid place-items-center text-[12.5px] font-bold num shrink-0">{i + 1}</span>
-        <label className="flex-1 min-w-0"><span className="block text-[12px] text-ink-3 mb-1">{L('مين بيعتمد؟', 'Who approves?')}</span>
+        <label className="flex-1 min-w-0"><span className="block text-[12px] text-ink-3 mb-1">{L('من يعتمد؟', 'Who approves?')}</span>
           <select className="field" value={valueOf(x)} onChange={e => pick(i, e.target.value)}>
             <optgroup label={L('حسب الدور', 'By role')}>{roleOpts.map(r => <option key={r.key} value={`role:${r.key}`}>{r.key === 'manager' ? bi(r, lang) : L(`أي ${r.ar}`, `Any ${r.en}`)}</option>)}</optgroup>
             <optgroup label={L('شخص محدد', 'A specific person')}>{users.map(u => <option key={u.id} value={`user:${u.id}`}>{bi(u, lang)}</option>)}</optgroup>
@@ -100,7 +100,7 @@ function ChainEditor({ chain, roles, users, onClose }: { chain: Chain; roles: Op
         </div>
       </div>
       {x.deputy_id || deputyOpen[i] ? <div className="mt-2 ms-9 flex items-center gap-2">
-        <span className="text-[12.5px] text-ink-3 shrink-0">{L('النائب (يعتمد بداله)', 'Deputy (can approve instead)')}</span>
+        <span className="text-[12.5px] text-ink-3 shrink-0">{L('النائب (يعتمد بدلاً منه)', 'Deputy (can approve instead)')}</span>
         <select className="field !h-9 flex-1" value={x.deputy_id ?? ''} onChange={e => setLv(lv.map((y, j) => j === i ? { ...y, deputy_id: e.target.value ? Number(e.target.value) : null } : y))}>
           <option value="">—</option>{users.filter(u => u.id !== x.user_id).map(u => <option key={u.id} value={u.id}>{bi(u, lang)}</option>)}</select>
         <button className="p-1 text-ink-3 hover:text-danger" onClick={() => { setLv(lv.map((y, j) => j === i ? { ...y, deputy_id: null } : y)); setDeputyOpen({ ...deputyOpen, [i]: false }) }} aria-label={L('بلا نائب', 'No deputy')}><X size={15} /></button>

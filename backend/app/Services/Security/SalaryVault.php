@@ -370,8 +370,8 @@ class SalaryVault
     {
         $l = $this->link($t);
         if (! $l) throw new ApiException(L::t('انتهت صلاحية الطلب — اطلب رمزاً جديداً من الحاسوب.', 'This request expired — start a new one on the computer.'), 'link_expired', 410);
-        if ($l['uid'] !== $u->id) throw new ApiException(L::t('هذا الطلب لحساب آخر — سجّل الدخول بحسابك نفسه على الموبايل.', 'This request belongs to another account — sign in with the same account on your phone.'), 'link_other_user', 403);
-        if ($l['sid'] === session()->getId()) throw new ApiException(L::t('افتح الرابط من موبايلك وليس من نفس المتصفح.', 'Open the link on your phone, not in the same browser.'), 'link_same_device', 409);
+        if ($l['uid'] !== $u->id) throw new ApiException(L::t('هذا الطلب لحساب آخر — سجّل الدخول بحسابك نفسه على الجوال.', 'This request belongs to another account — sign in with the same account on your phone.'), 'link_other_user', 403);
+        if ($l['sid'] === session()->getId()) throw new ApiException(L::t('افتح الرابط من جوالك لا من المتصفح نفسه.', 'Open the link on your phone, not in the same browser.'), 'link_same_device', 409);
         return $l;
     }
 

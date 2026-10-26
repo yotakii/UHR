@@ -128,7 +128,7 @@ class VaultController extends Controller
             'otp_minutes' => ['required', 'integer', 'between:1,10'], 'link_seconds' => ['required', 'integer', 'between:30,600'], 'backup_count' => ['required', 'integer', 'between:4,16'], 'audit_keep' => ['required', 'integer', 'between:20,1000'],
             'methods' => ['required', 'array'], 'methods.link' => ['required', 'boolean'], 'methods.phone' => ['required', 'boolean'], 'methods.passkey' => ['required', 'boolean'], 'methods.app' => ['required', 'boolean'],
             'grant_required' => ['required', 'boolean'], 'grant_hours' => ['required', 'integer', 'between:1,720'], 'grant_exempt_roles' => ['present', 'array'], 'grant_exempt_roles.*' => ['string', 'exists:roles,key'],
-        ], [], ['max_minutes' => L::t('الحد الأقصى للفتح', 'Maximum unlock'), 'link_seconds' => L::t('صلاحية طلب الموبايل', 'Phone request validity'), 'grant_hours' => L::t('مدة الإذن', 'Access duration'),
+        ], [], ['max_minutes' => L::t('الحد الأقصى للفتح', 'Maximum unlock'), 'link_seconds' => L::t('صلاحية طلب الجوال', 'Phone request validity'), 'grant_hours' => L::t('مدة الإذن', 'Access duration'),
             'unlock_minutes' => L::t('مدة الفتح', 'Unlock window'), 'max_attempts' => L::t('المحاولات', 'Attempts'), 'lockout_seconds' => L::t('مدة الإيقاف', 'Lockout'),
             'otp_minutes' => L::t('صلاحية الرمز', 'Code validity'), 'backup_count' => L::t('رموز الطوارئ', 'Backup codes'), 'audit_keep' => L::t('سجل المحاولات', 'Attempt log')]);
         if (! in_array(true, $d['methods'], true)) throw \Illuminate\Validation\ValidationException::withMessages(['methods' => [L::t('فعّل طريقة تحقق واحدة على الأقل.', 'Turn on at least one verification method.')]]);

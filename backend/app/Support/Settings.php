@@ -114,7 +114,7 @@ class Settings
                     ['key' => 'backup', 'ar' => 'نسخ البيانات (backup)', 'en' => 'Data backed up']]],
                 ['key' => 'legal', 'ar' => 'القانوني / التنفيذي', 'en' => 'Legal / executive', 'role' => 'executive', 'items' => [['key' => 'powers', 'ar' => 'التفويضات والوكالات', 'en' => 'Delegations and powers of attorney']]],
                 ['key' => 'admin', 'ar' => 'الشؤون الإدارية', 'en' => 'Administrative affairs', 'role' => 'hr_director', 'items' => [
-                    ['key' => 'assets', 'ar' => 'كل الأصول من سجل العهد', 'en' => 'All assets in the custody register', 'auto' => 'assets'], ['key' => 'mobile', 'ar' => 'خط الموبايل', 'en' => 'Mobile line'],
+                    ['key' => 'assets', 'ar' => 'كل الأصول من سجل العهد', 'en' => 'All assets in the custody register', 'auto' => 'assets'], ['key' => 'mobile', 'ar' => 'خط الجوال', 'en' => 'Mobile line'],
                     ['key' => 'internet', 'ar' => 'خط الإنترنت', 'en' => 'Internet line'], ['key' => 'vehicle', 'ar' => 'المركبة ومستنداتها', 'en' => 'Vehicle and its papers'], ['key' => 'keys', 'ar' => 'المفاتيح', 'en' => 'Keys']]],
                 ['key' => 'finance', 'ar' => 'المالية', 'en' => 'Finance', 'role' => 'finance', 'items' => [
                     ['key' => 'work_advances', 'ar' => 'سلف العمل', 'en' => 'Work advances', 'amount' => true], ['key' => 'personal_advances', 'ar' => 'سلف شخصية', 'en' => 'Personal advances', 'amount' => true],

@@ -44,7 +44,7 @@ export function Permissions({ user }: { user: SessionUser }) {
   const modOf = (k: string) => grid.modules.find(m => m.key === k)!
   const changedRoles = new Set(changes.map(c => c.role))
   const levelName: Record<Level | 'custom', string> = { none: L('لا وصول', 'No access'), view: L('عرض', 'View'), edit: L('عرض وتعديل', 'View & edit'), full: L('كامل', 'Full'), custom: L('مخصص', 'Custom') }
-  const scopeName: Record<Scope, string> = { own: L('نفسه', 'Own'), team: L('فريقه', 'Team'), all: L('الكل', 'Everyone') }
+  const scopeName: Record<Scope, string> = { own: L('نفسه', 'Own'), team: L('فريقه', 'Team'), all: L('الجميع', 'Everyone') }
   const set = (m: string, c: Cell) => setDraft(d => ({ ...d!, [role]: { ...d![role], [m]: c } }))
   const cells = draft[role]
   // المخصص يُكتب بالكلمات: «عرض، إضافة، طباعة · فريقه»
@@ -60,7 +60,7 @@ export function Permissions({ user }: { user: SessionUser }) {
   })
 
   return <div className="max-w-[1200px] mx-auto space-y-5">
-    <PageHead title={L('الصلاحيات', 'Permissions')} sub={L('اختر الدور، وحدد لكل قسم شو بيقدر يعمل وعلى مين. التغيير بيطبق فوراً على كل أصحاب الدور.', 'Pick a role, then choose for each section what it can do and for whom. Changes apply at once to everyone with the role.')}
+    <PageHead title={L('الصلاحيات', 'Permissions')} sub={L('اختر الدور، ثم حدّد لكل قسم ما يمكنه فعله ونطاقه. يُطبَّق التغيير فوراً على جميع أصحاب الدور.', 'Pick a role, then choose for each section what it can do and for whom. Changes apply at once to everyone with the role.')}
       actions={editable && <>
         <Btn icon={<RotateCcw size={16} />} disabled={!changes.length} onClick={() => setDraft(structuredClone(grid.matrix))}>{L('تراجع', 'Discard')}</Btn>
         <Btn kind="primary" icon={<Save size={16} />} disabled={!changes.length} onClick={() => setConfirm(true)}>{L('حفظ', 'Save')}{changes.length ? <span className="num">({changes.length})</span> : null}</Btn>
@@ -88,7 +88,7 @@ export function Permissions({ user }: { user: SessionUser }) {
                   onClick={() => set(m, { ...c, actions: x === 'none' ? [] : [...PRESET[x]] })}
                   className={`h-8 px-2.5 rounded-md text-[12.5px] font-semibold ${lv === x ? (x === 'none' ? 'bg-ink-3 text-on-brand' : 'bg-brand text-on-brand') : 'text-ink-2 hover:bg-sub'} disabled:cursor-default`}>{levelName[x]}</button>)}
                   {lv === 'custom' && <span className="h-8 px-2.5 rounded-md text-[12.5px] font-semibold bg-brass text-on-brand inline-flex items-center">{levelName.custom}</span>}</div>
-                {lv !== 'none' && <div className="inline-flex items-center gap-1.5"><span className="text-[12px] text-ink-3">{L('على مين؟', 'For whom?')}</span>
+                {lv !== 'none' && <div className="inline-flex items-center gap-1.5"><span className="text-[12px] text-ink-3">{L('النطاق', 'Scope')}</span>
                   <div className="inline-flex rounded-lg border border-line bg-surface p-0.5">{(['own', 'team', 'all'] as Scope[]).map(s => <button key={s} type="button" disabled={!editable} onClick={() => set(m, { ...c, scope: s })}
                     className={`h-8 px-2.5 rounded-md text-[12.5px] ${c.scope === s ? 'bg-info text-on-brand font-semibold' : 'text-ink-2 hover:bg-sub'} disabled:cursor-default`}>{scopeName[s]}</button>)}</div></div>}
                 <button type="button" onClick={() => setOpen(open === m ? null : m)} className="inline-flex items-center gap-1 text-[12px] text-ink-3 hover:text-brand" aria-expanded={open === m}>

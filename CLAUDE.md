@@ -43,6 +43,7 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 - Mail: dev mail goes to Mailpit (http://localhost:8125). The compose `environment:` sets MAIL_* and FRONTEND_URL, which override `backend/.env` (the user's `.env` already exists, so new keys must go in compose or be documented).
 
 ## 4. Conventions (follow them)
+- **System Arabic is formal Modern Standard Arabic (فصحى) — user decision, Oct 26.** Every UI label, message, email, PDF and the test guide: no Syrian colloquial (مين، شو، بيقدر، اكبس، موبايل، ما عندك…) → «من، ما، يمكنه، اضغط، الجوال، ليس لديك». Chat replies to the user stay in Syrian Arabic.
 - **Bilingual everywhere:**
   - UI: `const L = useL(); L('عربي','English')`.
   - Data: `Bi = {ar, en}` and `bi(x, lang)`.

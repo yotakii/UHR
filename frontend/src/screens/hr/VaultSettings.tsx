@@ -28,7 +28,7 @@ export function VaultSettings() {
     <Field label={label} hint={`${hint} (${min}–${max})`} error={err?.field(k)}>
       <input type="number" min={min} max={max} className="field num" disabled={!editable} value={c[k]} onChange={e => setC({ ...c, [k]: Number(e.target.value) })} /></Field>
   const methods: [VaultMethod, string, string][] = [
-    ['link', L('موافقة من الموبايل', 'Approve on the phone'), L('QR على الحاسوب يمسحه الموبايل المسجّل دخوله بنفس الحساب، ثم «موافق»', 'A QR on the computer scanned by the phone signed in to the same account, then “Approve”')],
+    ['link', L('الموافقة من الجوال', 'Approve on the phone'), L('رمز QR على الحاسوب يمسحه الجوال المسجّل دخوله بالحساب نفسه، ثم «موافق»', 'A QR on the computer scanned by the phone signed in to the same account, then “Approve”')],
     ['passkey', L('البصمة / Windows Hello', 'Fingerprint / Windows Hello'), L('مفتاح مرور على الجهاز — لمسة واحدة، يتطلب https', 'A passkey on the device — one touch, requires https')],
     ['phone', L('رمز لمرة واحدة بالبريد', 'One-time code by email'), L('يُرسل من الخادم إلى بريد الحساب (الرسائل القصيرة عند اعتماد مزوّد)', 'Sent by the server to the account email (SMS once a provider is chosen)')],
     ['app', L('تطبيق المصادقة', 'Authenticator app'), L('Google / Microsoft Authenticator مع رموز طوارئ', 'Google / Microsoft Authenticator with backup codes')],
@@ -51,7 +51,7 @@ export function VaultSettings() {
         {num('max_minutes', L('الحد الأقصى للفتح (دقيقة)', 'Maximum unlock (minutes)'), L('من لحظة التحقق مهما استُخدمت', 'From verification, however it’s used'), 1, 720)}
         {num('max_attempts', L('المحاولات الخاطئة قبل الإيقاف', 'Wrong attempts before lockout'), L('رمز أو كلمة مرور خاطئة', 'Wrong code or password'), 3, 10)}
         {num('lockout_seconds', L('مدة الإيقاف (ثانية)', 'Lockout (seconds)'), L('لا محاولات خلالها', 'No attempts during it'), 30, 3600)}
-        {num('link_seconds', L('صلاحية طلب الموبايل (ثانية)', 'Phone request validity (seconds)'), L('مدة QR الموافقة', 'How long the approval QR lasts'), 30, 600)}
+        {num('link_seconds', L('صلاحية طلب الجوال (ثانية)', 'Phone request validity (seconds)'), L('مدة QR الموافقة', 'How long the approval QR lasts'), 30, 600)}
         {num('otp_minutes', L('صلاحية الرمز المرسل (دقيقة)', 'Sent code validity (minutes)'), L('لمرة واحدة', 'Single use'), 1, 10)}
         {num('backup_count', L('عدد رموز الطوارئ', 'Backup codes'), L('تُعطى عند ربط التطبيق', 'Given when the app is linked'), 4, 16)}
         {num('audit_keep', L('سجل المحاولات لكل مستخدم', 'Attempt log per user'), L('آخر N محاولة ناجحة أو فاشلة', 'Last N successful or failed attempts'), 20, 1000)}
