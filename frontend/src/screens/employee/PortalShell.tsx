@@ -38,17 +38,8 @@ export function PortalShell({ user, tabs, more, children, linkOf }: { user: Sess
     <header className="sticky top-0 z-30 border-b border-line bg-canvas/80 backdrop-blur" data-noprint>
       <div className="max-w-[1180px] mx-auto px-4 md:px-6 h-16 flex items-center gap-3">
         <a href="/" className="shrink-0"><Logo h={26} /></a>
-        <span className="hidden 2xl:inline whitespace-nowrap text-[12px] text-ink-3 border-s border-line ps-3">{L('بوابة الموظف', 'Employee portal')}</span>
-        <nav className="hidden lg:flex items-center gap-0.5 mx-auto min-w-0">
-          {tabs.map(t => <a key={t.to} href={t.to} title={t.label} className={`relative h-9 px-2.5 rounded-lg text-[13.5px] flex items-center gap-1.5 whitespace-nowrap ${active(t.to) ? 'bg-brand-soft text-brand font-semibold' : 'text-ink-2 hover:bg-sub'}`}>
-            {t.icon}<span className="hidden xl:inline">{t.label}</span>{!!t.badge && <span className="min-w-4 h-4 px-1 rounded-full bg-brand text-on-brand text-[10px] grid place-items-center num">{t.badge}</span>}</a>)}
-          <div className="relative">
-            <button onClick={() => { setExtra(!extra); setMenu(false); setBell(false) }} className={`h-9 px-2.5 rounded-lg text-[13.5px] flex items-center gap-1.5 ${moreActive ? 'bg-brand-soft text-brand font-semibold' : 'text-ink-2 hover:bg-sub'}`} aria-expanded={extra}>
-              <MoreHorizontal size={17} /><span className="hidden xl:inline">{L('المزيد', 'More')}</span>{!!moreBadge && <span className="min-w-4 h-4 px-1 rounded-full bg-brand text-on-brand text-[10px] grid place-items-center num">{moreBadge}</span>}<ChevronDown size={14} /></button>
-            {extra && <div className="absolute end-0 top-11 w-60 bg-surface border border-line rounded-xl p-1 shadow-2xl z-40 fadeup">{more.map(t => <MenuItem key={t.to} t={t} on={active(t.to)} go={go} />)}</div>}
-          </div>
-        </nav>
-        <div className="flex items-center gap-2 ms-auto lg:ms-0">
+        <span className="hidden sm:inline whitespace-nowrap text-[12px] text-ink-3 border-s border-line ps-3">{L('بوابة الموظف', 'Employee portal')}</span>
+        <div className="flex items-center gap-2 ms-auto">
           <span className="hidden sm:flex"><LangToggle /></span><span className="hidden sm:flex"><ThemeToggle /></span>
           <BellMenu open={bell} setOpen={v => { setBell(v); setMenu(false); setExtra(false) }} linkOf={linkOf} />
           <div className="relative">
@@ -64,6 +55,18 @@ export function PortalShell({ user, tabs, more, children, linkOf }: { user: Sess
           </div>
         </div>
       </div>
+      {/* السطر الثاني على الحاسب: التبويبات وحدها بعرض الصفحة (تلتف ولا تتداخل مع أدوات الهيدر) */}
+      <nav className="hidden lg:block border-t border-line-2">
+        <div className="max-w-[1180px] mx-auto px-4 md:px-6 py-1.5 flex flex-wrap items-center justify-center gap-1">
+          {tabs.map(t => <a key={t.to} href={t.to} className={`relative h-9 px-3 rounded-lg text-[13.5px] flex items-center gap-1.5 whitespace-nowrap ${active(t.to) ? 'bg-brand-soft text-brand font-semibold' : 'text-ink-2 hover:bg-sub'}`}>
+            {t.icon}{t.label}{!!t.badge && <span className="min-w-4 h-4 px-1 rounded-full bg-brand text-on-brand text-[10px] grid place-items-center num">{t.badge}</span>}</a>)}
+          <div className="relative">
+            <button onClick={() => { setExtra(!extra); setMenu(false); setBell(false) }} className={`h-9 px-3 rounded-lg text-[13.5px] flex items-center gap-1.5 ${moreActive ? 'bg-brand-soft text-brand font-semibold' : 'text-ink-2 hover:bg-sub'}`} aria-expanded={extra}>
+              <MoreHorizontal size={17} />{L('المزيد', 'More')}{!!moreBadge && <span className="min-w-4 h-4 px-1 rounded-full bg-brand text-on-brand text-[10px] grid place-items-center num">{moreBadge}</span>}<ChevronDown size={14} /></button>
+            {extra && <div className="absolute end-0 top-11 w-60 bg-surface border border-line rounded-xl p-1 shadow-2xl z-40 fadeup">{more.map(t => <MenuItem key={t.to} t={t} on={active(t.to)} go={go} />)}</div>}
+          </div>
+        </div>
+      </nav>
     </header>
     <main className="flex-1 max-w-[1180px] w-full mx-auto px-4 md:px-6 py-6 pb-24 lg:pb-8" onClick={close}>{children}</main>
     <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-surface/95 backdrop-blur border-t border-line grid grid-cols-5" data-noprint>
