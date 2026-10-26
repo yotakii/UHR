@@ -105,7 +105,7 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 | 09b M13 performance 360 (real forms), 9-Box calibration, approval, review rewards D-28 → monthly sheet, analytics + Excel | ✅ user said next |
 | 09c succession D-23 + individual development plans D-24 | 📦 delivered, waiting for the user's test |
 | 09d M14 employee portal (demo PortalShell: top tabs, mobile bottom bar, home, team, profile) | |
-| 09 M12–M14 + development · 10 salary 2FA · 11 M16 + Reverb · 12 final verification | |
+| 10 salary 2FA · 11 M16 + Reverb · 12 «الساحة» social space (Viva Engage-like) · 13 AI agent (Claude via `AiClient`, user-scoped tools, confirm before actions) · 14 final verification — plan updated Oct 26 at the user's request | |
 
 **Task 03 delivered:**
 - Landing page: hero texts from settings, 3 cards, login card with show-password.
