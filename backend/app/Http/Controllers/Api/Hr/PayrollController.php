@@ -57,7 +57,7 @@ class PayrollController extends Controller
     public function export(Request $request, int $id): BinaryFileResponse
     {
         $s = MonthSheet::findOrFail($id);
-        SalaryVault::require($request->user());
+        SalaryVault::requireAll($request->user());
         $rows = $this->rows($request, $s);
         $path = tempnam(sys_get_temp_dir(), 'pay').'.xlsx';
         $w = new Writer(); $w->openToFile($path);
@@ -79,15 +79,18 @@ class PayrollController extends Controller
     public function certificate(Request $request, int $id): JsonResponse
     {
         $s = ServiceRequest::with(['employee', 'issuer.employee'])->whereNotNull('ref_no')->whereIn('employee_id', Directory::scoped($request->user(), 'leaves')->select('id'))->findOrFail($id);
-        return response()->json(['data' => ServiceDesk::certificate($s, SalaryVault::open($request->user()))]);
+        return response()->json(['data' => ServiceDesk::certificate($s, SalaryVault::sees($request->user(), $s->employee))]);
     }
 
     private function rows(Request $request, MonthSheet $s): array
     {
         $ids = Directory::scoped($request->user(), 'payroll')->select('id');
-        $open = SalaryVault::open($request->user());
+        $u = $request->user(); $others = SalaryVault::others($u);
         return MonthSheetRow::with('employee.department')->where('month_sheet_id', $s->id)->whereIn('employee_id', $ids)->get()->sortBy(fn ($r) => $r->employee->code)->values()
-            ->map(fn ($r) => ['id' => $r->id, 'employee' => \App\Services\Attendance\Attendance::person($r->employee), 'data' => $r->data, 'money' => $open ? $r->money : null, 'salary' => $open ? $r->salary : null])->all();
+            ->map(function ($r) use ($u, $others) {
+                $see = SalaryVault::sees($u, $r->employee, $others);
+                return ['id' => $r->id, 'employee' => \App\Services\Attendance\Attendance::person($r->employee), 'data' => $r->data, 'money' => $see ? $r->money : null, 'salary' => $see ? $r->salary : null];
+            })->all();
     }
 
     /** مجاميع الكشف: الأعداد تبقى، والمبالغ null حين تكون الرواتب مقفلة */
@@ -104,8 +107,8 @@ class PayrollController extends Controller
         $who = fn ($x) => $x ? ['ar' => $x->displayName('ar'), 'en' => $x->displayName('en')] : null;
         $months = MonthSheet::orderByDesc('month')->limit(24)->get(['id', 'month', 'status'])->map(fn ($x) => ['month' => $x->month, 'status' => $x->status]);
         return ['month' => $month, 'current_month' => Payroll::currentMonth(), 'months' => $months,
-            'masked' => ! SalaryVault::open($u),
-            'sheet' => $s ? ['id' => $s->id, 'month' => $s->month, 'status' => $s->status, 'totals' => self::totals($s->totals, SalaryVault::open($u)), 'note' => $s->note,
+            'masked' => ! ($all = (SalaryVault::others($u)['all'] ?? false)),
+            'sheet' => $s ? ['id' => $s->id, 'month' => $s->month, 'status' => $s->status, 'totals' => self::totals($s->totals, $all), 'note' => $s->note,
                 'calculated' => ['at' => $s->calculated_at?->toIso8601String(), 'by' => $who($s->calculator)], 'approved' => ['at' => $s->approved_at?->toIso8601String(), 'by' => $who($s->approver)],
                 'closed' => ['at' => $s->closed_at?->toIso8601String(), 'by' => $who($s->closer)]] : null,
             'rows' => $s ? $this->rows($request, $s) : [], 'incomplete' => $s && $s->status !== 'closed' ? $this->payroll->incomplete($s) : [],

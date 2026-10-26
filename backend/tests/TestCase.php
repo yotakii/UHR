@@ -28,10 +28,13 @@ abstract class TestCase extends BaseTestCase
         return $c;
     }
 
-    /** يفتح نافذة الرواتب (التحقق بخطوتين — SRS §4.4) لجلسة المستخدم الحالي */
-    protected function unlockSalaries(): void
+    /** يفتح نافذة الرواتب (التحقق بخطوتين — SRS §4.4) لجلسة المستخدم الحالي، ومعها إذن اطلاع معتمد على كل الشركة (10b) */
+    protected function unlockSalaries(bool $grant = true): void
     {
-        $this->withSession(['salary_vault' => ['uid' => auth()->id(), 'until' => now()->timestamp + 3600]]);
+        $this->withSession(['salary_vault' => ['uid' => auth()->id(), 'started' => now()->timestamp, 'until' => now()->timestamp + 3600]]);
+        $u = auth()->user();
+        if ($grant && $u) \App\Support\Tenant::run($u->company_id, fn () => \App\Models\SalaryGrant::create(['user_id' => $u->id, 'employee_id' => $u->employee_id, 'scope' => 'all',
+            'reason' => 'test', 'hours' => 8, 'status' => 'approved', 'expires_at' => now()->addHours(8), 'requested_by' => $u->id]));
     }
 
     /** الشركة الحالية = شركة بيانات الاختبار (الفرادة) */

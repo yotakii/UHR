@@ -33,7 +33,7 @@ export function Payroll() {
   const stLabel = { draft: L('مسودة', 'Draft'), calculated: L('محتسب', 'Calculated'), approved: L('معتمد', 'Approved'), closed: L('مُغلق', 'Closed') }
   const idx = s ? STEPS.indexOf(s.status) : -1
   const cur = d?.rows[0]?.money?.currency ?? 'USD'
-  const amt = (n: number | null | undefined) => <Masked value={n ?? null}>{money(n ?? 0, cur, lang)}</Masked>
+  const amt = (n: number | null | undefined) => <Masked others value={n ?? null}>{money(n ?? 0, cur, lang)}</Masked>
   const T = s?.totals
 
   return <div className="max-w-[1200px] mx-auto space-y-4">
@@ -46,7 +46,7 @@ export function Payroll() {
         {L('يُحتسب لكل الموظفين الحاليين من سجلات الدوام المسجلة.', 'It is calculated for every current employee from the recorded attendance.')}</Empty></Panel> : <>
       <Panel title={<span className="flex flex-wrap items-center gap-2">{label(s.month)}<Badge tone={s.status === 'closed' ? 'brand' : s.status === 'approved' ? 'info' : 'brass'}>{stLabel[s.status]}</Badge><Badge>{L('تقديري', 'Estimate')}</Badge></span>}
         action={<div className="flex flex-wrap gap-2 justify-end">
-          {d.can.export && <Btn size="sm" icon={d.masked ? <Lock size={14} /> : <Download size={14} />} onClick={() => d.masked ? openVault() : downloadSheet(s.id, s.month).catch(fail)}>Excel</Btn>}
+          {d.can.export && <Btn size="sm" icon={d.masked ? <Lock size={14} /> : <Download size={14} />} onClick={() => d.masked ? openVault('others') : downloadSheet(s.id, s.month).catch(fail)}>Excel</Btn>}
           {d.can.edit && ['draft', 'calculated'].includes(s.status) && <Btn size="sm" icon={act.isPending ? <Loader2 size={14} className="animate-spin" /> : <Calculator size={14} />} disabled={act.isPending}
             onClick={() => act.mutateAsync({ id: s.id, action: 'calculate' }).then(() => toast(L('أُعيد الاحتساب', 'Recalculated'))).catch(fail)}>{L('إعادة الاحتساب', 'Recalculate')}</Btn>}
           {d.can.decide && s.status === 'calculated' && <Btn size="sm" kind="primary" icon={<CheckCircle2 size={14} />} onClick={() => setDlg('approve')}>{L('اعتماد', 'Approve')}</Btn>}
@@ -77,7 +77,7 @@ export function Payroll() {
             <td className="num hidden md:table-cell">{r.data.absent ? <span className="text-danger">{r.data.absent}</span> : '—'}{r.data.justified_absent ? <span className="text-ink-3"> +{r.data.justified_absent} {L('مبرر', 'just.')}</span> : ''} / {r.data.leave || '—'}</td>
             <td className="num hidden lg:table-cell">{r.data.late ? <>{minsLabel(r.data.late, lang)} <span className="text-ink-3">→ {minsLabel(Math.round(r.data.deduct), lang)}</span></> : '—'}</td>
             <td className="num hidden lg:table-cell">{r.data.ot_paid ? <span className="text-brand">{minsLabel(r.data.ot_paid, lang)}</span> : '—'}{r.data.ot_raw > r.data.ot_paid ? <span className="text-ink-3 text-[11.5px]"> / {minsLabel(r.data.ot_raw, lang)}</span> : ''}</td>
-            <td className="num font-semibold"><Masked compact value={r.money}>{r.money && money(r.money.net, r.money.currency, lang)}</Masked></td></tr>)}</tbody></table>}</Panel>
+            <td className="num font-semibold"><Masked others compact value={r.money}>{r.money && money(r.money.net, r.money.currency, lang)}</Masked></td></tr>)}</tbody></table>}</Panel>
     </>}
     {row && <Drawer open onClose={() => setRow(null)} width={520}>
       <header className="flex items-center justify-between gap-3 px-5 h-14 border-b border-line-2"><h3 className="font-display font-bold text-[15px] truncate">{bi(row.employee.name, lang)}</h3>
@@ -113,7 +113,7 @@ function RowDetail({ r }: { r: SheetRow }) {
       {!!m.discipline && line(L(`جزاءات المخالفات (${t.discipline_days ?? 0} يوم)`, `Disciplinary deductions (${t.discipline_days ?? 0} d)`), money(m.discipline, m.currency, lang), 'text-danger')}
       {line(L('السلفة', 'Advance'), money(m.advance, m.currency, lang), 'text-danger')}
       <div className="flex justify-between pt-3 text-[16px] font-bold"><span>{L('الصافي', 'Net')}</span><span className="num text-brand">{money(m.net, m.currency, lang)}</span></div>
-    </div> : <ProtectedBlock masked>{null}</ProtectedBlock>}
+    </div> : <ProtectedBlock others masked>{null}</ProtectedBlock>}
     {t.incomplete_dates.length > 0 && <div className="text-[12.5px] text-danger">{L('أيام ناقصة: ', 'Incomplete: ')}<span className="num">{t.incomplete_dates.join('، ')}</span></div>}
   </div>
 }

@@ -31,7 +31,7 @@ export function Analytics() {
         {d.pay ? <Panel title={L('كتلة الرواتب حسب الإدارة', 'Payroll by department')}><div className="space-y-2.5">{d.pay.map((x, i) => <div key={x.id} className="grid grid-cols-[minmax(0,120px)_1fr] gap-3 items-center text-[13px]"><span className="truncate">{bi(x, lang)}</span>
           <div className="h-6 rounded-md bg-sub overflow-hidden relative"><div className="h-full rounded-md" style={{ width: `${x.v / maxPay * 100}%`, background: colors[i % 4], animation: `growx .7s ${i * 60}ms both`, transformOrigin: lang === 'ar' ? 'right' : 'left' }} />
             <span className="absolute inset-y-0 end-2 grid place-items-center text-[11.5px] font-semibold num">{money(x.v, d.currency, lang)}</span></div></div>)}</div></Panel>
-          : d.pay_masked ? <Panel title={L('كتلة الرواتب حسب الإدارة', 'Payroll by department')}><ProtectedBlock masked>{null}</ProtectedBlock></Panel>
+          : d.pay_masked ? <Panel title={L('كتلة الرواتب حسب الإدارة', 'Payroll by department')}><ProtectedBlock others masked>{null}</ProtectedBlock></Panel>
           : <Panel title={L('الموظفون حسب الإدارة', 'Headcount by department')}><div className="space-y-2">{d.headcount.by_dept.map(x => <div key={x.id} className="flex justify-between text-[13px]"><span>{bi(x, lang)}</span><span className="num font-semibold">{x.n}</span></div>)}</div></Panel>}
       </>}
       {tab === 'att' && <Panel title={L('خريطة الحضور حسب الإدارة', 'Attendance heatmap by department')} sub={L('آخر 10 أيام عمل — مرّر فوق الخلية للتفاصيل', 'Last 10 working days — hover a cell')} className="lg:col-span-2">

@@ -56,6 +56,8 @@ class CompanyDefaults
         ApprovalChain::firstOrCreate(['type' => 'advance'], ['levels' => [$hr]]);
         // M17: الجزاءات الأشد (حسم فوق صلاحية HR، الترفيع، الفصل) ← المدير العام
         ApprovalChain::firstOrCreate(['type' => 'penalty'], ['levels' => [['role_ar' => 'المدير العام', 'role_en' => 'General manager', 'role_key' => 'ceo']]]);
+        // إذن الاطلاع على رواتب الآخرين (المهمة 10b) ← المدير العام
+        ApprovalChain::firstOrCreate(['type' => 'salary_access'], ['levels' => [$gm]]);
         \App\Support\ViolationCatalog::seed();
         ApprovalChain::firstOrCreate(['type' => 'appointment'], ['levels' => [
             $hr + ['user_id' => null],

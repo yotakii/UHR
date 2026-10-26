@@ -458,8 +458,19 @@ Route::middleware(['auth', 'fresh'])->prefix('me/mfa')->group(function () {
     Route::post('/passkey/verify', [VaultController::class, 'passkeyVerify'])->middleware('throttle:20,1,mfa-passkey-verify');
     Route::delete('/passkey/{id}', [VaultController::class, 'removePasskey'])->whereNumber('id');
     Route::delete('/', [VaultController::class, 'reset'])->middleware('throttle:5,1,mfa-reset');
+    Route::post('/link', [VaultController::class, 'linkStart'])->middleware('throttle:20,1,mfa-link');
+    Route::get('/link/{token}', [VaultController::class, 'linkStatus'])->where('token', '[A-Za-z0-9]{40}');
+    Route::get('/link/{token}/info', [VaultController::class, 'linkInfo'])->where('token', '[A-Za-z0-9]{40}');
+    Route::post('/link/{token}', [VaultController::class, 'linkDecide'])->where('token', '[A-Za-z0-9]{40}')->middleware('throttle:20,1,mfa-link-decide');
+});
+Route::middleware(['auth', 'fresh'])->prefix('me/salary-access')->group(function () {
+    Route::get('/', [VaultController::class, 'grants']);
+    Route::post('/', [VaultController::class, 'requestGrant'])->middleware('throttle:10,1,salary-access');
+    Route::post('/{id}/cancel', [VaultController::class, 'cancelGrant'])->whereNumber('id');
 });
 Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr/vault-settings')->group(function () {
     Route::get('/', [VaultController::class, 'settings'])->middleware('perm:settings,view');
     Route::put('/', [VaultController::class, 'saveSettings'])->middleware('perm:settings,edit');
+    Route::get('/grants', [VaultController::class, 'allGrants'])->middleware('perm:settings,view');
+    Route::post('/grants/{id}/revoke', [VaultController::class, 'revokeGrant'])->whereNumber('id');
 });

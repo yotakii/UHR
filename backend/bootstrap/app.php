@@ -21,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Session\Middleware\StartSession::class,
             \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
             \App\Http\Middleware\ResolveTenant::class,
+            \App\Http\Middleware\SalaryWindow::class,
         ]);
         // على السيرفر: Nginx Proxy Manager أمام التطبيق (HTTPS) — نثق برؤوس X-Forwarded-* لمعرفة البروتوكول والعنوان الحقيقي
         $middleware->trustProxies(at: '*');

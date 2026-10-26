@@ -61,7 +61,7 @@ export function EmployeeFile({ id }: { id: number }) {
         <Panel title={L('البيانات الوظيفية', 'Employment')}>
           <KV k={L('تاريخ المباشرة', 'Start date')} v={fmtDate(e.hire_date, lang)} /><KV k={L('مقر العمل', 'Location')} v={bi(e.city, lang)} />
           <KV k={L('الدوام', 'Shift')} v={<span className="num ltr inline-block">{e.shift}</span>} />
-          {e.can.salary && <KV k={L('الراتب الشامل', 'Total pay')} v={<Masked value={e.salary}><span className="num font-semibold">{e.salary && money(e.salary.amount, e.salary.currency, lang)}</span></Masked>} />}
+          {e.can.salary && <KV k={L('الراتب الشامل', 'Total pay')} v={<Masked others value={e.salary}><span className="num font-semibold">{e.salary && money(e.salary.amount, e.salary.currency, lang)}</span></Masked>} />}
           {e.end_date && <KV k={L('تاريخ انتهاء الخدمة', 'End date')} v={fmtDate(e.end_date, lang)} />}
         </Panel>
         <Panel title={L('الإجازات', 'Leave')}>

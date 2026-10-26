@@ -22,7 +22,7 @@ export function CertificatePage({ id, hr, back }: { id: number; hr: boolean; bac
       `${c.company.en} certifies that ${name} has been employed as ${title} since ${since} and remains in service.${to ? ` Issued at the employee’s request for: ${to}.` : ''}`)
   return <div className="max-w-[900px] mx-auto space-y-3">
     <a href={back} className="inline-flex items-center gap-1.5 text-[13.5px] text-ink-2 hover:text-ink" data-noprint><Back size={15} />{L('رجوع', 'Back')}</a>
-    {c.masked ? <ProtectedBlock masked title={L('شهادة الراتب محمية', 'The salary certificate is protected')}>{null}</ProtectedBlock> :
+    {c.masked ? <ProtectedBlock others={hr} masked title={L('شهادة الراتب محمية', 'The salary certificate is protected')}>{null}</ProtectedBlock> :
     <Paper code={c.form} title={c.kind === 'salary_cert' ? L('شهادة راتب', 'Salary certificate') : L('شهادة عمل', 'Employment certificate')} sub={L('إلى من يهمه الأمر', 'To whom it may concern')} subject={c.ref_no}>
       <div className="flex flex-wrap justify-between gap-2 text-[13px] text-ink-2 mb-5"><span>{L('الرقم', 'No.')}: <b className="ltr inline-block text-ink">{c.ref_no}</b></span><span>{L('التاريخ', 'Date')}: <b className="num text-ink">{fmtDate(c.issued_at, lang)}</b></span></div>
       <p className="text-[15px] leading-9">{text}</p>

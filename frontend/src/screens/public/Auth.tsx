@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query'
 import { KeyRound, Nfc, MailCheck, Eye, EyeOff } from 'lucide-react'
 import { useL } from '../../lib/store'
 import { api, ApiError } from '../../lib/api'
-import { go, href, useRoute } from '../../lib/router'
+import { go, href, navigate, useRoute } from '../../lib/router'
 import { useLogin } from '../../lib/session'
 import { Btn, Field } from '../../ui/kit'
 import { PasswordFields, passwordOk } from '../../ui/password'
@@ -13,13 +13,13 @@ import { AuthCard } from './parts'
 const isAttendanceDevice = () => { try { return !!localStorage.getItem('uhr-device') } catch { return false } }
 
 /** بطاقة الدخول: للموظفين وموارد الشركات والمتقدمين ومدير المنصة — كلٌّ لواجهته */
-export function LoginCard({ sticky = true }: { sticky?: boolean }) {
+export function LoginCard({ sticky = true, after }: { sticky?: boolean; after?: string }) {
   const L = useL()
   const [email, setEmail] = useState(''); const [pw, setPw] = useState(''); const [show, setShow] = useState(false)
   const login = useLogin()
   const err = login.error instanceof ApiError ? (login.error.field('email') ?? login.error.field('password') ?? login.error.message) : login.error ? L('تعذّر الاتصال بالخادم. تحقق من الشبكة وحاول مجدداً.', 'Could not reach the server. Check your connection and try again.') : ''
   const locked = login.error instanceof ApiError && login.error.code === 'locked'
-  const submit = (e: FormEvent) => { e.preventDefault(); if (!login.isPending) login.mutate({ email: email.trim(), password: pw }, { onSuccess: () => go('') }) }
+  const submit = (e: FormEvent) => { e.preventDefault(); if (!login.isPending) login.mutate({ email: email.trim(), password: pw }, { onSuccess: () => after ? navigate(after) : go('') }) }
   const edit = (f: (v: string) => void) => (e: React.ChangeEvent<HTMLInputElement>) => { f(e.target.value); if (login.error && !locked) login.reset() }
   return <section className={`bg-surface border border-line rounded-2xl ${sticky ? 'lg:sticky lg:top-24' : ''}`}>
     <div className="p-6 border-b border-line-2">
@@ -40,8 +40,8 @@ export function LoginCard({ sticky = true }: { sticky?: boolean }) {
   </section>
 }
 
-export function Login() {
-  return <div className="max-w-md mx-auto px-5 py-10"><LoginCard sticky={false} /></div>
+export function Login({ after }: { after?: string }) {
+  return <div className="max-w-md mx-auto px-5 py-10"><LoginCard sticky={false} after={after} /></div>
 }
 
 export function Forgot() {

@@ -8,6 +8,9 @@ export class ApiError extends Error {
   field(k: string) { return this.errors[k]?.[0] }
 }
 
+/** مستمع لهيدر X-Salary-Remaining (نافذة الرواتب تتجدد مع الاستخدام — lib/vault.ts) */
+export const salaryHeader: { fn: ((seconds: number) => void) | null } = { fn: null }
+
 export function xsrf() {
   const m = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]*)/)
   return m ? decodeURIComponent(m[1]) : ''
@@ -24,6 +27,8 @@ export async function api<T>(path: string, init?: RequestInit & { json?: unknown
     body: json !== undefined ? JSON.stringify(json) : rest.body,
     headers: { Accept: 'application/json', ...contentType, 'Accept-Language': getPrefs().lang, 'X-XSRF-TOKEN': xsrf(), ...rest.headers },
   })
+  const sr = res.headers.get('X-Salary-Remaining')
+  if (sr !== null && salaryHeader.fn) salaryHeader.fn(Number(sr))
   const text = await res.text()
   let body: Record<string, unknown> | null = null
   try { body = text ? JSON.parse(text) : null } catch { /* استجابة غير JSON */ }

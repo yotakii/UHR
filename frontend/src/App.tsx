@@ -15,6 +15,7 @@ import { DevKit } from './screens/DevKit'
 import { CandidateHome } from './screens/candidate/CandidateHome'
 import { EmployeeApp } from './screens/employee/EmployeeApp'
 import { Terminal } from './screens/kiosk/Terminal'
+import { ApproveLink } from './screens/public/ApproveLink'
 
 function Splash() {
   return <div className="min-h-full grid place-items-center app-glow"><div className="flex flex-col items-center gap-4"><Logo h={34} /><Loader2 className="animate-spin text-brand" size={22} /></div></div>
@@ -33,6 +34,8 @@ function Root() {
   const user = me.data
   if (!user) return <Public />
   if (user.must_change_password) return <ForceChangePassword user={user} />
+  // موافقة الموبايل على فتح الرواتب في حاسوب (10b)
+  if (route.page === 'approve' && route.parts[1]) return <ApproveLink token={route.parts[1]} user={user} />
   // صفحات البوابة العامة متاحة للجميع؛ الصفحة الرئيسية لكل حساب = واجهته
   if (route.page && PUBLIC_PAGES.includes(route.page) && route.page !== 'login') return <Public />
   if (user.portal === 'platform') return <PlatformApp user={user} />

@@ -27,6 +27,7 @@ export function Public() {
         : page === 'apply' && slug && code ? <Apply slug={slug} code={code} refCode={query.ref} />
         : page === 'applied' ? <Applied />
         : page === 'login' ? <Login />
+        : page === 'approve' && parts[1] ? <Login after={`/approve/${parts[1]}`} />
         : page === 'forgot' ? <Forgot />
         : page === 'test' && parts[1] ? <TakeTest token={parts[1]} />
         : page === 'reset' ? <Reset token={query.token ?? ''} email={query.email ?? ''} />

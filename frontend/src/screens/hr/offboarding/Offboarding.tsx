@@ -112,7 +112,7 @@ function Detail({ id, d }: { id: number; d: OffboardingPage }) {
           : <Btn size="sm" kind="primary" onClick={() => run(`notices/${n.id}/send`).then(() => toast(L('أُرسل الإشعار', 'Notice sent'))).catch(fail)}>{L('اعتماد وإرسال', 'Approve & send')}</Btn>}</li>)}</ul></Panel>}
       {(r.settlement || r.settlement_masked) && <Panel title={L('المخالصة النهائية', 'Final settlement')} sub={L('F-33 — تقديري وفق بيانات النظام، يُراجع من الإدارة المالية', 'F-33 — estimate from system data, reviewed by Finance')}
         action={r.can.close && <Btn kind="danger" onClick={() => setDlg('close')}>{L('اعتماد إنهاء الخدمة', 'Close employment')}</Btn>}>
-        {r.settlement ? <SettlementTable s={r.settlement} /> : <ProtectedBlock masked>{null}</ProtectedBlock>}
+        {r.settlement ? <SettlementTable s={r.settlement} /> : <ProtectedBlock others masked>{null}</ProtectedBlock>}
         {r.status === 'closed' && <div className="mt-4 flex flex-wrap items-center gap-3"><span className="stamp text-danger">{L('انتهت الخدمة', 'SERVICE ENDED')} — {fmtDate(r.last_day, lang)}</span></div>}
       </Panel>}
       {r.status === 'closed' && r.followups && <Panel title={L('ما بعد الخروج', 'After exit')}>

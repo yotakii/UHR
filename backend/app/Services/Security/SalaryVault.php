@@ -4,7 +4,9 @@ namespace App\Services\Security;
 
 use App\Exceptions\ApiException;
 use App\Models\MfaFactor;
+use App\Models\Employee;
 use App\Models\Passkey;
+use App\Models\SalaryGrant;
 use App\Models\User;
 use App\Notifications\SalaryCode;
 use App\Support\Audit;
@@ -26,22 +28,78 @@ class SalaryVault
 
     // ——— حالة الفتح ———
 
-    public static function open(?User $u): bool
+    /** الثواني المتبقية بعد آخر تمديد في هذا الطلب (يرسلها الخادم في الهيدر X-Salary-Remaining) */
+    public static ?int $window = null;
+
+    private static function isOpen(?User $u): bool
     {
         if (! $u) return false;
         $s = session('salary_vault');
         return is_array($s) && ($s['uid'] ?? null) === $u->id && ($s['until'] ?? 0) > now()->timestamp;
     }
 
+    /** مفتوحة؟ وكل اطلاع على بيانات رواتب يمدّد النافذة (unlock_minutes من الآن) بحد أقصى max_minutes من لحظة التحقق */
+    public static function open(?User $u): bool
+    {
+        if (! self::isOpen($u)) return false;
+        $s = session('salary_vault'); $c = Settings::vault();
+        $cap = ($s['started'] ?? $s['until']) + 60 * (int) $c['max_minutes'];
+        $until = min($cap, now()->timestamp + 60 * (int) $c['unlock_minutes']);
+        if ($until > $s['until']) session()->put('salary_vault', ['until' => $until] + $s);
+        self::$window = max($until, $s['until']) - now()->timestamp;
+        return true;
+    }
+
     public static function remaining(User $u): int
     {
-        return self::open($u) ? max(0, (int) session('salary_vault')['until'] - now()->timestamp) : 0;
+        return self::isOpen($u) ? max(0, (int) session('salary_vault')['until'] - now()->timestamp) : 0;
+    }
+
+    // ——— إذن الوصول لرواتب الآخرين (10b) ———
+
+    /** يحتاج المستخدم إذناً معتمداً ليرى رواتب غيره؟ (الأدوار المعفاة = المعتمِد) */
+    public static function needsGrant(User $u): bool
+    {
+        $c = Settings::vault();
+        if (! $c['grant_required']) return false;
+        $u->loadMissing('roles');
+        return ! ($c['grant_exempt_roles'] && $u->hasRole(...$c['grant_exempt_roles']));
+    }
+
+    public static function grant(User $u): ?SalaryGrant
+    {
+        return SalaryGrant::where('user_id', $u->id)->where('status', 'approved')->where('expires_at', '>', now())->latest('expires_at')->first();
+    }
+
+    /** نطاق رواتب الآخرين المتاح الآن: null = لا شيء، ['all' => true] أو ['all' => false, 'dept' => id] */
+    public static function others(?User $u): ?array
+    {
+        if (! $u || ! self::open($u)) return null;
+        if (! self::needsGrant($u)) return ['all' => true, 'dept' => null];
+        $g = self::grant($u);
+        return $g ? ['all' => $g->scope === 'all', 'dept' => $g->department_id] : null;
+    }
+
+    /** يرى راتب هذا الموظف؟ ملفه هو: التحقق يكفي، وغيره: حسب الإذن */
+    public static function sees(User $u, ?Employee $e, ?array $others = null): bool
+    {
+        if (! $e) return false;
+        if ($u->employee_id && $u->employee_id === $e->id) return self::open($u);
+        $o = func_num_args() >= 3 ? $others : self::others($u);
+        return $o !== null && ($o['all'] || $o['dept'] === $e->department_id);
+    }
+
+    /** يرفض تصدير رواتب الآخرين بلا فتح وإذن على كل الشركة */
+    public static function requireAll(User $u): void
+    {
+        self::require($u);
+        if (! (self::others($u)['all'] ?? false)) throw new ApiException(L::t('تحتاج إذن اطلاع على رواتب كل الشركة من المدير العام.', 'You need company-wide salary access approved by the general manager.'), 'salary_grant_required', 403);
     }
 
     /** يرفض الطلب إن كانت الرواتب مقفلة (تصدير الكشف) */
     public static function require(User $u): void
     {
-        if (! self::open($u)) throw new ApiException(L::t('بيانات الرواتب مقفلة — تحقق من هويتك أولاً.', 'Salary data is locked — verify your identity first.'), 'salary_locked', 403);
+        if (! self::isOpen($u)) throw new ApiException(L::t('بيانات الرواتب مقفلة — تحقق من هويتك أولاً.', 'Salary data is locked — verify your identity first.'), 'salary_locked', 403);
     }
 
     public function lock(User $u): void
@@ -55,11 +113,16 @@ class SalaryVault
         $f = MfaFactor::where('user_id', $u->id)->first();
         $last = DB::table('mfa_audit')->where('user_id', $u->id)->where('ok', true)->orderByDesc('at')->orderByDesc('id')->first();
         $otp = Cache::get($this->key('otp', $u));
-        return ['unlocked' => self::open($u), 'remaining' => self::remaining($u), 'lockout' => $this->lockout($u),
+        $grants = SalaryGrant::with('department')->where('user_id', $u->id)->latest('id')->limit(1)->get();
+        $g = $grants->first();
+        return ['unlocked' => self::isOpen($u), 'remaining' => self::remaining($u), 'lockout' => $this->lockout($u),
+            'grant' => ['needed' => self::needsGrant($u), 'hours' => (int) $cfg['grant_hours'],
+                'last' => $g ? ['id' => $g->id, 'status' => $g->state(), 'scope' => $g->scope, 'department' => $g->department ? ['ar' => $g->department->name_ar, 'en' => $g->department->name_en] : null,
+                    'expires_at' => $g->expires_at?->toIso8601String(), 'created_at' => $g->created_at?->toIso8601String()] : null],
             'enrolled' => (bool) $f?->enrolled_at, 'backup_left' => $f ? count($f->backup_hashes ?? []) : 0,
             'passkeys' => Passkey::where('user_id', $u->id)->orderBy('id')->get()->map(fn ($p) => ['id' => $p->id, 'label' => $p->label, 'created_at' => $p->created_at?->toIso8601String(), 'last_used_at' => $p->last_used_at?->toIso8601String()])->values(),
             'last_ok' => $last ? ['at' => \Illuminate\Support\Carbon::parse($last->at)->toIso8601String(), 'method' => $last->method] : null,
-            'methods' => $cfg['methods'], 'unlock_minutes' => (int) $cfg['unlock_minutes'], 'otp_minutes' => (int) $cfg['otp_minutes'],
+            'methods' => $cfg['methods'], 'unlock_minutes' => (int) $cfg['unlock_minutes'], 'max_minutes' => (int) $cfg['max_minutes'], 'otp_minutes' => (int) $cfg['otp_minutes'], 'link_seconds' => (int) $cfg['link_seconds'],
             'otp' => $otp && $otp['exp'] > now()->timestamp ? ['expires_in' => $otp['exp'] - now()->timestamp, 'to' => self::maskEmail($u->email)] : null,
             'destination' => self::maskEmail($u->email)];
     }
@@ -102,7 +165,7 @@ class SalaryVault
     {
         $this->log($u, true, $method);
         Cache::forget($this->key('fail', $u));
-        session()->put('salary_vault', ['uid' => $u->id, 'until' => now()->timestamp + 60 * (int) Settings::vault()['unlock_minutes']]);
+        session()->put('salary_vault', ['uid' => $u->id, 'started' => now()->timestamp, 'until' => now()->timestamp + 60 * (int) Settings::vault()['unlock_minutes']]);
         return $this->state($u);
     }
 
@@ -246,6 +309,70 @@ class SalaryVault
         if (! hash_equals($otp['hash'], hash_hmac('sha256', preg_replace('/\D/', '', $code), (string) config('app.key')))) $this->wrong($u, 'phone');
         Cache::forget($this->key('otp', $u));
         return $this->unlock($u, 'phone');
+    }
+
+    // ——— موافقة من الموبايل (10b): QR على الحاسوب ← الموبايل المسجّل دخوله بنفس الحساب يوافق ← يُفتح الحاسوب ———
+
+    private function linkKey(string $t): string { return 'vault:link:'.hash('sha256', $t); }
+
+    public function linkStart(User $u): array
+    {
+        $this->method('link');
+        $this->guard($u);
+        $t = \Illuminate\Support\Str::random(40);
+        $sec = (int) Settings::vault()['link_seconds'];
+        $ua = (string) request()?->userAgent();
+        $device = trim(implode(' · ', array_filter([
+            str_contains($ua, 'Windows') ? 'Windows' : (str_contains($ua, 'Android') ? 'Android' : (preg_match('/iPhone|iPad/', $ua) ? 'iOS' : (str_contains($ua, 'Mac') ? 'macOS' : (str_contains($ua, 'Linux') ? 'Linux' : null)))),
+            str_contains($ua, 'Edg/') ? 'Edge' : (str_contains($ua, 'Chrome/') ? 'Chrome' : (str_contains($ua, 'Firefox/') ? 'Firefox' : (str_contains($ua, 'Safari/') ? 'Safari' : null))),
+        ])));
+        Cache::put($this->linkKey($t), ['uid' => $u->id, 'sid' => session()->getId(), 'status' => 'pending', 'exp' => now()->timestamp + $sec, 'device' => $device ?: null, 'ip' => request()?->ip(), 'at' => now()->toIso8601String()], now()->addSeconds($sec + 60));
+        session()->put('vault_link', $t);
+        return ['token' => $t, 'url' => rtrim((string) config('app.frontend_url'), '/').'/approve/'.$t, 'expires_in' => $sec];
+    }
+
+    private function link(string $t): ?array
+    {
+        $l = Cache::get($this->linkKey($t));
+        return $l && $l['exp'] > now()->timestamp ? $l : null;
+    }
+
+    /** الحاسوب يسأل كل ثانيتين: عند الموافقة تُفتح الرواتب في جلسته هو */
+    public function linkStatus(User $u, string $t): array
+    {
+        $l = $this->link($t);
+        if (! $l || $l['uid'] !== $u->id || session('vault_link') !== $t) return ['status' => 'expired'];
+        if ($l['status'] === 'pending') return ['status' => 'pending', 'expires_in' => $l['exp'] - now()->timestamp];
+        Cache::forget($this->linkKey($t));
+        session()->forget('vault_link');
+        if ($l['status'] === 'rejected') return ['status' => 'rejected'];
+        return ['status' => 'approved', 'state' => $this->unlock($u, 'link')];
+    }
+
+    /** الموبايل: تفاصيل الطلب (نفس الحساب فقط، ومن جلسة غير جلسة الحاسوب) */
+    public function linkInfo(User $u, string $t): array
+    {
+        $l = $this->linkFor($u, $t);
+        return ['status' => $l['status'], 'device' => $l['device'], 'ip' => $l['ip'], 'at' => $l['at'], 'expires_in' => $l['exp'] - now()->timestamp];
+    }
+
+    public function linkDecide(User $u, string $t, bool $approve): array
+    {
+        $l = $this->linkFor($u, $t);
+        if ($l['status'] !== 'pending') throw new ApiException(L::t('تم الرد على هذا الطلب.', 'This request was already answered.'), 'link_answered', 409);
+        $l['status'] = $approve ? 'approved' : 'rejected';
+        Cache::put($this->linkKey($t), $l, now()->addSeconds(max(5, $l['exp'] - now()->timestamp + 60)));
+        if (! $approve) $this->log($u, false, 'link');
+        return ['status' => $l['status']];
+    }
+
+    private function linkFor(User $u, string $t): array
+    {
+        $l = $this->link($t);
+        if (! $l) throw new ApiException(L::t('انتهت صلاحية الطلب — اطلب رمزاً جديداً من الحاسوب.', 'This request expired — start a new one on the computer.'), 'link_expired', 410);
+        if ($l['uid'] !== $u->id) throw new ApiException(L::t('هذا الطلب لحساب آخر — سجّل الدخول بحسابك نفسه على الموبايل.', 'This request belongs to another account — sign in with the same account on your phone.'), 'link_other_user', 403);
+        if ($l['sid'] === session()->getId()) throw new ApiException(L::t('افتح الرابط من موبايلك وليس من نفس المتصفح.', 'Open the link on your phone, not in the same browser.'), 'link_same_device', 409);
+        return $l;
     }
 
     // ——— البصمة / Windows Hello (WebAuthn) ———

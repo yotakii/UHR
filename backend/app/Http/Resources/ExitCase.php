@@ -65,7 +65,7 @@ class ExitCase
         ];
         $money = ($hr && Perm::can($viewer, 'payroll')) || $self;
         $money = $money && in_array($r->status, ['clearance', 'closed'], true);
-        $open = \App\Services\Security\SalaryVault::open($viewer);
+        $open = $self ? \App\Services\Security\SalaryVault::open($viewer) : \App\Services\Security\SalaryVault::sees($viewer, $r->employee);
         $out['settlement'] = $money && $open ? ($r->status === 'closed' ? $r->settlement : ExitFlow::settlement($r)) : null;
         $out['settlement_masked'] = $money && ! $open;
         $out['can'] = ['interview' => $hr && $r->kind === 'resignation' && in_array($r->status, Resignation::PENDING, true),

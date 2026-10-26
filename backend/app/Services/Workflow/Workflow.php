@@ -45,7 +45,7 @@ class Workflow
     }
 
     /** بدء المسار: إنشاء الخطوات وتفعيل أول مستوى قابل للتنفيذ */
-    public function start(Model $subject, Employee $for, array $levels, User $by): Model
+    public function start(Model $subject, ?Employee $for, array $levels, User $by): Model
     {
         foreach (array_values($levels) as $i => $lv) {
             RequestStep::create(['subject_type' => $subject->getMorphClass(), 'subject_id' => $subject->getKey(), 'level' => $i + 1, 'role_key' => $lv['role_key'],
