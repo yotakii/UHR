@@ -138,13 +138,13 @@ function PlanForm({ d, plan, onClose }: { d: DevPage; plan: Plan | null; onClose
   const e = save.error instanceof ApiError ? save.error : null
   const setAct = (i: number, p: Partial<PlanInput['activities'][number]>) => setV({ ...v, activities: v.activities.map((a, j) => j === i ? { ...a, ...p } : a) })
   return <Modal open onClose={onClose} width={760} title={plan ? L('تعديل خطة التطوير', 'Edit development plan') : L('خطة تطوير فردية', 'Individual development plan')}
-    footer={<><Btn onClick={onClose}>{L('إلغاء', 'Cancel')}</Btn><Btn kind="primary" disabled={save.isPending} onClick={() => save.mutate(v, { onSuccess: () => { toast(L('حُفظت الخطة', 'Plan saved')); onClose() } })}>{L('حفظ', 'Save')}</Btn></>}>
+    footer={<><Btn onClick={onClose}>{L('إلغاء', 'Cancel')}</Btn><Btn kind="primary" disabled={save.isPending} onClick={() => save.mutate({ ...v, goals: v.goals.filter(g => g.text.trim()), activities: v.activities.filter(a => a.title.trim() || a.due_on) }, { onSuccess: () => { toast(L('حُفظت الخطة', 'Plan saved')); onClose() } })}>{L('حفظ', 'Save')}</Btn></>}>
     <div className="grid sm:grid-cols-2 gap-3">
       {!plan && <Field req label={L('الموظف', 'Employee')} error={e?.field('employee_id')}><select className="field" value={v.employee_id} onChange={x => setV({ ...v, employee_id: x.target.value ? Number(x.target.value) : '' })}><option value="">—</option>{d.employees.map(x => <option key={x.id} value={x.id}>{lang === 'ar' ? x.ar : x.en} · {x.code}</option>)}</select></Field>}
       <Field req label={L('عنوان الخطة', 'Plan title')} error={e?.field('title')} className={plan ? 'sm:col-span-2' : ''}><input className="field" value={v.title} onChange={x => setV({ ...v, title: x.target.value })} /></Field>
       <Field label={L('الفجوات', 'Gaps')} className="sm:col-span-2"><textarea className="field" value={v.gaps} onChange={x => setV({ ...v, gaps: x.target.value })} /></Field>
     </div>
-    <Field div label={L('الأهداف', 'Goals')} className="mt-3" error={e?.field('goals')}><div className="space-y-2">{v.goals.map((g, i) => <div key={i} className="flex gap-2"><input className="field flex-1 min-w-0" value={g.text} onChange={x => setV({ ...v, goals: v.goals.map((y, j) => j === i ? { ...y, text: x.target.value } : y) })} />
+    <Field div req label={L('الأهداف', 'Goals')} className="mt-3" error={e?.field('goals') ?? e?.field('goals.0.text')}><div className="space-y-2">{v.goals.map((g, i) => <div key={i} className="flex gap-2"><input className="field flex-1 min-w-0" value={g.text} onChange={x => setV({ ...v, goals: v.goals.map((y, j) => j === i ? { ...y, text: x.target.value } : y) })} />
       {v.goals.length > 1 && <button className="p-2 text-ink-3 hover:text-danger" aria-label={L('حذف', 'Remove')} onClick={() => setV({ ...v, goals: v.goals.filter((_, j) => j !== i) })}><Trash2 size={15} /></button>}</div>)}
       {v.goals.length < 10 && <Btn size="sm" icon={<Plus size={14} />} onClick={() => setV({ ...v, goals: [...v.goals, { text: '' }] })}>{L('هدف', 'Goal')}</Btn>}</div></Field>
     <Field div label={L('الأنشطة (مسؤول وموعد)', 'Activities (owner and date)')} className="mt-3"><div className="space-y-2">{v.activities.map((a, i) => <div key={a.id ?? `n${i}`} className="rounded-xl border border-line-2 p-2 grid sm:grid-cols-[1fr_130px] gap-2">
@@ -154,7 +154,7 @@ function PlanForm({ d, plan, onClose }: { d: DevPage; plan: Plan | null; onClose
       <div className="flex gap-2"><input className="field num flex-1 min-w-0" type="date" value={a.due_on} onChange={x => setAct(i, { due_on: x.target.value })} /><button className="p-2 text-ink-3 hover:text-danger" aria-label={L('حذف', 'Remove')} onClick={() => setV({ ...v, activities: v.activities.filter((_, j) => j !== i) })}><Trash2 size={15} /></button></div>
       {(e?.field(`activities.${i}.title`) || e?.field(`activities.${i}.due_on`)) && <p className="sm:col-span-2 text-[12px] text-danger">{e?.field(`activities.${i}.title`) ?? e?.field(`activities.${i}.due_on`)}</p>}</div>)}
       {v.activities.length < 20 && <Btn size="sm" icon={<Plus size={14} />} onClick={() => setV({ ...v, activities: [...v.activities, { title: '', kind: 'course', owner_employee_id: '', due_on: '' }] })}>{L('نشاط', 'Activity')}</Btn>}</div></Field>
-    {e && !Object.keys(e.errors).length && <p className="text-danger text-[13px] mt-2">{e.message}</p>}
+    {e && <p role="alert" className="text-danger text-[13px] mt-3">{Object.values(e.errors)[0]?.[0] ?? e.message}</p>}
   </Modal>
 }
 
@@ -241,6 +241,7 @@ function SPlanForm({ d, plan, onClose }: { d: DevPage; plan: SPlan | null; onClo
     <Field label={L('سبب اعتباره حرجاً', 'Why it is critical')} className="mt-3"><textarea className="field" value={v.reason} onChange={x => setV({ ...v, reason: x.target.value })} /></Field>
     <Field div req label={L('الكفاءات المطلوبة', 'Required competencies')} className="mt-3" error={e?.field('competencies')}><div className="flex flex-wrap gap-2">{d.competencies.map(c => { const on = v.competencies.includes(c.id)
       return <button key={c.id} type="button" onClick={() => setV({ ...v, competencies: on ? v.competencies.filter(x => x !== c.id) : [...v.competencies, c.id] })} className={`rounded-lg border px-3 h-9 text-[13px] ${on ? 'border-brand bg-brand-soft text-brand font-semibold' : 'border-line'}`}>{bi(c, lang)}</button> })}</div></Field>
+    {e && <p role="alert" className="text-danger text-[13px] mt-3">{Object.values(e.errors)[0]?.[0] ?? e.message}</p>}
   </Modal>
 }
 
