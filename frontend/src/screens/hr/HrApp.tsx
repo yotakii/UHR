@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed, Megaphone, Gift, ClipboardCheck, SlidersHorizontal, Sprout } from 'lucide-react'
+import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed, Megaphone, Gift, ClipboardCheck, SlidersHorizontal, Sprout, KeyRound } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { useRoute } from '../../lib/router'
 import { can, type SessionUser } from '../../lib/session'
@@ -25,6 +25,7 @@ import { Employees } from './employees/Employees'
 import { EmployeeFile } from './employees/EmployeeFile'
 import { OrgChart } from './employees/OrgChart'
 import { DocumentSettings } from './DocumentSettings'
+import { VaultSettings } from './VaultSettings'
 import { Attendance } from './attendance/Attendance'
 import { PolicySettings } from './PolicySettings'
 import { Devices } from './Devices'
@@ -109,6 +110,7 @@ export function HrApp({ user }: { user: SessionUser }) {
     { item: { to: '/hr/settings/performance', icon: <SlidersHorizontal size={17} />, label: L('إعدادات الأداء والتقييم', 'Performance settings'), group: g4 }, module: u => can(u, 'settings', 'edit') && can(u, 'performance'), view: () => <PerformanceSettings /> },
     { item: { to: '/hr/settings/devices', icon: <Nfc size={18} />, label: L('أجهزة الحضور', 'Attendance devices'), group: g4 }, module: u => can(u, 'attendance', 'edit'), view: () => <Devices /> },
     { item: { to: '/hr/settings/recruitment', icon: <Scale size={18} />, label: L('قواعد التوظيف والمطابقة', 'Recruitment & matching rules'), group: g4 }, module: u => can(u, 'settings') || can(u, 'candidates'), view: () => <RecruitmentSettings /> },
+    { item: { to: '/hr/settings/security', icon: <KeyRound size={18} />, label: L('حماية الرواتب', 'Salary protection'), group: g4 }, module: u => can(u, 'settings'), view: () => <VaultSettings /> },
     { item: { to: '/hr/settings/documents', icon: <FolderCog size={18} />, label: L('الملفات الإضافية للموظفين', 'Employee documents'), group: g4 }, module: u => can(u, 'settings') && can(u, 'employees'), view: () => <DocumentSettings /> },
     { item: { to: '/hr/settings/violations', icon: <BookOpen size={18} />, label: L('دليل المخالفات', 'Violations catalogue'), group: g4 }, module: 'discipline', view: () => <ViolationSettings /> },
     { item: { to: '/hr/settings/exit', icon: <DoorClosed size={18} />, label: L('إعدادات الخروج', 'Exit settings'), group: g4 }, module: u => can(u, 'settings', 'edit'), view: () => <ExitSettings /> },

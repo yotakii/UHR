@@ -12,6 +12,7 @@ use OpenSpout\Common\Entity\Row;
 use OpenSpout\Common\Entity\Style\Style;
 use OpenSpout\Writer\XLSX\Entity\SheetView;
 use OpenSpout\Writer\XLSX\Writer;
+use App\Services\Security\SalaryVault;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /** التحليلات (Analytics في الديمو) + تصدير كل جدول إلى Excel (ورقة لكل تقرير) */
@@ -21,12 +22,14 @@ class AnalyticsController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        return response()->json($this->analytics->build(Perm::can($request->user(), 'payroll')));
+        $can = Perm::can($request->user(), 'payroll');
+        $open = SalaryVault::open($request->user());
+        return response()->json($this->analytics->build($can && $open) + ['pay_masked' => $can && ! $open]);
     }
 
     public function export(Request $request): BinaryFileResponse
     {
-        $d = $this->analytics->build(Perm::can($request->user(), 'payroll'));
+        $d = $this->analytics->build(Perm::can($request->user(), 'payroll') && SalaryVault::open($request->user()));
         $path = tempnam(sys_get_temp_dir(), 'ana').'.xlsx';
         $w = new Writer(); $w->openToFile($path);
         $bold = (new Style())->setFontBold();

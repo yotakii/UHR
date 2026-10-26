@@ -185,6 +185,7 @@ class ExitTest extends TestCase
         $this->postJson("/api/hr/offboarding/{$id}/exit", ['answers' => ['why' => 'فرصة أفضل'], 'rating' => 4, 'would_return' => true, 'rehire' => false, 'noncompete' => true, 'rights' => true])
             ->assertUnprocessable()->assertJsonPath('code', 'rehire_reason_required');
         $this->postJson("/api/hr/offboarding/{$id}/exit", ['answers' => ['why' => 'فرصة أفضل'], 'rating' => 4, 'would_return' => true, 'rehire' => true, 'noncompete' => true, 'rights' => true])->assertOk();
+        $this->unlockSalaries();
         $c = $this->postJson("/api/hr/offboarding/{$id}/close")->assertOk()->json('data');
         $this->assertSame('closed', $c['status']);
         $this->assertFalse($c['settlement']['notice_short']);   // أُعفي

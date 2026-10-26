@@ -99,14 +99,14 @@ class ServiceDesk
     }
 
     /** بيانات الشهادة للطباعة (Paper) */
-    public static function certificate(ServiceRequest $s): array
+    public static function certificate(ServiceRequest $s, bool $open = false): array
     {
         $e = $s->employee;
         $issuer = $s->issuer;
         return ['ref_no' => $s->ref_no, 'kind' => $s->kind, 'issued_at' => $s->issued_at?->toIso8601String(), 'addressee' => $s->addressee, 'notify_consent' => $s->notify_consent,
             'employee' => ['name' => ['ar' => $e->name, 'en' => $e->name_en], 'gender' => $e->gender, 'code' => $e->code, 'title' => ['ar' => $e->title_ar, 'en' => $e->title_en],
                 'national_id' => $e->national_id, 'hire_date' => $e->hire_date?->toDateString()],
-            'salary' => $s->kind === 'salary_cert' ? ['amount' => (float) $e->salary, 'currency' => $e->currency] : null,
+            'salary' => $s->kind === 'salary_cert' ? ['amount' => $open ? (float) $e->salary : null, 'currency' => $e->currency] : null, 'masked' => $s->kind === 'salary_cert' && ! $open,
             'company' => ['ar' => Settings::company('name_ar'), 'en' => Settings::company('name_en')],
             'issuer' => $issuer ? ['ar' => $issuer->displayName('ar'), 'en' => $issuer->displayName('en')] : null, 'form' => $s->kind === 'salary_cert' ? 'SAL' : 'EMP'];
     }

@@ -5,6 +5,7 @@ import { ApiError } from '../../lib/api'
 import { navigate, useRoute } from '../../lib/router'
 import { useCancelService, useMyServices, useSubmitService, type ServiceInput, type ServiceKind } from '../../lib/payroll'
 import { Btn, Empty, Field, Modal, PageHead, Panel, toast } from '../../ui/kit'
+import { Masked } from '../../ui/vault'
 import { DecisionDialog } from '../../ui/decision'
 import { LeaveStatus, Period, StepsPath } from './parts'
 
@@ -28,7 +29,7 @@ export function MyServices({ base }: { base: string }) {
       {(d?.kinds ?? []).map(k => <button key={k.key} onClick={() => setOpen(k.key)} className="hoverlift rounded-2xl border border-line bg-surface p-4 flex items-center gap-3 text-start">
         <span className="size-11 rounded-xl grid place-items-center bg-brand-soft text-brand shrink-0">{ICONS[k.key]}</span>
         <span className="min-w-0"><span className="block font-semibold text-[13.5px]">{bi(k, lang)}</span>
-          {k.key === 'advance' && av && <span className="block text-[12px] text-ink-3">{L('المتاح الآن', 'Available now')}: <span className="num">{money(av.available, av.currency, lang)}</span></span>}</span></button>)}
+          {k.key === 'advance' && av && <span className="block text-[12px] text-ink-3">{L('المتاح الآن', 'Available now')}: <Masked plain value={av.available}><span className="num">{money(av.available ?? 0, av.currency, lang)}</span></Masked></span>}</span></button>)}
     </div>
     <Panel title={L('طلباتي', 'My requests')} pad={false}>
       {!d ? <Empty title={L('جارٍ التحميل…', 'Loading…')} /> : d.data.length === 0 ? <Empty title={L('لا توجد طلبات بعد', 'No requests yet')} /> :
@@ -47,13 +48,13 @@ export function MyServices({ base }: { base: string }) {
   </div>
 }
 
-function ServiceModal({ kind, onClose, available, currency }: { kind: ServiceKind | null; onClose: () => void; available: number; currency: 'USD' | 'SYP' }) {
+function ServiceModal({ kind, onClose, available, currency }: { kind: ServiceKind | null; onClose: () => void; available: number | null; currency: 'USD' | 'SYP' }) {
   const L = useL()
   const submit = useSubmitService()
   const [v, setV] = useState<ServiceInput>({ kind: 'salary_cert' })
   const [err, setErr] = useState<Record<string, string>>({})
   const [shown, setShown] = useState<ServiceKind | null>(null)
-  if (kind !== shown) { setShown(kind); if (kind) { setV({ kind, addressee: {}, data: {}, notify_consent: false, amount: kind === 'advance' ? Math.min(available, 100) : undefined }); setErr({}) } }
+  if (kind !== shown) { setShown(kind); if (kind) { setV({ kind, addressee: {}, data: {}, notify_consent: false, amount: kind === 'advance' ? Math.min(available ?? 100, 100) : undefined }); setErr({}) } }
   if (!kind) return null
   const to = (k: 'name' | 'cr_no' | 'email' | 'phone', x: string) => setV({ ...v, addressee: { ...v.addressee, [k]: x } })
   const send = () => {
@@ -77,8 +78,9 @@ function ServiceModal({ kind, onClose, available, currency }: { kind: ServiceKin
       </>}
       {kind === 'experience_cert' && <Field label={L('الجهة الموجّه إليها (اختياري)', 'Addressed to (optional)')} error={err['addressee.name']}><input className="field" value={v.addressee?.name ?? ''} onChange={e => to('name', e.target.value)} /></Field>}
       {kind === 'advance' && <Field label={L(`المبلغ (${currency === 'USD' ? 'دولار' : 'ل.س'})`, `Amount (${currency})`)} req error={err.amount}
-        hint={L(`المتاح الآن من دوامك هذا الشهر: ${money(available, currency, 'ar')} — تُخصم من كشف الشهر`, `Available now from this month’s attendance: ${money(available, currency, 'en')} — deducted from this month’s sheet`)}>
-        <input type="number" min={1} max={available} className="field num" value={v.amount ?? ''} onChange={e => setV({ ...v, amount: Number(e.target.value) })} disabled={available <= 0} /></Field>}
+        hint={available === null ? <span className="inline-flex flex-wrap items-center gap-1.5">{L('الحد المتاح محمي', 'The available limit is protected')} <Masked value={null}>{null}</Masked></span>
+          : L(`المتاح الآن من دوامك هذا الشهر: ${money(available, currency, 'ar')} — تُخصم من كشف الشهر`, `Available now from this month’s attendance: ${money(available, currency, 'en')} — deducted from this month’s sheet`)}>
+        <input type="number" min={1} max={available ?? undefined} className="field num" value={v.amount ?? ''} onChange={e => setV({ ...v, amount: Number(e.target.value) })} disabled={available !== null && available <= 0} /></Field>}
       {kind === 'data_update' && <Field label={L('الجوال الجديد (اختياري)', 'New mobile (optional)')} error={err['data.phone']}><input className="field ltr" value={v.data?.phone ?? ''} onChange={e => setV({ ...v, data: { phone: e.target.value } })} /></Field>}
       <Field label={kind === 'data_update' ? L('ما المطلوب تحديثه', 'What should be updated') : L('ملاحظات', 'Notes')} req={kind === 'data_update'} error={err.note ?? err.kind}>
         <textarea className="field" value={v.note ?? ''} maxLength={1000} onChange={e => setV({ ...v, note: e.target.value })} /></Field>

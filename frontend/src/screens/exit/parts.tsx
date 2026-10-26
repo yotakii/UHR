@@ -6,6 +6,7 @@ import { EXIT_TONE, type ClearanceItem, type ClearanceSection, type ExitFull, ty
 import type { Bi } from '../../lib/types'
 import { Badge, Btn, Empty, Field, Modal, Panel, toast } from '../../ui/kit'
 import { Paper, SigBox } from '../../ui/docs'
+import { ProtectedBlock } from '../../ui/vault'
 
 export function ExitBadge({ s, kind }: { s: ExitStatus; kind?: 'resignation' | 'termination' }) {
   const L = useL()
@@ -204,7 +205,7 @@ export function ExitDoc({ r, form, company, lists }: { r: ExitFull; form: PrintF
         <tr><td colSpan={2} className="border border-line px-2 py-1 text-[12px] text-ink-3">{L('التوقيع والتاريخ', 'Signature & date')}: {signedBy(s.signed, lang) ?? ''}</td></tr></tbody></table></div>)}
   </Paper>
   return <Paper code="F-33" title={L('المخالصة النهائية وإنهاء الخدمة', 'Final settlement & end of service')} sub={L('حساب تقديري وفق بيانات النظام — يُراجع من الإدارة المالية', 'Estimate from system data — reviewed by Finance')} subject={r.ref_no ?? undefined}>{head}
-    {r.settlement ? <SettlementTable s={r.settlement} /> : null}
+    {r.settlement ? <SettlementTable s={r.settlement} /> : r.settlement_masked ? <div data-noprint><ProtectedBlock masked>{null}</ProtectedBlock></div> : null}
     <div className="grid sm:grid-cols-3 gap-3 mt-5"><SigBox label={L('الموظف', 'Employee')} name={name} /><SigBox label={L('الموارد البشرية', 'HR')} at={r.closed_at ?? undefined} /><SigBox label={L('الإدارة المالية', 'Finance')} /></div>
     {r.status === 'closed' && <div className="mt-4"><span className="stamp text-danger">{L('انتهت الخدمة', 'SERVICE ENDED')} — {fmtDate(r.last_day, lang)}</span></div>}
   </Paper>
@@ -214,7 +215,7 @@ export function PrintLinks({ r, href }: { r: ExitFull; href: (f: PrintForm) => s
   const L = useL()
   const forms: [PrintForm, string, boolean][] = [['f02', L('طلب الاستقالة F-02', 'Resignation F-02'), r.kind === 'resignation'], ['f03', L('إنهاء العقد F-03', 'Termination F-03'), r.kind === 'termination'],
     ['f05', L('تسليم المهام F-05', 'Handover F-05'), !!r.handover?.tasks.length], ['f07', L('تسليم العهدة F-07', 'Custody F-07'), !!r.clearance], ['f04', L('براءة الذمة F-04', 'Clearance F-04'), !!r.clearance_no],
-    ['f06', L('شهادة الخدمة F-06', 'Service certificate F-06'), !!r.service_cert_no], ['f33', L('المخالصة F-33', 'Settlement F-33'), !!r.settlement]]
+    ['f06', L('شهادة الخدمة F-06', 'Service certificate F-06'), !!r.service_cert_no], ['f33', L('المخالصة F-33', 'Settlement F-33'), !!r.settlement || !!r.settlement_masked]]
   return <div className="flex flex-wrap gap-x-4 gap-y-1">{forms.filter(f => f[2]).map(([k, t]) => <a key={k} href={href(k)} className="inline-flex items-center gap-1 text-brand text-[13px] font-semibold"><Printer size={13} />{t}</a>)}</div>
 }
 

@@ -4,6 +4,7 @@ import { useL, useLang, money } from '../../lib/store'
 import { minsLabel } from '../../lib/employees'
 import { useMyPayslips, type Payslip } from '../../lib/payroll'
 import { Badge, Btn, Empty, Panel } from '../../ui/kit'
+import { Masked, ProtectedBlock } from '../../ui/vault'
 
 const monthName = (m: string, lang: 'ar' | 'en') => new Date(m + '-01T12:00').toLocaleDateString(lang === 'ar' ? 'ar-SY-u-nu-latn' : 'en-GB', { month: 'long', year: 'numeric' })
 
@@ -15,7 +16,7 @@ export function MyPayslip() {
   if (!d) return <div className="grid place-items-center py-24">{q.isError ? <Empty title={L('تعذّر التحميل', 'Could not load')} /> : <Loader2 className="animate-spin text-brand" />}</div>
   const all: Payslip[] = [d.current, ...d.data]
   const p = all.find(x => x.month === sel) ?? all[0]
-  const m = p.money, t = p.data, cur = m.currency
+  const m = p.money, t = p.data, cur = m?.currency ?? 'USD'
   const row = (k: string, v: number, neg?: boolean) => <div className="flex justify-between gap-3 py-2 border-b border-line-2 text-[14px]"><span className={neg ? 'text-ink-2' : ''}>{k}</span><span className={`num font-semibold shrink-0 ${neg ? 'text-danger' : ''}`}>{neg ? '− ' : ''}{money(v, cur, lang)}</span></div>
   return <div className="max-w-[880px] mx-auto">
     <div className="flex flex-wrap items-center justify-between gap-3 mb-4" data-noprint><h1 className="text-[22px] font-bold">{L('كشفي الشهري', 'My monthly sheet')}</h1>
@@ -24,6 +25,7 @@ export function MyPayslip() {
     <div className="grid md:grid-cols-[1fr_280px] gap-5">
       <Panel title={<span className="flex flex-wrap items-center gap-2">{monthName(p.month, lang)}{p.status === 'estimate' ? <Badge tone="brass">{L('تقدير حتى أمس', 'Estimate to yesterday')}</Badge> : <Badge tone="brand">{L('مغلق', 'Closed')}</Badge>}</span>}
         action={<Btn size="sm" icon={<Printer size={14} />} onClick={() => window.print()}>{L('طباعة', 'Print')}</Btn>}>
+        {!m ? <ProtectedBlock masked>{null}</ProtectedBlock> : <>
         <div className="text-[12px] font-semibold text-ink-3 mb-1">{L('المستحقات', 'Earnings')}</div>
         {row(L('الراتب', 'Salary'), m.base)}{m.ot_pay > 0 && row(L(`أجر العمل الإضافي (${minsLabel(t.ot_paid, lang)})`, `Overtime pay (${minsLabel(t.ot_paid, lang)})`), m.ot_pay)}{!!m.bonus && row(L('مكافأة التقييم', 'Performance reward'), m.bonus)}
         <div className="text-[12px] font-semibold text-ink-3 mt-4 mb-1">{L('الاقتطاعات', 'Deductions')}</div>
@@ -34,10 +36,11 @@ export function MyPayslip() {
         {!!m.discipline && row(L(`جزاءات المخالفات (${t.discipline_days ?? 0} يوم)`, `Disciplinary deductions (${t.discipline_days ?? 0} d)`), m.discipline, true)}
         {m.advance > 0 && row(L('سلفة', 'Advance'), m.advance, true)}
         <div className="flex justify-between pt-3 mt-1 text-[17px] font-bold"><span>{L('الصافي', 'Net')}</span><span className="num text-brand">{money(m.net, cur, lang)}</span></div>
+        </>}
         <p className="text-[11.5px] text-ink-3 mt-3">{L('كشف تقديري محسوب من بيانات الحضور؛ الكشف الرسمي يصدر عن الإدارة المالية.', 'Estimate from attendance data; the official payslip is issued by Finance.')}</p>
       </Panel>
       <div className="space-y-4">
-        <div className="rounded-2xl border border-line bg-surface p-5"><div className="text-[12.5px] text-ink-3">{L('الصافي', 'Net')}</div><div className="text-[30px] font-bold font-display num text-brand">{money(m.net, cur, lang)}</div></div>
+        <div className="rounded-2xl border border-line bg-surface p-5"><div className="text-[12.5px] text-ink-3">{L('الصافي', 'Net')}</div><div className="text-[30px] font-bold font-display num text-brand">{m ? money(m.net, cur, lang) : <Masked value={null}>{null}</Masked>}</div></div>
         <div className="rounded-2xl border border-line bg-surface p-5 text-[13px] space-y-2">
           {([[L('أيام العمل', 'Work days'), t.work_days], [L('أيام الحضور', 'Days present'), t.present], [L('غياب', 'Absent'), t.absent], [L('إجازات', 'Leave'), t.leave],
             [L('تأخير', 'Late'), minsLabel(t.late, lang)], [L('معفى بمبرر', 'Exempted'), `${t.exempted} × ${minsLabel(t.exempt_min, lang)}`], [L('موعد الصرف', 'Pay date'), d.pay_day]] as const).map(([k, v]) =>

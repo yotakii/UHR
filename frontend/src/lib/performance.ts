@@ -59,7 +59,7 @@ export const useFillReview = () => useMutation({
 
 // ── التحليلات ──
 export interface Analytics {
-  headcount: { total: number; by_dept: (Bi & { id: number; n: number })[] }; tenure: { from: number; to: number; n: number }[]; pay: (Bi & { id: number; v: number })[] | null; currency: 'USD' | 'SYP'
+  headcount: { total: number; by_dept: (Bi & { id: number; n: number })[] }; tenure: { from: number; to: number; n: number }[]; pay: (Bi & { id: number; v: number })[] | null; pay_masked?: boolean; currency: 'USD' | 'SYP'
   heat: { days: string[]; rows: (Bi & { id: number; cells: { day: string; staff: number; present: number; rate: number | null; late: number }[] })[] }
   funnel: (Bi & { stage: string; n: number })[]; rejected: number; leaves: (Bi & { key: string; n: number })[]
   performance: { cycle: Bi & { status: string }; grid: Record<string, number> } | null

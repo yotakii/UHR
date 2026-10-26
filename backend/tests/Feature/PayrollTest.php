@@ -116,6 +116,8 @@ class PayrollTest extends TestCase
         $this->postJson("/api/hr/payroll/{$id}/approve")->assertOk();
         $this->postJson("/api/hr/payroll/{$id}/close")->assertOk()->assertJsonPath('sheet.status', 'closed');
         $this->assertTrue(AuditLog::where('action', 'payroll.closed')->exists());
+        $this->get("/api/hr/payroll/{$id}/export")->assertStatus(403)->assertJsonPath('code', 'salary_locked');
+        $this->unlockSalaries();
         $this->get("/api/hr/payroll/{$id}/export")->assertOk();
 
         // الموظف يرى كشفه المغلق وإشعار «كشفك جاهز»
@@ -134,6 +136,7 @@ class PayrollTest extends TestCase
     public function test_advance_is_limited_by_earned_pay_and_deducted(): void
     {
         $this->login('samer.halabi@alfarada.sy');
+        $this->unlockSalaries();
         $d = $this->getJson('/api/me/services')->assertOk()->json();
         $av = $d['advance'];
         $this->assertGreaterThan(0, $av['available']);
@@ -168,6 +171,8 @@ class PayrollTest extends TestCase
         $this->assertSame(['approved', 'CRT-2026-0001'], [$s->status, $s->ref_no]);
         $this->assertSame('+963 944 000 111', $this->emp('UHR-1007')->phone);
         $this->assertTrue(AuditLog::where('action', 'certificate.issued')->exists());
+        $this->getJson("/api/hr/services/{$r['id']}/certificate")->assertOk()->assertJsonPath('data.salary.amount', null)->assertJsonPath('data.masked', true);
+        $this->unlockSalaries();
         $this->getJson("/api/hr/services/{$r['id']}/certificate")->assertOk()->assertJsonPath('data.salary.amount', 1450);
 
         $this->login('samer.halabi@alfarada.sy');

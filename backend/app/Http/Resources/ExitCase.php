@@ -64,7 +64,10 @@ class ExitCase
             'notices' => $hr ? ExitNotice::where('resignation_id', $r->id)->get()->map(fn ($n) => ['id' => $n->id, 'to' => $n->addressee, 'consent' => $n->consent, 'status' => $n->status, 'sent_at' => $n->sent_at?->toIso8601String()])->values() : [],
         ];
         $money = ($hr && Perm::can($viewer, 'payroll')) || $self;
-        $out['settlement'] = $money && in_array($r->status, ['clearance', 'closed'], true) ? ($r->status === 'closed' ? $r->settlement : ExitFlow::settlement($r)) : null;
+        $money = $money && in_array($r->status, ['clearance', 'closed'], true);
+        $open = \App\Services\Security\SalaryVault::open($viewer);
+        $out['settlement'] = $money && $open ? ($r->status === 'closed' ? $r->settlement : ExitFlow::settlement($r)) : null;
+        $out['settlement_masked'] = $money && ! $open;
         $out['can'] = ['interview' => $hr && $r->kind === 'resignation' && in_array($r->status, Resignation::PENDING, true),
             'waive' => ($hr || $isManager) && $r->kind === 'resignation' && $r->isOpen(),
             'withdrawal' => $hr && ($r->withdrawal['status'] ?? null) === 'pending' && $r->isOpen(),

@@ -183,6 +183,7 @@ class PerformanceTest extends TestCase
     public function test_analytics_reads_system_data(): void
     {
         $this->login('hr@alfarada.sy');
+        $this->unlockSalaries();
         $d = $this->getJson('/api/hr/analytics')->assertOk()->json();
         $this->assertSame(Employee::allCompanies()->where('company_id', $this->emp('UHR-1007')->company_id)->whereNotIn('status', ['terminated'])->count(), $d['headcount']['total']);
         $this->assertSame($d['headcount']['total'], array_sum(array_column($d['tenure'], 'n')));

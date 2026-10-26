@@ -104,8 +104,9 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 | 09a M12 referrals & rewards store, internal F-27 via the manager → transfer, announcements (D-06) | ✅ user said next |
 | 09b M13 performance 360 (real forms), 9-Box calibration, approval, review rewards D-28 → monthly sheet, analytics + Excel | ✅ user said next |
 | 09c succession D-23 + individual development plans D-24 | ✅ user said done |
-| 09d M14 employee portal (demo PortalShell: top tabs, mobile bottom bar, home, check-in from the portal, team, profile) — task 09 complete | 📦 delivered, waiting for the user's test |
-| 10 salary 2FA · 11 M16 + Reverb · 12 «الساحة» social space (Viva Engage-like) · 13 AI agent (Claude via `AiClient`, user-scoped tools, confirm before actions) · 14 final verification — plan updated Oct 26 at the user's request | |
+| 09d M14 employee portal (demo PortalShell: top tabs, mobile bottom bar, home, check-in from the portal, team, profile) — task 09 complete | ✅ user said next |
+| 10 salary 2FA (server-side vault: email code, passkey, TOTP + backup codes; every salary field masked until unlocked) | 📦 delivered, waiting for the user's test |
+| 11 M16 + Reverb · 12 «الساحة» social space (Viva Engage-like) · 13 AI agent (Claude via `AiClient`, user-scoped tools, confirm before actions) · 14 final verification — plan updated Oct 26 at the user's request | |
 
 **Task 03 delivered:**
 - Landing page: hero texts from settings, 3 cards, login card with show-password.
@@ -297,6 +298,15 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 - API (auth, fresh): `GET /api/me/home`, `POST /api/me/checkin {lat?, lng?}`, `GET /api/me/team`, `GET /api/me/my-file`, `PUT /api/me/my-file/phone` (`/api/me/profile` stays the applicant's profile). `lib/portal.ts` (`position()` = browser geolocation).
 - Added `backend/lang/ar/validation.php` — generic validation messages were English before.
 - Tests: `tests/Feature/EmployeePortalTest.php` (3) — 168 backend, 32 frontend.
+
+**Task 10 delivered (Oct 26) — salary protection (SRS §4.4):**
+- Existing tables `mfa_factors` (TOTP secret encrypted, `totp_last_step`, `backup_hashes`), `passkeys`, `mfa_audit`; migration `2026_10_30_000001` adds passkeys `sign_count`, `last_used_at`. MfaFactor/Passkey are not auto-audited (manual `mfa.enrolled|reset|passkey_added|passkey_removed`).
+- Settings `salary_vault` (`Settings::vault()`, page `/hr/settings/security` «حماية الرواتب», settings,edit, audited `settings.salary_vault`): unlock_minutes 5, max_attempts 5, lockout_seconds 60, otp_minutes 2, backup_count 8, audit_keep 200, methods phone/passkey/app (≥ 1 on).
+- `Services/Security/SalaryVault`: window in the session (`salary_vault` {uid, until}) → `SalaryVault::open($u)` / `require($u)` (403 `salary_locked`); failures + lockout in the cache (`vault:fail:{uid}`, 429 `locked` + `retry`, 422 `wrong` + `left`); every attempt in `mfa_audit` (last audit_keep per user). TOTP RFC 6238 in PHP (SHA-1, 30 s, ±1, step must exceed `totp_last_step` → `reused`); backup codes `XXXX-XXXX` stored as HMAC with the app key, single use; one-time code by **email** (`Notifications/SalaryCode`, sent synchronously, 30 s between sends; SMS later when a provider is chosen); WebAuthn without a library (challenge in the session, clientData type/challenge/origin = FRONTEND_URL host or a subdomain over https or localhost, rpIdHash, UP+UV flags, ES256/RS256 via openssl, sign counter must grow); «غيّرت جوالك؟» = password → removes TOTP and passkeys. Removing a passkey needs no unlock. `ApiException` gained `extra` (merged into the JSON body).
+- API (auth, fresh, both portals): `GET /api/me/mfa`, POST `/me/mfa/lock|totp/enrol|totp/confirm|totp/verify|backup/verify|otp/send|otp/verify|passkey/options|passkey/register|passkey/verify`, DELETE `/me/mfa/passkey/{id}`, DELETE `/me/mfa` {password}; throttles use per-route prefixes `mfa-…`. `GET|PUT /api/hr/vault-settings`.
+- Masked while locked (null + flag): payroll rows `money`/`salary` + money totals (`masked`), payroll Excel (403), employee file `salary` (only with payroll view; `can.salary`), payslips (`masked`, current `money` null), advance limit amounts in `/me/services` (`masked`), salary certificate amount (`masked`), exit settlement F-33 (`settlement_masked`), analytics payroll by department (`pay_masked`).
+- Frontend: `lib/vault.ts` (`useVault`, `applyVault` re-fetches every query when the state flips, `openVault`, `passkeyAuth`, settings hooks), `ui/vault.tsx` (`Masked` (`plain` inside other buttons), `ProtectedBlock`, `VaultButton` with m:ss countdown — click locks, `VaultDialog` = demo flow: choose → email code / passkey / app intro → QR (package **`qrcode-generator`**) + manual key + store QRs → code → backup codes; verify, backup code, new phone), mounted in `console/Shell` (HR with payroll view or an employee file) and `PortalShell`. `screens/hr/VaultSettings.tsx`. Tests use `$this->unlockSalaries()` (TestCase).
+- Tests: `tests/Feature/SalaryVaultTest.php` (7, incl. RFC 6238 vectors and a real P-256 passkey), `frontend/src/lib/__tests__/vault.test.ts`.
 
 **Open questions in SRS** (ask the user only when you reach them):
 - SMS provider for OTP.

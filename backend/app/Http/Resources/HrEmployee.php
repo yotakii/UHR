@@ -53,7 +53,9 @@ class HrEmployee
             'assets' => $e->assets->sortBy('id')->values()->map(fn (Asset $a) => HrOnboarding::asset($a)),
             'documents' => EmployeeDocs::visible($e, $u)->map(fn ($d) => EmployeeDocs::row($d))->values(),
             'logs' => $e->logs->sortBy([['at', 'desc'], ['id', 'desc']])->values()->map(fn ($l) => ['at' => $l->at->toIso8601String(), 'ar' => $l->text_ar, 'en' => $l->text_en, 'kind' => $l->kind, 'form' => $l->form]),
-            'can' => ['edit' => Perm::can($u, 'employees', 'edit'), 'sensitive' => EmployeeDocs::canSensitive($u), 'onboarding' => (bool) $e->onboarding && ! $e->onboarding->confirmed_at],
+            // الراتب الشامل: لمن يرى الرواتب، وبعد التحقق بخطوتين فقط (SRS §4.4)
+            'salary' => Perm::can($u, 'payroll') && \App\Services\Security\SalaryVault::open($u) ? ['amount' => (float) $e->salary, 'currency' => $e->currency] : null,
+            'can' => ['salary' => Perm::can($u, 'payroll'), 'edit' => Perm::can($u, 'employees', 'edit'), 'sensitive' => EmployeeDocs::canSensitive($u), 'onboarding' => (bool) $e->onboarding && ! $e->onboarding->confirmed_at],
         ]);
     }
 }

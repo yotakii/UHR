@@ -8,6 +8,8 @@ import { downloadSheet, useOpenSheet, usePayroll, useSheetAction, type SheetRow 
 import { Badge, Btn, Drawer, Empty, PageHead, Panel, toast } from '../../../ui/kit'
 import { Lifecycle } from '../../../ui/docs'
 import { DecisionDialog } from '../../../ui/decision'
+import { Masked, ProtectedBlock } from '../../../ui/vault'
+import { openVault } from '../../../lib/vault'
 
 const STEPS = ['draft', 'calculated', 'approved', 'closed'] as const
 
@@ -30,7 +32,8 @@ export function Payroll() {
   const label = (m: string) => new Date(m + '-01T12:00').toLocaleDateString(lang === 'ar' ? 'ar-SY-u-nu-latn' : 'en-GB', { month: 'long', year: 'numeric' })
   const stLabel = { draft: L('مسودة', 'Draft'), calculated: L('محتسب', 'Calculated'), approved: L('معتمد', 'Approved'), closed: L('مُغلق', 'Closed') }
   const idx = s ? STEPS.indexOf(s.status) : -1
-  const cur = d?.rows[0]?.money.currency ?? 'USD'
+  const cur = d?.rows[0]?.money?.currency ?? 'USD'
+  const amt = (n: number | null | undefined) => <Masked value={n ?? null}>{money(n ?? 0, cur, lang)}</Masked>
   const T = s?.totals
 
   return <div className="max-w-[1200px] mx-auto space-y-4">
@@ -43,7 +46,7 @@ export function Payroll() {
         {L('يُحتسب لكل الموظفين الحاليين من سجلات الدوام المسجلة.', 'It is calculated for every current employee from the recorded attendance.')}</Empty></Panel> : <>
       <Panel title={<span className="flex flex-wrap items-center gap-2">{label(s.month)}<Badge tone={s.status === 'closed' ? 'brand' : s.status === 'approved' ? 'info' : 'brass'}>{stLabel[s.status]}</Badge><Badge>{L('تقديري', 'Estimate')}</Badge></span>}
         action={<div className="flex flex-wrap gap-2 justify-end">
-          {d.can.export && <Btn size="sm" icon={<Download size={14} />} onClick={() => downloadSheet(s.id, s.month).catch(fail)}>Excel</Btn>}
+          {d.can.export && <Btn size="sm" icon={d.masked ? <Lock size={14} /> : <Download size={14} />} onClick={() => d.masked ? openVault() : downloadSheet(s.id, s.month).catch(fail)}>Excel</Btn>}
           {d.can.edit && ['draft', 'calculated'].includes(s.status) && <Btn size="sm" icon={act.isPending ? <Loader2 size={14} className="animate-spin" /> : <Calculator size={14} />} disabled={act.isPending}
             onClick={() => act.mutateAsync({ id: s.id, action: 'calculate' }).then(() => toast(L('أُعيد الاحتساب', 'Recalculated'))).catch(fail)}>{L('إعادة الاحتساب', 'Recalculate')}</Btn>}
           {d.can.decide && s.status === 'calculated' && <Btn size="sm" kind="primary" icon={<CheckCircle2 size={14} />} onClick={() => setDlg('approve')}>{L('اعتماد', 'Approve')}</Btn>}
@@ -54,8 +57,8 @@ export function Payroll() {
           code: k === 'calculated' ? fmtDateTime(s.calculated.at ?? undefined, lang) : k === 'approved' && s.approved.at ? fmtDateTime(s.approved.at, lang) : k === 'closed' && s.closed.at ? fmtDateTime(s.closed.at, lang) : undefined }))} />
         {s.note && <p className="mt-3 text-[13px] text-ink-2">{L('ملاحظة', 'Note')}: {s.note}</p>}
         {T && <div className="mt-4 grid [grid-template-columns:repeat(auto-fill,minmax(150px,1fr))] gap-3">
-          {([[L('الموظفون', 'Employees'), T.employees], [L('الرواتب', 'Salaries'), money(T.base, cur, lang)], [L('أجر الإضافي', 'Overtime pay'), money(T.ot_pay, cur, lang)],
-            [L('الاقتطاعات', 'Deductions'), money(T.deductions, cur, lang)], [L('السلف', 'Advances'), money(T.advance, cur, lang)], [L('الصافي', 'Net'), money(T.net, cur, lang)]] as const).map(([k, v]) =>
+          {([[L('الموظفون', 'Employees'), T.employees], [L('الرواتب', 'Salaries'), amt(T.base)], [L('أجر الإضافي', 'Overtime pay'), amt(T.ot_pay)],
+            [L('الاقتطاعات', 'Deductions'), amt(T.deductions)], [L('السلف', 'Advances'), amt(T.advance)], [L('الصافي', 'Net'), amt(T.net)]] as const).map(([k, v]) =>
             <div key={k} className="rounded-xl border border-line px-3 py-2"><div className="text-[12px] text-ink-3">{k}</div><div className="font-bold num text-[16px]">{v}</div></div>)}
         </div>}
       </Panel>
@@ -74,15 +77,15 @@ export function Payroll() {
             <td className="num hidden md:table-cell">{r.data.absent ? <span className="text-danger">{r.data.absent}</span> : '—'}{r.data.justified_absent ? <span className="text-ink-3"> +{r.data.justified_absent} {L('مبرر', 'just.')}</span> : ''} / {r.data.leave || '—'}</td>
             <td className="num hidden lg:table-cell">{r.data.late ? <>{minsLabel(r.data.late, lang)} <span className="text-ink-3">→ {minsLabel(Math.round(r.data.deduct), lang)}</span></> : '—'}</td>
             <td className="num hidden lg:table-cell">{r.data.ot_paid ? <span className="text-brand">{minsLabel(r.data.ot_paid, lang)}</span> : '—'}{r.data.ot_raw > r.data.ot_paid ? <span className="text-ink-3 text-[11.5px]"> / {minsLabel(r.data.ot_raw, lang)}</span> : ''}</td>
-            <td className="num font-semibold">{money(r.money.net, r.money.currency, lang)}</td></tr>)}</tbody></table>}</Panel>
+            <td className="num font-semibold"><Masked compact value={r.money}>{r.money && money(r.money.net, r.money.currency, lang)}</Masked></td></tr>)}</tbody></table>}</Panel>
     </>}
     {row && <Drawer open onClose={() => setRow(null)} width={520}>
       <header className="flex items-center justify-between gap-3 px-5 h-14 border-b border-line-2"><h3 className="font-display font-bold text-[15px] truncate">{bi(row.employee.name, lang)}</h3>
         <button className="p-1.5 rounded-lg hover:bg-sub" onClick={() => setRow(null)} aria-label={L('إغلاق', 'Close')}><X size={18} /></button></header>
-      <div className="flex-1 overflow-y-auto p-5"><RowDetail r={row} /></div></Drawer>}
+      <div className="flex-1 overflow-y-auto p-5"><RowDetail r={d?.rows.find(x => x.id === row.id) ?? row} /></div></Drawer>}
     {s && <DecisionDialog open={!!dlg} onClose={() => setDlg(null)} tone={dlg === 'reopen' ? 'danger' : 'primary'}
       title={dlg === 'approve' ? L('اعتماد الكشف', 'Approve the sheet') : dlg === 'reopen' ? L('إرجاع الكشف للاحتساب', 'Send the sheet back') : L('إغلاق الكشف', 'Close the sheet')}
-      subject={<>{label(s.month)} — {T ? money(T.net, cur, lang) : ''}{dlg === 'close' && <div className="text-[12.5px] text-ink-3 mt-1">{L('بعد الإغلاق لا تعديل، وتُخصم السلف ويُبلغ كل موظف بكشفه.', 'After closing nothing changes; advances are deducted and every employee is notified.')}</div>}</>}
+      subject={<>{label(s.month)}{T?.net != null ? ` — ${money(T.net, cur, lang)}` : ''}{dlg === 'close' && <div className="text-[12.5px] text-ink-3 mt-1">{L('بعد الإغلاق لا تعديل، وتُخصم السلف ويُبلغ كل موظف بكشفه.', 'After closing nothing changes; advances are deducted and every employee is notified.')}</div>}</>}
       confirmLabel={dlg === 'approve' ? L('تأكيد الاعتماد', 'Confirm approval') : dlg === 'reopen' ? L('تأكيد الإرجاع', 'Confirm') : L('تأكيد الإغلاق', 'Confirm closing')}
       reasonRequired={dlg === 'reopen'}
       onConfirm={note => act.mutateAsync({ id: s.id, action: dlg!, note }).then(() => toast(L('تم', 'Done')))} />}
@@ -91,7 +94,7 @@ export function Payroll() {
 
 function RowDetail({ r }: { r: SheetRow }) {
   const L = useL(); const lang = useLang()
-  const t = r.data, m = r.money, c = m.currency
+  const t = r.data, m = r.money
   const line = (k: string, v: string | number, tone = '') => <div className="flex justify-between gap-3 py-1.5 border-b border-line-2 text-[13.5px]"><span className="text-ink-2">{k}</span><b className={`num ${tone}`}>{v}</b></div>
   return <div className="space-y-4">
     <div>
@@ -102,15 +105,15 @@ function RowDetail({ r }: { r: SheetRow }) {
       {line(L('معفى بمبرر', 'Exempted (justified)'), `${t.exempted} × ${minsLabel(t.exempt_min, lang)}`)}{line(L('دقائق الحسم', 'Deduction minutes'), minsLabel(Math.round(t.deduct), lang))}
       {line(L('الإضافي المسجل / المكلّف / المعتمد', 'OT recorded / assigned / paid'), `${t.ot_raw} / ${t.ot_assigned} / ${t.ot_paid}`)}
     </div>
-    <div>
-      <div className="text-[12px] font-semibold text-ink-3 mb-1">{L('المبالغ (تقديرية)', 'Amounts (estimate)')} <span className="num">· {L('الأجر اليومي', 'day')} {money(m.day, c, lang)} · {L('الساعة', 'hour')} {money(m.hour, c, lang)}</span></div>
-      {line(L('الراتب', 'Salary'), money(m.base, c, lang))}{line(L('أجر الإضافي', 'Overtime pay'), money(m.ot_pay, c, lang), 'text-brand')}{!!m.bonus && line(L('مكافأة التقييم', 'Performance reward'), money(m.bonus, c, lang), 'text-brand')}
-      {line(L('حسم التأخير', 'Lateness'), money(m.late, c, lang), 'text-danger')}{line(L('حسم الغياب', 'Absence'), money(m.absent, c, lang), 'text-danger')}
-      {line(L('إجازات بلا أجر', 'Unpaid leave'), money(m.leave, c, lang), 'text-danger')}{line(L('التأمينات', 'Insurance'), money(m.insurance, c, lang), 'text-danger')}
-      {!!m.discipline && line(L(`جزاءات المخالفات (${t.discipline_days ?? 0} يوم)`, `Disciplinary deductions (${t.discipline_days ?? 0} d)`), money(m.discipline, c, lang), 'text-danger')}
-      {line(L('السلفة', 'Advance'), money(m.advance, c, lang), 'text-danger')}
-      <div className="flex justify-between pt-3 text-[16px] font-bold"><span>{L('الصافي', 'Net')}</span><span className="num text-brand">{money(m.net, c, lang)}</span></div>
-    </div>
+    {m ? <div>
+      <div className="text-[12px] font-semibold text-ink-3 mb-1">{L('المبالغ (تقديرية)', 'Amounts (estimate)')} <span className="num">· {L('الأجر اليومي', 'day')} {money(m.day, m.currency, lang)} · {L('الساعة', 'hour')} {money(m.hour, m.currency, lang)}</span></div>
+      {line(L('الراتب', 'Salary'), money(m.base, m.currency, lang))}{line(L('أجر الإضافي', 'Overtime pay'), money(m.ot_pay, m.currency, lang), 'text-brand')}{!!m.bonus && line(L('مكافأة التقييم', 'Performance reward'), money(m.bonus, m.currency, lang), 'text-brand')}
+      {line(L('حسم التأخير', 'Lateness'), money(m.late, m.currency, lang), 'text-danger')}{line(L('حسم الغياب', 'Absence'), money(m.absent, m.currency, lang), 'text-danger')}
+      {line(L('إجازات بلا أجر', 'Unpaid leave'), money(m.leave, m.currency, lang), 'text-danger')}{line(L('التأمينات', 'Insurance'), money(m.insurance, m.currency, lang), 'text-danger')}
+      {!!m.discipline && line(L(`جزاءات المخالفات (${t.discipline_days ?? 0} يوم)`, `Disciplinary deductions (${t.discipline_days ?? 0} d)`), money(m.discipline, m.currency, lang), 'text-danger')}
+      {line(L('السلفة', 'Advance'), money(m.advance, m.currency, lang), 'text-danger')}
+      <div className="flex justify-between pt-3 text-[16px] font-bold"><span>{L('الصافي', 'Net')}</span><span className="num text-brand">{money(m.net, m.currency, lang)}</span></div>
+    </div> : <ProtectedBlock masked>{null}</ProtectedBlock>}
     {t.incomplete_dates.length > 0 && <div className="text-[12.5px] text-danger">{L('أيام ناقصة: ', 'Incomplete: ')}<span className="num">{t.incomplete_dates.join('، ')}</span></div>}
   </div>
 }

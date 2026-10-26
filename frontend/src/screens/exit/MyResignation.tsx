@@ -8,6 +8,7 @@ import { Btn, Empty, Field, Modal, PageHead, Panel, toast } from '../../ui/kit'
 import { Paper } from '../../ui/docs'
 import { StepsPath } from '../requests/parts'
 import { ClearancePanel, ExitBadge, ExitDoc, HandoverPanel, PrintLinks, SettlementTable, type PrintForm } from './parts'
+import { ProtectedBlock } from '../../ui/vault'
 
 /**
  * بوابة الموظف (M11، MyResign في الديمو بإجراء HR.01-03): نموذج طلب الاستقالة F-02 مع الأسباب والاستبيان والإخطار،
@@ -93,7 +94,7 @@ function Follow({ r, d, base }: { r: ExitFull; d: MyExit; base: string }) {
     {(r.status === 'clearance' || r.status === 'closed') && <>
       <HandoverPanel r={r} canEdit={r.can.handover} colleagues={d.colleagues} onSave={v => run('handover', v as unknown as Record<string, unknown>, 'PUT')} sign={as => run('handover/sign', { as })} signAs={['employee']} />
       <ClearancePanel r={r} mark={() => Promise.resolve()} sign={() => Promise.resolve()} />
-      {r.settlement && <Panel title={L('المخالصة النهائية (تقديرية)', 'Final settlement (estimate)')} sub="F-33"><SettlementTable s={r.settlement} /></Panel>}
+      {(r.settlement || r.settlement_masked) && <Panel title={L('المخالصة النهائية (تقديرية)', 'Final settlement (estimate)')} sub="F-33">{r.settlement ? <SettlementTable s={r.settlement} /> : <ProtectedBlock masked>{null}</ProtectedBlock>}</Panel>}
     </>}
     <Modal open={wd} onClose={() => setWd(false)} title={L('الرجوع عن الاستقالة', 'Withdraw the resignation')} footer={<><Btn onClick={() => setWd(false)}>{L('إلغاء', 'Cancel')}</Btn>
       <Btn kind="primary" disabled={wtext.trim().length < 10 || act.isPending} onClick={() => run('withdraw', { text: wtext }).then(() => { toast(L('أُرسل طلب الرجوع', 'Withdrawal sent')); setWd(false) }).catch(e => toast(e instanceof ApiError ? e.message : L('تعذّر', 'Failed')))}>{L('إرسال', 'Send')}</Btn></>}>

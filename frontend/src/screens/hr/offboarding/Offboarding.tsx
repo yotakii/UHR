@@ -9,6 +9,7 @@ import { Avatar, Badge, Btn, Empty, Field, KV, Modal, PageHead, Panel, Tabs, toa
 import { DecisionDialog } from '../../../ui/decision'
 import { StepsPath } from '../../requests/parts'
 import { ClearancePanel, ExitBadge, ExitDoc, HandoverPanel, PrintLinks, SettlementTable, signedBy, type PrintForm } from '../../exit/parts'
+import { ProtectedBlock } from '../../../ui/vault'
 
 /**
  * M11 الاستقالات وإنهاء الخدمة (Offboarding في الديمو، بإجراء الشركة HR.01-03): القائمة 320px + التفاصيل.
@@ -109,9 +110,9 @@ function Detail({ id, d }: { id: number; d: OffboardingPage }) {
         <span className="flex-1 min-w-0">{n.to.name} <span className="ltr inline-block text-ink-3">{n.to.email}</span></span>
         {n.status === 'blocked' ? <Badge>{L('بلا موافقة — لا يُرسل', 'No consent — not sent')}</Badge> : n.status === 'sent' ? <Badge tone="brand">{L('أُرسل', 'Sent')} {fmtDateTime(n.sent_at ?? undefined, lang)}</Badge>
           : <Btn size="sm" kind="primary" onClick={() => run(`notices/${n.id}/send`).then(() => toast(L('أُرسل الإشعار', 'Notice sent'))).catch(fail)}>{L('اعتماد وإرسال', 'Approve & send')}</Btn>}</li>)}</ul></Panel>}
-      {r.settlement && <Panel title={L('المخالصة النهائية', 'Final settlement')} sub={L('F-33 — تقديري وفق بيانات النظام، يُراجع من الإدارة المالية', 'F-33 — estimate from system data, reviewed by Finance')}
+      {(r.settlement || r.settlement_masked) && <Panel title={L('المخالصة النهائية', 'Final settlement')} sub={L('F-33 — تقديري وفق بيانات النظام، يُراجع من الإدارة المالية', 'F-33 — estimate from system data, reviewed by Finance')}
         action={r.can.close && <Btn kind="danger" onClick={() => setDlg('close')}>{L('اعتماد إنهاء الخدمة', 'Close employment')}</Btn>}>
-        <SettlementTable s={r.settlement} />
+        {r.settlement ? <SettlementTable s={r.settlement} /> : <ProtectedBlock masked>{null}</ProtectedBlock>}
         {r.status === 'closed' && <div className="mt-4 flex flex-wrap items-center gap-3"><span className="stamp text-danger">{L('انتهت الخدمة', 'SERVICE ENDED')} — {fmtDate(r.last_day, lang)}</span></div>}
       </Panel>}
       {r.status === 'closed' && r.followups && <Panel title={L('ما بعد الخروج', 'After exit')}>

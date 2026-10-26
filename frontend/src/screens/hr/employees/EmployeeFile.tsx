@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { ArrowRight, ArrowLeft, Loader2, Lock, Pencil, CreditCard, ClipboardList } from 'lucide-react'
-import { useL, useLang, bi, fmtDate, fmtDateTime } from '../../../lib/store'
+import { ArrowRight, ArrowLeft, Loader2, Pencil, CreditCard, ClipboardList } from 'lucide-react'
+import { useL, useLang, bi, fmtDate, fmtDateTime, money } from '../../../lib/store'
 import { setQuery, useRoute } from '../../../lib/router'
 import { lifecycleOf, minsLabel, tenureLabel, useEmployee, type DayRow, type EmpFile } from '../../../lib/employees'
 import { Avatar, Badge, Btn, Empty, KV, Panel, Tabs } from '../../../ui/kit'
@@ -8,6 +8,7 @@ import { Lifecycle, Timeline } from '../../../ui/docs'
 import { EmpBadge } from './Employees'
 import { EditProfile, CardModal } from './EditProfile'
 import { DocumentsTab } from './DocumentsTab'
+import { Masked } from '../../../ui/vault'
 
 type Tab = 'overview' | 'attendance' | 'leaves' | 'assets' | 'docs' | 'log'
 const TABS: Tab[] = ['overview', 'attendance', 'leaves', 'assets', 'docs', 'log']
@@ -60,7 +61,7 @@ export function EmployeeFile({ id }: { id: number }) {
         <Panel title={L('البيانات الوظيفية', 'Employment')}>
           <KV k={L('تاريخ المباشرة', 'Start date')} v={fmtDate(e.hire_date, lang)} /><KV k={L('مقر العمل', 'Location')} v={bi(e.city, lang)} />
           <KV k={L('الدوام', 'Shift')} v={<span className="num ltr inline-block">{e.shift}</span>} />
-          <KV k={L('الراتب الشامل', 'Total pay')} v={<span className="inline-flex items-center gap-1.5 text-ink-3" title={L('يظهر بعد التحقق بخطوتين', 'Shown after two-step verification')}><Lock size={13} />{L('محمي', 'Protected')}</span>} />
+          {e.can.salary && <KV k={L('الراتب الشامل', 'Total pay')} v={<Masked value={e.salary}><span className="num font-semibold">{e.salary && money(e.salary.amount, e.salary.currency, lang)}</span></Masked>} />}
           {e.end_date && <KV k={L('تاريخ انتهاء الخدمة', 'End date')} v={fmtDate(e.end_date, lang)} />}
         </Panel>
         <Panel title={L('الإجازات', 'Leave')}>

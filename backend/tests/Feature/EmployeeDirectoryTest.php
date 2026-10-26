@@ -95,7 +95,7 @@ class EmployeeDirectoryTest extends TestCase
         $this->assertCount(14, $d['attendance']);
         $this->assertSame('2026-10-12', $d['attendance'][0]['date']);
         $this->assertTrue(collect($d['attendance'])->every(fn ($r) => in_array($r['status'], ['before_start', 'leave', 'holiday', 'not_in', 'weekend', 'absent', 'justified', 'late', 'present'], true)));
-        $this->assertArrayNotHasKey('salary', $d);                                  // الراتب محمي (المهمة 10)
+        $this->assertNull($d['salary']);                                            // الراتب محمي حتى التحقق بخطوتين (المهمة 10)
         $this->assertNotEmpty($d['assets']);
         $this->assertArrayHasKey('services', $d);
         $this->assertTrue($d['can']['edit']);

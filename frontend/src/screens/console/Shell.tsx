@@ -2,9 +2,10 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { LogOut, Menu, Building2, UserRound, ExternalLink, Bell, Search, Users, Kanban, Briefcase } from 'lucide-react'
 import { useL, useLang, bi, fmtDateTime } from '../../lib/store'
 import { navigate, useRoute } from '../../lib/router'
-import { useLogout, type SessionUser } from '../../lib/session'
+import { can, useLogout, type SessionUser } from '../../lib/session'
 import { useMarkNoticesRead, useNotices, useSearch } from '../../lib/console'
 import { Logo, LangToggle, ThemeToggle } from '../../ui/brand'
+import { VaultButton, VaultDialog } from '../../ui/vault'
 
 /**
  * إطار لوحات الإدارة (M15 — منقول من Shell.tsx في الديمو بدون أدوات المعرض):
@@ -66,6 +67,7 @@ export function Shell({ items, user, org, sub, children, linkOf, search }: { ite
           <Search size={16} /><span className="flex-1 text-start">{L('ابحث في النظام…', 'Search the platform…')}</span><kbd className="text-[11px] border border-line rounded px-1.5 ltr">Ctrl K</kbd></button>
         <div className="flex items-center gap-2 ms-auto md:ms-0">
           <button onClick={() => setPalette(true)} className="md:hidden h-9 w-9 grid place-items-center rounded-lg border border-line bg-surface hover:bg-sub" aria-label={L('بحث', 'Search')}><Search size={17} /></button>
+          {(can(user, 'payroll') || !!user.employee) && <VaultButton />}
           <LangToggle /><span className="hidden sm:inline-flex"><ThemeToggle /></span>
           {linkOf && <BellMenu open={bell} setOpen={v => { setBell(v); setMenu(false) }} linkOf={linkOf} />}
         </div>
@@ -73,6 +75,7 @@ export function Shell({ items, user, org, sub, children, linkOf, search }: { ite
       <main id="main-scroll" className="flex-1 overflow-y-auto p-4 md:p-6" onClick={() => { setMenu(false); setBell(false) }}>{children}</main>
     </div>
     {palette && <Palette items={items} search={search} onClose={() => setPalette(false)} />}
+    <VaultDialog />
   </div>
 }
 

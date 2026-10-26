@@ -9,6 +9,7 @@ use App\Models\ServiceRequest;
 use App\Services\Payroll\Payroll;
 use App\Services\People\Directory;
 use App\Services\People\ServiceDesk;
+use App\Services\Security\SalaryVault;
 use App\Support\Audit;
 use App\Support\Perm;
 use Illuminate\Http\JsonResponse;
@@ -56,6 +57,7 @@ class PayrollController extends Controller
     public function export(Request $request, int $id): BinaryFileResponse
     {
         $s = MonthSheet::findOrFail($id);
+        SalaryVault::require($request->user());
         $rows = $this->rows($request, $s);
         $path = tempnam(sys_get_temp_dir(), 'pay').'.xlsx';
         $w = new Writer(); $w->openToFile($path);
@@ -77,14 +79,23 @@ class PayrollController extends Controller
     public function certificate(Request $request, int $id): JsonResponse
     {
         $s = ServiceRequest::with(['employee', 'issuer.employee'])->whereNotNull('ref_no')->whereIn('employee_id', Directory::scoped($request->user(), 'leaves')->select('id'))->findOrFail($id);
-        return response()->json(['data' => ServiceDesk::certificate($s)]);
+        return response()->json(['data' => ServiceDesk::certificate($s, SalaryVault::open($request->user()))]);
     }
 
     private function rows(Request $request, MonthSheet $s): array
     {
         $ids = Directory::scoped($request->user(), 'payroll')->select('id');
+        $open = SalaryVault::open($request->user());
         return MonthSheetRow::with('employee.department')->where('month_sheet_id', $s->id)->whereIn('employee_id', $ids)->get()->sortBy(fn ($r) => $r->employee->code)->values()
-            ->map(fn ($r) => ['id' => $r->id, 'employee' => \App\Services\Attendance\Attendance::person($r->employee), 'data' => $r->data, 'money' => $r->money, 'salary' => $r->salary])->all();
+            ->map(fn ($r) => ['id' => $r->id, 'employee' => \App\Services\Attendance\Attendance::person($r->employee), 'data' => $r->data, 'money' => $open ? $r->money : null, 'salary' => $open ? $r->salary : null])->all();
+    }
+
+    /** مجاميع الكشف: الأعداد تبقى، والمبالغ null حين تكون الرواتب مقفلة */
+    public static function totals(?array $t, bool $open): ?array
+    {
+        if ($t === null || $open) return $t;
+        foreach (['base', 'ot_pay', 'deductions', 'advance', 'bonus', 'net'] as $k) if (array_key_exists($k, $t)) $t[$k] = null;
+        return $t;
     }
 
     private function payload(Request $request, string $month, ?MonthSheet $s): array
@@ -93,7 +104,8 @@ class PayrollController extends Controller
         $who = fn ($x) => $x ? ['ar' => $x->displayName('ar'), 'en' => $x->displayName('en')] : null;
         $months = MonthSheet::orderByDesc('month')->limit(24)->get(['id', 'month', 'status'])->map(fn ($x) => ['month' => $x->month, 'status' => $x->status]);
         return ['month' => $month, 'current_month' => Payroll::currentMonth(), 'months' => $months,
-            'sheet' => $s ? ['id' => $s->id, 'month' => $s->month, 'status' => $s->status, 'totals' => $s->totals, 'note' => $s->note,
+            'masked' => ! SalaryVault::open($u),
+            'sheet' => $s ? ['id' => $s->id, 'month' => $s->month, 'status' => $s->status, 'totals' => self::totals($s->totals, SalaryVault::open($u)), 'note' => $s->note,
                 'calculated' => ['at' => $s->calculated_at?->toIso8601String(), 'by' => $who($s->calculator)], 'approved' => ['at' => $s->approved_at?->toIso8601String(), 'by' => $who($s->approver)],
                 'closed' => ['at' => $s->closed_at?->toIso8601String(), 'by' => $who($s->closer)]] : null,
             'rows' => $s ? $this->rows($request, $s) : [], 'incomplete' => $s && $s->status !== 'closed' ? $this->payroll->incomplete($s) : [],

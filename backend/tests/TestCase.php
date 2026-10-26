@@ -28,6 +28,12 @@ abstract class TestCase extends BaseTestCase
         return $c;
     }
 
+    /** يفتح نافذة الرواتب (التحقق بخطوتين — SRS §4.4) لجلسة المستخدم الحالي */
+    protected function unlockSalaries(): void
+    {
+        $this->withSession(['salary_vault' => ['uid' => auth()->id(), 'until' => now()->timestamp + 3600]]);
+    }
+
     /** الشركة الحالية = شركة بيانات الاختبار (الفرادة) */
     protected function useCompany(string $slug = 'alfarada'): Company
     {

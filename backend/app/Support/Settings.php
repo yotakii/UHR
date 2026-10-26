@@ -44,6 +44,10 @@ class Settings
         // التعاقب وخطط التطوير (D-23، D-24 — SRS §10.14): مقياس الجاهزية، دورة مراجعة الخطة (ربعية)، ومراجعة خطط التعاقب
         'development' => ['readiness' => [['key' => 'now', 'ar' => 'جاهز الآن', 'en' => 'Ready now'], ['key' => '1y', 'ar' => 'خلال سنة', 'en' => 'Within a year'], ['key' => '3y', 'ar' => 'خلال 3 سنوات', 'en' => 'Within 3 years']],
             'review_months' => 3, 'succession_review_months' => 12],
+        // حماية الرواتب بخطوتين (SRS §4.4): مدة الفتح، المحاولات قبل الإيقاف ومدته، صلاحية الرمز المرسل، عدد رموز الطوارئ،
+        // الطرق المتاحة، وعدد محاولات التحقق المحفوظة لكل مستخدم
+        'salary_vault' => ['unlock_minutes' => 5, 'max_attempts' => 5, 'lockout_seconds' => 60, 'otp_minutes' => 2, 'backup_count' => 8, 'audit_keep' => 200,
+            'methods' => ['phone' => true, 'passkey' => true, 'app' => true]],
         'performance' => ['weights' => ['manager' => 50, 'peers' => 30, 'self' => 20], 'scale' => 5, 'peers' => 3, 'high_from' => 4.0, 'mid_from' => 3.0, 'rewards' => []],
         // معايرة المطابقة (لكل شركة، والأوزان قابلة للتجاوز لكل شاغر) — القيم الافتراضية = الديمو، كلها نسب مئوية
         'match' => [
@@ -247,6 +251,15 @@ class Settings
         $d = self::DEFAULTS['performance'];
         $out = array_merge($d, array_intersect_key($saved, $d));
         $out['weights'] = array_merge($d['weights'], array_intersect_key($saved['weights'] ?? [], $d['weights']));
+        return $out;
+    }
+
+    public static function vault(): array
+    {
+        $saved = self::get('salary_vault') ?? [];
+        $d = self::DEFAULTS['salary_vault'];
+        $out = array_merge($d, array_intersect_key($saved, $d));
+        $out['methods'] = array_merge($d['methods'], array_intersect_key($saved['methods'] ?? [], $d['methods']));
         return $out;
     }
 

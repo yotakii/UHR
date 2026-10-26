@@ -39,7 +39,7 @@ export interface ExitFull extends ExitCard {
   followups: { labor?: { done: boolean; at?: string | null }; insurance?: { done: boolean; due?: string; at?: string | null }; informed?: { done: boolean } } | null
   successor: (Bi & { id: number }) | null; needs_successor: boolean; account_moved_at: string | null
   notices: { id: number; to: { name?: string; email?: string }; consent: boolean; status: 'prepared' | 'sent' | 'blocked'; sent_at: string | null }[]
-  settlement: Settlement | null
+  settlement: Settlement | null; settlement_masked?: boolean
   can: { interview: boolean; waive: boolean; withdrawal: boolean; handover: boolean; exit: boolean; close: boolean; successor: boolean; certificate: boolean; print: boolean }
 }
 export interface OffboardingPage {

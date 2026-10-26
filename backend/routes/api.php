@@ -46,6 +46,7 @@ use App\Http\Controllers\Api\NoticeController;
 use App\Http\Controllers\Api\Platform\PlatformController;
 use App\Http\Controllers\Api\PublicController;
 use App\Http\Controllers\Api\PublicTestController;
+use App\Http\Controllers\Api\Security\VaultController;
 use Illuminate\Support\Facades\Route;
 
 // كل المسارات هنا تحت البادئة /api
@@ -440,4 +441,25 @@ Route::middleware(['auth', 'fresh', 'portal:platform'])->prefix('platform')->gro
 Route::middleware(['device', 'throttle:120,1'])->prefix('device')->group(function () {
     Route::get('/me', [TerminalController::class, 'me']);
     Route::post('/scan', [TerminalController::class, 'scan']);
+});
+
+// حماية الرواتب بخطوتين (SRS §4.4): لكل حساب بجلسة؛ المحاولات والإيقاف في SalaryVault
+Route::middleware(['auth', 'fresh'])->prefix('me/mfa')->group(function () {
+    Route::get('/', [VaultController::class, 'show']);
+    Route::post('/lock', [VaultController::class, 'lock']);
+    Route::post('/totp/enrol', [VaultController::class, 'enrol'])->middleware('throttle:10,1,mfa-totp-enrol');
+    Route::post('/totp/confirm', [VaultController::class, 'confirm'])->middleware('throttle:20,1,mfa-totp-confirm');
+    Route::post('/totp/verify', [VaultController::class, 'verifyApp'])->middleware('throttle:20,1,mfa-totp-verify');
+    Route::post('/backup/verify', [VaultController::class, 'verifyBackup'])->middleware('throttle:20,1,mfa-backup-verify');
+    Route::post('/otp/send', [VaultController::class, 'sendOtp'])->middleware('throttle:6,10,mfa-otp-send');
+    Route::post('/otp/verify', [VaultController::class, 'verifyOtp'])->middleware('throttle:20,1,mfa-otp-verify');
+    Route::post('/passkey/options', [VaultController::class, 'passkeyOptions'])->middleware('throttle:20,1,mfa-passkey-options');
+    Route::post('/passkey/register', [VaultController::class, 'passkeyRegister'])->middleware('throttle:10,1,mfa-passkey-register');
+    Route::post('/passkey/verify', [VaultController::class, 'passkeyVerify'])->middleware('throttle:20,1,mfa-passkey-verify');
+    Route::delete('/passkey/{id}', [VaultController::class, 'removePasskey'])->whereNumber('id');
+    Route::delete('/', [VaultController::class, 'reset'])->middleware('throttle:5,1,mfa-reset');
+});
+Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr/vault-settings')->group(function () {
+    Route::get('/', [VaultController::class, 'settings'])->middleware('perm:settings,view');
+    Route::put('/', [VaultController::class, 'saveSettings'])->middleware('perm:settings,edit');
 });

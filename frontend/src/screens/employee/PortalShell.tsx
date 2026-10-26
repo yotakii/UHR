@@ -7,6 +7,7 @@ import { useNotices } from '../../lib/console'
 import { Logo, LangToggle, ThemeToggle } from '../../ui/brand'
 import { Avatar, toast } from '../../ui/kit'
 import { BellMenu } from '../console/Shell'
+import { VaultButton, VaultDialog } from '../../ui/vault'
 
 export interface PortalTab { to: string; icon: ReactNode; label: string; badge?: number }
 
@@ -40,6 +41,7 @@ export function PortalShell({ user, tabs, more, children, linkOf }: { user: Sess
         <a href="/" className="shrink-0"><Logo h={26} /></a>
         <span className="hidden sm:inline whitespace-nowrap text-[12px] text-ink-3 border-s border-line ps-3">{L('بوابة الموظف', 'Employee portal')}</span>
         <div className="flex items-center gap-2 ms-auto">
+          <VaultButton />
           <span className="hidden sm:flex"><LangToggle /></span><span className="hidden sm:flex"><ThemeToggle /></span>
           <BellMenu open={bell} setOpen={v => { setBell(v); setMenu(false); setExtra(false) }} linkOf={linkOf} />
           <div className="relative">
@@ -73,6 +75,7 @@ export function PortalShell({ user, tabs, more, children, linkOf }: { user: Sess
       {tabs.slice(0, 5).map(t => <a key={t.to} href={t.to} onClick={close} className={`relative h-16 flex flex-col items-center justify-center gap-1 text-[11px] ${active(t.to) ? 'text-brand font-semibold' : 'text-ink-3'}`}>
         {t.icon}<span className="truncate max-w-full px-1">{t.label}</span>{!!t.badge && <span className="absolute top-2 start-1/2 ms-2 min-w-4 h-4 px-1 rounded-full bg-brand text-on-brand text-[10px] grid place-items-center num">{t.badge}</span>}</a>)}
     </nav>
+    <VaultDialog />
   </div>
 }
 
