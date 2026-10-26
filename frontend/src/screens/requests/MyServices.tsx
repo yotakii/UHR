@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { Banknote, FileSignature, FileText, Printer, UserRound } from 'lucide-react'
 import { useL, useLang, bi, fmtDateTime, money } from '../../lib/store'
 import { ApiError } from '../../lib/api'
-import { navigate } from '../../lib/router'
+import { navigate, useRoute } from '../../lib/router'
 import { useCancelService, useMyServices, useSubmitService, type ServiceInput, type ServiceKind } from '../../lib/payroll'
 import { Btn, Empty, Field, Modal, PageHead, Panel, toast } from '../../ui/kit'
 import { DecisionDialog } from '../../ui/decision'
@@ -18,7 +18,8 @@ export function MyServices({ base }: { base: string }) {
   const L = useL(); const lang = useLang()
   const q = useMyServices(); const d = q.data
   const cancel = useCancelService()
-  const [open, setOpen] = useState<ServiceKind | null>(null)
+  const route = useRoute()
+  const [open, setOpen] = useState<ServiceKind | null>(['salary_cert', 'experience_cert', 'advance', 'data_update'].includes(route.query.new ?? '') ? route.query.new as ServiceKind : null)
   const [cancelId, setCancelId] = useState<number | null>(null)
   const av = d?.advance
   return <div className="max-w-[1100px] mx-auto space-y-4">

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Paperclip } from 'lucide-react'
 import { useL, useLang, bi, fmtDateTime, todayISO, addDays } from '../../lib/store'
 import { ApiError } from '../../lib/api'
+import { useRoute } from '../../lib/router'
 import { checkLeave, useAttachDoc, useCancelLeave, useMyLeave, useSubmitLeave, type Check, type LeaveInput } from '../../lib/requests'
 import { Btn, Empty, Field, PageHead, Panel, toast } from '../../ui/kit'
 import { DecisionDialog } from '../../ui/decision'
@@ -15,7 +16,8 @@ export function MyRequests() {
   const L = useL(); const lang = useLang()
   const q = useMyLeave(); const d = q.data
   const submit = useSubmitLeave(); const cancel = useCancelLeave(); const attach = useAttachDoc()
-  const [v, setV] = useState<LeaveInput>({ type: 'annual', from: addDays(todayISO(), 7), to: addDays(todayISO(), 8), hours: 2, reason: '', substitute_id: '' })
+  const route = useRoute()
+  const [v, setV] = useState<LeaveInput>({ type: route.query.type || 'annual', from: addDays(todayISO(), 7), to: addDays(todayISO(), 8), hours: 2, reason: '', substitute_id: '' })
   const [file, setFile] = useState<File | null>(null)
   const [chk, setChk] = useState<Check | null>(null)
   const [errs, setErrs] = useState<Record<string, string>>({})

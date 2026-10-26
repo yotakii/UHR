@@ -77,7 +77,7 @@ export function Shell({ items, user, org, sub, children, linkOf, search }: { ite
 }
 
 /** الجرس: عداد غير المقروء، آخر 12، النقر يفتح الرابط، وتُعلَّم مقروءة بعد 1.5 ثانية من الفتح */
-function BellMenu({ open, setOpen, linkOf }: { open: boolean; setOpen: (v: boolean) => void; linkOf: (link: string) => string | null }) {
+export function BellMenu({ open, setOpen, linkOf }: { open: boolean; setOpen: (v: boolean) => void; linkOf: (link: string) => string | null }) {
   const L = useL(); const lang = useLang()
   const { data } = useNotices()
   const mark = useMarkNoticesRead()

@@ -30,7 +30,7 @@ export interface PolicyValues {
   shift: Shift; work_days: number[]; overtime_rates: { day: number; night: number; rest: number; holiday: number }
   late_deduction: { tiers: Tier[]; exempt_upto: number; exempt_per_month: number; absent_after: number }
   overtime: { weekly_hours: number; daily_max: number; requires_assignment: boolean; max_continuous_hours: number }
-  terminal: { cooldown: number; incomplete_after: number }
+  terminal: { cooldown: number; incomplete_after: number; portal_checkin: boolean; geo_lat: number; geo_lng: number; geo_radius: number }
   annual_leave: { first_year: number; standard: number; senior: number; standard_years: number; senior_years: number; senior_age: number; prorate_first_year: boolean }
   leave_rules: {
     notice: { max_days: number; days_before: number }[]; hourly_notice_days: number; exec_after_days: number; substitute_required: boolean; conflict_note_required: boolean

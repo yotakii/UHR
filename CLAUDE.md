@@ -103,8 +103,8 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 | 08c M11 exit per HR.01-03: resignation F-02 / termination F-03 via workflow, interview, waiver, withdrawal, F-05, F-07 → F-04, exit interview, F-33, successor D-14, D-17, report — task 08 complete | ✅ user said next |
 | 09a M12 referrals & rewards store, internal F-27 via the manager → transfer, announcements (D-06) | ✅ user said next |
 | 09b M13 performance 360 (real forms), 9-Box calibration, approval, review rewards D-28 → monthly sheet, analytics + Excel | ✅ user said next |
-| 09c succession D-23 + individual development plans D-24 | 📦 delivered, waiting for the user's test |
-| 09d M14 employee portal (demo PortalShell: top tabs, mobile bottom bar, home, team, profile) | |
+| 09c succession D-23 + individual development plans D-24 | ✅ user said done |
+| 09d M14 employee portal (demo PortalShell: top tabs, mobile bottom bar, home, check-in from the portal, team, profile) — task 09 complete | 📦 delivered, waiting for the user's test |
 | 10 salary 2FA · 11 M16 + Reverb · 12 «الساحة» social space (Viva Engage-like) · 13 AI agent (Claude via `AiClient`, user-scoped tools, confirm before actions) · 14 final verification — plan updated Oct 26 at the user's request | |
 
 **Task 03 delivered:**
@@ -289,6 +289,14 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 - TestDataSeeder: critical position = Samer's manager's post (high risk, gap — Samer is «within a year»), linked active IDP for Samer with an overdue course, mentoring by the manager and a project.
 - Frontend: `lib/development.ts`; `screens/development/Development.tsx` (HR `/hr/development?tab=plans|succession` in «الرؤى», employee `/me/development` «خطة تطويري»: plan cards with gaps/goals/progress/reviews/activities (overdue highlighted), activity update modal, review modal, plan form with goals + activities; succession cards with gap banner, readiness counts, competencies, candidates + assess/withdraw, nominate modal, position form, review dialog, settings modal).
 - Tests: `tests/Feature/DevelopmentTest.php` (3) — 165 backend, 32 frontend.
+
+**Task 09d delivered (Oct 26) — M14 employee portal; task 09 complete:**
+- `screens/employee/PortalShell.tsx` = the demo PortalShell: sticky header (logo, tabs from lg — icons only below xl, «المزيد» dropdown with the other pages, language, theme, the shared `BellMenu` exported from `console/Shell`, user menu with «ملفي الشخصي», the rest of the pages under lg, sign out), content max 1180px, mobile bottom bar with the first five tabs (home, attendance, requests, pay, team). Toast «لديك N إشعارات جديدة» on entry and the text of a new notice while open. Tabs: home, attendance, requests, pay, team, approvals (approvers), documents, rewards; more: services, reviews, development, news, discipline, resignation, profile. `EmployeeApp` routes everything through it.
+- `screens/employee/PortalPages.tsx`: `PortalHome` (demo hero + today card with «تسجيل الحضور/الخروج», signatures banner, six quick actions (`/me/requests?type=hourly`, `/me/services?new=salary_cert|advance` open the form directly), «بانتظارك» todos, balance rings, recent requests, news, team today, journey lifecycle), `PortalTeam` (`/me/team`), `PortalProfile` (`/me/profile`: phone update, fixed data, career timeline).
+- Policy `terminal` + `portal_checkin` (default on), `geo_lat`/`geo_lng`/`geo_radius` (0 = no geofence) — edited on the attendance terminal card of `/hr/settings/policies`. `Services/People/Portal`: `home`, `checkIn` (policy on, work day without leave, no check-out yet, cooldown, geofence by Haversine distance → `portal_checkin_off|checkin_closed|location_required|out_of_range|dup`; AttendanceDay `source=portal`, Scan `via=phone` with device «بوابة الموظف — الجوال»), `team` (state in/out/leave/none, last 7 digits of the mobile), `profile`, `updatePhone` (direct + timeline + HR notice + audit `profile.phone`).
+- API (auth, fresh): `GET /api/me/home`, `POST /api/me/checkin {lat?, lng?}`, `GET /api/me/team`, `GET /api/me/my-file`, `PUT /api/me/my-file/phone` (`/api/me/profile` stays the applicant's profile). `lib/portal.ts` (`position()` = browser geolocation).
+- Added `backend/lang/ar/validation.php` — generic validation messages were English before.
+- Tests: `tests/Feature/EmployeePortalTest.php` (3) — 168 backend, 32 frontend.
 
 **Open questions in SRS** (ask the user only when you reach them):
 - SMS provider for OTP.

@@ -59,7 +59,12 @@ export function PolicySettings() {
     <div className="grid lg:grid-cols-2 gap-5">
       <PolicyCard k="terminal" title={L('جهاز الحضور', 'Attendance terminal')} data={data} editable={ed} render={(v, set) => <>
         {num(v.cooldown, x => set({ ...v, cooldown: x }), L('تجاهل التمرير المكرر خلال', 'Ignore repeated taps within'), ed, L('ثانية', 'sec'))}
-        {num(v.incomplete_after, x => set({ ...v, incomplete_after: x }), L('«ناقص» بلا خروج بعد نهاية الوردية بـ', '"Incomplete" without out after shift end +'), ed, L('دقيقة', 'min'))}</>} />
+        {num(v.incomplete_after, x => set({ ...v, incomplete_after: x }), L('«ناقص» بلا خروج بعد نهاية الوردية بـ', '"Incomplete" without out after shift end +'), ed, L('دقيقة', 'min'))}
+        <Toggle on={v.portal_checkin} set={x => set({ ...v, portal_checkin: x })} editable={ed} label={L('تسجيل الحضور من بوابة الموظف (الجوال)', 'Check in from the employee portal (mobile)')} />
+        {v.portal_checkin && <>
+          {num(v.geo_radius, x => set({ ...v, geo_radius: x }), L('النطاق الجغرافي حول المقر (0 = بلا قيد)', 'Allowed radius around the office (0 = off)'), ed, L('متر', 'm'))}
+          {v.geo_radius > 0 && <>{num(v.geo_lat, x => set({ ...v, geo_lat: x }), L('خط العرض للمقر', 'Office latitude'), ed, '°', 0.000001)}{num(v.geo_lng, x => set({ ...v, geo_lng: x }), L('خط الطول للمقر', 'Office longitude'), ed, '°', 0.000001)}</>}
+        </>}</>} />
       <Holidays editable={ed} />
     </div>
 
@@ -241,7 +246,7 @@ function PolicyCard<K extends PolicyKey>({ k, title, data, editable, render, dep
 
 const num = (value: number, on: (v: number) => void, label: string, editable: boolean, suffix: string, step = 1) =>
   <label className="flex items-center justify-between gap-3 py-1.5 text-[13.5px]"><span className="min-w-0">{label}</span>
-    <span className="flex items-center gap-1.5 shrink-0"><input type="number" min={0} step={step} disabled={!editable} value={Math.round(value * 100) / 100} onChange={e => on(Number(e.target.value))} className="field !h-9 !w-20 num text-center" />
+    <span className="flex items-center gap-1.5 shrink-0"><input type="number" min={0} step={step} disabled={!editable} value={Math.round(value * 1e6) / 1e6} onChange={e => on(Number(e.target.value))} className="field !h-9 !w-20 num text-center" />
       <span className="text-[12px] text-ink-3 w-12">{suffix}</span></span></label>
 
 const time = (value: number, on: (v: number) => void, label: string, editable: boolean) =>

@@ -147,7 +147,8 @@ class Settings
         // الإضافي بتكليف مسبق (F-04): بعد weekly_hours ساعة أسبوعياً، وبحد daily_max دقيقة باليوم
         'overtime' => ['weekly_hours' => 48, 'daily_max' => 120, 'requires_assignment' => true, 'max_continuous_hours' => 10],
         // جهاز الحضور: تجاهل التمرير المكرر خلال cooldown ثانية، واليوم بلا خروج «ناقص» بعد incomplete_after دقيقة من نهاية الوردية
-        'terminal' => ['cooldown' => 10, 'incomplete_after' => 120],
+        // portal_checkin: زر «تسجيل الحضور» من بوابة الموظف (M14)؛ geo_*: نطاق جغرافي اختياري (نصف القطر 0 = بلا قيد)
+        'terminal' => ['cooldown' => 10, 'incomplete_after' => 120, 'portal_checkin' => true, 'geo_lat' => 0, 'geo_lng' => 0, 'geo_radius' => 0],
         // الاستحقاق السنوي (HR.01-01): first_year حتى standard_years سنوات خدمة (السنة الأولى بالنسبة إن prorate_first_year)،
         // standard بعدها، senior بعد senior_years أو بعمر senior_age
         'annual_leave' => ['first_year' => 14, 'standard' => 21, 'senior' => 30, 'standard_years' => 5, 'senior_years' => 10, 'senior_age' => 50, 'prorate_first_year' => true],

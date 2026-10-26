@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\Hr\OffboardingController;
 use App\Http\Controllers\Api\Employee\MyExitController;
 use App\Http\Controllers\Api\Employee\MyRewardsController;
 use App\Http\Controllers\Api\Employee\MyReviewsController;
+use App\Http\Controllers\Api\Employee\MyPortalController;
 use App\Http\Controllers\Api\DevelopmentController;
 use App\Http\Controllers\Api\Hr\ReferralsController;
 use App\Http\Controllers\Api\Hr\AnnouncementController;
@@ -130,6 +131,12 @@ Route::middleware(['auth', 'fresh'])->prefix('me')->group(function () {
     Route::post('/internal/{id}/cancel', [MyRewardsController::class, 'cancelInternal'])->whereNumber('id');
     Route::post('/internal/{id}/offer-response', [MyRewardsController::class, 'offerResponse'])->whereNumber('id')->middleware('throttle:10,1');
     Route::get('/announcements', [AnnouncementController::class, 'mine']);
+    // M14 — بوابة الموظف: الرئيسية، التسجيل من الجوال، فريقي، ملفي الشخصي
+    Route::get('/home', [MyPortalController::class, 'home']);
+    Route::post('/checkin', [MyPortalController::class, 'checkIn'])->middleware('throttle:10,1');
+    Route::get('/team', [MyPortalController::class, 'team']);
+    Route::get('/my-file', [MyPortalController::class, 'profile']);
+    Route::put('/my-file/phone', [MyPortalController::class, 'phone'])->middleware('throttle:10,1');
     // M13 — نماذج تقييم 360 المطلوبة مني ونتائجي
     Route::get('/reviews', [MyReviewsController::class, 'index']);
     Route::post('/reviews/{id}', [MyReviewsController::class, 'fill'])->whereNumber('id')->middleware('throttle:60,1');
