@@ -33,6 +33,7 @@ class CompanyController extends Controller
     public function update(Request $request, CompanyProvisioner $prov): JsonResponse
     {
         $p = ['employee', 'candidate', 'decision', 'asset', 'job'];
+        $request->merge(['website' => \App\Support\Url::normalize($request->input('website')), 'careers_url' => \App\Support\Url::normalize($request->input('careers_url'))]);
         $d = $request->validate([
             'name_ar' => ['required', 'string', 'max:160'], 'name_en' => ['required', 'string', 'max:160'], 'short_ar' => ['nullable', 'string', 'max:80'], 'short_en' => ['nullable', 'string', 'max:80'],
             'brand_latin' => ['nullable', 'string', 'max:60'], 'about_ar' => ['nullable', 'string', 'max:2000'], 'about_en' => ['nullable', 'string', 'max:2000'], 'website' => ['nullable', 'url', 'max:190'],

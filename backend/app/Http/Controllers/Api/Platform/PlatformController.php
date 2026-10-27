@@ -118,6 +118,7 @@ class PlatformController extends Controller
 
     private function validateCompany(Request $request, ?Company $c = null, array $extra = []): array
     {
+        $request->merge(['website' => \App\Support\Url::normalize($request->input('website'))]);
         $data = $request->validate($extra + [
             'slug' => ['required', 'string', 'min:3', 'max:40', 'regex:/^[a-z][a-z0-9-]*$/', Rule::unique('companies', 'slug')->ignore($c?->id)],
             'name_ar' => ['required', 'string', 'max:150'], 'name_en' => ['required', 'string', 'max:150'],

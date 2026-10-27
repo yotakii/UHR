@@ -45,7 +45,8 @@ class AdminSettingsTest extends TestCase
         $d['prefixes']['employee'] = 'FRD';
         $d['short_ar'] = 'الفرادة';
         $d['site']['hero_title_ar'] = 'انضم إلى فريق الفرادة';
-        $this->post('/api/hr/admin/company', $d, ['Accept' => 'application/json'])->assertOk()->assertJsonPath('data.prefixes.employee', 'FRD')->assertJsonPath('data.short_ar', 'الفرادة');
+        $d['website'] = 'www.uniqueness-sy.com';
+        $this->post('/api/hr/admin/company', $d, ['Accept' => 'application/json'])->assertOk()->assertJsonPath('data.prefixes.employee', 'FRD')->assertJsonPath('data.short_ar', 'الفرادة')->assertJsonPath('data.website', 'https://www.uniqueness-sy.com');
         $this->useCompany();
         $this->assertStringStartsWith('FRD-', Counters::employeeCode());
         $this->assertDatabaseHas('audit_logs', ['action' => 'settings.company']);

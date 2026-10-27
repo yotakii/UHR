@@ -63,5 +63,8 @@ return [
     'uploaded' => 'تعذّر رفع :attribute.',
     'url' => 'صيغة :attribute غير صحيحة.',
     'custom' => [],
-    'attributes' => [],
+    'attributes' => [
+        'website' => 'الموقع الإلكتروني', 'careers_url' => 'رابط صفحة التوظيف', 'domain' => 'نطاق البريد', 'email' => 'البريد الإلكتروني', 'password' => 'كلمة المرور',
+        'name' => 'الاسم', 'name_ar' => 'الاسم بالعربية', 'name_en' => 'الاسم بالإنكليزية', 'phone' => 'رقم الجوال', 'logo' => 'الشعار', 'reason' => 'السبب', 'note' => 'الملاحظة',
+    ],
 ];
