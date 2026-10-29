@@ -74,6 +74,12 @@ class Settings
             ],
             'extensions' => ['pdf', 'jpg', 'jpeg', 'png', 'docx'], 'max_mb' => 10, 'alert_days' => 30, 'sensitive_roles' => ['hr_director', 'hr_officer'],
         ],
+        // سجل التدقيق (SRS §10.14): أيام العرض في الواجهة، ثم أرشيف دائم بلا حذف
+        'audit' => ['visible_days' => 30],
+        // تصدير الهيكل PDF (D-33): names_titles = الاسم والمسمى، titles = المسميات فقط؛ levels = عدد المستويات في كل صفحة
+        'org_chart' => ['mode' => 'names_titles', 'levels' => 3],
+        // نسخ بيانات الشركة (zip): عدد النسخ المحفوظة، وهل تشمل الملفات المرفوعة
+        'backup' => ['keep' => 5, 'include_files' => true],
         'stage_sla' => ['new' => 2, 'screening' => 3, 'interview' => 5, 'technical' => 5, 'offer' => 4],
         // الخروج M11 (HR.01-03، SRS §10.8): أسباب الاستقالة، أسباب انتهاء الخدمة (م37) والفصل (F-03)، أسئلة الاستبيان ومقابلة الخروج،
         // وجهات تسليم العهدة F-07 وبنودها (auto = يُحسب من النظام: handover من F-05، assets من سجل العهد، leave من الرصيد)
@@ -128,6 +134,8 @@ class Settings
 
     /** إعدادات المنصة (بلا شركة): نصوص بوابة فرص العمل العامة — SRS §10.15 */
     public const PLATFORM_DEFAULTS = [
+        // النسخة الكاملة للخادم (D-27): يومياً في الوقت المحدد، والاحتفاظ بآخر keep نسخة
+        'backup' => ['enabled' => true, 'time' => '02:30', 'keep' => 14],
         'portal' => [
             'brand_latin' => 'UHR · ATMATA GROUP',
             'hero_title_ar' => 'فرص عمل حقيقية في شركات سورية رائدة', 'hero_title_en' => 'Real jobs at leading Syrian companies',
@@ -263,6 +271,17 @@ class Settings
         $out = array_merge($d, array_intersect_key($saved, $d));
         $out['methods'] = array_merge($d['methods'], array_intersect_key($saved['methods'] ?? [], $d['methods']));
         return $out;
+    }
+
+    /** إعداد بمفاتيح ثابتة: المحفوظ فوق الافتراضي */
+    public static function merged(string $key): array
+    {
+        return array_merge(self::DEFAULTS[$key], array_intersect_key(self::get($key) ?? [], self::DEFAULTS[$key]));
+    }
+
+    public static function platformMerged(string $key): array
+    {
+        return array_merge(self::PLATFORM_DEFAULTS[$key], array_intersect_key(self::platform($key) ?? [], self::PLATFORM_DEFAULTS[$key]));
     }
 
     public static function docs(): array

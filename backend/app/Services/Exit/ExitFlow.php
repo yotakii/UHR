@@ -440,7 +440,7 @@ class ExitFlow
             User::where('employee_id', $e->id)->update(['active' => false]);   // تنتهي جلساته (ResolveTenant)
             $e->log("انتهت الخدمة {$r->ref_no} — المخالصة {$st['total']} {$st['currency']}", "Service ended {$r->ref_no} — settlement {$st['total']} {$st['currency']}", 'danger', 'F-33');
             // إعلام كل الموظفين
-            foreach (User::where('active', true)->whereNotNull('employee_id')->pluck('id') as $id) Notify::user($id, "انتهت خدمة {$e->name} في الشركة — نشكره على ما قدّم", "{$e->name_en} has left the company — thank you for everything", null);
+            foreach (User::where('company_id', \App\Support\Tenant::id())->where('active', true)->whereNotNull('employee_id')->pluck('id') as $id) Notify::user($id, "انتهت خدمة {$e->name} في الشركة — نشكره على ما قدّم", "{$e->name_en} has left the company — thank you for everything", null);
             Audit::record('exit.closed', $r, null, ['total' => $st['total'], 'kind' => $r->kind]);
             return $r->refresh();
         });

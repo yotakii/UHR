@@ -38,7 +38,8 @@ export interface ProfileInput {
 export interface DocHistory { action: 'upload' | 'view' | 'download' | 'archive' | 'restore' | 'update'; by: Bi | null; at: string }
 export interface DocSettings { types: { key: string; ar: string; en: string }[]; extensions: string[]; max_mb: number; alert_days: number; sensitive_roles: string[] }
 export interface OrgNode { id: number; code: string; name: Bi; title: Bi; dept: string; manager_id: number | null; open: boolean }
-export interface OrgData { data: OrgNode[]; depts: (Bi & { code: string; color: string })[] }
+export interface OrgChartSettings { mode: 'names_titles' | 'titles'; levels: number }
+export interface OrgData { data: OrgNode[]; depts: (Bi & { code: string; color: string })[]; chart: OrgChartSettings; can: { print: boolean; settings: boolean } }
 
 export interface DirFilters { q: string; dept: string; status: DirStatus }
 const qs = (f: Partial<DirFilters>) => new URLSearchParams(Object.entries(f).filter(([, v]) => v) as [string, string][]).toString()
@@ -47,6 +48,35 @@ export const useDirectory = (f: DirFilters) => useQuery({ queryKey: ['hr', 'empl
 export const exportUrl = (f: DirFilters) => `/api/hr/employees/export?${qs(f)}`
 export const useEmployee = (id: number) => useQuery({ queryKey: ['hr', 'employee', id], queryFn: () => api<{ data: EmpFile }>(`/hr/employees/${id}`).then(r => r.data) })
 export const useOrg = () => useQuery({ queryKey: ['hr', 'org'], queryFn: () => api<OrgData>('/hr/org') })
+/** تصدير الهيكل PDF (D-33): يُسجَّل في التدقيق ثم يطبع المتصفح */
+export const logOrgExport = (v: { scope: string; dept?: string; root?: number; levels: number; mode: string; pages: number }) => api('/hr/org/export', { json: v })
+export const useSaveOrgSettings = () => useMutation({ mutationFn: (v: OrgChartSettings) => api('/hr/org/settings', { method: 'PUT', json: v }), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['hr', 'org'] }) })
+
+/**
+ * تقسيم الهيكل على صفحات: كل صفحة جذر + levels مستويات تحته؛ من له فريق في المستوى الأخير يبدأ صفحة جديدة باسمه.
+ * roots = جذور النطاق (الشركة: بلا مدير داخل القائمة؛ إدارة: مديرهم خارج الإدارة؛ فرع: موظف بعينه).
+ */
+export function orgPages(nodes: Pick<OrgNode, 'id' | 'manager_id'>[], roots: number[], levels: number) {
+  const kids = new Map<number, number[]>()
+  for (const n of nodes) if (n.manager_id !== null && n.manager_id !== n.id) kids.set(n.manager_id, [...(kids.get(n.manager_id) ?? []), n.id])
+  const pages: { root: number; cut: number[] }[] = []
+  const queue = [...roots]; const seen = new Set<number>()
+  while (queue.length) {
+    const r = queue.shift()!
+    if (seen.has(r)) continue
+    seen.add(r)
+    const cut: number[] = []
+    const walk = (id: number, depth: number) => {
+      const ch = kids.get(id) ?? []
+      if (!ch.length) return
+      if (depth >= levels) { cut.push(id); queue.push(id); return }
+      for (const c of ch) walk(c, depth + 1)
+    }
+    walk(r, 1)
+    pages.push({ root: r, cut })
+  }
+  return pages
+}
 
 const settle = (e: EmpFile) => {
   queryClient.setQueryData(['hr', 'employee', e.id], e)

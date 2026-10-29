@@ -1,7 +1,9 @@
 # UHR API — بيئة تطوير (PHP 8.3 + Composer)
+# pg_dump بنفس إصدار قاعدة البيانات (18) للنسخ الاحتياطي، وpdftotext لاستخراج نص السياسات PDF
 FROM php:8.3-cli-alpine
 
-RUN apk add --no-cache bash git unzip libpq-dev icu-dev libzip-dev postgresql-client libpng-dev libjpeg-turbo-dev libwebp-dev freetype-dev \
+RUN (apk add --no-cache postgresql18-client || apk add --no-cache postgresql-client) \
+ && apk add --no-cache poppler-utils bash git unzip libpq-dev icu-dev libzip-dev libpng-dev libjpeg-turbo-dev libwebp-dev freetype-dev \
  && docker-php-ext-configure gd --with-jpeg --with-webp --with-freetype \
  && docker-php-ext-install pdo_pgsql pgsql intl zip bcmath pcntl opcache gd
 

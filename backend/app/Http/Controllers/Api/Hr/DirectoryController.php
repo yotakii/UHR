@@ -90,7 +90,27 @@ class DirectoryController extends Controller
             'data' => $list->map(fn ($e) => ['id' => $e->id, 'code' => $e->code, 'name' => ['ar' => $e->name, 'en' => $e->name_en], 'title' => ['ar' => $e->title_ar, 'en' => $e->title_en],
                 'dept' => $e->department->code, 'manager_id' => $e->manager_id, 'open' => $open->has($e->id)]),
             'depts' => Department::where('active', true)->orderBy('sort')->get()->map(fn ($d) => ['code' => $d->code, 'color' => $d->color, 'ar' => $d->name_ar, 'en' => $d->name_en]),
+            'chart' => \App\Support\Settings::merged('org_chart'),
+            'can' => ['print' => Perm::can($u, 'org', 'print'), 'settings' => Perm::can($u, 'settings', 'edit')],
         ]);
+    }
+
+    /** تصدير الهيكل PDF (D-33): يُسجَّل ثم يطبع المتصفح الصفحات */
+    public function orgExport(Request $request): JsonResponse
+    {
+        $v = $request->validate(['scope' => ['required', 'in:company,department,branch'], 'dept' => ['nullable', 'string', 'max:20'], 'root' => ['nullable', 'integer'],
+            'levels' => ['required', 'integer', 'between:2,8'], 'mode' => ['required', 'in:names_titles,titles'], 'pages' => ['nullable', 'integer', 'min:0']]);
+        Audit::record('org.exported', null, null, $v);
+        return response()->json(['ok' => true]);
+    }
+
+    public function orgSettings(Request $request): JsonResponse
+    {
+        $v = $request->validate(['mode' => ['required', 'in:names_titles,titles'], 'levels' => ['required', 'integer', 'between:2,8']]);
+        $before = \App\Support\Settings::merged('org_chart');
+        \App\Support\Settings::put('org_chart', ['mode' => $v['mode'], 'levels' => (int) $v['levels']]);
+        Audit::record('settings.org_chart', null, $before, \App\Support\Settings::merged('org_chart'));
+        return response()->json(['data' => \App\Support\Settings::merged('org_chart')]);
     }
 
     private function filtered(Request $request): Builder

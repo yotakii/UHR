@@ -38,6 +38,8 @@ class Forms
         'SAL' => ['شهادة راتب', 'Salary certificate', 'salary_cert', true],
         'EMP' => ['شهادة عمل / تعريف', 'Employment certificate', 'employees', false],
         'PAY' => ['كشف الدوام والمستحقات الشهري', 'Monthly attendance & pay sheet', 'payroll', true],
+        // تصدير الهيكل الوظيفي (D-33)
+        'ORG' => ['الهيكل التنظيمي', 'Organization chart', 'org', false],
     ];
 
     public const ISSUED_ON = '2025-04-01';

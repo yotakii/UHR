@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react'
-import { ChevronDown, Loader2, Minus, Plus, Search } from 'lucide-react'
+import { ChevronDown, FileDown, Loader2, Minus, Plus, Search } from 'lucide-react'
 import { useL, useLang, bi } from '../../../lib/store'
 import { navigate } from '../../../lib/router'
 import { deptTone, useOrg, type OrgNode } from '../../../lib/employees'
@@ -68,7 +68,8 @@ export function OrgChart() {
       actions={<><div className="relative w-full sm:w-auto"><Search size={15} className="absolute top-1/2 -translate-y-1/2 start-3 text-ink-3" /><input className="field !w-full sm:!w-56 !ps-9" placeholder={L('ابحث عن موظف', 'Find someone')} value={q} onChange={e => setQ(e.target.value)} /></div>
         <div className="hidden md:flex rounded-lg border border-line bg-surface"><button className="h-9 w-9 grid place-items-center disabled:opacity-40" disabled={scale <= .6} onClick={() => setZoom(Math.max(.6, scale - .1))} aria-label={L('تصغير', 'Zoom out')}><Minus size={15} /></button>
           <span className="w-12 grid place-items-center text-[12px] num">{Math.round(scale * 100)}%</span>
-          <button className="h-9 w-9 grid place-items-center disabled:opacity-40" disabled={scale >= Math.min(1.2, fit)} onClick={() => setZoom(Math.min(1.2, scale + .1))} aria-label={L('تكبير', 'Zoom in')}><Plus size={15} /></button></div></>} />
+          <button className="h-9 w-9 grid place-items-center disabled:opacity-40" disabled={scale >= Math.min(1.2, fit)} onClick={() => setZoom(Math.min(1.2, scale + .1))} aria-label={L('تكبير', 'Zoom in')}><Plus size={15} /></button></div>
+        {data.can.print && <a href="/hr/org/print" className="inline-flex items-center justify-center gap-2 rounded-lg border font-semibold h-9 px-3.5 bg-surface text-ink border-line hover:bg-sub"><FileDown size={15} />{L('تصدير PDF', 'Export PDF')}</a>}</>} />
     <div className="flex flex-wrap gap-3 mb-3 text-[12px] text-ink-2">{data.depts.map(d => <span key={d.code} className="flex items-center gap-1.5"><span className={`size-2.5 rounded-full ${deptTone(d.color)}`} />{bi(d, lang)}</span>)}</div>
     {!root ? <div className="bg-surface border border-line rounded-2xl"><Empty title={L('لا يوجد موظفون بعد', 'No employees yet')} /></div> : <>
       <div ref={box} className="hidden md:block rounded-2xl border border-line bg-sub/40 overflow-hidden p-4" style={{ direction: 'ltr' }}>

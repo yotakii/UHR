@@ -173,6 +173,8 @@ class TestDataSeeder extends Seeder
             $this->users($employees, $cands);
             $this->performance($emp);
             $this->development($emp);
+            // مكتبة السياسات (D-26): وثائق الشركة الفعلية منشورة
+            app(\App\Services\Policies\PolicyLibrary::class)->seedCompanyDocs(\App\Models\User::where('email', 'hr@alfarada.sy')->firstOrFail());
             Counters::atLeast('employee', 1000 + count($employees));
             Counters::atLeast('asset', Asset::count());
             Counters::atLeast('cand-app-'.now()->year, 48210 + 9 * 37);

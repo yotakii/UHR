@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed, Megaphone, Gift, ClipboardCheck, SlidersHorizontal, Sprout, KeyRound, Building, UserCog, GitBranch, BellRing } from 'lucide-react'
+import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed, Megaphone, Gift, ClipboardCheck, SlidersHorizontal, Sprout, KeyRound, Building, UserCog, GitBranch, BellRing, Library, History, DatabaseBackup } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { useRoute } from '../../lib/router'
 import { can, type SessionUser } from '../../lib/session'
@@ -58,6 +58,10 @@ import { Chains } from './admin/Chains'
 import { Users as AdminUsers } from './admin/Users'
 import { Channels } from './admin/Channels'
 import { SettingsHub } from './admin/SettingsHub'
+import { AuditLog } from './admin/AuditLog'
+import { Backups } from './admin/Backups'
+import { OrgPrint } from './employees/OrgPrint'
+import { PolicyLibrary } from '../policies/PolicyLibrary'
 
 type Page = { item: NavItem; module: string | ((u: SessionUser) => boolean); view?: () => ReactNode; task?: string; section?: 'org' | 'rules' | 'system' }
 
@@ -90,7 +94,8 @@ export function HrApp({ user }: { user: SessionUser }) {
     { item: { to: '/hr/referrals', icon: <Trophy size={17} />, label: L('الإحالات والمكافآت', 'Referrals & rewards'), count: count('redemption'), group: g1 }, module: 'referrals', view: () => <ReferralsHR /> },
     { item: { to: '/hr/employees', icon: <Users size={18} />, label: L('الموظفون', 'Employees'), group: g2 }, module: 'employees',
       view: () => route.parts[2] && /^\d+$/.test(route.parts[2]) ? <EmployeeFile id={Number(route.parts[2])} /> : <Employees /> },
-    { item: { to: '/hr/org', icon: <Network size={17} />, label: L('الهيكل التنظيمي', 'Org chart'), group: g2 }, module: 'org', view: () => <OrgChart /> },
+    { item: { to: '/hr/org', icon: <Network size={17} />, label: L('الهيكل التنظيمي', 'Org chart'), group: g2 }, module: 'org', view: () => route.parts[2] === 'print' ? <OrgPrint /> : <OrgChart /> },
+    { item: { to: '/hr/policies', icon: <Library size={17} />, label: L('مكتبة السياسات', 'Policy library'), group: g2 }, module: 'policies', view: () => <PolicyLibrary /> },
     { item: { to: '/hr/attendance', icon: <Clock size={18} />, label: L('الحضور والدوام', 'Attendance'), group: g2 }, module: 'attendance', view: () => <Attendance /> },
     { item: { to: '/hr/leaves', icon: <CalendarCheck size={18} />, label: L('الإجازات والتبريرات', 'Leave & justifications'), count: count('leave', 'service'), group: g2 }, module: 'leaves',
       view: () => route.parts[2] === 'cert' && /^\d+$/.test(route.parts[3] ?? '') ? <CertificatePage id={Number(route.parts[3])} hr back="/hr/leaves?tab=services" /> : <Leaves /> },
@@ -129,6 +134,8 @@ export function HrApp({ user }: { user: SessionUser }) {
     { item: { to: '/hr/settings/violations', icon: <BookOpen size={18} />, label: L('دليل المخالفات', 'Violations catalogue'), group: g4, hidden: true }, section: 'rules', module: 'discipline', view: () => <ViolationSettings /> },
     { item: { to: '/hr/settings/exit', icon: <DoorClosed size={18} />, label: L('إعدادات الخروج', 'Exit settings'), group: g4, hidden: true }, section: 'rules', module: u => can(u, 'settings', 'edit'), view: () => <ExitSettings /> },
     { item: { to: '/hr/settings/permissions', icon: <ShieldCheck size={18} />, label: L('الصلاحيات', 'Permissions'), group: g4, hidden: true }, section: 'org', module: 'users', view: () => <Permissions user={user} /> },
+    { item: { to: '/hr/settings/audit', icon: <History size={18} />, label: L('سجل التدقيق', 'Audit log'), group: g4, hidden: true }, section: 'system', module: 'audit', view: () => <AuditLog /> },
+    { item: { to: '/hr/settings/backups', icon: <DatabaseBackup size={18} />, label: L('النسخ الاحتياطي', 'Backups'), group: g4, hidden: true }, section: 'system', module: 'settings', view: () => <Backups /> },
     { item: { to: '/hr/settings/forms', icon: <FileText size={18} />, label: L('النماذج وقالب الطباعة', 'Forms & print template'), group: g4, hidden: true }, section: 'system', module: 'settings', view: () => <Forms /> },
   ]
   const allowed = pages.filter(p => typeof p.module === 'function' ? p.module(user) : can(user, p.module))

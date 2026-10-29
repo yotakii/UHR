@@ -74,7 +74,7 @@ class Perm
         'ceo' => ['attendance' => 'v', 'leaves' => 'v', 'payroll' => 'v', 'jobs' => 'v', 'candidates' => 'v', 'employees' => 'v', 'org' => 'vp', 'performance' => 'v', 'discipline' => 'v'],
         'admin' => ['attendance' => 've', 'leaves' => 'v', 'excuses' => 'v', 'payroll' => 'v', 'salary_cert' => 'v', 'jobs' => 'v', 'candidates' => 'v', 'internal' => 'v',
             'referrals' => 've', 'announcements' => 'vcea', 'employees' => 'v', 'assets' => 'v', 'policies' => 'vcea', 'org' => 'vexp', 'discipline' => 'v',
-            'performance' => 'v', 'succession' => 'v', 'settings' => 've', 'users' => 'vcea', 'audit' => 'vx'],
+            'performance' => 'v', 'succession' => 'v', 'settings' => 've', 'users' => 'vcea', 'audit' => 'vxa'],
     ];
 
     /** خلية افتراضية: ['actions' => [...], 'scope' => ...] */

@@ -75,3 +75,22 @@ Artisan::command('development:sweep', function () {
     $this->info("Overdue {$t['overdue']}, reviews {$t['review']}, gaps {$t['gaps']}.");
 })->purpose('Alert overdue development activities, due reviews and succession gaps');
 Schedule::command('development:sweep')->dailyAt('08:00');
+
+// النسخ الاحتياطي (D-27): نسخة الخادم الكاملة يومياً في وقت إعداد المنصة — يُفحص كل 15 دقيقة
+Artisan::command('backup:run {--auto : only when due} {--company= : slug — نسخة بيانات شركة}', function () {
+    $svc = app(\App\Services\Admin\Backups::class);
+    if ($slug = $this->option('company')) {
+        $b = $svc->company(\App\Models\Company::where('slug', $slug)->firstOrFail());
+    } else {
+        if ($this->option('auto') && ! $svc->due()) return;
+        $b = $svc->full(null, $this->option('auto') ? 'auto' : 'manual');
+    }
+    $b->status === 'ok' ? $this->info("Backup {$b->path} (".number_format($b->size / 1024).' KB)') : $this->error("Backup failed: {$b->error}");
+})->purpose('Create a full server backup (or a company data copy)');
+Schedule::command('backup:run --auto')->everyFifteenMinutes()->withoutOverlapping();
+
+// سجل التدقيق: أرشيف شهري دائم للأشهر التي خرجت من نافذة العرض (لا حذف) — يومياً
+Artisan::command('audit:archive', function () {
+    $this->info('Archived '.app(\App\Services\Admin\AuditArchive::class)->run().' month file(s).');
+})->purpose('Write monthly audit archive files');
+Schedule::command('audit:archive')->dailyAt('03:30');

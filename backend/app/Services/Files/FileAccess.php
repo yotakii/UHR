@@ -39,6 +39,11 @@ class FileAccess
         if ($n = \App\Models\Announcement::where('image_file_id', $f->id)->orWhere('attachment_file_id', $f->id)->first()) {
             return ['module' => 'announcements', 'owner' => null, 'label' => 'announcement:'.$n->id, 'department_id' => $n->audience === 'department' ? $n->department_id : null];
         }
+        if ($v = \App\Models\PolicyVersion::with('document')->where('file_id', $f->id)->first()) {
+            // مكتبة السياسات: المنشور والمؤرشف لكل من يقرأ السياسات، والمسودات والوثائق المؤرشفة لمن يديرها فقط
+            return ['module' => 'policies', 'owner' => null, 'label' => 'policy:'.($v->document?->code ?: $v->document_id).'#'.$v->number,
+                'manage_only' => $v->status === 'draft' || $v->document?->status === 'archived'];
+        }
         return null;
     }
 
@@ -47,6 +52,7 @@ class FileAccess
         if (! $owner) return false;
         if ($owner['owner'] && $owner['owner'] === $user->id) return true;
         if (! $user->company_id || $user->company_id !== $f->company_id || ! Perm::can($user, $owner['module'])) return false;
+        if (! empty($owner['manage_only']) && ! Perm::can($user, $owner['module'], 'edit')) return false;
         // مستندات الموظف: ضمن نطاق رؤية المستخدم (خاصته/فريقه/الكل)، والحساس لأدواره فقط
         // إعلان لإدارة: لموظفيها، ولمن يدير الإعلانات
         if (! empty($owner['department_id']) && ! Perm::can($user, 'announcements', 'create') && \App\Models\Employee::whereKey($user->employee_id ?? 0)->value('department_id') !== $owner['department_id']) return false;

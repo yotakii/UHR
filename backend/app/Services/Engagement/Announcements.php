@@ -82,7 +82,7 @@ class Announcements
     public function deliver(Announcement $a): void
     {
         if ($a->status !== 'published' || $a->notified_at || $a->published_at?->isFuture()) return;
-        $users = User::where('active', true)->whereNotNull('employee_id')
+        $users = User::where('company_id', \App\Support\Tenant::id())->where('active', true)->whereNotNull('employee_id')
             ->when($a->audience === 'department', fn ($q) => $q->whereIn('employee_id', Employee::where('department_id', $a->department_id)->select('id')))->pluck('id');
         foreach ($users as $id) Notify::user($id, "إعلان: {$a->title_ar}", 'Announcement: '.($a->title_en ?: $a->title_ar), 'announcements');
         $a->update(['notified_at' => now()]);

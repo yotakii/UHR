@@ -48,7 +48,10 @@ use App\Http\Controllers\Api\PublicController;
 use App\Http\Controllers\Api\PublicTestController;
 use App\Http\Controllers\Api\Security\VaultController;
 use App\Http\Controllers\Api\Hr\Admin\ChainController as AdminChainController;
+use App\Http\Controllers\Api\Hr\Admin\AuditController as AdminAuditController;
+use App\Http\Controllers\Api\Hr\Admin\BackupController as AdminBackupController;
 use App\Http\Controllers\Api\Hr\Admin\ChannelController as AdminChannelController;
+use App\Http\Controllers\Api\PolicyLibraryController;
 use App\Http\Controllers\Api\Hr\Admin\CompanyController as AdminCompanyController;
 use App\Http\Controllers\Api\Hr\Admin\DepartmentController as AdminDepartmentController;
 use App\Http\Controllers\Api\Hr\Admin\UserController as AdminUserController;
@@ -250,6 +253,8 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
     });
     Route::put('/employee-docs/settings', [EmployeeDocController::class, 'saveSettings'])->middleware('perm:settings,edit');
     Route::get('/org', [DirectoryController::class, 'org'])->middleware('perm:org,view');
+    Route::post('/org/export', [DirectoryController::class, 'orgExport'])->middleware('perm:org,print');
+    Route::put('/org/settings', [DirectoryController::class, 'orgSettings'])->middleware('perm:settings,edit');
 
     // M08 — الحضور والدوام (بنطاق own/team/all لوحدة attendance) + الأجهزة المسجّلة
     Route::middleware('perm:attendance,view')->group(function () {
@@ -440,6 +445,11 @@ Route::middleware(['auth', 'fresh', 'portal:platform'])->prefix('platform')->gro
     Route::post('/reviews/{id}', [PlatformController::class, 'review'])->whereNumber('id');
     Route::get('/portal', [PlatformController::class, 'portal']);
     Route::put('/portal', [PlatformController::class, 'updatePortal']);
+    // نسخة الخادم الكاملة (11b)
+    Route::get('/backups', [AdminBackupController::class, 'platform']);
+    Route::post('/backups', [AdminBackupController::class, 'platformRun'])->middleware('throttle:6,10,platform-backup');
+    Route::get('/backups/{id}/download', [AdminBackupController::class, 'platformDownload'])->whereNumber('id');
+    Route::put('/backups/settings', [AdminBackupController::class, 'platformSettings']);
 });
 
 // جهاز الحضور وجسر القارئ: مفتاح الجهاز في X-Device-Key (بلا جلسة)
@@ -496,4 +506,30 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr/admin')->group(fun
     Route::get('/channels', [AdminChannelController::class, 'index'])->middleware('perm:settings,view');
     Route::put('/channels/{key}', [AdminChannelController::class, 'updateChannel'])->where('key', 'email|sms|whatsapp')->middleware('perm:settings,edit');
     Route::put('/templates/{id}', [AdminChannelController::class, 'updateTemplate'])->whereNumber('id')->middleware('perm:settings,edit');
+    // 11b: سجل التدقيق والنسخ الاحتياطي
+    Route::get('/audit', [AdminAuditController::class, 'index'])->middleware('perm:audit,view');
+    Route::get('/audit/export', [AdminAuditController::class, 'export'])->middleware('perm:audit,export');
+    Route::get('/audit/archives', [AdminAuditController::class, 'archives'])->middleware('perm:audit,archive');
+    Route::get('/audit/archives/{month}', [AdminAuditController::class, 'archiveFile'])->where('month', '\d{4}-\d{2}')->middleware('perm:audit,archive');
+    Route::put('/audit/settings', [AdminAuditController::class, 'saveSettings'])->middleware('perm:settings,edit');
+    Route::get('/backups', [AdminBackupController::class, 'index'])->middleware('perm:settings,view');
+    Route::post('/backups', [AdminBackupController::class, 'store'])->middleware(['perm:settings,edit', 'throttle:6,10,company-backup']);
+    Route::get('/backups/{id}/download', [AdminBackupController::class, 'download'])->whereNumber('id')->middleware('perm:settings,edit');
+    Route::put('/backups/settings', [AdminBackupController::class, 'saveSettings'])->middleware('perm:settings,edit');
+});
+
+// مكتبة السياسات (D-26) — للبوابتين: الكل يقرأ ويبحث، وإدارة المكتبة بصلاحيات «السياسات»
+Route::middleware(['auth', 'fresh', 'perm:policies,view'])->prefix('policies')->group(function () {
+    Route::get('/', [PolicyLibraryController::class, 'index']);
+    Route::get('/search', [PolicyLibraryController::class, 'search']);
+    Route::get('/{id}', [PolicyLibraryController::class, 'show'])->whereNumber('id');
+    Route::post('/', [PolicyLibraryController::class, 'store'])->middleware('perm:policies,create');
+    Route::put('/{id}', [PolicyLibraryController::class, 'update'])->whereNumber('id')->middleware('perm:policies,edit');
+    Route::post('/{id}/versions', [PolicyLibraryController::class, 'addVersion'])->whereNumber('id')->middleware('perm:policies,edit');
+    Route::post('/{id}/archive', [PolicyLibraryController::class, 'archive'])->whereNumber('id')->middleware('perm:policies,archive');
+    Route::get('/versions/{id}/reads', [PolicyLibraryController::class, 'reads'])->whereNumber('id')->middleware('perm:policies,edit');
+    Route::post('/versions/{id}', [PolicyLibraryController::class, 'updateVersion'])->whereNumber('id')->middleware('perm:policies,edit');   // multipart
+    Route::post('/versions/{id}/publish', [PolicyLibraryController::class, 'publish'])->whereNumber('id')->middleware('perm:policies,edit');
+    Route::delete('/versions/{id}', [PolicyLibraryController::class, 'destroyVersion'])->whereNumber('id')->middleware('perm:policies,edit');
+    Route::put('/paragraphs/{id}', [PolicyLibraryController::class, 'link'])->whereNumber('id')->middleware('perm:policies,edit');
 });

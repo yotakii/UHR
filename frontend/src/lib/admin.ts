@@ -1,5 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { api } from './api'
+import { api, ApiError, xsrf } from './api'
+import { getPrefs } from './store'
 import { queryClient } from './session'
 import type { Bi } from './types'
 
@@ -67,3 +68,34 @@ export const useSaveChannel = () => useMutation({ mutationFn: ({ key, enabled, c
   onSuccess: d => queryClient.setQueryData(['admin', 'channels'], d) })
 export const useSaveTemplate = () => useMutation({ mutationFn: ({ id, ar, en }: { id: number; ar: string; en: string }) => api<ChannelsRes>(`/hr/admin/templates/${id}`, { method: 'PUT', json: { ar, en } }),
   onSuccess: d => queryClient.setQueryData(['admin', 'channels'], d) })
+
+// ——— 11b: سجل التدقيق، النسخ الاحتياطي ———
+export interface AuditRow {
+  id: number; at: string; action: string; label: Bi; subject: (Bi & { id: number | null }) | null; user: (Bi & { id: number; email: string }) | null
+  before: Record<string, unknown> | null; after: Record<string, unknown> | null; ip: string | null; agent: string | null
+}
+export type AuditFilter = { q?: string; user?: string; group?: string; from?: string; to?: string; archive?: string; page?: string }
+type AuditRes = { data: AuditRow[]; total: number; page: number; per: number; settings: { visible_days: number }; defaults: { visible_days: number }; since: string
+  groups: (Bi & { key: string })[]; users: (Bi & { id: number; email: string })[]; can: { export: boolean; archive: boolean; settings: boolean } }
+const qs = (f: Record<string, string | undefined>) => new URLSearchParams(Object.entries(f).filter(([, v]) => v) as [string, string][]).toString()
+export const useAudit = (f: AuditFilter) => useQuery({ queryKey: ['admin', 'audit', qs(f)], queryFn: () => api<AuditRes>(`/hr/admin/audit?${qs(f)}`), placeholderData: p => p })
+export const useAuditArchives = (on: boolean) => useQuery({ queryKey: ['admin', 'audit', 'archives'], enabled: on, queryFn: () => api<{ data: { month: string; size: number }[] }>('/hr/admin/audit/archives') })
+export const useSaveAuditSettings = () => useMutation({ mutationFn: (v: { visible_days: number }) => api('/hr/admin/audit/settings', { method: 'PUT', json: v }), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'audit'] }) })
+
+export interface BackupRow { id: number; kind: 'full' | 'company'; trigger: 'auto' | 'manual'; status: 'running' | 'ok' | 'failed' | 'removed'; size: number | null; meta: Record<string, number | string> | null; error: string | null; name: string | null; started_at: string | null; finished_at: string | null; by: Bi | null }
+type BackupRes = { data: BackupRow[]; server: { last: BackupRow | null; last_ok_at: string | null; schedule: { enabled: boolean; time: string; keep: number } }; settings: { keep: number; include_files: boolean }; defaults: { keep: number; include_files: boolean }; can: { edit: boolean } }
+export const useBackups = () => useQuery({ queryKey: ['admin', 'backups'], queryFn: () => api<BackupRes>('/hr/admin/backups') })
+export const useRunBackup = () => useMutation({ mutationFn: () => api<{ data: BackupRow }>('/hr/admin/backups', { json: {} }), onSettled: () => queryClient.invalidateQueries({ queryKey: ['admin', 'backups'] }) })
+export const useSaveBackupSettings = () => useMutation({ mutationFn: (v: { keep: number; include_files: boolean }) => api<BackupRes>('/hr/admin/backups/settings', { method: 'PUT', json: v }), onSuccess: d => queryClient.setQueryData(['admin', 'backups'], d) })
+type PlatformBackupRes = { data: BackupRow[]; settings: { enabled: boolean; time: string; keep: number }; defaults: { enabled: boolean; time: string; keep: number } }
+export const usePlatformBackups = () => useQuery({ queryKey: ['platform', 'backups'], queryFn: () => api<PlatformBackupRes>('/platform/backups') })
+export const useRunPlatformBackup = () => useMutation({ mutationFn: () => api<{ data: BackupRow }>('/platform/backups', { json: {} }), onSettled: () => queryClient.invalidateQueries({ queryKey: ['platform', 'backups'] }) })
+export const useSavePlatformBackupSettings = () => useMutation({ mutationFn: (v: { enabled: boolean; time: string; keep: number }) => api<PlatformBackupRes>('/platform/backups/settings', { method: 'PUT', json: v }), onSuccess: d => queryClient.setQueryData(['platform', 'backups'], d) })
+
+/** تنزيل ملف من الـ API (Excel، نسخة، أرشيف) — الخطأ يُرجع ApiError برمزه (salary_locked…) */
+export async function download(path: string, name: string) {
+  const r = await fetch(`/api${path}`, { credentials: 'same-origin', headers: { 'X-XSRF-TOKEN': xsrf(), Accept: 'application/json', 'Accept-Language': getPrefs().lang } })
+  if (!r.ok) { let b: Record<string, unknown> = {}; try { b = await r.json() } catch { /* */ } throw new ApiError(r.status, (b.message as string) ?? `HTTP ${r.status}`, b.code as string | undefined, {}, b) }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(await r.blob()); a.download = name; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href)
+}
+export const fmtSize = (n: number | null) => n === null ? '—' : n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(0)} KB` : `${(n / 1048576).toFixed(1)} MB`
