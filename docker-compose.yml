@@ -3,6 +3,16 @@
 #   الواجهة 5180 · الـ API 8180 · PostgreSQL 54330 · Redis 6390 · صندوق البريد التجريبي 8125
 name: uhr
 
+# التحديث اللحظي (Reverb): الـ API والطابور والمجدول يبثّون إلى خادم reverb، والمتصفح يتصل به عبر Vite (/app)
+x-reverb-env: &reverb-env
+  BROADCAST_CONNECTION: reverb
+  REVERB_APP_ID: uhr-dev
+  REVERB_APP_KEY: uhr-dev-key
+  REVERB_APP_SECRET: uhr-dev-secret
+  REVERB_HOST: reverb
+  REVERB_PORT: 8080
+  REVERB_SCHEME: http
+
 services:
   db:
     image: postgres:18-alpine
@@ -58,6 +68,7 @@ services:
       MAIL_PORT: 1025
       MAIL_FROM_ADDRESS: no-reply@alfarada.sy
       MAIL_FROM_NAME: UHR
+      <<: *reverb-env
     volumes:
       - ./backend:/var/www
       - uhr-vendor:/var/www/vendor          # الحزم داخل volume — أسرع بكثير على ويندوز
@@ -85,6 +96,7 @@ services:
       MAIL_PORT: 1025
       MAIL_FROM_ADDRESS: no-reply@alfarada.sy
       MAIL_FROM_NAME: UHR
+      <<: *reverb-env
     volumes:
       - ./backend:/var/www
       - uhr-vendor:/var/www/vendor
@@ -97,6 +109,22 @@ services:
     entrypoint: ["php", "artisan", "schedule:work"]
     depends_on:
       api: { condition: service_healthy }
+    environment:
+      <<: *reverb-env
+    volumes:
+      - ./backend:/var/www
+      - uhr-vendor:/var/www/vendor
+
+  # خادم البث اللحظي (Laravel Reverb) — داخلي فقط، المتصفح يصله عبر الواجهة على /app
+  reverb:
+    image: uhr-api:dev
+    container_name: uhr-reverb
+    restart: unless-stopped
+    entrypoint: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
+    depends_on:
+      api: { condition: service_healthy }
+    environment:
+      <<: *reverb-env
     volumes:
       - ./backend:/var/www
       - uhr-vendor:/var/www/vendor
@@ -117,6 +145,7 @@ services:
     command: sh -c "npm install --no-audit --no-fund && npm run dev"
     environment:
       VITE_API_PROXY: http://api:8000
+      VITE_REVERB_PROXY: ws://reverb:8080
       CHOKIDAR_USEPOLLING: "true"
     depends_on:
       - api

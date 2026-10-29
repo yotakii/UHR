@@ -20,6 +20,22 @@ main() {
     exit 0
   fi
 
+  # البث اللحظي (Reverb): يُضاف للملف الموجود إن لم يكن — بمفاتيح عشوائية
+  if ! grep -q '^REVERB_APP_KEY=' "$ENV"; then
+    {
+      echo ""
+      echo "# التحديث اللحظي (Reverb) — أُضيف تلقائياً"
+      echo "BROADCAST_CONNECTION=reverb"
+      echo "REVERB_APP_ID=uhr"
+      echo "REVERB_APP_KEY=$(openssl rand -hex 16)"
+      echo "REVERB_APP_SECRET=$(openssl rand -hex 24)"
+      echo "REVERB_HOST=reverb"
+      echo "REVERB_PORT=8080"
+      echo "REVERB_SCHEME=http"
+    } >> "$ENV"
+    echo "[uhr] أُضيفت إعدادات Reverb إلى deploy/.env"
+  fi
+
   local BRANCH="${1:-$(grep -E '^DEPLOY_BRANCH=' "$ENV" | cut -d= -f2)}"
   BRANCH="${BRANCH:-$(git rev-parse --abbrev-ref HEAD)}"
   echo "[uhr] الفرع: $BRANCH"

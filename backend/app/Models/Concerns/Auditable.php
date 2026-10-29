@@ -9,7 +9,13 @@ trait Auditable
 {
     public static function bootAuditable(): void
     {
-        static::created(fn ($m) => $m->auditable() && Audit::record(static::auditName().'.created', $m, null, $m->getAttributes()));
+        // كل كتابة (حتى غير المدقّقة) تُعلم الواجهات المفتوحة عبر البث اللحظي
+        $touch = fn ($m) => \App\Support\Realtime::touch($m->getTable(), $m->getAttributes()['company_id'] ?? null);
+        static::created($touch); static::deleted($touch);
+        // تعديل حقول الضجيج فقط (آخر دخول، محاولات فاشلة…) لا يُبث
+        static::updated(function ($m) use ($touch) { if (array_diff(array_keys($m->getChanges()), [...Audit::NOISE, 'remember_token', 'locked_until'])) $touch($m); });
+        // لا تُرجع false من المستمع: Laravel يوقف بقية مستمعي الحدث عندها
+        static::created(function ($m) { if ($m->auditable()) Audit::record(static::auditName().'.created', $m, null, $m->getAttributes()); });
         static::updated(function ($m) {
             if (! $m->auditable()) return;
             $after = Audit::clean($m->getChanges());
@@ -17,7 +23,7 @@ trait Auditable
             $before = array_intersect_key($m->getOriginal(), $after);
             Audit::record(static::auditName().'.updated', $m, $before, $after);
         });
-        static::deleted(fn ($m) => $m->auditable() && Audit::record(static::auditName().'.deleted', $m, $m->getAttributes(), null));
+        static::deleted(function ($m) { if ($m->auditable()) Audit::record(static::auditName().'.deleted', $m, $m->getAttributes(), null); });
     }
 
     /** employee, job_opening … */

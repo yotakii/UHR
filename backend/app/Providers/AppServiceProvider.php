@@ -18,6 +18,8 @@ class AppServiceProvider extends ServiceProvider
     {
         // تطوير صارم: كشف lazy loading والحقول غير المعرّفة مبكراً
         Model::shouldBeStrict(! $this->app->isProduction());
+        // البث اللحظي من الطابور: بعد كل مهمة
+        \Illuminate\Support\Facades\Queue::after(fn () => \App\Support\Realtime::flush());
 
         // حدود المحاولات: 10 دخول بالدقيقة لكل عنوان+بريد، و3 طلبات استعادة كلمة مرور بالدقيقة
         RateLimiter::for('login', fn (Request $r) => Limit::perMinute(10)->by(strtolower((string) $r->input('email')).'|'.$r->ip())

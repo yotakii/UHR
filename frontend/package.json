@@ -12,7 +12,9 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.104.2",
+    "laravel-echo": "^2.6.3",
     "lucide-react": "^1.55.0",
+    "pusher-js": "^8.6.0",
     "qrcode-generator": "^1.5.2",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"

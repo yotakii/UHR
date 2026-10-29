@@ -59,6 +59,8 @@ use Illuminate\Support\Facades\Route;
 
 // كل المسارات هنا تحت البادئة /api
 Route::get('/health', HealthController::class)->name('health');
+// التحديث اللحظي (Reverb): إعداد الاتصال لصاحب الجلسة
+Route::get('/realtime', \App\Http\Controllers\Api\RealtimeController::class)->middleware('auth');
 
 // بوابة فرص العمل العامة (SRS §10.15) + صفحات الشركات والشواغر + التقديم F-28
 Route::prefix('public')->group(function () {

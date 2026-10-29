@@ -12,6 +12,8 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    // البث اللحظي: مصادقة القنوات الخاصة عبر /api/broadcasting/auth بالجلسة وCSRF
+    ->withBroadcasting(__DIR__.'/../routes/channels.php', ['prefix' => 'api', 'middleware' => ['api', 'auth']])
     ->withMiddleware(function (Middleware $middleware): void {
         // الواجهة والـ API على نفس الأصل (proxy): جلسة بكوكي httpOnly + حماية CSRF (هيدر X-XSRF-TOKEN)
         $middleware->api(prepend: [

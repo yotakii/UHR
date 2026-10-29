@@ -16,6 +16,7 @@ import { CandidateHome } from './screens/candidate/CandidateHome'
 import { EmployeeApp } from './screens/employee/EmployeeApp'
 import { Terminal } from './screens/kiosk/Terminal'
 import { ApproveLink } from './screens/public/ApproveLink'
+import { startRealtime, stopRealtime } from './lib/realtime'
 
 function Splash() {
   return <div className="min-h-full grid place-items-center app-glow"><div className="flex flex-col items-center gap-4"><Logo h={34} /><Loader2 className="animate-spin text-brand" size={22} /></div></div>
@@ -24,6 +25,9 @@ function Splash() {
 function Root() {
   const L = useL(); const route = useRoute()
   const me = useMe()
+  // التحديث اللحظي لأي حساب مسجّل (يُفصل عند الخروج)
+  const uid = me.data && !me.data.must_change_password ? me.data.id : null
+  useEffect(() => { if (uid) void startRealtime(uid); else stopRealtime() }, [uid])
   // صفحات المطوّرين — بيئة التطوير فقط
   if (import.meta.env.DEV && route.page === 'kit') return <DevKit />
   if (route.page === 'status') return <SystemStatus />
