@@ -25,5 +25,6 @@
         <env name="MAIL_MAILER" value="array" force="true"/>
         <env name="FRONTEND_URL" value="http://localhost:5180" force="true"/>
         <env name="BROADCAST_CONNECTION" value="null" force="true"/>
+        <server name="BROADCAST_CONNECTION" value="null" force="true"/>
     </php>
 </phpunit>
