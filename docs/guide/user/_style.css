@@ -1,0 +1,74 @@
+
+@font-face { font-family: "UHR Arabic"; src: url("../../../frontend/src/assets/fonts/uhr-arabic-400.woff2") format("woff2"); font-weight: 400; }
+@font-face { font-family: "UHR Arabic"; src: url("../../../frontend/src/assets/fonts/uhr-arabic-500.woff2") format("woff2"); font-weight: 500; }
+@font-face { font-family: "UHR Arabic"; src: url("../../../frontend/src/assets/fonts/uhr-arabic-600.woff2") format("woff2"); font-weight: 600; }
+@font-face { font-family: "UHR Arabic"; src: url("../../../frontend/src/assets/fonts/uhr-arabic-700.woff2") format("woff2"); font-weight: 700 900; }
+@font-face { font-family: Figtree; src: url("../../../frontend/src/assets/fonts/figtree-400.woff2") format("woff2"); font-weight: 400 600; }
+@font-face { font-family: Figtree; src: url("../../../frontend/src/assets/fonts/figtree-700.woff2") format("woff2"); font-weight: 700 900; }
+:root { --brand: #0f8b78; --brand-soft: #e3f4f1; --ink: #17242f; --ink2: #44505c; --ink3: #6b7680; --line: #d8dee3; --sub: #f4f6f8; --brass: #b7791f; --brass-soft: #fbf1df; --danger: #c0392b; --info: #4f5bd5; --info-soft: #eceefd; }
+@page { size: A4; margin: 16mm 14mm 18mm; }
+* { box-sizing: border-box; }
+body { font-family: "UHR Arabic", Figtree, sans-serif; color: var(--ink); font-size: 10.6pt; line-height: 1.75; margin: 0; }
+.ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; font-family: Figtree, "UHR Arabic", sans-serif; }
+td.ltr { display: table-cell; text-align: left; word-break: break-all; }
+h1, h2, h3 { line-height: 1.45; margin: 0; }
+h2 { font-size: 17pt; color: var(--brand); border-bottom: 2px solid var(--brand); padding-bottom: 4px; margin: 0 0 10px; break-after: avoid; }
+h3 { font-size: 12.5pt; margin: 14px 0 6px; break-after: avoid; }
+p { margin: 4px 0 8px; }
+ul { margin: 4px 0 8px; padding-inline-start: 18px; }
+li { margin: 2px 0; }
+section { break-before: page; }
+section.flow { break-before: auto; margin-top: 18px; }
+table { width: 100%; border-collapse: collapse; margin: 6px 0 12px; font-size: 9.6pt; }
+th, td { border: 1px solid var(--line); padding: 5px 7px; vertical-align: top; text-align: start; }
+th { background: var(--sub); font-weight: 700; }
+tr { break-inside: avoid; }
+.cover { height: 255mm; display: flex; flex-direction: column; justify-content: space-between; break-after: page; }
+.cover .top { display: flex; align-items: center; gap: 14px; }
+.cover .top img { height: 54px; }
+.cover h1 { font-size: 30pt; color: var(--ink); margin-top: 60mm; }
+.cover .sub { font-size: 14pt; color: var(--ink2); margin-top: 6px; }
+.cover .meta { border-top: 2px solid var(--brand); padding-top: 10px; color: var(--ink2); font-size: 10.5pt; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 20px; }
+.box { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; margin: 8px 0 12px; background: #fff; break-inside: avoid; }
+.box.brand { background: var(--brand-soft); border-color: #b9e2db; }
+.box.warn { background: var(--brass-soft); border-color: #efd7a8; }
+.box.info { background: var(--info-soft); border-color: #cfd3fa; }
+.box b.t { display: block; margin-bottom: 2px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.mod { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; break-inside: avoid; }
+.mod h4 { margin: 0 0 2px; font-size: 11pt; color: var(--brand); }
+.mod ul { font-size: 9.6pt; margin: 0; }
+.tag { display: inline-block; font-size: 8.5pt; padding: 0 7px; border-radius: 5px; background: var(--sub); color: var(--ink2); margin-inline-start: 4px; font-weight: 600; }
+.flowline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 4px; margin: 8px 0 10px; }
+.st { border: 1.5px solid var(--brand); color: var(--ink); background: #fff; border-radius: 8px; padding: 3px 9px; font-size: 9.4pt; font-weight: 600; line-height: 1.5; text-align: center; }
+.st small { display: block; font-weight: 400; color: var(--ink3); font-size: 8pt; }
+.st.alt { border-color: var(--brass); background: var(--brass-soft); }
+.st.end { background: var(--brand); color: #fff; }
+.st.end small { color: #e3f4f1; }
+.st.bad { border-color: var(--danger); color: var(--danger); }
+.ar { color: var(--brand); font-weight: 700; font-size: 11pt; }
+.shot { border: 1px solid var(--line); border-radius: 8px; width: 100%; display: block; margin: 6px 0 4px; }
+.cap { text-align: center; color: var(--ink3); font-size: 9pt; margin-bottom: 10px; }
+.tc td:first-child { white-space: nowrap; font-weight: 700; color: var(--brand); font-family: Figtree, sans-serif; }
+.tc td:nth-child(3) { width: 21%; }
+.tc td:nth-child(4) { width: 33%; }
+.tc td:nth-child(5) { width: 25%; }
+.acc td:first-child { white-space: nowrap; }
+.toc li { margin: 3px 0; }
+.small { font-size: 9pt; color: var(--ink3); }
+.chk { display: inline-block; width: 11px; height: 11px; border: 1.3px solid var(--ink3); border-radius: 3px; vertical-align: -1px; }
+
+.steps { counter-reset: s; list-style: none; padding: 0; margin: 6px 0 10px; }
+.steps > li { counter-increment: s; position: relative; padding-inline-start: 30px; margin: 5px 0; }
+.steps > li::before { content: counter(s); position: absolute; inset-inline-start: 0; top: 1px; width: 21px; height: 21px; border-radius: 50%; background: var(--brand); color: #fff; font-size: 9pt; font-weight: 700; display: grid; place-items: center; font-family: Figtree, sans-serif; }
+.fields td:first-child { width: 26%; font-weight: 700; }
+.who { margin: 2px 0 8px; font-size: 9.4pt; color: var(--ink2); }
+.who .tag { background: var(--brand-soft); color: var(--brand); }
+dfn { font-style: normal; font-weight: 700; color: var(--brand); }
+.gloss td:first-child { width: 24%; font-weight: 700; color: var(--brand); }
+.path { font-family: Figtree, "UHR Arabic", sans-serif; direction: ltr; unicode-bidi: isolate; display: inline-block; background: var(--sub); border-radius: 4px; padding: 0 5px; font-size: 9.2pt; }
+.kbd { border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; font-family: Figtree, sans-serif; font-size: 9pt; }
+.toc { columns: 2; column-gap: 24px; }
+.toc a { color: var(--ink); text-decoration: none; }
+.toc .n { color: var(--brand); font-weight: 700; margin-inline-end: 4px; }
+h2 .num { color: var(--ink3); font-weight: 600; margin-inline-end: 6px; }
