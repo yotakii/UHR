@@ -13,7 +13,7 @@
   - Multi-company (company_id + subdomain), editable permission matrix + `recruiter` role, unified request workflow (mandatory reason + second confirmation, delegates, 24h reminders).
   - Company policy defaults: 09:00–17:00 Sat–Thu, late-deduction table, overtime after 48h/week, leave notice periods + mandatory substitute, sick 70%/80%, notice 60 days.
   - New module **M17 discipline** (violations ladder, warnings F-01, complaints F-02); M11 follows HR.01-03 (forms F-02…F-07); staged referral points 10/20/30/40; match bands ≥50 / 41–49 review / ≤40 auto-reject; preliminary tests written and approved by HR.
-- **No AI in the system (user decision, Oct 29):** nothing related to Claude or any AI may appear or run in UHR — the Claude API key, AI question suggestions and AI-suggested scores were removed (migration `2026_11_03_000001_remove_ai_features`, package `anthropic-ai/sdk` removed), and the planned AI agent (task 13) is cancelled. Don't add AI features unless the user asks.
+- **AI (user decisions, Oct 29):** the AI pieces inside preliminary tests were removed (Claude API key screen, AI question suggestions, AI-suggested scores — migration `2026_11_03_000001_remove_ai_features`, package `anthropic-ai/sdk` removed). **The AI agent (task 13) stays in the plan**, but it must be simple and clear for users: one «المساعد» entry (button + chat panel) in both portals, plain formal Arabic, ready-made suggested questions, answers show their source (policy paragraph, balance, request…), every action is a preview card with «تأكيد / إلغاء». No technical words in the UI (no «Claude», «API», «مفتاح», model names) and no key setup for company users — the key is configured once by the platform (server env / platform console). Re-add the SDK only in task 13.
   - Values not yet decided by the client are in SRS §10.14 with the provisional default we use.
   - **Public jobs portal (SRS §10.15):** the main page is a multi-company careers portal — Atmata and every client company publish vacancies there (visibility internal/company/public, optional platform moderation); one applicant account applies to any company and each application is a `candidates` row inside that company; the current M01 page becomes the company page. Real path URLs + JobPosting JSON-LD for SEO. Built in task 05b right after the foundation.
 - **Build UHR standalone first.** Integration with **ZERP** (Atmata's ERP: accounting, official payroll) comes **later** — don't start it.
@@ -111,7 +111,7 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 | 10b phone approval, one-touch remembered method, sliding window, GM-approved renewable access to others' salaries | ✅ user said next |
 | 11a M16 admin: settings hub, company data, departments, approval chains with deputies, users & roles, notification channels & templates | ✅ user said next |
 | 11b audit log + permanent archive, backups (server pg_dump + company zip), policy library D-26, org chart PDF D-33 | 📦 delivered, waiting for the user's test |
-| 11 M16 + Reverb · 12 «الساحة» social space (Viva Engage-like) · 13 final verification — plan updated Oct 26 at the user's request; the AI agent was dropped Oct 29 | |
+| 11 M16 + Reverb · 12 «الساحة» social space (Viva Engage-like) · 13 «المساعد» AI agent (simple chat for users, user-scoped tools, confirm before actions, no technical setup for companies) · 14 final verification — plan updated Oct 26; AI agent kept Oct 29 | |
 
 **Task 03 delivered:**
 - Landing page: hero texts from settings, 3 cards, login card with show-password.
