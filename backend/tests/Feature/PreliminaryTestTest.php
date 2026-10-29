@@ -7,7 +7,6 @@ use App\Models\Candidate;
 use App\Models\CandidateTest;
 use App\Models\JobOpening;
 use App\Notifications\CandidateMessage;
-use App\Services\Ai\AiClient;
 use Database\Seeders\TestDataSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -17,13 +16,10 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
-/** الاختبار الأولي (D-34): اقتراح الأسئلة ← المراجعة والاعتماد ← الإرسال ← الحل بمدة ← التصحيح والمراجعة — بلا رفض آلي */
+/** الاختبار الأولي (D-34): HR يكتب الأسئلة ويعتمدها ← الإرسال ← الحل بمدة ← التصحيح والمراجعة — بلا رفض آلي */
 class PreliminaryTestTest extends TestCase
 {
     use RefreshDatabase;
-
-    /** ما أُرسل للذكاء الاصطناعي — للتحقق من عدم إرسال بيانات شخصية */
-    public array $sent = [];
 
     protected function setUp(): void
     {
@@ -33,25 +29,6 @@ class PreliminaryTestTest extends TestCase
         Storage::fake('local');
         Notification::fake();
         $this->withoutMiddleware(ThrottleRequests::class);
-        $test = $this;
-        $this->app->instance(AiClient::class, new class($test) implements AiClient {
-            public function __construct(private $t) {}
-            public function configured(): bool { return true; }
-            public function json(string $system, string $prompt, array $schema): array
-            {
-                $this->t->sent[] = $prompt;
-                if (str_contains($system, 'مصحح')) {
-                    $items = json_decode($prompt, true)['answers'];
-                    return ['scores' => array_map(fn ($i) => ['id' => $i['id'], 'score' => 12, 'note' => 'إجابة جيدة تغطي المعيار'], $items)];
-                }
-                return ['questions' => [
-                    ['type' => 'mcq', 'text' => 'ما المعادلة المحاسبية الأساسية؟', 'options' => ['الأصول = الخصوم + حقوق الملكية', 'الأصول = الإيرادات', 'الخصوم = المصاريف'], 'answer' => 0, 'points' => 10, 'rubric' => ''],
-                    ['type' => 'mcq', 'text' => 'أي قائمة تُظهر الأرباح؟', 'options' => ['الميزانية', 'قائمة الدخل'], 'answer' => 1, 'points' => 10, 'rubric' => ''],
-                    ['type' => 'short', 'text' => 'اشرح مبدأ الاستحقاق.', 'options' => [], 'answer' => -1, 'points' => 15, 'rubric' => 'يذكر تسجيل الإيراد والمصروف عند حدوثهما'],
-                    ['type' => 'bogus', 'text' => '', 'options' => [], 'answer' => 0, 'points' => 5, 'rubric' => ''],
-                ]];
-            }
-        });
     }
 
     protected function tearDown(): void { Carbon::setTestNow(); parent::tearDown(); }
@@ -68,15 +45,17 @@ class PreliminaryTestTest extends TestCase
     {
         $this->login('hr@alfarada.sy');
         $id = $this->job()->id;
-        $r = $this->postJson("/api/hr/jobs/{$id}/test/generate")->assertOk();
-        $qs = $r->json('data.test.questions');
-        $this->assertCount(3, $qs);                                   // السؤال غير الصالح يُستبعد
-        $this->assertSame('draft', $r->json('data.test.status'));
-        $qs[1]['text'] = 'أي قائمة مالية تُظهر صافي الربح؟';          // تعديل HR
-        $body = ['enabled' => true, 'audience' => $audience, 'minutes' => 20, 'attempts' => 2, 'valid_days' => 3, 'questions' => $qs, 'approve' => true];
+        $qs = [
+            ['type' => 'mcq', 'text' => 'ما المعادلة المحاسبية الأساسية؟', 'options' => ['الأصول = الخصوم + حقوق الملكية', 'الأصول = الإيرادات', 'الخصوم = المصاريف'], 'answer' => 0, 'points' => 10, 'rubric' => ''],
+            ['type' => 'mcq', 'text' => 'أي قائمة مالية تُظهر صافي الربح؟', 'options' => ['الميزانية', 'قائمة الدخل'], 'answer' => 1, 'points' => 10, 'rubric' => ''],
+            ['type' => 'short', 'text' => 'اشرح مبدأ الاستحقاق.', 'options' => [], 'answer' => -1, 'points' => 15, 'rubric' => 'يذكر تسجيل الإيراد والمصروف عند حدوثهما'],
+        ];
+        $body = ['enabled' => true, 'audience' => $audience, 'minutes' => 20, 'attempts' => 2, 'valid_days' => 3, 'questions' => $qs, 'approve' => false];
         $r = $this->putJson("/api/hr/jobs/{$id}/test", $body)->assertOk();
-        $this->assertSame(['approved', true], [$r->json('data.test.status'), $r->json('data.test.edited')]);
-        return $qs;
+        $this->assertSame('draft', $r->json('data.test.status'));
+        $r = $this->putJson("/api/hr/jobs/{$id}/test", ['approve' => true, 'questions' => $r->json('data.test.questions')] + $body)->assertOk();
+        $this->assertSame('approved', $r->json('data.test.status'));
+        return $r->json('data.test.questions');
     }
 
     private function apply(array $over = []): Candidate
@@ -95,17 +74,17 @@ class PreliminaryTestTest extends TestCase
         return Candidate::allCompanies()->where('ref', $ref)->firstOrFail();
     }
 
-    public function test_questions_are_generated_from_job_data_only_then_edited_and_approved(): void
+    public function test_hr_writes_and_approves_the_questions(): void
     {
-        $this->prepare();
-        $this->assertStringContainsString('المتطلبات', $this->sent[0]);
-        $this->assertSame(1, AuditLog::where('action', 'test.generated')->count());
+        $qs = $this->prepare();
+        $this->assertCount(3, $qs);
+        $this->assertNotEmpty($qs[0]['id']);
         $this->assertSame(1, AuditLog::where('action', 'test.approved')->count());
         // بلا أسئلة لا اعتماد، والمستخدم العادي لا يعدّل
         $this->putJson("/api/hr/jobs/{$this->job()->id}/test", ['enabled' => true, 'audience' => 'all', 'minutes' => 20, 'attempts' => 1, 'valid_days' => 3, 'questions' => [], 'approve' => true])
             ->assertStatus(422)->assertJsonPath('code', 'no_questions');
         $this->login('samer.halabi@alfarada.sy');
-        $this->postJson("/api/hr/jobs/{$this->job()->id}/test/generate")->assertForbidden();
+        $this->putJson("/api/hr/jobs/{$this->job()->id}/test", ['enabled' => true, 'audience' => 'all', 'minutes' => 20, 'attempts' => 1, 'valid_days' => 3, 'questions' => $qs, 'approve' => true])->assertForbidden();
     }
 
     public function test_applicant_gets_a_timed_link_answers_and_hr_reviews_without_auto_reject(): void
@@ -123,20 +102,20 @@ class PreliminaryTestTest extends TestCase
         $this->assertArrayNotHasKey('answer', $s->json('data.questions.0'));
         $this->assertArrayNotHasKey('rubric', $s->json('data.questions.2'));
 
-        // إجابة: الأول صحيح، الثاني خطأ، المفتوح نص — 50٪ موضوعي، واقتراح 12/15 للمفتوح بلا اسم المتقدم
+        // إجابة: الأول صحيح، الثاني خطأ، المفتوح نص — 50٪ موضوعي، والمفتوح بانتظار HR
         $done = $this->postJson("/api/public/tests/{$ct->token}/submit", ['answers' => [$qs[0]['id'] => 0, $qs[1]['id'] => 0, $qs[2]['id'] => 'تسجيل الإيراد عند تحققه لا عند القبض']])->assertOk();
         $this->assertSame('completed', $done->json('data.status'));
         $this->postJson("/api/public/tests/{$ct->token}/submit", ['answers' => []])->assertStatus(409);
         $ct->refresh();
-        $this->assertSame([50, 12], [$ct->auto_pct, $ct->suggested[$qs[2]['id']]['score']]);
-        $this->assertStringNotContainsString('سارة', end($this->sent));
+        $this->assertSame(50, $ct->auto_pct);
         $this->assertNotSame('rejected', $c->refresh()->stage);
 
-        // مراجعة HR: الدرجة المقترحة تُعتمد ما لم تُعدّل ← النتيجة النهائية (10+0+12)/35
+        // مراجعة HR: درجة كل سؤال مفتوح مطلوبة ← النتيجة النهائية (10+0+12)/35
         $this->login('hr@alfarada.sy');
         $f = $this->getJson("/api/hr/candidates/{$c->id}")->assertOk();
         $this->assertSame('completed', $f->json('data.test_detail.current.status'));
-        $r = $this->postJson("/api/hr/candidates/{$c->id}/test/review", ['scores' => [], 'note' => 'مستوى جيد'])->assertOk();
+        $this->postJson("/api/hr/candidates/{$c->id}/test/review", ['scores' => [], 'note' => 'مستوى جيد'])->assertStatus(422);
+        $r = $this->postJson("/api/hr/candidates/{$c->id}/test/review", ['scores' => [$qs[2]['id'] => 12], 'note' => 'مستوى جيد'])->assertOk();
         $this->assertSame([63, 'reviewed'], [$r->json('data.test.pct'), $r->json('data.test.status')]);
         $this->assertSame(63, collect($this->getJson('/api/hr/candidates')->json('data'))->firstWhere('id', $c->id)['test']['pct']);
         $this->assertSame(1, AuditLog::where('action', 'test.reviewed')->count());
@@ -161,18 +140,12 @@ class PreliminaryTestTest extends TestCase
         $this->postJson("/api/hr/candidates/{$c->id}/test")->assertStatus(409)->assertJsonPath('code', 'no_attempts');
     }
 
-    public function test_audience_passed_skips_low_match_and_ai_key_is_stored_encrypted(): void
+    public function test_audience_passed_skips_low_match(): void
     {
         $this->prepare('passed');
         $low = $this->apply(['email' => 'mid@mail.sy', 'national_id' => '07777', 'years_exp' => 1, 'salary' => 900, 'english' => 'fair', 'linkedin' => '', 'experience' => [], 'cv' => null]);
         $this->assertSame('review', $low->match_band);
         $this->assertSame(0, CandidateTest::allCompanies()->where('candidate_id', $low->id)->count());
 
-        $this->login('admin@alfarada.sy');
-        $this->putJson('/api/hr/ai-settings', ['api_key' => 'not-a-key'])->assertStatus(422);
-        $r = $this->putJson('/api/hr/ai-settings', ['api_key' => 'sk-ant-test-1234567890abcd'])->assertOk();
-        $this->assertSame(['company', '…abcd'], [$r->json('source'), $r->json('hint')]);
-        $raw = \App\Models\Setting::where('key', 'ai')->whereNotNull('company_id')->value('value');
-        $this->assertStringNotContainsString('sk-ant-test', json_encode($raw));
     }
 }

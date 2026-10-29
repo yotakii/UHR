@@ -71,7 +71,7 @@ class HrCandidate
                 'id' => $t->id, 'attempt' => $t->attempt, 'status' => $t->overdue() ? 'expired' : $t->status, 'minutes' => $t->minutes,
                 'sent_at' => $t->sent_at->toIso8601String(), 'expires_at' => $t->expires_at->toIso8601String(), 'started_at' => $t->started_at?->toIso8601String(),
                 'submitted_at' => $t->submitted_at?->toIso8601String(), 'reviewed_at' => $t->reviewed_at?->toIso8601String(), 'review_note' => $t->review_note,
-                'auto_pct' => $t->auto_pct, 'pct' => $t->pct, 'questions' => $t->questions, 'answers' => $t->answers ?? (object) [], 'suggested' => $t->suggested ?? (object) [], 'scores' => $t->scores ?? (object) [],
+                'auto_pct' => $t->auto_pct, 'pct' => $t->pct, 'questions' => $t->questions, 'answers' => $t->answers ?? (object) [], 'scores' => $t->scores ?? (object) [],
             ] : null,
         ];
     }

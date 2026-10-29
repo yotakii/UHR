@@ -9,7 +9,6 @@ use App\Models\JobOpening;
 use App\Models\JobTest;
 use App\Models\User;
 use App\Notifications\CandidateMessage;
-use App\Services\Ai\AiClient;
 use App\Support\Audit;
 use App\Support\L;
 use App\Support\Notify;
@@ -18,43 +17,16 @@ use Illuminate\Support\Str;
 
 /**
  * الاختبار الأولي (SRS §10.9، D-34):
- * 1) HR يفعّله للشاغر ← 2) يقترح الذكاء الاصطناعي الأسئلة من المتطلبات (اختيار من متعدد، قصيرة، سيناريو)
- * 3) HR يراجع ويعدّل ويعتمد ← 4) رابط للمتقدم بمدة وعدد محاولات وموعد انتهاء (للكل أو للمطابقين فوق الحد)
- * 5) التصحيح: الموضوعية آلياً، والمفتوحة بتقييم مقترح، وHR يراجع ويقرر ← 6) النتيجة بجانب المطابقة، ولا رفض آلي بالاختبار.
- * يُسجَّل في التدقيق: الأسئلة المولّدة وما عُدّل، والإجابات، والنتيجة، والمراجع.
+ * 1) HR يفعّله للشاغر ويكتب الأسئلة (اختيار من متعدد، قصيرة، سيناريو) ويعتمدها
+ * 2) رابط للمتقدم بمدة وعدد محاولات وموعد انتهاء (للكل أو للمطابقين فوق الحد)
+ * 3) التصحيح: الموضوعية آلياً، والمفتوحة يصححها HR ← 4) النتيجة بجانب المطابقة، ولا رفض آلي بالاختبار.
+ * يُسجَّل في التدقيق: الأسئلة المعتمدة، والإجابات، والنتيجة، والمراجع.
  */
 class PreliminaryTests
 {
     public const TYPES = ['mcq', 'short', 'scenario'];
 
-    public function __construct(private AiClient $ai) {}
-
     /* ------------------------------------------------------------ أسئلة الشاغر */
-
-    /** اقتراح الأسئلة — يُرسل للذكاء الاصطناعي متطلبات الشاغر فقط */
-    public function generate(JobOpening $job, User $by): JobTest
-    {
-        $job->loadMissing('department');
-        $req = implode("\n", array_map(fn ($r) => '- '.($r['ar'] ?? ''), $job->requirements ?? []));
-        $degree = MatchScore::DEGREES[(int) $job->degree]['ar'] ?? '';
-        $prompt = "الوظيفة: {$job->title_ar} ({$job->title_en})\nالإدارة: {$job->department->name_ar}\nالخبرة المطلوبة: {$job->min_years} سنوات على الأقل\nالمؤهل: {$degree}\n"
-            ."الوصف: {$job->summary_ar}\nالمتطلبات:\n{$req}\n\n"
-            .'اكتب اختباراً أولياً من 8 أسئلة: 5 اختيار من متعدد (4 خيارات، إجابة واحدة صحيحة)، وسؤالان قصيران، وسؤال سيناريو عملي. '
-            .'لكل سؤال مفتوح اكتب معيار تصحيح مختصراً (rubric) يصف الإجابة الجيدة. الدرجات: 10 لكل سؤال اختيار، 15 للقصير، 20 للسيناريو.';
-        $system = 'أنت خبير توظيف يكتب اختبارات فرز أولية قصيرة وعادلة باللغة العربية الفصحى المبسطة لوظائف في شركات سورية. '
-            .'الأسئلة تقيس المعرفة المهنية والمهارات المطلوبة للوظيفة فقط، بلا أسئلة شخصية أو تمييزية، ويمكن الإجابة عنها خلال 20 إلى 40 دقيقة.';
-        $schema = ['type' => 'object', 'additionalProperties' => false, 'required' => ['questions'], 'properties' => ['questions' => ['type' => 'array', 'items' => [
-            'type' => 'object', 'additionalProperties' => false, 'required' => ['type', 'text', 'options', 'answer', 'points', 'rubric'],
-            'properties' => ['type' => ['type' => 'string', 'enum' => self::TYPES], 'text' => ['type' => 'string'], 'options' => ['type' => 'array', 'items' => ['type' => 'string']],
-                'answer' => ['type' => 'integer', 'description' => 'رقم الخيار الصحيح من 0 لأسئلة الاختيار، و-1 للأسئلة المفتوحة'], 'points' => ['type' => 'integer'], 'rubric' => ['type' => 'string']],
-        ]]]];
-        $out = $this->ai->json($system, $prompt, $schema);
-        $questions = $this->normalize($out['questions'] ?? []);
-        if (! $questions) throw new ApiException(L::t('لم تُقترح أسئلة صالحة — حاول مجدداً أو اكتبها يدوياً.', 'No valid questions were suggested — try again or write them manually.'), 'ai_empty', 422);
-        $t = JobTest::updateOrCreate(['job_opening_id' => $job->id], ['questions' => $questions, 'generated' => $questions, 'generated_at' => now(), 'status' => 'draft', 'approved_by' => null, 'approved_at' => null]);
-        Audit::record('test.generated', $t, null, ['job' => $job->code, 'questions' => count($questions)]);
-        return $t;
-    }
 
     /** حفظ تعديلات HR (يعيد الاختبار مسودة)، أو حفظ واعتماد */
     public function save(JobOpening $job, array $questions, bool $approve, User $by): JobTest
@@ -63,7 +35,7 @@ class PreliminaryTests
         if ($approve && ! $questions) throw ApiException::field('questions', L::t('أضف سؤالاً واحداً على الأقل قبل الاعتماد.', 'Add at least one question before approving.'), 'no_questions');
         $t = JobTest::firstOrNew(['job_opening_id' => $job->id]);
         $t->fill(['questions' => $questions, 'status' => $approve ? 'approved' : 'draft', 'approved_by' => $approve ? $by->id : null, 'approved_at' => $approve ? now() : null])->save();
-        if ($approve) Audit::record('test.approved', $t, null, ['job' => $job->code, 'questions' => count($questions), 'edited' => $t->generated && $t->generated !== $questions]);
+        if ($approve) Audit::record('test.approved', $t, null, ['job' => $job->code, 'questions' => count($questions)]);
         return $t;
     }
 
@@ -141,7 +113,7 @@ class PreliminaryTests
         return $ct;
     }
 
-    /** إرسال الإجابات: تصحيح الموضوعية، واقتراح درجات المفتوحة (إن توفر الذكاء الاصطناعي) — بلا رفض آلي */
+    /** إرسال الإجابات: تصحيح الموضوعية آلياً، والمفتوحة بانتظار HR — بلا رفض آلي */
     public function submit(CandidateTest $ct, array $answers): CandidateTest
     {
         if ($ct->status === 'expired') throw new ApiException(L::t('انتهى وقت الاختبار قبل الإرسال.', 'The test time ended before submission.'), 'test_expired', 410);
@@ -158,40 +130,17 @@ class PreliminaryTests
         $c->log("أكمل المتقدم الاختبار الأولي — الأسئلة الموضوعية {$auto}٪ (بانتظار المراجعة)", "Preliminary test completed — objective questions {$auto}% (awaiting review)", 'info');
         Notify::hr("أكمل {$c->name} الاختبار الأولي — بانتظار المراجعة", ($c->name_en ?: $c->name).' completed the preliminary test — awaiting review', "cand:{$c->id}");
         Audit::record('test.submitted', $ct, null, ['answers' => count(array_filter($clean, fn ($v) => $v !== null && $v !== ''))]);
-        $this->suggest($ct);
         return $ct->refresh();
     }
 
-    /** تقييم مقترح للأسئلة المفتوحة: السؤال ومعياره وإجابة المتقدم فقط */
-    public function suggest(CandidateTest $ct): void
-    {
-        $open = array_values(array_filter($ct->questions, fn ($q) => $q['type'] !== 'mcq' && trim((string) ($ct->answers[$q['id']] ?? '')) !== ''));
-        if (! $open || ! $this->ai->configured()) return;
-        $items = array_map(fn ($q) => ['id' => $q['id'], 'question' => $q['text'], 'rubric' => $q['rubric'], 'max' => $q['points'], 'answer' => $ct->answers[$q['id']]], $open);
-        try {
-            $out = $this->ai->json(
-                'أنت مصحح اختبارات توظيف عادل. قيّم كل إجابة مقابل معيار التصحيح فقط، وأعطِ درجة من 0 حتى الحد الأقصى، وملاحظة قصيرة بالعربية تبرر الدرجة. الدرجة اقتراح يراجعه مسؤول الموارد البشرية.',
-                json_encode(['answers' => $items], JSON_UNESCAPED_UNICODE),
-                ['type' => 'object', 'additionalProperties' => false, 'required' => ['scores'], 'properties' => ['scores' => ['type' => 'array', 'items' => ['type' => 'object', 'additionalProperties' => false,
-                    'required' => ['id', 'score', 'note'], 'properties' => ['id' => ['type' => 'string'], 'score' => ['type' => 'integer'], 'note' => ['type' => 'string']]]]]],
-            );
-        } catch (ApiException $e) {
-            report($e);
-            return;   // بلا اقتراح: HR يصحح يدوياً
-        }
-        $max = array_column($open, 'points', 'id'); $sug = [];
-        foreach ($out['scores'] ?? [] as $s) if (isset($max[$s['id'] ?? ''])) $sug[$s['id']] = ['score' => max(0, min($max[$s['id']], (int) $s['score'])), 'note' => mb_substr((string) $s['note'], 0, 500)];
-        $ct->update(['suggested' => $sug]);
-    }
-
-    /** مراجعة HR: درجات الأسئلة المفتوحة (افتراضياً المقترحة) ← النتيجة النهائية */
+    /** مراجعة HR: درجات الأسئلة المفتوحة ← النتيجة النهائية */
     public function review(CandidateTest $ct, array $scores, ?string $note, User $by): CandidateTest
     {
         if (! in_array($ct->status, ['completed', 'reviewed'], true)) throw new ApiException(L::t('لم يُكمل المتقدم الاختبار بعد.', 'The applicant has not completed the test yet.'), 'test_not_completed');
         $final = $ct->scores ?? [];
         foreach ($ct->questions as $q) {
             if ($q['type'] === 'mcq') continue;
-            $v = $scores[$q['id']] ?? ($ct->suggested[$q['id']]['score'] ?? null);
+            $v = $scores[$q['id']] ?? null;
             if ($v === null || ! is_numeric($v)) throw ApiException::field("scores.{$q['id']}", L::t('أدخل درجة كل سؤال مفتوح.', 'Enter a score for every open question.'), 'score_required');
             $final[$q['id']] = max(0, min((int) $q['points'], (int) $v));
         }

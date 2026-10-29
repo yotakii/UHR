@@ -187,13 +187,10 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
         Route::get('/jobs/{id}', [JobController::class, 'show'])->whereNumber('id');
         Route::get('/jobs/{id}/test', [JobTestController::class, 'show'])->whereNumber('id');
     });
-    // الاختبار الأولي للشاغر: الإعداد، اقتراح الأسئلة بالذكاء الاصطناعي، التعديل والاعتماد
+    // الاختبار الأولي للشاغر: الإعداد، كتابة الأسئلة وتعديلها واعتمادها
     Route::middleware('perm:jobs,edit')->group(function () {
         Route::put('/jobs/{id}/test', [JobTestController::class, 'update'])->whereNumber('id');
-        Route::post('/jobs/{id}/test/generate', [JobTestController::class, 'generate'])->whereNumber('id')->middleware('throttle:10,1');
     });
-    Route::get('/ai-settings', [JobTestController::class, 'ai'])->middleware('perm:jobs,view');
-    Route::put('/ai-settings', [JobTestController::class, 'saveAi'])->middleware('perm:settings,edit');
     Route::post('/jobs', [JobController::class, 'store'])->middleware('perm:jobs,create');
     Route::put('/jobs/{id}', [JobController::class, 'update'])->whereNumber('id')->middleware('perm:jobs,edit');
     Route::post('/jobs/{id}/status', [JobController::class, 'status'])->whereNumber('id')->middleware('perm:jobs,edit');

@@ -1,26 +1,25 @@
 import { useEffect, useState } from 'react'
-import { ArrowRight, ArrowLeft, Sparkles, Plus, Trash2, Save, BadgeCheck, Loader2, KeyRound, ChevronUp, ChevronDown } from 'lucide-react'
-import { useL, useLang, bi, fmtDateTime } from '../../../lib/store'
+import { ArrowRight, ArrowLeft, Plus, Trash2, Save, BadgeCheck, Loader2, ChevronUp, ChevronDown } from 'lucide-react'
+import { useL, useLang, bi } from '../../../lib/store'
 import { can, useMe } from '../../../lib/session'
 import { ApiError } from '../../../lib/api'
-import { useAiSettings, useGenerateTest, useJobTest, useSaveAiKey, useSaveJobTest, type Question, type QType, type TestSettings } from '../../../lib/tests'
-import { Badge, Btn, Empty, Field, Modal, PageHead, Panel, Seg, toast } from '../../../ui/kit'
+import { useJobTest, useSaveJobTest, type Question, type QType, type TestSettings } from '../../../lib/tests'
+import { Badge, Btn, Empty, Field, PageHead, Panel, Seg, toast } from '../../../ui/kit'
 
 const blank = (type: QType): Question => ({ id: 'q' + Math.random().toString(36).slice(2, 8), type, text: '', options: type === 'mcq' ? ['', '', '', ''] : [], answer: type === 'mcq' ? 0 : -1, points: type === 'mcq' ? 10 : type === 'short' ? 15 : 20, rubric: '' })
 
 /**
  * الاختبار الأولي للشاغر (D-34): الإعداد (الجمهور، المدة، المحاولات، الصلاحية) + الأسئلة.
- * «اقتراح الأسئلة بالذكاء الاصطناعي» — الميزة الوحيدة الموسومة بالذكاء الاصطناعي — ثم مراجعة HR وتعديله واعتماده قبل الإرسال.
+ * HR يكتب الأسئلة ويعتمدها قبل الإرسال.
  */
 export function JobTest({ id }: { id: number }) {
   const L = useL(); const lang = useLang()
   const me = useMe().data
   const editable = can(me, 'jobs', 'edit')
   const { data, isLoading, error } = useJobTest(id)
-  const gen = useGenerateTest(id); const save = useSaveJobTest(id)
+  const save = useSaveJobTest(id)
   const [s, setS] = useState<TestSettings | null>(null)
   const [qs, setQs] = useState<Question[]>([])
-  const [keyOpen, setKeyOpen] = useState(false)
   useEffect(() => { if (data) { setS(data.settings); setQs(data.test?.questions ?? []) } }, [data])
   if (isLoading || !s) return error ? <div className="max-w-[1000px] mx-auto bg-surface border border-line rounded-2xl"><Empty title={L('الشاغر غير موجود', 'Position not found')} /></div> : <div className="grid place-items-center py-24"><Loader2 className="animate-spin text-brand" /></div>
   const d = data!
@@ -34,7 +33,6 @@ export function JobTest({ id }: { id: number }) {
     onSuccess: () => toast(approve ? L('اعتُمد الاختبار — يُرسل للمتقدمين الجدد حسب الإعداد', 'Test approved — sent to new applicants per the settings') : L('حُفظت المسودة', 'Draft saved')),
     onError: x => toast((x as ApiError).message),
   })
-  const generate = () => gen.mutate(undefined, { onSuccess: () => toast(L('اقتُرحت الأسئلة — راجعها وعدّلها قبل الاعتماد', 'Questions suggested — review and edit before approving')), onError: x => toast((x as ApiError).message) })
 
   return <div className="max-w-[1000px] mx-auto space-y-5">
     <a href="/hr/jobs" className="text-[13px] text-ink-3 hover:text-ink inline-flex items-center gap-1"><Back size={14} />{L('الوظائف الشاغرة', 'Job openings')}</a>
@@ -54,16 +52,8 @@ export function JobTest({ id }: { id: number }) {
       <p className="text-[12.5px] text-ink-3 mt-3">{L('النتيجة تظهر بجانب نسبة المطابقة لا بديلاً عنها، ولا يُرفض أي متقدم آلياً بسبب الاختبار.', 'The result shows next to the match score, never instead of it, and no applicant is rejected automatically because of the test.')}</p>
     </Panel>
 
-    <Panel title={<span className="flex items-center gap-2">{L('الأسئلة', 'Questions')} <span className="text-[12px] text-ink-3 font-normal num">{qs.length} · {L(`${total} درجة`, `${total} points`)}</span></span>}
-      sub={d.test?.generated_at ? <>{L('اقتُرحت بالذكاء الاصطناعي', 'Suggested by AI')} <span className="num">{fmtDateTime(d.test.generated_at, lang)}</span>{d.test.edited && <> · {L('عدّلها HR', 'edited by HR')}</>}</> : undefined}
-      action={editable && <div className="flex flex-wrap gap-2">
-        <Btn size="sm" kind="secondary" icon={gen.isPending ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />} disabled={gen.isPending || !d.ai} title={d.ai ? undefined : L('أضف مفتاح Claude API أولاً', 'Add a Claude API key first')} onClick={generate}>
-          {L('اقتراح الأسئلة بالذكاء الاصطناعي', 'Suggest questions with AI')}</Btn>
-        {can(me, 'settings', 'edit') && <Btn size="sm" kind="ghost" icon={<KeyRound size={14} />} onClick={() => setKeyOpen(true)}>{L('مفتاح Claude API', 'Claude API key')}</Btn>}
-      </div>}>
-      {!d.ai && <div className="mb-4 rounded-xl bg-brass-soft/50 border border-brass/30 px-4 py-3 text-[13px]">{L('اقتراح الأسئلة يحتاج مفتاح Claude API للشركة. يُرسل إليه وصف الشاغر ومتطلباته فقط، بلا أي بيانات للمتقدمين. ويمكن كتابة الأسئلة يدوياً.', 'Suggesting questions needs the company Claude API key. Only the job description and requirements are sent — no applicant data. You can also write the questions manually.')}</div>}
-      {gen.isPending && <div className="mb-4 flex items-center gap-2 text-[13px] text-ink-2"><Loader2 size={15} className="animate-spin text-brand" />{L('جارٍ اقتراح الأسئلة من متطلبات الشاغر… قد يستغرق دقيقة.', 'Suggesting questions from the job requirements… this can take a minute.')}</div>}
-      {qs.length === 0 ? <Empty title={L('لا أسئلة بعد', 'No questions yet')}>{L('اقترحها من متطلبات الشاغر، أو أضفها يدوياً.', 'Suggest them from the job requirements, or add them manually.')}</Empty> :
+    <Panel title={<span className="flex items-center gap-2">{L('الأسئلة', 'Questions')} <span className="text-[12px] text-ink-3 font-normal num">{qs.length} · {L(`${total} درجة`, `${total} points`)}</span></span>}>
+      {qs.length === 0 ? <Empty title={L('لا أسئلة بعد', 'No questions yet')}>{L('أضف الأسئلة من الزر أدناه.', 'Add questions with the button below.')}</Empty> :
         <ol className="space-y-4">{qs.map((q, i) => <li key={q.id} className="rounded-xl border border-line p-4">
           <fieldset disabled={!editable} className="space-y-3 min-w-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -83,7 +73,7 @@ export function JobTest({ id }: { id: number }) {
               <input className="flex-1 min-w-0 w-full bg-transparent outline-none text-[14px]" value={o} placeholder={L(`الخيار ${k + 1}`, `Option ${k + 1}`)} onChange={e => setQ(i, { options: q.options.map((x, m) => m === k ? e.target.value : x) })} />
               {q.options.length > 2 && editable && <button type="button" onClick={() => setQ(i, { options: q.options.filter((_, m) => m !== k), answer: q.answer >= k && q.answer > 0 ? q.answer - 1 : q.answer })} className="text-ink-3 hover:text-danger" aria-label={L('حذف الخيار', 'Remove option')}><Trash2 size={13} /></button>}
             </label>)}{q.options.length < 6 && editable && <button type="button" onClick={() => setQ(i, { options: [...q.options, ''] })} className="text-[13px] text-brand font-semibold text-start px-2">+ {L('خيار', 'Option')}</button>}</div>
-              : <Field label={L('معيار التصحيح (يرشد التقييم المقترح ومراجعة HR)', 'Grading rubric (guides the suggested score and HR review)')}><textarea className="field min-h-[52px]" value={q.rubric} onChange={e => setQ(i, { rubric: e.target.value })} /></Field>}
+              : <Field label={L('معيار التصحيح (يرشد مراجعة HR)', 'Grading rubric (guides the HR review)')}><textarea className="field min-h-[52px]" value={q.rubric} onChange={e => setQ(i, { rubric: e.target.value })} /></Field>}
           </fieldset>
         </li>)}</ol>}
       {editable && <div className="flex flex-wrap gap-2 mt-4">
@@ -91,24 +81,5 @@ export function JobTest({ id }: { id: number }) {
         <Btn size="sm" icon={<Plus size={14} />} onClick={() => setQs(x => [...x, blank('short')])}>{L('إجابة قصيرة', 'Short answer')}</Btn>
         <Btn size="sm" icon={<Plus size={14} />} onClick={() => setQs(x => [...x, blank('scenario')])}>{L('سيناريو', 'Scenario')}</Btn></div>}
     </Panel>
-    {keyOpen && <AiKeyModal onClose={() => setKeyOpen(false)} />}
   </div>
-}
-
-function AiKeyModal({ onClose }: { onClose: () => void }) {
-  const L = useL()
-  const { data } = useAiSettings()
-  const save = useSaveAiKey()
-  const [key, setKey] = useState('')
-  const err = save.error instanceof ApiError ? save.error : null
-  return <Modal open onClose={onClose} title={L('مفتاح Claude API للشركة', 'Company Claude API key')}
-    footer={<>{data?.source === 'company' && <Btn kind="danger" disabled={save.isPending} onClick={() => save.mutate('', { onSuccess: () => { toast(L('حُذف المفتاح', 'Key removed')); onClose() } })}>{L('حذف المفتاح', 'Remove key')}</Btn>}
-      <Btn onClick={onClose}>{L('إلغاء', 'Cancel')}</Btn><Btn kind="primary" disabled={!key || save.isPending} onClick={() => save.mutate(key, { onSuccess: () => { toast(L('حُفظ المفتاح مشفّراً', 'Key saved encrypted')); onClose() } })}>{L('حفظ', 'Save')}</Btn></>}>
-    <div className="space-y-3 text-[14px]">
-      <p className="text-ink-2">{L('يُستخدم المفتاح من الخادم فقط لاقتراح أسئلة الاختبار الأولي وتقييم الإجابات المفتوحة مبدئياً. يُحفظ مشفّراً ولا يظهر بعد الحفظ.', 'The key is used server-side only, to suggest test questions and pre-grade open answers. It is stored encrypted and never shown again.')}</p>
-      {data && <div className="text-[13px]">{data.configured ? <Badge tone="brand">{data.source === 'company' ? L('مفتاح الشركة', 'Company key') : L('مفتاح الخادم', 'Server key')} <span className="ltr">{data.hint}</span></Badge> : <Badge tone="brass">{L('غير مضبوط', 'Not set')}</Badge>}
-        <span className="text-ink-3 ms-2 ltr inline-block">{data.model}</span></div>}
-      <Field label={L('مفتاح جديد', 'New key')} error={err?.field('api_key')}><input className="field ltr text-start" type="password" autoComplete="off" placeholder="sk-ant-…" value={key} onChange={e => { setKey(e.target.value.trim()); save.reset() }} /></Field>
-    </div>
-  </Modal>
 }

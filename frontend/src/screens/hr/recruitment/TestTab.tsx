@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Send, Loader2, Check, X, Sparkles, BadgeCheck } from 'lucide-react'
+import { Send, Loader2, Check, X, BadgeCheck } from 'lucide-react'
 import { useL, useLang, fmtDateTime } from '../../../lib/store'
 import { can, useMe } from '../../../lib/session'
 import { ApiError } from '../../../lib/api'
@@ -24,7 +24,7 @@ export function TestTab({ c }: { c: CandFile }) {
   const [note, setNote] = useState('')
   useEffect(() => {
     if (!t) return
-    setScores(Object.fromEntries(t.questions.filter(q => q.type !== 'mcq').map(q => [q.id, t.scores[q.id] ?? t.suggested[q.id]?.score ?? 0])))
+    setScores(Object.fromEntries(t.questions.filter(q => q.type !== 'mcq').map(q => [q.id, t.scores[q.id] ?? 0])))
     setNote(t.review_note ?? '')
   }, [t])
   const closed = ['hired', 'rejected'].includes(c.stage)
@@ -67,7 +67,6 @@ export function TestTab({ c }: { c: CandFile }) {
             : <div className="mt-3 space-y-2">
               <div className="rounded-lg bg-sub px-3 py-2 text-[14px] whitespace-pre-wrap">{(a as string) || <span className="text-ink-3">{L('لم يُجب', 'Not answered')}</span>}</div>
               {q.rubric && <div className="text-[12.5px] text-ink-3"><span className="font-semibold">{L('المعيار:', 'Rubric:')}</span> {q.rubric}</div>}
-              {t.suggested[q.id] && <div className="text-[12.5px] flex gap-1.5 items-start text-info"><Sparkles size={13} className="mt-0.5 shrink-0" /><span>{L('تقييم مقترح بالذكاء الاصطناعي', 'AI-suggested score')}: <b className="num">{t.suggested[q.id].score}/{q.points}</b> — {t.suggested[q.id].note}</span></div>}
               <label className="flex items-center gap-2 text-[13px]">{L('الدرجة المعتمدة', 'Approved score')}
                 <input type="number" min={0} max={q.points} disabled={!editable} className="field !h-8 !w-20 num" value={scores[q.id] ?? 0} onChange={e => setScores(s => ({ ...s, [q.id]: Math.max(0, Math.min(q.points, +e.target.value)) }))} />
                 <span className="text-ink-3 num">/ {q.points}</span></label>

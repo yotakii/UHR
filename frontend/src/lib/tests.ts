@@ -12,28 +12,20 @@ export interface TestSettings { enabled: boolean; audience: 'all' | 'passed'; mi
 export interface JobTestData {
   job: { id: number; code: string; title: Bi; status: string }
   settings: TestSettings
-  test: { status: 'draft' | 'approved'; questions: Question[]; ai_generated: boolean; edited: boolean; generated_at: string | null; approved_at: string | null } | null
-  ai: boolean; sent: number
+  test: { status: 'draft' | 'approved'; questions: Question[]; approved_at: string | null } | null
+  sent: number
 }
 export type TestStatus = 'sent' | 'started' | 'completed' | 'reviewed' | 'expired'
 export interface CandTestDetail {
   enabled: boolean; approved: boolean; attempts: number
   current: { id: number; attempt: number; status: TestStatus; minutes: number; sent_at: string; expires_at: string; started_at: string | null; submitted_at: string | null; reviewed_at: string | null
-    review_note: string | null; auto_pct: number | null; pct: number | null; questions: Question[]; answers: Record<string, number | string | null>; suggested: Record<string, { score: number; note: string }>; scores: Record<string, number> } | null
+    review_note: string | null; auto_pct: number | null; pct: number | null; questions: Question[]; answers: Record<string, number | string | null>; scores: Record<string, number> } | null
 }
 
 export const useJobTest = (id: number) => useQuery({ queryKey: ['hr', 'job-test', id], queryFn: () => api<{ data: JobTestData }>(`/hr/jobs/${id}/test`).then(r => r.data) })
 const setJobTest = (d: JobTestData) => { queryClient.setQueryData(['hr', 'job-test', d.job.id], d); queryClient.invalidateQueries({ queryKey: ['hr', 'jobs'] }) }
-export const useGenerateTest = (id: number) => useMutation({ mutationFn: () => api<{ data: JobTestData }>(`/hr/jobs/${id}/test/generate`, { method: 'POST', json: {} }).then(r => r.data), onSuccess: setJobTest })
 export const useSaveJobTest = (id: number) => useMutation({
   mutationFn: (v: TestSettings & { questions: Question[]; approve: boolean }) => api<{ data: JobTestData }>(`/hr/jobs/${id}/test`, { method: 'PUT', json: v }).then(r => r.data), onSuccess: setJobTest,
-})
-
-export interface AiSettings { configured: boolean; source: 'company' | 'server' | null; hint: string | null; model: string }
-export const useAiSettings = () => useQuery({ queryKey: ['hr', 'ai-settings'], queryFn: () => api<AiSettings>('/hr/ai-settings') })
-export const useSaveAiKey = () => useMutation({
-  mutationFn: (api_key: string) => api<AiSettings>('/hr/ai-settings', { method: 'PUT', json: { api_key: api_key || null } }),
-  onSuccess: d => { queryClient.setQueryData(['hr', 'ai-settings'], d); queryClient.invalidateQueries({ queryKey: ['hr', 'job-test'] }) },
 })
 
 const settleCand = (c: CandFile) => { queryClient.setQueryData(['hr', 'candidate', c.id], c); queryClient.invalidateQueries({ queryKey: ['hr', 'candidates'] }) }

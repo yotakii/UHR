@@ -8,6 +8,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class JobTest extends Model
 {
     use Concerns\BelongsToCompany;
-    protected function casts(): array { return ['questions' => 'array', 'generated' => 'array', 'generated_at' => 'datetime', 'approved_at' => 'datetime']; }
+    protected function casts(): array { return ['questions' => 'array', 'approved_at' => 'datetime']; }
     public function jobOpening(): BelongsTo { return $this->belongsTo(JobOpening::class); }
 }

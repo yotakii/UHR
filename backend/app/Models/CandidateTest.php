@@ -13,7 +13,7 @@ class CandidateTest extends Model
 
     protected function casts(): array
     {
-        return ['questions' => 'array', 'answers' => 'array', 'suggested' => 'array', 'scores' => 'array', 'sent_at' => 'datetime', 'expires_at' => 'datetime',
+        return ['questions' => 'array', 'answers' => 'array', 'scores' => 'array', 'sent_at' => 'datetime', 'expires_at' => 'datetime',
             'started_at' => 'datetime', 'deadline_at' => 'datetime', 'submitted_at' => 'datetime', 'reviewed_at' => 'datetime'];
     }
 

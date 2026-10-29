@@ -60,8 +60,6 @@ class Settings
             'eng' => ['excellent' => 100, 'good' => 70, 'fair' => 40, 'weak' => 10],
             'file' => ['cv' => true, 'education' => true, 'experience' => true, 'refs' => true, 'linkedin' => true], // ما يُحسب في اكتمال الملف
         ],
-        // الاختبار الأولي (D-34): مفتاح Claude API مشفّراً، والنموذج
-        'ai' => ['api_key' => null, 'model' => 'claude-opus-5-5'],
         // قالب الطباعة (SRS §10.4): الشعار وحجمه ومحاذاته والهامش
         'print' => ['logo' => true, 'logo_height' => 56, 'align' => 'start', 'margin_mm' => 14],
         // الملفات الإضافية للموظف (SRS §10.11، D-25): الأنواع، الصيغ والحجم، أيام التنبيه قبل الانتهاء، والأدوار التي ترى «الحساس»
