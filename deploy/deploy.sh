@@ -36,6 +36,12 @@ main() {
     echo "[uhr] أُضيفت إعدادات Reverb إلى deploy/.env"
   fi
 
+  # قراءة السير بالنموذج المحلي (خدمة ollama)
+  if ! grep -q '^OLLAMA_URL=' "$ENV"; then
+    printf '\n# قراءة السير بنموذج محلي مجاني — أُضيف تلقائياً\nOLLAMA_URL=http://ollama:11434\nOLLAMA_MODEL=qwen2.5:3b\n' >> "$ENV"
+    echo "[uhr] أُضيفت إعدادات قراءة السير إلى deploy/.env"
+  fi
+
   local BRANCH="${1:-$(grep -E '^DEPLOY_BRANCH=' "$ENV" | cut -d= -f2)}"
   BRANCH="${BRANCH:-$(git rev-parse --abbrev-ref HEAD)}"
   echo "[uhr] الفرع: $BRANCH"

@@ -12,6 +12,8 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        // قراءة السير: نموذج محلي مجاني على الخادم (الاختبارات تستبدله)
+        $this->app->bind(\App\Services\Ai\AiClient::class, \App\Services\Ai\LocalModel::class);
     }
 
     public function boot(): void

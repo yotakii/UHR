@@ -13,6 +13,12 @@ class Candidate extends Model
 
     public const STAGES = ['new', 'screening', 'interview', 'technical', 'offer', 'hired', 'rejected'];
 
+    protected static function booted(): void
+    {
+        // كل طلب جديد: قراءة السيرة بالخلفية (إن كانت متاحة للشركة)
+        static::created(fn (Candidate $c) => app(\App\Services\Recruitment\CvReview::class)->queue($c));
+    }
+
     protected function casts(): array
     {
         return [
@@ -42,5 +48,6 @@ class Candidate extends Model
     }
     public function photo(): BelongsTo { return $this->belongsTo(StoredFile::class, 'photo_file_id'); }
     /** آخر محاولة للاختبار الأولي */
+    public function review(): HasOne { return $this->hasOne(CandidateReview::class); }
     public function test(): HasOne { return $this->hasOne(CandidateTest::class)->latestOfMany('attempt'); }
 }

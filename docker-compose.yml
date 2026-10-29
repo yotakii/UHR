@@ -13,6 +13,11 @@ x-reverb-env: &reverb-env
   REVERB_PORT: 8080
   REVERB_SCHEME: http
 
+# قراءة السير بنموذج محلي مجاني (اختياري محلياً: docker compose --profile ai up -d) — بلا خدمة ollama تبقى الميزة متوقفة بصمت
+x-ai-env: &ai-env
+  OLLAMA_URL: http://ollama:11434
+  OLLAMA_MODEL: ${UHR_AI_MODEL:-qwen2.5:3b}
+
 services:
   db:
     image: postgres:18-alpine
@@ -68,7 +73,7 @@ services:
       MAIL_PORT: 1025
       MAIL_FROM_ADDRESS: no-reply@alfarada.sy
       MAIL_FROM_NAME: UHR
-      <<: *reverb-env
+      <<: [*reverb-env, *ai-env]
     volumes:
       - ./backend:/var/www
       - uhr-vendor:/var/www/vendor          # الحزم داخل volume — أسرع بكثير على ويندوز
@@ -111,6 +116,36 @@ services:
       api: { condition: service_healthy }
     environment:
       <<: *reverb-env
+    volumes:
+      - ./backend:/var/www
+      - uhr-vendor:/var/www/vendor
+
+  # قراءة السير: النموذج المحلي (يُنزَّل أول مرة ~2GB) وعامل طابور «ai» مستقل حتى لا يتأخر البريد
+  ollama:
+    profiles: ["ai"]
+    image: ollama/ollama:latest
+    container_name: uhr-ollama
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 4; ollama pull $${OLLAMA_MODEL}; wait"]
+    environment:
+      OLLAMA_MODEL: ${UHR_AI_MODEL:-qwen2.5:3b}
+      OLLAMA_KEEP_ALIVE: 5m
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_MAX_LOADED_MODELS: "1"
+    mem_limit: 4g
+    volumes:
+      - uhr-ollama:/root/.ollama
+
+  ai-worker:
+    profiles: ["ai"]
+    image: uhr-api:dev
+    container_name: uhr-ai-worker
+    restart: unless-stopped
+    entrypoint: ["php", "artisan", "queue:work", "--queue=ai", "--tries=2", "--timeout=600", "--sleep=3"]
+    depends_on:
+      api: { condition: service_healthy }
+    environment:
+      <<: [*reverb-env, *ai-env]
     volumes:
       - ./backend:/var/www
       - uhr-vendor:/var/www/vendor
@@ -160,3 +195,4 @@ volumes:
   uhr-redis:
   uhr-vendor:
   uhr-node-modules:
+  uhr-ollama:

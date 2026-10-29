@@ -12,7 +12,7 @@ use Carbon\Carbon;
 /** المتقدم كما يراه فريق التوظيف (M03 بطاقة اللوحة، M04 الملف الكامل) */
 class HrCandidate
 {
-    public const WITH = ['jobOpening.department', 'offer', 'appointment.approvals', 'referrer', 'test'];
+    public const WITH = ['jobOpening.department', 'offer', 'appointment.approvals', 'referrer', 'test', 'review'];
 
     public static function card(Candidate $c): array
     {
@@ -26,6 +26,7 @@ class HrCandidate
             'referrer' => $c->referrer ? ['ar' => $c->referrer->name, 'en' => $c->referrer->name_en] : null,
             'offer' => $c->offer?->status, 'appointment' => (bool) $c->appointment,
             'test' => $c->test ? ['status' => $c->test->status, 'pct' => $c->test->pct, 'auto_pct' => $c->test->auto_pct] : null,
+            'review' => \App\Services\Recruitment\CvReview::row($c->review),
             'job' => ['id' => $c->job_opening_id, 'code' => $c->jobOpening->code, 'title' => ['ar' => $c->jobOpening->title_ar, 'en' => $c->jobOpening->title_en]],
         ];
     }
@@ -55,6 +56,8 @@ class HrCandidate
             'appointment' => $ap ? self::appointment($ap, $c, $viewer) : null,
             'keep_cv' => $c->keep_cv, 'cv_status' => $c->cv_status,
             'test_detail' => self::test($c),
+            'review_detail' => \App\Services\Recruitment\CvReview::row($c->review, true),
+            'review_available' => app(\App\Services\Ai\AiClient::class)->available() && \App\Services\Recruitment\CvReview::forCompany($c->company_id)['enabled'],
             'logs' => $c->logs->sortByDesc('at')->values()->map(fn ($l) => ['at' => $l->at->toIso8601String(), 'ar' => $l->text_ar, 'en' => $l->text_en, 'kind' => $l->kind, 'form' => $l->form]),
         ]);
     }

@@ -33,3 +33,12 @@ export function useSaveCompany(id: number | null) {
 export const useCompanyStatus = () => useMutation({ mutationFn: (v: { id: number; status: 'active' | 'suspended'; reason: string }) => api(`/platform/companies/${v.id}/status`, { json: v }), onSuccess: refresh })
 export const useReview = () => useMutation({ mutationFn: (v: { id: number; decision: 'approved' | 'rejected'; reason: string }) => api(`/platform/reviews/${v.id}`, { json: v }), onSuccess: refresh })
 export const useSavePortal = () => useMutation({ mutationFn: (v: PortalTexts) => api<{ data: PortalTexts }>('/platform/portal', { method: 'PUT', json: v }), onSuccess: refresh })
+
+// قراءة السير بالنموذج المحلي: الحالة، التشغيل والحد الشهري لكل شركة
+export interface CvReadingCompany { id: number; ar: string; en: string; enabled: boolean; monthly_limit: number | null; used: number; failed: number }
+export interface CvReading { configured: boolean; available: boolean; model: string; enabled: boolean; monthly_limit: number; queue: number; companies: CvReadingCompany[] }
+export const useCvReading = () => useQuery({ queryKey: ['platform', 'cv-reading'], queryFn: () => api<{ data: CvReading }>('/platform/cv-reading').then(r => r.data), refetchInterval: 30_000 })
+export const useSaveCvReading = () => useMutation({
+  mutationFn: (v: { enabled: boolean; monthly_limit: number; companies: { id: number; enabled: boolean; monthly_limit: number | null }[] }) => api<{ data: CvReading }>('/platform/cv-reading', { method: 'PUT', json: v }).then(r => r.data),
+  onSuccess: d => queryClient.setQueryData(['platform', 'cv-reading'], d),
+})

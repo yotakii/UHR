@@ -209,6 +209,7 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
     Route::middleware('perm:candidates,edit')->group(function () {
         Route::post('/candidates/{id}/move', [CandidateController::class, 'move'])->whereNumber('id');
         Route::post('/candidates/{id}/notes', [CandidateController::class, 'note'])->whereNumber('id');
+        Route::post('/candidates/{id}/review', [CandidateController::class, 'review'])->whereNumber('id')->middleware('throttle:20,1,cv-review');
         Route::put('/candidates/{id}/interview', [CandidateController::class, 'interview'])->whereNumber('id');
         Route::put('/candidates/{id}/offer', [CandidateController::class, 'offer'])->whereNumber('id');
         Route::post('/candidates/{id}/test', [CandidateController::class, 'sendTest'])->whereNumber('id');
@@ -444,6 +445,9 @@ Route::middleware(['auth', 'fresh', 'portal:platform'])->prefix('platform')->gro
     Route::post('/reviews/{id}', [PlatformController::class, 'review'])->whereNumber('id');
     Route::get('/portal', [PlatformController::class, 'portal']);
     Route::put('/portal', [PlatformController::class, 'updatePortal']);
+    // قراءة السير بالنموذج المحلي: الحالة، والتشغيل والحد الشهري لكل شركة
+    Route::get('/cv-reading', [\App\Http\Controllers\Api\Platform\CvReadingController::class, 'show']);
+    Route::put('/cv-reading', [\App\Http\Controllers\Api\Platform\CvReadingController::class, 'update']);
     // نسخة الخادم الكاملة (11b)
     Route::get('/backups', [AdminBackupController::class, 'platform']);
     Route::post('/backups', [AdminBackupController::class, 'platformRun'])->middleware('throttle:6,10,platform-backup');

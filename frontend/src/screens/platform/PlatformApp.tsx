@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { LayoutGrid, Building2, ClipboardCheck, Type, Briefcase, Inbox, Clock, CheckCircle2, XCircle, MapPin, DatabaseBackup } from 'lucide-react'
+import { LayoutGrid, Building2, ClipboardCheck, Type, Briefcase, Inbox, Clock, CheckCircle2, XCircle, MapPin, DatabaseBackup, ScanText } from 'lucide-react'
 import { useL, useLang, bi, fmtDateTime } from '../../lib/store'
 import { useRoute } from '../../lib/router'
 import type { SessionUser } from '../../lib/session'
@@ -11,6 +11,7 @@ import { Shell, type NavItem } from '../console/Shell'
 import { Companies } from './Companies'
 import { PortalTexts } from './PortalTexts'
 import { PlatformBackups } from '../hr/admin/Backups'
+import { CvReading } from './CvReading'
 
 /** لوحة مدير المنصة: نظرة عامة، الشركات، مراجعة الشواغر، نصوص البوابة */
 export function PlatformApp({ user }: { user: SessionUser }) {
@@ -22,11 +23,12 @@ export function PlatformApp({ user }: { user: SessionUser }) {
     { to: '/platform/companies', icon: <Building2 size={18} />, label: L('الشركات', 'Companies'), group: L('المنصة', 'Platform') },
     { to: '/platform/reviews', icon: <ClipboardCheck size={18} />, label: L('مراجعة الشواغر', 'Job reviews'), count: pending, group: L('المنصة', 'Platform') },
     { to: '/platform/portal', icon: <Type size={18} />, label: L('نصوص البوابة', 'Portal texts'), group: L('المنصة', 'Platform') },
+    { to: '/platform/cv-reading', icon: <ScanText size={18} />, label: L('قراءة السير', 'CV reading'), group: L('المنصة', 'Platform') },
     { to: '/platform/backups', icon: <DatabaseBackup size={18} />, label: L('النسخ الاحتياطي', 'Backups'), group: L('المنصة', 'Platform') },
   ]
   const sub = route.parts[1]
   return <Shell items={items} user={user} org="Atmata · UHR" sub={L('إدارة منصة UHR وبوابة فرص العمل', 'UHR platform & jobs portal administration')}>
-    {sub === 'companies' ? <Companies /> : sub === 'reviews' ? <Reviews /> : sub === 'portal' ? <PortalTexts /> : sub === 'backups' ? <PlatformBackups /> : <OverviewPage />}
+    {sub === 'companies' ? <Companies /> : sub === 'reviews' ? <Reviews /> : sub === 'portal' ? <PortalTexts /> : sub === 'backups' ? <PlatformBackups /> : sub === 'cv-reading' ? <CvReading /> : <OverviewPage />}
   </Shell>
 }
 

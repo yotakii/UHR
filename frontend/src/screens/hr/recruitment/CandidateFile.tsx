@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { FileText, Download, ArrowRight, ArrowLeft, Loader2 } from 'lucide-react'
-import { useL, useLang, bi, fmtDate } from '../../../lib/store'
+import { FileText, Download, ArrowRight, ArrowLeft, Loader2, ScanText, RefreshCw, Check, Minus } from 'lucide-react'
+import { useL, useLang, bi, fmtDate, fmtDateTime } from '../../../lib/store'
 import { navigate, setQuery, useRoute } from '../../../lib/router'
 import { can, useMe } from '../../../lib/session'
 import { fileUrl } from '../../../lib/console'
-import { useCandidate, useMove, useNote, f25Axes, type CandFile } from '../../../lib/candidates'
+import { useCandidate, useMove, useNote, useReviewCv, f25Axes, FIT, type CandFile } from '../../../lib/candidates'
 import { STAGES, DEGREES, ENGLISH, type Stage } from '../../../lib/recruitment'
 import type { ApiError } from '../../../lib/api'
 import { Avatar, Badge, Btn, Empty, KV, Panel, Progress, Tabs, toast } from '../../../ui/kit'
@@ -59,6 +59,8 @@ function File({ c, lang }: { c: CandFile; lang: 'ar' | 'en' }) {
           {c.stage === 'rejected' && c.reject_reason && <div className="text-[13px] text-danger mt-1">{L('السبب:', 'Reason:')} {c.reject_reason}</div>}
         </div>
         <div className="text-center px-4 border-s border-line-2"><div className="text-[12px] text-ink-3">{L('مطابقة المتطلبات', 'Requirement match')}</div><div className={`text-[28px] font-bold num ${c.match >= 75 ? 'text-brand' : c.match >= 55 ? 'text-brass' : 'text-ink-3'}`}>{c.match}{P}</div></div>
+        {c.review?.status === 'done' && c.review.score !== null && <button type="button" onClick={() => setTab('match')} className="text-center px-4 border-s border-line-2" title={L('قراءة آلية للاسترشاد', 'Automatic reading, for guidance')}>
+          <div className="text-[12px] text-ink-3">{L('قراءة السيرة', 'CV reading')}</div><div className="text-[28px] font-bold num text-ink-2">{c.review.score}</div></button>}
         {c.test && <button type="button" onClick={() => setTab('test')} className="text-center px-4 border-s border-line-2"><div className="text-[12px] text-ink-3">{L('الاختبار الأولي', 'Preliminary test')}</div>
           {c.test.pct !== null ? <div className="text-[28px] font-bold num text-info">{c.test.pct}{P}</div> : <div className="mt-1.5"><Badge tone={testStatus(c.test.status, L)[1]}>{testStatus(c.test.status, L)[0]}</Badge></div>}</button>}
         <div className="flex gap-2 flex-wrap">
@@ -140,9 +142,36 @@ function FileTab({ c }: { c: CandFile }) {
   </div>
 }
 
+/** قراءة السيرة الآلية: درجة استرشادية وملخص ونقاط القوة والنواقص — لا تغيّر المرحلة */
+function ReviewPanel({ c }: { c: CandFile }) {
+  const L = useL(); const lang = useLang()
+  const me = useMe().data; const canEdit = can(me, 'candidates', 'edit')
+  const rerun = useReviewCv(c.id)
+  const r = c.review_detail
+  if (!r && !c.review_available) return null
+  const busy = r?.status === 'pending' || r?.status === 'running'
+  return <Panel title={<span className="flex items-center gap-2"><ScanText size={17} />{L('قراءة السيرة', 'CV reading')}</span>}
+    sub={L('قراءة آلية للمؤهلات والخبرات مقابل متطلبات الشاغر، للاسترشاد فقط — لا تغيّر المرحلة ولا ترفض أحداً، والقرار للموارد البشرية.', 'An automatic reading of qualifications and experience against the role, for guidance only — it never moves or rejects anyone; HR decides.')}
+    action={canEdit && c.review_available && !busy && <Btn size="sm" icon={<RefreshCw size={14} />} disabled={rerun.isPending} onClick={() => rerun.mutate(undefined, { onSuccess: () => toast(L('بدأت إعادة القراءة', 'Reading started again')), onError: e => toast((e as ApiError).message) })}>{L('إعادة القراءة', 'Read again')}</Btn>}>
+    {!r || busy ? <div className="flex items-center gap-2 text-[14px] text-ink-2"><Loader2 size={16} className="animate-spin text-brand" />{L('تُقرأ السيرة الآن بالخلفية — تظهر النتيجة هنا خلال دقائق.', 'The CV is being read in the background — the result appears here within minutes.')}</div>
+      : r.status === 'failed' ? <div className="text-[14px] text-ink-2">{L('تعذّرت قراءة السيرة هذه المرة. يمكنك إعادة المحاولة لاحقاً.', 'The CV could not be read this time. You can try again later.')}</div>
+      : <div className="grid md:grid-cols-[150px_1fr] gap-5 items-start">
+        <div className="text-center rounded-2xl bg-sub p-4"><div className="text-[40px] font-bold num leading-none">{r.score}</div><div className="text-[12px] text-ink-3 mt-1">{L('من 100', 'out of 100')}</div>
+          {r.fit && <div className="mt-2"><Badge tone={FIT[r.fit][2]}>{lang === 'ar' ? FIT[r.fit][0] : FIT[r.fit][1]}</Badge></div>}</div>
+        <div className="space-y-3 min-w-0">
+          {r.summary && <p className="text-[14px] leading-7">{r.summary}</p>}
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div><div className="text-[13px] font-semibold text-brand mb-1">{L('نقاط القوة', 'Strengths')}</div><ul className="space-y-1 text-[13.5px]">{r.strengths.length ? r.strengths.map((x, i) => <li key={i} className="flex gap-2"><Check size={14} className="text-brand mt-1 shrink-0" />{x}</li>) : <li className="text-ink-3">—</li>}</ul></div>
+            <div><div className="text-[13px] font-semibold text-brass mb-1">{L('نواقص مقارنة بالمتطلبات', 'Gaps against the requirements')}</div><ul className="space-y-1 text-[13.5px]">{r.gaps.length ? r.gaps.map((x, i) => <li key={i} className="flex gap-2"><Minus size={14} className="text-brass mt-1 shrink-0" />{x}</li>) : <li className="text-ink-3">—</li>}</ul></div>
+          </div>
+          {r.reviewed_at && <div className="text-[12px] text-ink-3">{L('قُرئت في', 'Read on')} <span className="num">{fmtDateTime(r.reviewed_at, lang)}</span></div>}
+        </div></div>}
+  </Panel>
+}
+
 function MatchTab({ c }: { c: CandFile }) {
   const L = useL(); const lang = useLang(); const P = lang === 'ar' ? '٪' : '%'
-  return <Panel title={L('مطابقة المتقدم مع متطلبات الوظيفة', 'Applicant vs role requirements')} sub={<>{L('حسب معايرة شركتك: الأوزان ودرجة كل حالة من', 'Per your company calibration: weights and per-case scores in')} <a href="/hr/settings/recruitment" className="text-brand font-semibold">{L('قواعد التوظيف والمطابقة', 'Recruitment & matching rules')}</a></>}>
+  return <div className="space-y-5"><ReviewPanel c={c} /><Panel title={L('مطابقة المتقدم مع متطلبات الوظيفة', 'Applicant vs role requirements')} sub={<>{L('حسب معايرة شركتك: الأوزان ودرجة كل حالة من', 'Per your company calibration: weights and per-case scores in')} <a href="/hr/settings/recruitment" className="text-brand font-semibold">{L('قواعد التوظيف والمطابقة', 'Recruitment & matching rules')}</a></>}>
     <div className="grid lg:grid-cols-[1fr_auto] gap-8 items-center"><div className="space-y-4 max-w-2xl min-w-0">{c.match_parts.map(p => <div key={p.key} className="grid grid-cols-[120px_1fr] sm:grid-cols-[150px_1fr_120px] gap-x-4 gap-y-1 items-center text-[14px]">
       <span>{p[lang]} <span className="text-ink-3 text-[12px] num">({p.weight}{P})</span></span><Progress value={p.score * 100} tone={p.score >= 0.75 ? 'brand' : p.score >= 0.45 ? 'brass' : 'danger'} /><span className="text-[13px] text-ink-2 col-span-2 sm:col-span-1">{lang === 'ar' ? p.note_ar : p.note_en}</span></div>)}
       <div className="pt-3 border-t border-line-2 flex justify-between font-semibold"><span>{L('النتيجة', 'Result')}</span><span className="num">{c.match}{P}</span></div>
@@ -151,7 +180,7 @@ function MatchTab({ c }: { c: CandFile }) {
     </div>
     <div className="flex flex-wrap justify-center gap-4"><div className="text-center"><Radar size={240} axes={c.match_parts.map(p => ({ label: p[lang], value: p.score }))} /><div className="text-[12px] text-ink-3">{L('مطابقة المتطلبات', 'Requirement match')}</div></div>
       {c.interview && <div className="text-center"><Radar size={240} axes={f25Axes(c.interview.ratings, lang)} /><div className="text-[12px] text-ink-3">{L('تقييم المقابلة F-25', 'Interview F-25')}</div></div>}</div></div>
-  </Panel>
+  </Panel></div>
 }
 
 function LogTab({ c, canEdit }: { c: CandFile; canEdit: boolean }) {

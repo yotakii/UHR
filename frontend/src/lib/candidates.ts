@@ -9,6 +9,8 @@ export interface CandCard {
   id: number; ref: string; name: Bi; stage: Stage; stage_at: string; days_in_stage: number; sla: 'ok' | 'due' | 'late' | 'none'; sla_limit: number; created_at: string
   match: number; band: 'normal' | 'review' | 'reject' | null; auto_flag: string | null; internal: boolean; referred: boolean; referrer: Bi | null; offer: OfferStatus | null; appointment: boolean
   test: { status: import('./tests').TestStatus; pct: number | null; auto_pct: number | null } | null
+  /** قراءة السيرة الآلية (استرشادية) */
+  review: CvReviewCard | null
   job: { id: number; code: string; title: Bi }
 }
 export interface MatchPart { key: string; ar: string; en: string; weight: number; score: number; note_ar: string; note_en: string }
@@ -37,6 +39,13 @@ export interface CandFile extends Omit<CandCard, 'offer' | 'appointment' | 'job'
   interview: { ratings: Record<string, number>; notes: string | null; recommendation: 'recommended' | 'reserve' | 'rejected'; interviewer: string; date: string; pct: number } | null
   offer: HrOffer | null; appointment: HrAppointment | null; logs: LogRow[]
   keep_cv: boolean; cv_status: 'active' | 'archived' | 'erased'; test_detail: import('./tests').CandTestDetail
+  review_detail: (CvReviewCard & { summary: string | null; strengths: string[]; gaps: string[]; reviewed_at: string | null }) | null
+  review_available: boolean
+}
+export type CvFit = 'strong' | 'good' | 'partial' | 'weak'
+export interface CvReviewCard { status: 'pending' | 'running' | 'done' | 'failed'; score: number | null; fit: CvFit | null }
+export const FIT: Record<CvFit, [string, string, 'brand' | 'info' | 'brass' | 'neutral']> = {
+  strong: ['ملاءمة عالية', 'Strong fit', 'brand'], good: ['ملاءمة جيدة', 'Good fit', 'info'], partial: ['ملاءمة جزئية', 'Partial fit', 'brass'], weak: ['ملاءمة ضعيفة', 'Weak fit', 'neutral'],
 }
 export type OfferInput = Pick<HrOffer, 'title' | 'contract' | 'currency' | 'basic' | 'housing' | 'transport' | 'fuel' | 'leave_days' | 'start_date'>
 export interface Rules { match_threshold: number; review_min: number; reject_max: number; auto_reject: boolean; auto_screen: boolean; sla_alerts: boolean; whatsapp_nudge: boolean; referral_stages: number[]; hard_to_fill_x: number; cv_retention_months: number; probation_at: number; internal_min_months: number; internal_no_probation: boolean; internal_clean_months: number }
@@ -57,12 +66,15 @@ export const useBoard = (job?: number, q?: string) => useQuery({
   queryFn: () => api<{ data: CandCard[]; jobs: { id: number; code: string; title: Bi; status: string }[]; sla: Record<string, number> }>(`/hr/candidates?${new URLSearchParams({ ...(job ? { job: String(job) } : {}), ...(q ? { q } : {}) })}`),
   placeholderData: prev => prev,
 })
-export const useCandidate = (id: number) => useQuery({ queryKey: ['hr', 'candidate', id], queryFn: () => api<{ data: CandFile }>(`/hr/candidates/${id}`).then(r => r.data) })
+export const useCandidate = (id: number) => useQuery({ queryKey: ['hr', 'candidate', id], queryFn: () => api<{ data: CandFile }>(`/hr/candidates/${id}`).then(r => r.data),
+  // أثناء قراءة السيرة بالخلفية: تحديث كل 8 ثوانٍ (احتياطاً إن لم يصل التحديث اللحظي)
+  refetchInterval: q => ['pending', 'running'].includes(q.state.data?.review_detail?.status ?? '') ? 8000 : false })
 
 const settle = (c: CandFile) => { queryClient.setQueryData(['hr', 'candidate', c.id], c); queryClient.invalidateQueries({ queryKey: ['hr', 'candidates'] }); queryClient.invalidateQueries({ queryKey: ['hr', 'dashboard'] }) }
 const post = <T,>(path: string, method: string, json: T) => api<{ data: CandFile }>(path, { method, json }).then(r => r.data)
 
 export const useMove = () => useMutation({ mutationFn: (v: { id: number; stage: Stage; reason?: string }) => post(`/hr/candidates/${v.id}/move`, 'POST', { stage: v.stage, reason: v.reason }), onSuccess: settle })
+export const useReviewCv = (id: number) => useMutation({ mutationFn: () => post(`/hr/candidates/${id}/review`, 'POST', {}), onSuccess: settle })
 export const useNote = (id: number) => useMutation({ mutationFn: (text: string) => post(`/hr/candidates/${id}/notes`, 'POST', { text }), onSuccess: settle })
 export const useInterview = (id: number) => useMutation({ mutationFn: (v: { ratings: Record<string, number>; notes: string; recommendation: string }) => post(`/hr/candidates/${id}/interview`, 'PUT', v), onSuccess: settle })
 export const useIssueOffer = (id: number) => useMutation({ mutationFn: (v: OfferInput) => post(`/hr/candidates/${id}/offer`, 'PUT', v), onSuccess: settle })

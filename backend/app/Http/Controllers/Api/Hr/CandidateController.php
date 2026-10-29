@@ -57,6 +57,14 @@ class CandidateController extends Controller
         return response()->json(['data' => HrCandidate::full($c->refresh(), $request->user())]);
     }
 
+    /** إعادة قراءة السيرة بالخلفية */
+    public function review(Request $request, int $id): JsonResponse
+    {
+        $c = Candidate::findOrFail($id);
+        app(\App\Services\Recruitment\CvReview::class)->rerun($c, $request->user());
+        return response()->json(['data' => HrCandidate::full($c->refresh(), $request->user())]);
+    }
+
     public function interview(Request $request, int $id): JsonResponse
     {
         $rules = ['notes' => ['nullable', 'string', 'max:2000'], 'recommendation' => ['required', Rule::in(['recommended', 'reserve', 'rejected'])], 'ratings' => ['required', 'array']];

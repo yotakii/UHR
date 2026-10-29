@@ -83,6 +83,33 @@ services:
     depends_on:
       api: { condition: service_healthy }
 
+  # قراءة السير: نموذج محلي مجاني (يُنزَّل أول مرة ~2GB) — داخلي، بحد ذاكرة 4GB، يفرّغ الذاكرة بعد 5 دقائق خمول
+  ollama:
+    image: ollama/ollama:latest
+    container_name: uhr-ollama
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 4; ollama pull $${OLLAMA_MODEL}; wait"]
+    environment:
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
+      OLLAMA_KEEP_ALIVE: 5m
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_MAX_LOADED_MODELS: "1"
+      OLLAMA_NUM_THREADS: "4"
+    mem_limit: 4g
+    volumes:
+      - uhr-ollama:/root/.ollama
+
+  # طابور «ai»: سيرة واحدة في كل مرة، مستقل عن طابور البريد
+  ai-worker:
+    <<: *api
+    container_name: uhr-ai-worker
+    command: ["php", "artisan", "queue:work", "--queue=ai", "--tries=2", "--timeout=600", "--sleep=3", "--max-time=3600"]
+    environment:
+      TZ: Asia/Damascus
+      UHR_ROLE: worker
+    depends_on:
+      api: { condition: service_healthy }
+
   # خادم البث اللحظي (Laravel Reverb) — داخلي، تصله الواجهة عبر Nginx على /app
   reverb:
     <<: *api
@@ -119,3 +146,4 @@ volumes:
   uhr-db:
   uhr-redis:
   uhr-storage:
+  uhr-ollama:

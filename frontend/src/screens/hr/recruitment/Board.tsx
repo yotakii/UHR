@@ -6,7 +6,7 @@ import { can, useMe } from '../../../lib/session'
 import { useBoard, useMove, type CandCard } from '../../../lib/candidates'
 import { STAGES, type Stage } from '../../../lib/recruitment'
 import type { ApiError } from '../../../lib/api'
-import { Avatar, Badge, Btn, PageHead, toast } from '../../../ui/kit'
+import { Avatar, Badge, Btn, PageHead, Seg, toast } from '../../../ui/kit'
 import { DecisionDialog } from '../../../ui/decision'
 
 const COLUMNS: Stage[] = ['new', 'screening', 'interview', 'technical', 'offer', 'hired', 'rejected']
@@ -30,7 +30,10 @@ export function Board() {
   const [drag, setDrag] = useState<number | null>(null); const [over, setOver] = useState<Stage | null>(null)
   const [reject, setReject] = useState<CandCard | null>(null);
   const canEdit = can(me, 'candidates', 'edit'), canDecide = can(me, 'candidates', 'decide')
-  const list = data?.data ?? []
+  // «الأنسب أولاً»: ترتيب كل عمود بدرجة قراءة السيرة (الاسترشادية) ثم بالمطابقة
+  const byFit = route.query.sort === 'fit'
+  const fitOf = (c: CandCard) => c.review?.status === 'done' && c.review.score !== null ? c.review.score : -1
+  const list = (data?.data ?? []).slice().sort((a, b) => byFit ? fitOf(b) - fitOf(a) || b.match - a.match : 0)
 
   const drop = (to: Stage) => {
     setOver(null); if (!drag) return
@@ -50,6 +53,7 @@ export function Board() {
     <PageHead title={L('المتقدمون', 'Applicants')} sub={L('اسحب البطاقة لنقل المتقدم بين المراحل، أو افتحها لعرض ملفه.', 'Drag a card to move it between stages, or open it to see the file.')}
       actions={<>
         <Btn icon={<Settings2 size={15} />} onClick={() => navigate('/hr/settings/recruitment')}>{L('قواعد التوظيف والمطابقة', 'Recruitment & matching rules')}</Btn>
+        <Seg value={byFit ? 'fit' : 'new'} onChange={v => setQuery({ sort: v === 'fit' ? 'fit' : undefined })} options={[{ v: 'new', label: L('الأحدث', 'Newest') }, { v: 'fit', label: L('الأنسب أولاً', 'Best fit first') }]} />
         <input className="field sm:!w-56" placeholder={L('بحث بالاسم أو رقم الطلب', 'Search name or reference')} value={q} onChange={e => setQ(e.target.value)} aria-label={L('بحث', 'Search')} />
         <select className="field sm:!w-60" value={job ?? ''} onChange={e => setQuery({ job: e.target.value || undefined })} aria-label={L('الوظيفة', 'Position')}>
           <option value="">{L('كل الوظائف', 'All positions')}</option>{data?.jobs.map(j => <option key={j.id} value={j.id}>{bi(j.title, lang)} — {j.code}</option>)}</select>
@@ -67,6 +71,7 @@ export function Board() {
                 <div className="flex items-start gap-2.5"><Avatar size={30} tone={c.internal ? 'ink' : 'brand'} />
                   <div className="flex-1 min-w-0"><div className="font-semibold text-[14px] truncate">{bi(c.name, lang)}</div><div className="text-[12px] text-ink-3 truncate">{bi(c.job.title, lang)}</div></div>
                   <span className="text-end leading-tight"><span className={`block text-[13px] font-bold num ${c.match >= 75 ? 'text-brand' : c.match >= 55 ? 'text-brass' : 'text-ink-3'}`} title={L('مطابقة المتطلبات', 'Requirement match')}>{c.match}{P}</span>
+                    {c.review?.status === 'done' && c.review.score !== null && <span className="block text-[11px] text-ink-2 num" title={L('قراءة السيرة — للاسترشاد', 'CV reading — for guidance')}>{L('قراءة', 'Read')} {c.review.score}</span>}
                     {c.test && <span className="block text-[11px] text-info num" title={L('الاختبار الأولي', 'Preliminary test')}>{c.test.pct !== null ? `${L('اختبار', 'Test')} ${c.test.pct}${P}` : c.test.status === 'completed' ? L('اختبار ✓', 'Test ✓') : c.test.status === 'expired' ? L('اختبار —', 'Test —') : L('اختبار…', 'Test…')}</span>}</span></div>
                 <div className="flex items-center justify-between gap-2 mt-2.5 text-[12px]">
                   <span className="flex items-center gap-1.5 min-w-0"><span className="text-ink-3 ltr num truncate">#{c.ref.split('-').pop()}</span>{c.internal && <Badge tone="info">{L('داخلي', 'Internal')}</Badge>}{c.referred && <span title={c.referrer ? L(`إحالة من ${c.referrer.ar}`, `Referred by ${c.referrer.en}`) : undefined}><Badge tone="brass">{L('إحالة موظف', 'Referral')}</Badge></span>}{c.band === 'review' && c.stage === 'new' && <Badge tone="warn">{L('مطابقة منخفضة', 'Low match')}</Badge>}</span>
