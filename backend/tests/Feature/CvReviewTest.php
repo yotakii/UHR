@@ -97,6 +97,13 @@ class CvReviewTest extends TestCase
         $this->postJson("/api/hr/candidates/{$c->id}/review")->assertForbidden();
     }
 
+    public function test_model_answer_is_extracted_even_with_text_around_it(): void
+    {
+        $this->assertSame(70, \App\Services\Ai\LocalModel::extract("النتيجة:\n```json\n{\"score\": 70, \"gaps\": []}\n```")['score']);
+        $this->assertSame(55, \App\Services\Ai\LocalModel::extract('{"score": 55}')['score']);
+        $this->assertNull(\App\Services\Ai\LocalModel::extract('لا يوجد'));
+    }
+
     public function test_scrub_removes_identity_and_contacts_from_cv_text(): void
     {
         $c = new Candidate(['name' => 'سارة محمود الأحمد', 'name_en' => 'Sara Ahmad', 'email' => 'sara@mail.sy', 'mobile' => '+963 944 555 123', 'national_id' => '01020304050']);

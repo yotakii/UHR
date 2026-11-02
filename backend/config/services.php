@@ -9,5 +9,7 @@ return [
         'timeout' => (int) env('OLLAMA_TIMEOUT', 420),
         'num_ctx' => (int) env('OLLAMA_NUM_CTX', 3072),
         'threads' => (int) env('OLLAMA_THREADS', 0),   // 0 = تلقائي
+        'num_predict' => (int) env('OLLAMA_NUM_PREDICT', 350),
+        'format' => env('OLLAMA_FORMAT', 'none'),        // none | json | schema
     ],
 ];
