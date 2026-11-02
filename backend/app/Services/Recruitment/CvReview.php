@@ -54,6 +54,26 @@ class CvReview
         return $r;
     }
 
+    /**
+     * الطلبات التي وصلت والخدمة غير جاهزة (أثناء تنزيل النموذج مثلاً) تُقرأ لاحقاً تلقائياً:
+     * الطلبات المفتوحة خلال آخر $days يوماً بلا قراءة، ضمن الحد الشهري لكل شركة — يُشغَّل كل 10 دقائق
+     */
+    public function backlog(int $days = 30): int
+    {
+        if (! $this->ai->available()) return 0;
+        $n = 0;
+        foreach (\App\Models\Company::pluck('id') as $cid) {
+            $cfg = self::forCompany($cid);
+            if (! $cfg['enabled']) continue;
+            $room = $cfg['monthly_limit'] - self::usedThisMonth($cid);
+            if ($room <= 0) continue;
+            $list = Candidate::allCompanies()->where('company_id', $cid)->whereNotIn('stage', ['hired', 'rejected'])->where('created_at', '>=', now()->subDays($days))
+                ->whereDoesntHave('review')->orderBy('id')->limit($room)->get();
+            foreach ($list as $c) if ($this->queue($c)) $n++;
+        }
+        return $n;
+    }
+
     /** طلب إعادة القراءة من ملف المتقدم */
     public function rerun(Candidate $c, User $by): CandidateReview
     {

@@ -94,3 +94,9 @@ Artisan::command('audit:archive', function () {
     $this->info('Archived '.app(\App\Services\Admin\AuditArchive::class)->run().' month file(s).');
 })->purpose('Write monthly audit archive files');
 Schedule::command('audit:archive')->dailyAt('03:30');
+
+// قراءة السير: الطلبات التي وصلت والنموذج غير جاهز تُقرأ عند جاهزيته — كل 10 دقائق
+Artisan::command('cv:review-backlog', function () {
+    $this->info('Queued '.app(\App\Services\Recruitment\CvReview::class)->backlog().' CV reading(s).');
+})->purpose('Queue CV readings for recent applications that were not read yet');
+Schedule::command('cv:review-backlog')->everyTenMinutes()->withoutOverlapping();

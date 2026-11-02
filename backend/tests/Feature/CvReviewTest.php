@@ -23,6 +23,7 @@ class CvReviewTest extends TestCase
 
     public array $prompts = [];
     public bool $fail = false;
+    public bool $up = true;
 
     protected function setUp(): void
     {
@@ -35,7 +36,7 @@ class CvReviewTest extends TestCase
         $t = $this;
         $this->app->instance(AiClient::class, new class($t) implements AiClient {
             public function __construct(private $t) {}
-            public function available(): bool { return true; }
+            public function available(): bool { return $this->t->up; }
             public function model(): string { return 'local-test'; }
             public function json(string $system, string $prompt, array $schema): array
             {
@@ -124,6 +125,18 @@ class CvReviewTest extends TestCase
         $this->postJson("/api/hr/candidates/{$c2->id}/review")->assertStatus(409)->assertJsonPath('code', 'review_limit');
         $this->postJson("/api/hr/candidates/{$c0->id}/review")->assertOk();   // إعادة قراءة موجودة لا تحسب من الحد
         $this->getJson('/api/platform/cv-reading')->assertForbidden();
+    }
+
+    public function test_applications_received_while_the_model_was_down_are_read_later(): void
+    {
+        $this->up = false;
+        $c = $this->apply();
+        $this->assertSame(0, CandidateReview::allCompanies()->where('candidate_id', $c->id)->count());
+        $this->assertSame(0, app(CvReview::class)->backlog());   // ما زالت متوقفة
+        $this->up = true;
+        $this->artisan('cv:review-backlog')->assertSuccessful();
+        $this->assertSame('done', CandidateReview::allCompanies()->where('candidate_id', $c->id)->value('status'));
+        $this->assertSame(0, app(CvReview::class)->backlog());   // لا تكرار
     }
 
     public function test_failure_is_recorded_and_never_blocks(): void
