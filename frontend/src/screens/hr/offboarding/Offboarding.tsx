@@ -191,10 +191,10 @@ function ExitInterview({ r, d, save }: { r: ExitFull; d: OffboardingPage; save: 
 }
 
 /** نسخ الحساب للبديل (D-14) */
-function AccountPanel({ r, d, run }: { r: ExitFull; d: OffboardingPage; run: (path: string, body?: Record<string, unknown>) => Promise<{ password?: string | null; roles?: string[] }> }) {
+function AccountPanel({ r, d, run }: { r: ExitFull; d: OffboardingPage; run: (path: string, body?: Record<string, unknown>) => Promise<{ link?: string | null; roles?: string[] }> }) {
   const L = useL(); const lang = useLang()
   const [user, setUser] = useState(0); const [reset, setReset] = useState(false)
-  const [pw, setPw] = useState<string | null>(null)
+  const [sent, setSent] = useState(false)
   if (!r.needs_successor && !r.successor) return null
   return <Panel title={L('نقل الحساب للبديل', 'Move the account to a successor')} sub="D-14">
     {r.successor ? <p className="text-[14px]">{L('البديل', 'Successor')}: <b>{bi(r.successor, lang)}</b> · <span className="text-ink-3 num">{fmtDateTime(r.account_moved_at ?? undefined, lang)}</span></p>
@@ -202,9 +202,9 @@ function AccountPanel({ r, d, run }: { r: ExitFull; d: OffboardingPage; run: (pa
     {r.can.successor && <div className="mt-3 space-y-2">
       <Field label={L('الحساب البديل', 'Successor account')}><select className="field" value={user || ''} onChange={e => setUser(Number(e.target.value))}><option value="">—</option>
         {d.users.filter(u => u.id !== r.successor?.id).map(u => <option key={u.id} value={u.id}>{bi(u, lang)} — {u.code}</option>)}</select></Field>
-      <label className="flex items-center gap-2 text-[14px]"><input type="checkbox" checked={reset} onChange={e => setReset(e.target.checked)} />{L('كلمة سر مؤقتة جديدة للبديل (تُغيَّر أول دخول)', 'New temporary password (changed at first sign-in)')}</label>
-      <Btn kind="primary" disabled={!user} onClick={() => run('successor', { user_id: user, reset }).then(x => { setPw(x.password ?? null); toast(L('نُقلت الصلاحيات', 'Permissions moved')) }).catch(e => toast(e instanceof ApiError ? e.message : L('تعذّر', 'Failed')))}>{L('نقل الأدوار والصلاحيات', 'Move roles & permissions')}</Btn>
-      {pw && <div className="rounded-lg border border-warn/50 bg-warn/10 p-3 text-[13px]">{L('كلمة السر المؤقتة (تظهر مرة واحدة — سلّمها بقناة آمنة):', 'Temporary password (shown once — hand it over securely):')} <b className="ltr inline-block num select-all">{pw}</b></div>}
+      <label className="flex items-center gap-2 text-[14px]"><input type="checkbox" checked={reset} onChange={e => setReset(e.target.checked)} />{L('إرسال رابط للبديل ليعيّن كلمة مرور جديدة', 'Email the successor a link to set a new password')}</label>
+      <Btn kind="primary" disabled={!user} onClick={() => run('successor', { user_id: user, reset }).then(x => { setSent(!!x.link); toast(L('نُقلت الصلاحيات', 'Permissions moved')) }).catch(e => toast(e instanceof ApiError ? e.message : L('تعذّر', 'Failed')))}>{L('نقل الأدوار والصلاحيات', 'Move roles & permissions')}</Btn>
+      {sent && <div className="rounded-lg border border-line bg-sub p-3 text-[13px]">{L('أُرسل إلى بريد البديل رابط لتعيين كلمة مرور جديدة. يمكن إعادة إرساله من «المستخدمون والأدوار».', 'A link to set a new password was emailed to the successor. Resend it from “Users & roles” if needed.')}</div>}
     </div>}
   </Panel>
 }

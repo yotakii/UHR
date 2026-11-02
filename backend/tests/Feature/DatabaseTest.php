@@ -70,7 +70,7 @@ class DatabaseTest extends TestCase
         $this->assertTrue($u->must_change_password);
         $this->assertSame('platform', $u->portal());
         $admin = User::where('email', 'admin@alfarada.sy')->firstOrFail();
-        $this->assertSame(['hr', 'alfarada', true], [$admin->portal(), $admin->company->slug, $admin->must_change_password]);
+        $this->assertSame(['hr', 'alfarada', 'invite', null], [$admin->portal(), $admin->company->slug, $admin->invite_kind, $admin->activated_at]);
         $this->assertSame(1, AuditLog::where('action', 'system.installed')->count());
     }
 

@@ -398,17 +398,13 @@ class ExitFlow
         return DB::transaction(function () use ($r, $by, $old, $new, $reset) {
             $roles = $old ? $old->roles->filter(fn ($x) => $x->key !== 'employee') : collect();
             foreach ($roles as $role) if (! $new->roles->contains('id', $role->id)) $new->roles()->attach($role->id);
-            $password = null;
-            if ($reset) {
-                $password = \Illuminate\Support\Str::password(12, symbols: false);
-                $new->forceFill(['password' => $password, 'must_change_password' => true])->save();
-            }
+            $link = $reset ? app(\App\Services\Accounts\Invites::class)->issue($new, 'successor') : null;   // رابط لكلمة مرور جديدة يصل بريد البديل
             $r->update(['successor_user_id' => $new->id, 'account_moved_at' => now()]);
             if ($r->status === 'closed' && $old) $old->forceFill(['active' => false])->save();
             Audit::record('account.transferred', $r, null, ['from' => $old?->id, 'to' => $new->id, 'roles' => $roles->pluck('key')->values()->all(), 'password_reset' => $reset]);
             Employee::find($r->employee_id)?->log("نسخ الحساب والصلاحيات إلى {$new->displayName('ar')}", "Account and permissions moved to {$new->displayName('en')}", 'info');
             Notify::user($new->id, 'أُضيفت إلى حسابك صلاحيات '.($old?->displayName('ar') ?? ''), 'Permissions of '.($old?->displayName('en') ?? '').' were added to your account', null);
-            return ['roles' => $roles->pluck('key')->values()->all(), 'password' => $password];
+            return ['roles' => $roles->pluck('key')->values()->all(), 'link' => $link];
         });
     }
 

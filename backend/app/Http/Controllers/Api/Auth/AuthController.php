@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\Company;
 use App\Models\User;
+use App\Services\Accounts\Invites;
 use App\Support\Audit;
 use App\Support\L;
 use App\Support\Settings;
@@ -54,6 +56,7 @@ class AuthController extends Controller
             }
             $user->forceFill(['failed_logins' => $fails])->save();
             Audit::record('auth.failed', $user, null, ['attempt' => $fails]);
+            if (! $user->activated_at && $user->invite_hash) return response()->json(['message' => L::t('لم يُفعَّل هذا الحساب بعد. افتح رابط التفعيل المرسل إلى بريدك لتختار كلمة المرور، أو اطلب رابطاً جديداً من «نسيت كلمة المرور؟».', 'This account is not activated yet. Open the activation link sent to your email to choose your password, or request a new link with "Forgot password?".'), 'code' => 'not_activated'], 422);
             return $invalid(['remaining' => self::MAX_ATTEMPTS - $fails]);
         }
 
@@ -62,7 +65,7 @@ class AuthController extends Controller
             return response()->json(['message' => L::t('هذا الحساب موقوف. راجع الموارد البشرية.', 'This account is disabled. Please contact HR.'), 'code' => 'blocked'], 403);
         }
 
-        $user->forceFill(['failed_logins' => 0, 'locked_until' => null, 'last_login_at' => now()])->save();
+        $user->forceFill(['failed_logins' => 0, 'locked_until' => null, 'last_login_at' => now(), 'activated_at' => $user->activated_at ?? now()])->save();
         Auth::login($user);
         $request->session()->regenerate();
         Audit::record('auth.login', $user);
@@ -72,6 +75,32 @@ class AuthController extends Controller
     private function locked(int $minutes): JsonResponse
     {
         return response()->json(['message' => L::t("تم إيقاف الدخول مؤقتاً بعد عدة محاولات خاطئة. حاول بعد {$minutes} دقيقة، أو أعد تعيين كلمة المرور.", "Sign-in is paused after several wrong attempts. Try again in {$minutes} min, or reset your password."), 'code' => 'locked', 'minutes' => $minutes], 423);
+    }
+
+    /** صفحة الرابط: لمن الحساب وما نوع الرابط (بلا تفاصيل أخرى) */
+    public function invite(string $token, Invites $inv): JsonResponse
+    {
+        $u = $inv->find($token);
+        $state = $u ? Invites::state($u) : null;
+        if (! $u || $state !== 'pending' || $u->blocked()) {
+            return response()->json(['message' => L::t('الرابط غير صالح أو انتهت صلاحيته. اطلب رابطاً جديداً من مدير النظام، أو من «نسيت كلمة المرور؟».', 'This link is invalid or has expired. Ask your administrator for a new one, or use "Forgot password?".'),
+                'code' => 'invite_invalid', 'expired' => $state === 'expired'], 410);
+        }
+        $co = $u->company_id ? Company::find($u->company_id) : null;
+        return response()->json(['data' => ['email' => $u->email, 'name' => ['ar' => $u->displayName('ar'), 'en' => $u->displayName('en')], 'kind' => $u->invite_kind,
+            'company' => $co ? ['ar' => $co->name_ar, 'en' => $co->name_en, 'logo' => $co->card()['logo']] : null,
+            'expires_at' => $u->invite_expires_at?->toIso8601String()]]);
+    }
+
+    /** اختيار كلمة المرور بالرابط ثم الدخول مباشرة */
+    public function activate(Request $request, string $token, Invites $inv): JsonResponse
+    {
+        $request->validate(['password' => ['required', 'confirmed', self::passwordRule()]], self::passwordMessages());
+        $user = $inv->accept($token, (string) $request->input('password'));
+        Auth::login($user);
+        $request->session()->regenerate();
+        Audit::record('auth.login', $user);
+        return response()->json(['user' => $user->sessionPayload()]);
     }
 
     public function logout(Request $request): JsonResponse
@@ -102,7 +131,7 @@ class AuthController extends Controller
             'current_password' => ['required', 'current_password'],
             'password' => ['required', 'confirmed', self::passwordRule(), 'different:current_password'],
         ], self::passwordMessages() + ['current_password.current_password' => L::t('كلمة المرور الحالية غير صحيحة.', 'Current password is incorrect.'), 'current_password.required' => L::t('أدخل كلمة المرور الحالية.', 'Enter your current password.'), 'password.different' => L::t('اختر كلمة مرور مختلفة عن الحالية.', 'Choose a password different from the current one.')]);
-        $user->forceFill(['password' => $request->input('password'), 'must_change_password' => false])->save();
+        $user->forceFill(['password' => $request->input('password'), 'must_change_password' => false, 'activated_at' => $user->activated_at ?? now()])->save();
         Audit::record('auth.password_changed', $user);
         $request->session()->regenerate();
         return response()->json(['user' => $user->sessionPayload()]);
@@ -125,7 +154,8 @@ class AuthController extends Controller
     {
         $request->validate(['token' => ['required'], 'email' => ['required', 'email'], 'password' => ['required', 'confirmed', self::passwordRule()]], self::passwordMessages());
         $status = Password::reset($request->only('email', 'password', 'password_confirmation', 'token'), function (User $user, string $password) {
-            $user->forceFill(['password' => $password, 'must_change_password' => false, 'failed_logins' => 0, 'locked_until' => null])->save();
+            $user->forceFill(['password' => $password, 'must_change_password' => false, 'failed_logins' => 0, 'locked_until' => null,
+                'activated_at' => $user->activated_at ?? now(), 'invite_hash' => null, 'invite_kind' => null, 'invite_expires_at' => null])->save();
             Audit::record('auth.password_reset', $user);
             event(new PasswordReset($user));
         });

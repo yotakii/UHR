@@ -26,7 +26,7 @@ export const usePortalTexts = () => useQuery({ queryKey: ['platform', 'portal'],
 
 export function useSaveCompany(id: number | null) {
   return useMutation({
-    mutationFn: (fd: FormData) => api<{ data: PlatformCompany; admin?: { email: string; temporary_password: string | null } }>(id ? `/platform/companies/${id}` : '/platform/companies', { method: 'POST', body: fd }),
+    mutationFn: (fd: FormData) => api<{ data: PlatformCompany; admin?: { email: string; link: string | null } }>(id ? `/platform/companies/${id}` : '/platform/companies', { method: 'POST', body: fd }),
     onSuccess: refresh,
   })
 }
@@ -42,3 +42,13 @@ export const useSaveCvReading = () => useMutation({
   mutationFn: (v: { enabled: boolean; monthly_limit: number; companies: { id: number; enabled: boolean; monthly_limit: number | null }[] }) => api<{ data: CvReading }>('/platform/cv-reading', { method: 'PUT', json: v }).then(r => r.data),
   onSuccess: d => queryClient.setQueryData(['platform', 'cv-reading'], d),
 })
+
+// البريد الصادر (11e): خادم SMTP للمنصة، رسالة تجريبية
+export interface MailSettings { host: string; port: number; encryption: 'tls' | 'ssl' | 'none'; username: string; password_set: boolean; from_address: string; from_name: string; log_days: number
+  source: 'settings' | 'server'; server: { host: string | null; from: string | null }; stats: { sent: number; failed: number } }
+export const useMailSettings = () => useQuery({ queryKey: ['platform', 'mail'], queryFn: () => api<{ data: MailSettings }>('/platform/mail').then(r => r.data) })
+export const useSaveMail = () => useMutation({
+  mutationFn: (v: Omit<MailSettings, 'password_set' | 'source' | 'server' | 'stats'> & { password?: string; clear_password?: boolean }) => api<{ data: MailSettings }>('/platform/mail', { method: 'PUT', json: v }).then(r => r.data),
+  onSuccess: d => queryClient.setQueryData(['platform', 'mail'], d),
+})
+export const useTestMail = () => useMutation({ mutationFn: (to: string) => api<{ message: string }>('/platform/mail/test', { json: { to } }), onSettled: () => queryClient.invalidateQueries({ queryKey: ['mail-log'] }) })

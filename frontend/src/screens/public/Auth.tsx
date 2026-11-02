@@ -1,10 +1,10 @@
 import { useState, type FormEvent } from 'react'
-import { useMutation } from '@tanstack/react-query'
-import { KeyRound, Nfc, MailCheck, Eye, EyeOff } from 'lucide-react'
-import { useL } from '../../lib/store'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { KeyRound, Nfc, MailCheck, Eye, EyeOff, Loader2, Link2Off } from 'lucide-react'
+import { useL, useLang, bi } from '../../lib/store'
 import { api, ApiError } from '../../lib/api'
 import { go, href, navigate, useRoute } from '../../lib/router'
-import { useLogin } from '../../lib/session'
+import { useActivate, useLogin } from '../../lib/session'
 import { Btn, Field } from '../../ui/kit'
 import { PasswordFields, passwordOk } from '../../ui/password'
 import { AuthCard } from './parts'
@@ -76,6 +76,39 @@ export function Reset({ token, email }: { token: string; email: string }) {
       <PasswordFields v={v} set={(k, x) => { setV(s => ({ ...s, [k]: x })); m.reset() }} errs={{ password: e?.field('password') }} />
       {e && !e.field('password') && <div role="alert" className="text-[13px] text-danger bg-danger-soft rounded px-3 py-2">{e.message}{e.code === 'invalid_token' && <> — <a className="underline" href={href('forgot', undefined, { email })}>{L('طلب رابط جديد', 'request a new link')}</a></>}</div>}
       <Btn kind="primary" size="lg" className="w-full" type="submit" disabled={m.isPending || !passwordOk(v)}>{L('حفظ كلمة المرور', 'Save password')}</Btn>
+    </form>
+  </AuthCard>
+}
+
+type InviteInfo = { email: string; name: { ar: string; en: string }; kind: 'invite' | 'reset'; company: { ar: string; en: string; logo: string | null } | null; expires_at: string | null }
+
+/** رابط تفعيل الحساب أو تعيين كلمة المرور (يصل بالبريد): يختار كلمة المرور ويدخل مباشرة */
+export function Activate({ token }: { token: string }) {
+  const L = useL(); const lang = useLang()
+  const info = useQuery({ queryKey: ['public', 'activate', token], queryFn: () => api<{ data: InviteInfo }>(`/auth/activate/${encodeURIComponent(token)}`), retry: false, enabled: !!token })
+  const [v, setV] = useState({ password: '', password_confirmation: '' })
+  const m = useActivate(token)
+  const e = m.error instanceof ApiError ? m.error : null
+  if (info.isLoading) return <div className="grid place-items-center py-24"><Loader2 className="animate-spin text-brand" /></div>
+  const bad = !token || info.isError || (e && e.code === 'invite_invalid')
+  if (bad) return <AuthCard title={L('الرابط غير صالح', 'This link is not valid')}>
+    <div className="text-center"><div className="size-12 rounded-full bg-danger-soft text-danger grid place-items-center mx-auto"><Link2Off /></div>
+      <p className="text-ink-2 mt-4">{info.error instanceof ApiError && info.error.data.expired
+        ? L('انتهت صلاحية هذا الرابط. اطلب رابطاً جديداً بإدخال بريدك، أو راجع مدير النظام.', 'This link has expired. Request a new one with your email, or contact your administrator.')
+        : L('استُخدم هذا الرابط من قبل أو استُبدل برابط أحدث. إن كنت قد اخترت كلمة المرور فادخل بها مباشرة.', 'This link was already used or replaced by a newer one. If you already chose your password, just sign in.')}</p>
+      <div className="flex flex-wrap justify-center gap-2 mt-5"><Btn kind="primary" onClick={() => go('login')}>{L('تسجيل الدخول', 'Sign in')}</Btn><Btn onClick={() => go('forgot')}>{L('طلب رابط جديد', 'Request a new link')}</Btn></div></div>
+  </AuthCard>
+  const d = info.data!.data
+  const reset = d.kind === 'reset'
+  return <AuthCard title={reset ? L('تعيين كلمة مرور جديدة', 'Set a new password') : L('تفعيل حسابك', 'Activate your account')}
+    sub={<>{d.company && <span className="block font-semibold text-ink">{bi(d.company, lang)}</span>}{bi(d.name, lang)} · <span className="ltr inline-block">{d.email}</span></>}>
+    {d.company?.logo && <img src={d.company.logo} alt="" className="h-10 mb-4 object-contain" />}
+    <p className="text-[13.5px] text-ink-2 mb-4">{reset ? L('اختر كلمة مرور جديدة لحسابك. بعد الحفظ تدخل مباشرة.', 'Choose a new password for your account. You will be signed in right after.')
+      : L('اختر كلمة مرور لحسابك. ستستخدمها مع بريدك في كل دخول، ثم تدخل الآن مباشرة.', 'Choose a password for your account. You will use it with your email from now on, and you will be signed in right away.')}</p>
+    <form onSubmit={x => { x.preventDefault(); m.mutate(v, { onSuccess: () => navigate('/') }) }} className="space-y-4" noValidate>
+      <PasswordFields v={v} set={(k, x) => { setV(s => ({ ...s, [k]: x })); m.reset() }} errs={{ password: e?.field('password') }} label={reset ? undefined : L('كلمة المرور', 'Password')} />
+      {e && !e.field('password') && <div role="alert" className="text-[13px] text-danger bg-danger-soft rounded px-3 py-2">{e.message}</div>}
+      <Btn kind="primary" size="lg" className="w-full" type="submit" disabled={m.isPending || !passwordOk(v)}>{reset ? L('حفظ والدخول', 'Save and sign in') : L('تفعيل الحساب والدخول', 'Activate and sign in')}</Btn>
     </form>
   </AuthCard>
 }

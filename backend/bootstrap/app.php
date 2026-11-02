@@ -41,4 +41,6 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         // كل أخطاء الـ API ترجع JSON
         $exceptions->shouldRenderJsonWhen(fn (Request $request) => $request->is('api/*') || $request->expectsJson());
+        // رسالة بريد مباشرة (بلا طابور) فشلت أثناء الطلب → سجل البريد «فشل»
+        $exceptions->report(fn (\Throwable $e) => \App\Support\MailSetup::failed($e));
     })->create();

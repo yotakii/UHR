@@ -5,7 +5,7 @@ namespace App\Services\Platform;
 use App\Models\Company;
 use App\Models\Role;
 use App\Models\User;
-use App\Notifications\CompanyWelcome;
+use App\Services\Accounts\Invites;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -16,23 +16,22 @@ use Illuminate\Support\Str;
  */
 class CompanyProvisioner
 {
-    /** @return array{0: Company, 1: ?string} الشركة وكلمة المرور المؤقتة للمدير */
+    /** @return array{0: Company, 1: ?string} الشركة ورابط تفعيل حساب مديرها (null إن أُعطيت كلمة مرور) */
     public function create(array $data, ?string $adminEmail, ?UploadedFile $logo = null, ?string $password = null): array
     {
         [$company, $temp] = DB::transaction(function () use ($data, $adminEmail, $password) {
             $company = Company::create($data);
             CompanyDefaults::seed($company);
-            $temp = null;
+            $link = null;
             if ($adminEmail) {
-                $temp = $password ?? Str::password(12, symbols: false);
-                $admin = User::create(['email' => strtolower(trim($adminEmail)), 'password' => $temp, 'name' => 'مدير '.$company->name_ar, 'name_en' => $company->name_en.' admin',
-                    'company_id' => $company->id, 'must_change_password' => $password === null, 'active' => true]);
+                $admin = User::create(['email' => strtolower(trim($adminEmail)), 'password' => $password ?? Invites::unusable(), 'name' => 'مدير '.$company->name_ar, 'name_en' => $company->name_en.' admin',
+                    'company_id' => $company->id, 'must_change_password' => false, 'active' => true, 'activated_at' => $password !== null ? now() : null, 'invited_at' => $password === null ? now() : null]);
                 $admin->roles()->attach(Role::whereIn('key', ['admin', 'hr_director'])->pluck('id'));
+                if ($password === null) $link = app(Invites::class)->issue($admin, 'company');
             }
-            return [$company, $temp];
+            return [$company, $link];
         });
         if ($logo) $this->setLogo($company, $logo);
-        if ($adminEmail && $password === null) User::where('email', strtolower(trim($adminEmail)))->first()?->notify(new CompanyWelcome($company->name_ar, $company->name_en, $temp));
         return [$company, $temp];
     }
 

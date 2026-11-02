@@ -28,6 +28,10 @@ const setMe = (r: { user: SessionUser | null }) => { queryClient.removeQueries({
 export function useLogin() {
   return useMutation({ mutationFn: (v: { email: string; password: string }) => api<{ user: SessionUser }>('/auth/login', { json: v }), onSuccess: setMe })
 }
+/** رابط تفعيل الحساب / تعيين كلمة المرور (11e): يختار كلمة المرور ثم يدخل مباشرة */
+export function useActivate(token: string) {
+  return useMutation({ mutationFn: (v: { password: string; password_confirmation: string }) => api<{ user: SessionUser }>(`/auth/activate/${encodeURIComponent(token)}`, { json: v }), onSuccess: setMe })
+}
 export function useLogout() {
   return useMutation({ mutationFn: () => api<{ user: null }>('/auth/logout', { json: {} }), onSettled: () => { setMe({ user: null }); navigate('/') } })
 }

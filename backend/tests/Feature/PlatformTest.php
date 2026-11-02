@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Models\Company;
 use App\Models\JobOpening;
 use App\Models\User;
-use App\Notifications\CompanyWelcome;
+use App\Notifications\AccountInvite;
 use Database\Seeders\TestDataSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -60,18 +60,18 @@ class PlatformTest extends TestCase
             'slug' => 'sham-cables', 'name_ar' => 'الشام للكابلات', 'name_en' => 'Sham Cables', 'about_ar' => 'تصنيع كابلات', 'portal_enabled' => 1, 'portal_review' => 1,
             'admin_email' => 'Admin@ShamCables.sy', 'logo' => UploadedFile::fake()->image('logo.png', 200, 80),
         ], ['Accept' => 'application/json'])->assertCreated()->assertJsonPath('data.slug', 'sham-cables')->assertJsonPath('admin.email', 'admin@shamcables.sy');
-        $this->assertNotEmpty($res->json('admin.temporary_password'));
+        $token = basename((string) $res->json('admin.link'));
         $co = Company::where('slug', 'sham-cables')->first();
         Storage::disk('public')->assertExists($co->logo_path);
         $admin = User::where('email', 'admin@shamcables.sy')->first();
-        $this->assertSame([$co->id, true, 'hr'], [$admin->company_id, $admin->must_change_password, $admin->portal()]);
-        Notification::assertSentTo($admin, CompanyWelcome::class);
+        $this->assertSame([$co->id, null, 'hr'], [$admin->company_id, $admin->activated_at, $admin->portal()]);
+        Notification::assertSentTo($admin, AccountInvite::class, fn ($n) => $n->kind === 'company' && str_ends_with($n->url, $token));
         $this->postJson('/api/auth/logout');
+        $this->app['auth']->forgetGuards();
 
-        // مدير الشركة الجديدة: كلمة مؤقتة ← تغيير ← ينشر شاغراً ينتظر المراجعة
-        $this->postJson('/api/auth/login', ['email' => 'admin@shamcables.sy', 'password' => $res->json('admin.temporary_password')])->assertOk()->assertJsonPath('user.must_change_password', true);
-        $this->getJson('/api/hr/jobs')->assertForbidden()->assertJsonPath('code', 'password_change_required');
-        $this->postJson('/api/auth/password', ['current_password' => $res->json('admin.temporary_password'), 'password' => 'Sham2026pw', 'password_confirmation' => 'Sham2026pw'])->assertOk();
+        // مدير الشركة الجديدة: رابط التفعيل ← يختار كلمة المرور ويدخل ← ينشر شاغراً ينتظر المراجعة
+        $this->getJson("/api/auth/activate/{$token}")->assertOk()->assertJsonPath('data.email', 'admin@shamcables.sy')->assertJsonPath('data.company.ar', 'الشام للكابلات');
+        $this->postJson("/api/auth/activate/{$token}", ['password' => 'Sham2026pw', 'password_confirmation' => 'Sham2026pw'])->assertOk()->assertJsonPath('user.must_change_password', false);
         $this->getJson('/api/hr/jobs')->assertOk()->assertJsonCount(0, 'data');
         $this->assertCount(0, $this->getJson('/api/hr/jobs/lookups')->json('departments'), 'new company starts with no departments');
     }

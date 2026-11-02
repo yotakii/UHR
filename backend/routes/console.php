@@ -100,3 +100,6 @@ Artisan::command('cv:review-backlog', function () {
     $this->info('Queued '.app(\App\Services\Recruitment\CvReview::class)->backlog().' CV reading(s).');
 })->purpose('Queue CV readings for recent applications that were not read yet');
 Schedule::command('cv:review-backlog')->everyTenMinutes()->withoutOverlapping();
+
+// سجل البريد الصادر (11e): حذف ما مضى عليه log_days من إعداد المنصة
+Schedule::command('model:prune', ['--model' => [\App\Models\MailLog::class]])->dailyAt('04:10');

@@ -9,19 +9,19 @@ use App\Models\MfaFactor;
 use App\Models\Passkey;
 use App\Models\Role;
 use App\Models\User;
-use App\Notifications\AccountNotice;
+use App\Services\Accounts\Invites;
 use App\Support\Audit;
 use App\Support\L;
 use App\Support\Perm;
+use App\Support\Settings;
 use App\Support\Tenant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 /**
- * M16 «المستخدمون والأدوار»: حسابات الشركة، أدوارها (RBAC)، إنشاء حساب (لموظف أو بلا ملف)، إعادة تعيين كلمة المرور (مؤقتة + بريد)،
+ * M16 «المستخدمون والأدوار»: حسابات الشركة، أدوارها (RBAC)، إنشاء حساب (لموظف أو بلا ملف) برابط تفعيل، رابط تعيين كلمة مرور جديدة،
  * إيقاف/تفعيل، فك قفل محاولات الدخول، إلغاء ربط التحقق بخطوتين. لا يوقف المدير نفسه ولا يسحب منها دور المدير (self_lockout).
  */
 class UserController extends Controller
@@ -34,11 +34,23 @@ class UserController extends Controller
             ->when($role, fn ($w) => $w->whereHas('roles', fn ($r) => $r->where('key', $role)))
             ->when($status === 'active', fn ($w) => $w->where('active', true))->when($status === 'inactive', fn ($w) => $w->where('active', false))
             ->when($status === 'locked', fn ($w) => $w->where('locked_until', '>', now()))
+            ->when($status === 'pending', fn ($w) => $w->whereNull('activated_at')->whereNotNull('invited_at'))
             ->orderBy('id')->limit(500)->get();
         return response()->json(['data' => $rows->map(fn (User $u) => $this->row($u))->values(),
             'roles' => Role::whereIn('key', Perm::ROLES)->get()->sortBy(fn ($r) => array_search($r->key, Perm::ROLES, true))->map(fn ($r) => ['key' => $r->key, 'ar' => $r->name_ar, 'en' => $r->name_en])->values(),
             'employees' => Employee::current()->whereDoesntHave('user')->orderBy('code')->get(['id', 'code', 'name', 'name_en', 'email'])->map(fn ($e) => ['id' => $e->id, 'code' => $e->code, 'ar' => $e->name, 'en' => $e->name_en, 'email' => $e->email]),
-            'can' => ['create' => Perm::can($request->user(), 'users', 'create'), 'edit' => Perm::can($request->user(), 'users', 'edit')]]);
+            'settings' => Settings::merged('accounts'),
+            'can' => ['create' => Perm::can($request->user(), 'users', 'create'), 'edit' => Perm::can($request->user(), 'users', 'edit'), 'settings' => Perm::can($request->user(), 'settings', 'edit')]]);
+    }
+
+    /** صلاحية روابط التفعيل وتعيين كلمة المرور (ساعات) */
+    public function saveSettings(Request $request): JsonResponse
+    {
+        $d = $request->validate(['invite_hours' => ['required', 'integer', 'between:1,720']], [], ['invite_hours' => L::t('صلاحية الرابط', 'Link validity')]);
+        $before = Settings::merged('accounts');
+        Settings::put('accounts', ['invite_hours' => (int) $d['invite_hours']]);
+        Audit::record('settings.accounts', null, $before, Settings::merged('accounts'));
+        return response()->json(['settings' => Settings::merged('accounts')]);
     }
 
     private function row(User $u): array
@@ -47,7 +59,9 @@ class UserController extends Controller
         return ['id' => $u->id, 'email' => $u->email, 'name' => ['ar' => $u->displayName('ar'), 'en' => $u->displayName('en')], 'active' => $u->active,
             'employee' => $e ? ['id' => $e->id, 'code' => $e->code, 'status' => $e->status, 'dept' => $e->department ? ['ar' => $e->department->name_ar, 'en' => $e->department->name_en] : null] : null,
             'roles' => $u->roles->pluck('key')->values(), 'last_login_at' => $u->last_login_at?->toIso8601String(), 'locked' => (bool) ($u->locked_until?->isFuture()),
-            'must_change_password' => (bool) $u->must_change_password, 'mfa' => (bool) $u->mfa?->enrolled_at, 'passkeys' => (int) $u->passkeys_count];
+            'must_change_password' => (bool) $u->must_change_password, 'activated' => $u->isActivated(),
+            'invite' => Invites::state($u) ? ['state' => Invites::state($u), 'kind' => $u->invite_kind, 'sent_at' => $u->invited_at?->toIso8601String(), 'expires_at' => $u->invite_expires_at?->toIso8601String()] : null,
+            'mfa' => (bool) $u->mfa?->enrolled_at, 'passkeys' => (int) $u->passkeys_count];
     }
 
     private function roles(array $keys, ?User $target, User $by): array
@@ -70,18 +84,17 @@ class UserController extends Controller
         if ($e && User::where('employee_id', $e->id)->exists()) throw new ApiException(L::t('لهذا الموظف حساب مسبقاً.', 'This employee already has an account.'), 'has_account', 409);
         $email = strtolower(trim($e?->email ?: $d['email']));
         if (User::where('email', $email)->exists()) throw ApiException::field('email', L::t('البريد مستخدم لحساب آخر.', 'This email belongs to another account.'), 'email_taken');
-        $temp = Str::password(12, symbols: false);
-        $u = DB::transaction(function () use ($d, $e, $email, $temp, $by) {
-            $u = User::create(['email' => $email, 'password' => $temp, 'name' => $e ? null : trim($d['name']), 'name_en' => $e ? null : (trim((string) ($d['name_en'] ?? '')) ?: null),
-                'employee_id' => $e?->id, 'company_id' => Tenant::id(), 'must_change_password' => true, 'active' => true]);
+        $url = null;
+        $u = DB::transaction(function () use ($d, $e, $email, $by, &$url) {
+            $u = User::create(['email' => $email, 'password' => Invites::unusable(), 'invited_at' => now(), 'name' => $e ? null : trim($d['name']), 'name_en' => $e ? null : (trim((string) ($d['name_en'] ?? '')) ?: null),
+                'employee_id' => $e?->id, 'company_id' => Tenant::id(), 'must_change_password' => false, 'active' => true]);
             $keys = $d['roles']; if ($e) $keys[] = 'employee';
             $u->roles()->sync($this->roles($keys, null, $by));
+            Audit::record('user.created', $u, null, ['email' => $email, 'roles' => $u->roles()->pluck('key')]);
+            $url = app(Invites::class)->issue($u, $e ? 'employee' : 'invite', $e?->code);
             return $u;
         });
-        $co = Tenant::company();
-        $u->notify((new AccountNotice('created', $co->name_ar, $co->name_en, $temp))->afterCommit());
-        Audit::record('user.created', $u, null, ['email' => $email, 'roles' => $u->roles()->pluck('key')]);
-        return response()->json(['data' => $this->row($u->load(['employee.department', 'roles', 'mfa'])->loadCount('passkeys')), 'temporary_password' => $temp], 201);
+        return response()->json(['data' => $this->row($u->fresh(['employee.department', 'roles', 'mfa'])->loadCount('passkeys')), 'link' => $url, 'email' => $u->email], 201);
     }
 
     public function update(Request $request, int $id): JsonResponse
@@ -99,17 +112,15 @@ class UserController extends Controller
 
     public function action(Request $request, int $id, string $action): JsonResponse
     {
-        $u = User::where('company_id', Tenant::id())->findOrFail($id);
+        $u = User::with('employee')->where('company_id', Tenant::id())->findOrFail($id);
         $by = $request->user();
         $out = [];
         switch ($action) {
             case 'reset-password':
-                $temp = Str::password(12, symbols: false);
-                $u->update(['password' => $temp, 'must_change_password' => true, 'failed_logins' => 0, 'locked_until' => null]);
-                $co = Tenant::company();
-                $u->notify(new AccountNotice('reset', $co->name_ar, $co->name_en, $temp));
-                Audit::record('user.password_reset', $u);
-                $out['temporary_password'] = $temp;
+                // رابط لتعيين كلمة مرور جديدة — كلمة المرور الحالية تبقى صالحة حتى يُستخدم (لا يُقفل الحساب على صاحبه)
+                if (! $u->active) throw new ApiException(L::t('فعّل الحساب أولاً.', 'Activate the account first.'), 'inactive', 409);
+                $u->forceFill(['failed_logins' => 0, 'locked_until' => null])->save();
+                $out['link'] = app(Invites::class)->issue($u, $u->isActivated() ? 'reset' : ($u->employee_id ? 'employee' : 'invite'), $u->employee?->code);
                 break;
             case 'deactivate':
             case 'activate':

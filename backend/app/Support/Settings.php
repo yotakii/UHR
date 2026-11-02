@@ -78,6 +78,8 @@ class Settings
         'org_chart' => ['mode' => 'names_titles', 'levels' => 3],
         // نسخ بيانات الشركة (zip): عدد النسخ المحفوظة، وهل تشمل الملفات المرفوعة
         'backup' => ['keep' => 5, 'include_files' => true],
+        // الحسابات (11e): صلاحية رابط تفعيل الحساب أو تعيين كلمة المرور بالساعات
+        'accounts' => ['invite_hours' => 72],
         'stage_sla' => ['new' => 2, 'screening' => 3, 'interview' => 5, 'technical' => 5, 'offer' => 4],
         // الخروج M11 (HR.01-03، SRS §10.8): أسباب الاستقالة، أسباب انتهاء الخدمة (م37) والفصل (F-03)، أسئلة الاستبيان ومقابلة الخروج،
         // وجهات تسليم العهدة F-07 وبنودها (auto = يُحسب من النظام: handover من F-05، assets من سجل العهد، leave من الرصيد)
@@ -134,6 +136,8 @@ class Settings
     public const PLATFORM_DEFAULTS = [
         // النسخة الكاملة للخادم (D-27): يومياً في الوقت المحدد، والاحتفاظ بآخر keep نسخة
         'backup' => ['enabled' => true, 'time' => '02:30', 'keep' => 14],
+        // البريد الصادر (11e): خادم SMTP للمنصة كلها — host فارغ = إعداد الخادم (MAIL_* في البيئة). password مشفّر. log_days = مدة حفظ سجل البريد
+        'mail' => ['host' => '', 'port' => 587, 'encryption' => 'tls', 'username' => '', 'password' => '', 'from_address' => '', 'from_name' => 'UHR', 'log_days' => 90],
         'portal' => [
             'brand_latin' => 'UHR · ATMATA GROUP',
             'hero_title_ar' => 'فرص عمل حقيقية في شركات سورية رائدة', 'hero_title_en' => 'Real jobs at leading Syrian companies',

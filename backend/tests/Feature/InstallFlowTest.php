@@ -7,7 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Tests\TestCase;
 
-/** تثبيت نظيف ← دخول بكلمة المرور المؤقتة ← تغييرها ← خروج ← دخول بالجديدة؛ وأمر فك القفل وإعادة التعيين */
+/** تثبيت نظيف ← رابط تفعيل مدير الشركة ← اختيار كلمة المرور ← خروج ← دخول بها؛ وأمر فك القفل وإعادة التعيين */
 class InstallFlowTest extends TestCase
 {
     use RefreshDatabase;
@@ -15,10 +15,12 @@ class InstallFlowTest extends TestCase
     public function test_clean_install_temp_password_change_and_sign_in_again(): void
     {
         Artisan::call('uhr:install', ['--email' => 'platform@atmata.sy', '--company' => 'alfarada', '--company-name-ar' => 'الفرادة', '--company-name-en' => 'Uniqueness', '--company-admin' => 'admin@alfarada.sy']);
-        preg_match('/Company admin temporary password: (\S+)/', Artisan::output(), $m);
-        $temp = $m[1];
-        $this->postJson('/api/auth/login', ['email' => 'admin@alfarada.sy', 'password' => $temp])->assertOk()->assertJsonPath('user.must_change_password', true);
-        $this->postJson('/api/auth/password', ['current_password' => $temp, 'password' => 'Fresh-Start-2026', 'password_confirmation' => 'Fresh-Start-2026'])->assertOk();
+        preg_match('#Company admin activation link \(also emailed\): \S+/activate/(\S+)#', Artisan::output(), $m);
+        $token = $m[1];
+        $this->postJson('/api/auth/login', ['email' => 'admin@alfarada.sy', 'password' => 'anything1'])->assertStatus(422)->assertJsonPath('code', 'not_activated');
+        $this->postJson("/api/auth/activate/{$token}", ['password' => 'short', 'password_confirmation' => 'short'])->assertStatus(422);
+        $this->postJson("/api/auth/activate/{$token}", ['password' => 'Fresh-Start-2026', 'password_confirmation' => 'Fresh-Start-2026'])->assertOk();
+        $this->postJson("/api/auth/activate/{$token}", ['password' => 'Fresh-Start-2026', 'password_confirmation' => 'Fresh-Start-2026'])->assertStatus(410);   // لمرة واحدة
         $this->postJson('/api/auth/logout')->assertOk();
         $this->app['auth']->forgetGuards();
         $this->postJson('/api/auth/login', ['email' => 'Admin@Alfarada.sy ', 'password' => 'Fresh-Start-2026'])->assertOk()->assertJsonPath('user.must_change_password', false);

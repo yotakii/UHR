@@ -52,9 +52,9 @@ class PlatformController extends Controller
         $data = $this->validateCompany($request, null, ['admin_email' => ['required', 'email', 'unique:users,email']]);
         $admin = strtolower(trim($data['admin_email']));
         unset($data['admin_email']);
-        [$company, $temp] = $prov->create($data + ['status' => 'active'], $admin, $request->file('logo'));
+        [$company, $link] = $prov->create($data + ['status' => 'active'], $admin, $request->file('logo'));
         Audit::record('platform.company_created', $company, null, ['slug' => $company->slug, 'admin' => $admin]);
-        return response()->json(['data' => $this->presentCompany($company), 'admin' => ['email' => $admin, 'temporary_password' => $temp]], 201);
+        return response()->json(['data' => $this->presentCompany($company), 'admin' => ['email' => $admin, 'link' => $link]], 201);
     }
 
     public function updateCompany(Request $request, CompanyProvisioner $prov, int $id): JsonResponse

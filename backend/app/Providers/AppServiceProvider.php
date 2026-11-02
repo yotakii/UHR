@@ -22,6 +22,12 @@ class AppServiceProvider extends ServiceProvider
         Model::shouldBeStrict(! $this->app->isProduction());
         // البث اللحظي من الطابور: بعد كل مهمة
         \Illuminate\Support\Facades\Queue::after(fn () => \App\Support\Realtime::flush());
+        // البريد الصادر (11e): إعداد SMTP من لوحة المنصة، اسم المرسل لكل شركة، وسجل الرسائل
+        \App\Support\MailSetup::apply();
+        \Illuminate\Support\Facades\Queue::before(function () { \App\Support\MailSetup::reset(); \App\Support\MailSetup::apply(); });
+        \Illuminate\Support\Facades\Queue::exceptionOccurred(fn ($e) => \App\Support\MailSetup::failed($e->exception));
+        \Illuminate\Support\Facades\Event::listen(\Illuminate\Mail\Events\MessageSending::class, [\App\Support\MailSetup::class, 'sending']);
+        \Illuminate\Support\Facades\Event::listen(\Illuminate\Mail\Events\MessageSent::class, [\App\Support\MailSetup::class, 'sent']);
 
         // حدود المحاولات: 10 دخول بالدقيقة لكل عنوان+بريد، و3 طلبات استعادة كلمة مرور بالدقيقة
         RateLimiter::for('login', fn (Request $r) => Limit::perMinute(10)->by(strtolower((string) $r->input('email')).'|'.$r->ip())

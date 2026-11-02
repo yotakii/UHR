@@ -10,10 +10,10 @@ import { PortalHome } from './Portal'
 import { JobsBoard } from './JobsBoard'
 import { CompanyPage } from './CompanyPage'
 import { JobPage } from './JobPage'
-import { Forgot, Login, Reset } from './Auth'
+import { Activate, Forgot, Login, Reset } from './Auth'
 
 /** صفحات الزائر: البوابة، فرص العمل، صفحة الشركة، صفحة الشاغر، التقديم، الدخول */
-export const PUBLIC_PAGES = ['', 'jobs', 'c', 'apply', 'applied', 'login', 'forgot', 'reset', 'test']
+export const PUBLIC_PAGES = ['', 'jobs', 'c', 'apply', 'applied', 'login', 'forgot', 'reset', 'activate', 'test']
 
 export function Public() {
   const route = useRoute(); const { page, parts, query } = route
@@ -31,6 +31,7 @@ export function Public() {
         : page === 'forgot' ? <Forgot />
         : page === 'test' && parts[1] ? <TakeTest token={parts[1]} />
         : page === 'reset' ? <Reset token={query.token ?? ''} email={query.email ?? ''} />
+        : page === 'activate' ? <Activate token={route.parts[1] ?? ''} />
         : <PortalHome />}
     </main>
     <footer className="border-t border-line text-[12px] text-ink-3 px-5 md:px-8 py-4 flex flex-wrap justify-between gap-2">

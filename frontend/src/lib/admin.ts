@@ -48,17 +48,18 @@ export const useSaveChain = () => useMutation({
 export interface AdminUser {
   id: number; email: string; name: Bi; active: boolean; employee: { id: number; code: string; status: string; dept: Bi | null } | null
   roles: string[]; last_login_at: string | null; locked: boolean; must_change_password: boolean; mfa: boolean; passkeys: number
+  activated: boolean; invite: { state: 'pending' | 'expired'; kind: 'invite' | 'reset'; sent_at: string | null; expires_at: string | null } | null
 }
-type UsersRes = { data: AdminUser[]; roles: (Bi & { key: string })[]; employees: (Bi & { id: number; code: string; email: string })[]; can: { create: boolean; edit: boolean } }
+type UsersRes = { data: AdminUser[]; roles: (Bi & { key: string })[]; employees: (Bi & { id: number; code: string; email: string })[]; settings: { invite_hours: number }; can: { create: boolean; edit: boolean; settings: boolean } }
 export const useAdminUsers = (q: Record<string, string | undefined>) => {
   const qs = new URLSearchParams(Object.entries(q).filter(([, v]) => v) as [string, string][]).toString()
   return useQuery({ queryKey: ['admin', 'users', qs], queryFn: () => api<UsersRes>(`/hr/admin/users${qs ? `?${qs}` : ''}`), placeholderData: p => p })
 }
 const usersChanged = () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
-export const useCreateUser = () => useMutation({ mutationFn: (v: { employee_id?: number | null; email?: string; name?: string; name_en?: string; roles: string[] }) => api<{ data: AdminUser; temporary_password: string }>('/hr/admin/users', { json: v }), onSuccess: usersChanged })
+export const useCreateUser = () => useMutation({ mutationFn: (v: { employee_id?: number | null; email?: string; name?: string; name_en?: string; roles: string[] }) => api<{ data: AdminUser; link: string; email: string }>('/hr/admin/users', { json: v }), onSuccess: usersChanged })
 export const useUpdateUser = () => useMutation({ mutationFn: ({ id, ...v }: { id: number; roles: string[]; name?: string; name_en?: string }) => api<{ data: AdminUser }>(`/hr/admin/users/${id}`, { method: 'PUT', json: v }), onSuccess: usersChanged })
 export type UserAction = 'reset-password' | 'deactivate' | 'activate' | 'unlock' | 'reset-mfa'
-export const useUserAction = () => useMutation({ mutationFn: ({ id, action }: { id: number; action: UserAction }) => api<{ data: AdminUser; temporary_password?: string }>(`/hr/admin/users/${id}/${action}`, { json: {} }), onSuccess: usersChanged })
+export const useUserAction = () => useMutation({ mutationFn: ({ id, action }: { id: number; action: UserAction }) => api<{ data: AdminUser; link?: string }>(`/hr/admin/users/${id}/${action}`, { json: {} }), onSuccess: usersChanged })
 
 export interface ChannelCfg { key: 'email' | 'sms' | 'whatsapp'; enabled: boolean; config: Record<string, { value?: string; set?: boolean; secret: boolean }> }
 export interface Template { id: number; key: string; channel: string; label: Bi; ar: string; en: string }
@@ -99,3 +100,13 @@ export async function download(path: string, name: string) {
   const a = document.createElement('a'); a.href = URL.createObjectURL(await r.blob()); a.download = name; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href)
 }
 export const fmtSize = (n: number | null) => n === null ? '—' : n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(0)} KB` : `${(n / 1048576).toFixed(1)} MB`
+
+export const useSaveAccountSettings = () => useMutation({ mutationFn: (v: { invite_hours: number }) => api<{ settings: { invite_hours: number } }>('/hr/admin/users/settings', { method: 'PUT', json: v }), onSuccess: usersChanged })
+
+// سجل البريد الصادر (11e)
+export interface MailRow { id: number; to: string; subject: string | null; kind: string | null; status: 'sending' | 'sent' | 'failed'; error: string | null; at: string; sent_at: string | null; company?: Bi | null }
+export type MailLogRes = { data: MailRow[]; meta: { page: number; pages: number; total: number } }
+export const useMailLog = (base: '/hr/admin/mail-log' | '/platform/mail/log', q: Record<string, string | undefined>) => {
+  const qs = new URLSearchParams(Object.entries(q).filter(([, v]) => v) as [string, string][]).toString()
+  return useQuery({ queryKey: ['mail-log', base, qs], queryFn: () => api<MailLogRes>(`${base}${qs ? `?${qs}` : ''}`), placeholderData: p => p })
+}

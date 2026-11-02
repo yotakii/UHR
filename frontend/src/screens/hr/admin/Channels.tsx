@@ -5,6 +5,7 @@ import { can, useMe } from '../../../lib/session'
 import { ApiError } from '../../../lib/api'
 import { useChannels, useSaveChannel, useSaveTemplate, type ChannelCfg, type Template } from '../../../lib/admin'
 import { Badge, Btn, Field, PageHead, Panel, Tabs, toast } from '../../../ui/kit'
+import { MailLogList } from '../../../ui/maillog'
 
 const FIELD_LABEL: Record<string, [string, string]> = { from_name: ['اسم المرسل', 'Sender name'], reply_to: ['بريد الرد', 'Reply-to'], provider: ['المزوّد', 'Provider'],
   sender: ['اسم المرسل', 'Sender ID'], api_key: ['مفتاح API', 'API key'], phone_id: ['رقم الحساب', 'Phone number ID'], token: ['رمز الوصول', 'Access token'] }
@@ -21,6 +22,9 @@ export function Channels() {
     <Panel title={L('قوالب الرسائل', 'Message templates')} sub={<>{L('المتغيرات المتاحة', 'Available placeholders')}: <span className="ltr inline-block">{d.tokens.join('  ')}</span></>}>
       <Tabs value={ch} onChange={setCh} tabs={[{ v: 'email', label: L('البريد', 'Email') }, { v: 'sms', label: 'SMS' }, { v: 'whatsapp', label: 'WhatsApp' }]} />
       <div className="mt-4 space-y-4">{d.templates.filter(t => t.channel === ch).map(t => <TemplateRow key={t.id} t={t} />)}</div>
+    </Panel>
+    <Panel title={L('سجل البريد المرسل', 'Sent email log')} sub={L('كل رسالة أرسلها النظام من شركتك: لمن، وموضوعها، وهل سُلّمت لخادم البريد. إن فشلت رسالة يظهر السبب.', 'Every email the system sent for your company: to whom, the subject, and whether it was handed to the mail server. Failures show the reason.')}>
+      <MailLogList base="/hr/admin/mail-log" />
     </Panel>
   </div>
 }

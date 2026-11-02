@@ -10,7 +10,7 @@ use App\Models\Location;
 use App\Models\Onboarding;
 use App\Models\Role;
 use App\Models\User;
-use App\Notifications\EmployeeWelcome;
+use App\Services\Accounts\Invites;
 use App\Services\Onboarding\F19;
 use App\Support\Audit;
 use App\Support\Counters;
@@ -142,14 +142,13 @@ class NewEmployee
         ]);
     }
 
-    /** حساب الدخول: كلمة مرور مؤقتة + إلزام بالتغيير، تُرسل بالبريد */
+    /** حساب الدخول بانتظار التفعيل: يصل الموظف رابط يختار به كلمة مروره (11e) — بلا دعوة يرسلها المدير لاحقاً من «المستخدمون» */
     private function account(Employee $e, bool $invite): User
     {
-        $password = Str::password(12, symbols: false);
-        $u = User::create(['name' => $e->name, 'name_en' => $e->name_en, 'email' => $e->email, 'password' => $password, 'must_change_password' => true, 'active' => true,
+        $u = User::create(['name' => $e->name, 'name_en' => $e->name_en, 'email' => $e->email, 'password' => Invites::unusable(), 'must_change_password' => false, 'active' => true, 'invited_at' => now(),
             'employee_id' => $e->id, 'company_id' => Tenant::id()]);
         $u->roles()->sync(Role::where('key', 'employee')->pluck('id'));
-        if ($invite) { $co = Tenant::company(); $u->notify((new EmployeeWelcome($co->name_ar, $co->name_en, $e->code, $password))->afterCommit()); }
+        if ($invite) app(Invites::class)->issue($u, 'employee', $e->code);
         return $u;
     }
 

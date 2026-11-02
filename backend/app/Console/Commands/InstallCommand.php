@@ -42,7 +42,7 @@ class InstallCommand extends Command
                 $admin = strtolower(trim((string) $this->option('company-admin')));
                 [$company, $temp] = $prov->create(['slug' => $slug, 'name_ar' => $this->option('company-name-ar') ?: $slug, 'name_en' => $this->option('company-name-en') ?: $slug, 'status' => 'active'], $admin ?: null);
                 $this->info("Company created: {$company->slug}".($admin ? " — admin {$admin}" : ''));
-                if ($temp) $this->warn("Company admin temporary password: {$temp}");
+                if ($temp) $this->warn("Company admin activation link (also emailed): {$temp}");
             }
         });
         return self::SUCCESS;

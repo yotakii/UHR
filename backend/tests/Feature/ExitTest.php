@@ -249,9 +249,9 @@ class ExitTest extends TestCase
         $lama = User::where('email', 'lama.azmeh@alfarada.sy')->firstOrFail();
         $res = $this->postJson("/api/hr/offboarding/{$t['id']}/successor", ['user_id' => $lama->id, 'reset' => true])->assertOk()->json();
         $this->assertContains('manager', $res['roles']);
-        $this->assertNotEmpty($res['password']);
+        $this->assertStringContainsString('/activate/', $res['link']);
         $this->assertTrue($lama->fresh()->load('roles')->hasRole('manager'));
-        $this->assertTrue((bool) $lama->fresh()->must_change_password);
+        $this->assertSame('reset', $lama->fresh()->invite_kind);
     }
 
     public function test_external_notice_needs_documented_consent(): void

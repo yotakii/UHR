@@ -19,7 +19,7 @@ class User extends Authenticatable
     use Auditable, Notifiable;
 
     protected $guarded = ['id'];
-    protected $hidden = ['password', 'remember_token'];
+    protected $hidden = ['password', 'remember_token', 'invite_hash'];
 
     /** أدوار لوحة الإدارة (مسؤول التوظيف يدخل نفس الإطار بمجموعة التوظيف فقط — SRS §10.2) */
     public const ADMIN_ROLES = ['admin', 'hr_director', 'hr_officer', 'finance', 'executive', 'ceo', 'recruiter'];
@@ -34,6 +34,9 @@ class User extends Authenticatable
             'active' => 'boolean',
             'locked_until' => 'datetime',
             'last_login_at' => 'datetime',
+            'invite_expires_at' => 'datetime',
+            'invited_at' => 'datetime',
+            'activated_at' => 'datetime',
         ];
     }
 
@@ -68,6 +71,9 @@ class User extends Authenticatable
     }
 
     /** موقوف: حساب معطّل، أو موظف انتهت خدمته (M11 يمنع الدخول بعد الإغلاق)، أو شركته معلّقة على المنصة */
+    /** مفعّل = اختار كلمة مروره أو دخل، أو حساب قديم لم يُدعَ برابط (11e) */
+    public function isActivated(): bool { return $this->activated_at !== null || $this->invited_at === null; }
+
     public function blocked(): bool
     {
         return ! $this->active || $this->employee?->status === 'terminated' || $this->company?->status === 'suspended';

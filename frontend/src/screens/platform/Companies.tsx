@@ -52,7 +52,7 @@ function CompanyForm({ open, c, onClose }: { open: boolean; c: PlatformCompany |
   const save = useSaveCompany(c?.id ?? null)
   const [v, setV] = useState<Form>(EMPTY)
   const [logo, setLogo] = useState<File | null>(null)
-  const [created, setCreated] = useState<{ email: string; password: string | null } | null>(null)
+  const [created, setCreated] = useState<{ email: string; link: string | null } | null>(null)
   useEffect(() => {
     if (!open) return
     save.reset(); setLogo(null); setCreated(null)
@@ -64,14 +64,14 @@ function CompanyForm({ open, c, onClose }: { open: boolean; c: PlatformCompany |
     const fd = new FormData()
     Object.entries(v).forEach(([k, x]) => { if (k === 'admin_email' && c) return; fd.append(k, typeof x === 'boolean' ? (x ? '1' : '0') : x) })
     if (logo) fd.append('logo', logo)
-    save.mutate(fd, { onSuccess: r => { if (r.admin) setCreated({ email: r.admin.email, password: r.admin.temporary_password }); else { toast(L('حُفظت بيانات الشركة', 'Company saved')); onClose() } } })
+    save.mutate(fd, { onSuccess: r => { if (r.admin) setCreated({ email: r.admin.email, link: r.admin.link }); else { toast(L('حُفظت بيانات الشركة', 'Company saved')); onClose() } } })
   }
   if (created) return <Modal open={open} onClose={onClose} title={L('أُنشئت الشركة', 'Company created')} footer={<Btn kind="primary" onClick={onClose}>{L('تم', 'Done')}</Btn>}>
     <div className="space-y-3 text-[14px]">
-      <p>{L('أُرسل لمدير الشركة بريد بتفعيل الحساب وكلمة المرور المؤقتة، وسيُطلب منه تغييرها عند أول دخول.', 'The company admin was emailed the activation and a temporary password, which must be changed at first sign-in.')}</p>
+      <p>{L('أُرسل لمدير الشركة رابط تفعيل يختار به كلمة مروره ويدخل مباشرة. إن تأخر البريد فانسخ الرابط وأرسله إليه.', 'The company admin was emailed an activation link to choose a password and sign in. If the email is late, copy the link and send it.')}</p>
       <div className="rounded-lg border border-line p-3 space-y-1"><div className="text-ink-3 text-[12px]">{L('البريد', 'Email')}</div><div className="ltr text-start font-semibold">{created.email}</div>
-        {created.password && <><div className="text-ink-3 text-[12px] mt-2 flex items-center gap-1"><KeyRound size={13} />{L('كلمة المرور المؤقتة (تظهر مرة واحدة)', 'Temporary password (shown once)')}</div>
-          <div className="flex items-center gap-2"><code className="ltr font-bold text-[16px]">{created.password}</code><button className="text-ink-3 hover:text-ink" onClick={() => navigator.clipboard?.writeText(created.password!).then(() => toast(L('نُسخت', 'Copied')))} aria-label={L('نسخ', 'Copy')}><Copy size={15} /></button></div></>}</div>
+        {created.link && <><div className="text-ink-3 text-[12px] mt-2 flex items-center gap-1"><KeyRound size={13} />{L('رابط التفعيل (لمرة واحدة)', 'Activation link (single use)')}</div>
+          <div className="flex items-center gap-2"><code className="ltr text-[12px] break-all flex-1 min-w-0 select-all">{created.link}</code><button className="text-ink-3 hover:text-ink shrink-0" onClick={() => navigator.clipboard?.writeText(created.link!).then(() => toast(L('نُسخ', 'Copied')))} aria-label={L('نسخ', 'Copy')}><Copy size={15} /></button></div></>}</div>
     </div>
   </Modal>
   return <Modal open={open} onClose={onClose} width={720} title={c ? L('تعديل الشركة', 'Edit company') : L('شركة جديدة', 'New company')}
@@ -87,7 +87,7 @@ function CompanyForm({ open, c, onClose }: { open: boolean; c: PlatformCompany |
       <Field label={L('نبذة (إنكليزي)', 'About (English)')}><textarea className="field ltr text-start" value={v.about_en} onChange={x => set('about_en', x.target.value)} /></Field>
       <Field label={L('الموقع الإلكتروني', 'Website')} error={e?.field('website')}><input className="field ltr text-start" placeholder="https://" value={v.website} onChange={x => set('website', x.target.value)} /></Field>
       <Field label={L('الشعار', 'Logo')} hint="PNG / JPG / WEBP — 1MB" error={e?.field('logo')}><input type="file" accept=".png,.jpg,.jpeg,.webp" className="field !py-1.5" onChange={x => setLogo(x.target.files?.[0] ?? null)} /></Field>
-      {!c && <Field label={L('بريد مدير الشركة', 'Company admin email')} req error={e?.field('admin_email')} hint={L('يصله حساب «مدير النظام» بكلمة مرور مؤقتة', 'Gets a system-admin account with a temporary password')} className="sm:col-span-2"><input className="field ltr text-start" type="email" value={v.admin_email} onChange={x => set('admin_email', x.target.value)} /></Field>}
+      {!c && <Field label={L('بريد مدير الشركة', 'Company admin email')} req error={e?.field('admin_email')} hint={L('يصله رابط تفعيل حساب «مدير النظام»', 'Gets an activation link for the system-admin account')} className="sm:col-span-2"><input className="field ltr text-start" type="email" value={v.admin_email} onChange={x => set('admin_email', x.target.value)} /></Field>}
       <div className="sm:col-span-2 rounded-xl border border-line p-4 space-y-3 bg-canvas/40">
         <label className="flex gap-3 text-[14px]"><input type="checkbox" className="mt-1 accent-[var(--primary)]" checked={v.portal_enabled} onChange={x => set('portal_enabled', x.target.checked)} /><span>{L('السماح بالنشر على بوابة فرص العمل العامة', 'Allow publishing on the public jobs portal')}</span></label>
         <label className="flex gap-3 text-[14px]"><input type="checkbox" className="mt-1 accent-[var(--primary)]" checked={v.portal_review} disabled={!v.portal_enabled} onChange={x => set('portal_review', x.target.checked)} /><span>{L('مراجعة المنصة لكل شاغر قبل ظهوره في البوابة', 'Platform review of every position before it appears on the portal')}</span></label>

@@ -86,6 +86,9 @@ Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
     Route::post('/forgot', [AuthController::class, 'forgot'])->middleware('throttle:password-email');
     Route::post('/reset', [AuthController::class, 'reset'])->middleware('throttle:login');
+    // 11e: رابط تفعيل الحساب / تعيين كلمة المرور
+    Route::get('/activate/{token}', [AuthController::class, 'invite'])->middleware('throttle:30,1,activate');
+    Route::post('/activate/{token}', [AuthController::class, 'activate'])->middleware('throttle:10,1,activate-post');
     Route::middleware('auth')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::post('/password', [AuthController::class, 'changePassword']);
@@ -453,6 +456,11 @@ Route::middleware(['auth', 'fresh', 'portal:platform'])->prefix('platform')->gro
     Route::post('/backups', [AdminBackupController::class, 'platformRun'])->middleware('throttle:6,10,platform-backup');
     Route::get('/backups/{id}/download', [AdminBackupController::class, 'platformDownload'])->whereNumber('id');
     Route::put('/backups/settings', [AdminBackupController::class, 'platformSettings']);
+    // البريد الصادر (11e): خادم SMTP، رسالة تجريبية، وسجل الرسائل لكل الشركات
+    Route::get('/mail', [\App\Http\Controllers\Api\MailLogController::class, 'settings']);
+    Route::put('/mail', [\App\Http\Controllers\Api\MailLogController::class, 'saveSettings']);
+    Route::post('/mail/test', [\App\Http\Controllers\Api\MailLogController::class, 'test'])->middleware('throttle:6,1,mail-test');
+    Route::get('/mail/log', [\App\Http\Controllers\Api\MailLogController::class, 'platform']);
 });
 
 // جهاز الحضور وجسر القارئ: مفتاح الجهاز في X-Device-Key (بلا جلسة)
@@ -504,6 +512,8 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr/admin')->group(fun
     Route::put('/chains/{type}', [AdminChainController::class, 'update'])->where('type', '[a-z_]+')->middleware('perm:settings,edit');
     Route::get('/users', [AdminUserController::class, 'index'])->middleware('perm:users,view');
     Route::post('/users', [AdminUserController::class, 'store'])->middleware('perm:users,create');
+    Route::put('/users/settings', [AdminUserController::class, 'saveSettings'])->middleware('perm:settings,edit');
+    Route::get('/mail-log', [\App\Http\Controllers\Api\MailLogController::class, 'company'])->middleware('perm:settings,view');
     Route::put('/users/{id}', [AdminUserController::class, 'update'])->whereNumber('id')->middleware('perm:users,edit');
     Route::post('/users/{id}/{action}', [AdminUserController::class, 'action'])->whereNumber('id')->where('action', 'reset-password|deactivate|activate|unlock|reset-mfa')->middleware(['perm:users,edit', 'throttle:30,1']);
     Route::get('/channels', [AdminChannelController::class, 'index'])->middleware('perm:settings,view');

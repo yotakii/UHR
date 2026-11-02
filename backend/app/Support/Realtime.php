@@ -17,7 +17,7 @@ class Realtime
     private static int $muted = 0;
 
     /** جداول لا تعني الشاشات المفتوحة (أو لها حدثها الخاص: الإشعارات) */
-    public const IGNORE = ['audit_logs', 'mfa_audit', 'notices', 'sessions', 'jobs', 'failed_jobs'];
+    public const IGNORE = ['audit_logs', 'mfa_audit', 'notices', 'sessions', 'jobs', 'failed_jobs', 'mail_logs'];
 
     public static function touch(string $table, ?int $companyId = null): void
     {

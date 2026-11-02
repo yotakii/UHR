@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Models\Employee;
 use App\Models\MfaFactor;
 use App\Models\User;
-use App\Notifications\AccountNotice;
+use App\Notifications\AccountInvite;
 use App\Support\Counters;
 use App\Support\Tenant;
 use Database\Seeders\TestDataSeeder;
@@ -101,9 +101,10 @@ class AdminSettingsTest extends TestCase
         $atmata = User::where('email', 'hr@atmata.sy')->first();
         $this->postJson("/api/hr/admin/users/{$atmata->id}/deactivate")->assertNotFound();
         $r = $this->postJson('/api/hr/admin/users', ['email' => 'finance.audit@alfarada.sy', 'name' => 'مدقق مالي', 'roles' => ['finance']])->assertCreated();
-        $temp = $r->json('temporary_password');
+        $first = $r->json('link');
+        $this->assertSame('pending', $r->json('data.invite.state'));
         $u = User::where('email', 'finance.audit@alfarada.sy')->firstOrFail();
-        Notification::assertSentTo($u, AccountNotice::class);
+        Notification::assertSentTo($u, AccountInvite::class, fn ($n) => $n->kind === 'invite');
         $this->postJson('/api/hr/admin/users', ['email' => 'finance.audit@alfarada.sy', 'name' => 'x', 'roles' => ['finance']])->assertStatus(422);
 
         // حساب لموظف بلا حساب: دور employee يُضاف تلقائياً
@@ -119,15 +120,17 @@ class AdminSettingsTest extends TestCase
         $this->putJson("/api/hr/admin/users/{$me->id}", ['roles' => ['hr_director']])->assertStatus(409)->assertJsonPath('code', 'self_lockout');
         $this->postJson("/api/hr/admin/users/{$me->id}/deactivate")->assertStatus(409);
 
-        $new = $this->postJson("/api/hr/admin/users/{$u->id}/reset-password")->assertOk()->json('temporary_password');
-        $this->assertNotSame($temp, $new);
+        $link = $this->postJson("/api/hr/admin/users/{$u->id}/reset-password")->assertOk()->json('link');
+        $this->assertNotSame($first, $link);
+        $this->getJson('/api/auth/activate/'.basename($first))->assertStatus(410);          // رابط جديد يُبطل السابق
+        $this->getJson('/api/auth/activate/'.basename($link))->assertOk();
         MfaFactor::create(['user_id' => $u->id, 'totp_secret' => 'ABC', 'enrolled_at' => now()]);
         $this->postJson("/api/hr/admin/users/{$u->id}/reset-mfa")->assertOk()->assertJsonPath('data.mfa', false);
         $this->postJson("/api/hr/admin/users/{$u->id}/deactivate")->assertOk()->assertJsonPath('data.active', false);
         $this->assertDatabaseHas('audit_logs', ['action' => 'user.deactivated']);
         $this->postJson('/api/auth/logout');
         $this->app['auth']->forgetGuards();
-        $this->postJson('/api/auth/login', ['email' => 'finance.audit@alfarada.sy', 'password' => $new])->assertStatus(403);
+        $this->postJson('/api/auth/activate/'.basename($link), ['password' => 'Audit2026x', 'password_confirmation' => 'Audit2026x'])->assertStatus(403);   // موقوف
     }
 
     public function test_channels_secrets_and_templates(): void

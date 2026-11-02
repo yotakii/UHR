@@ -9,7 +9,7 @@ use App\Models\Employee;
 use App\Models\PointLog;
 use App\Models\Referral;
 use App\Models\User;
-use App\Notifications\EmployeeWelcome;
+use App\Notifications\AccountInvite;
 use App\Services\Onboarding\F19;
 use App\Support\Tenant;
 use Database\Seeders\TestDataSeeder;
@@ -76,8 +76,8 @@ class OnboardingTest extends TestCase
         $this->assertSame([0, 13], array_keys(array_filter($e->onboarding->checklist)));
         $this->assertSame(2, Asset::where('employee_id', $id)->where('status', 'pending_ack')->count());
         $u = User::where('email', 'nour.khatib@alfarada.sy')->firstOrFail();
-        $this->assertSame([$id, true, 'employee'], [$u->employee_id, $u->must_change_password, $u->portal()]);
-        Notification::assertSentTo($u, EmployeeWelcome::class);
+        $this->assertSame([$id, 'invite', 'employee'], [$u->employee_id, $u->invite_kind, $u->portal()]);
+        Notification::assertSentTo($u, AccountInvite::class, fn ($n) => $n->kind === 'employee' && $n->code === 'UHR-1033');
         $this->assertSame(1, AuditLog::where('action', 'employee.added')->count());
 
         $page = $this->getJson("/api/hr/onboarding/{$id}")->assertOk();
@@ -217,7 +217,7 @@ class OnboardingTest extends TestCase
         $m = Employee::where('code', 'UHR-2001')->firstOrFail(); $r = Employee::where('email', 'rana.youssef@alfarada.sy')->firstOrFail();
         $this->assertSame(['active', 1100.0, false], [$m->status, (float) $m->salary, $m->onboarding()->exists()]);
         $this->assertSame([$m->id, '2023-06-01', 'UHR-2002'], [$r->manager_id, $r->hire_date->toDateString(), $r->code]);   // العداد بعد أعلى رقم مستورد
-        $this->assertTrue(User::where('email', 'rana.youssef@alfarada.sy')->value('must_change_password'));
+        $this->assertFalse(User::where('email', 'rana.youssef@alfarada.sy')->first()->isActivated());   // بلا دعوة: يرسلها المدير لاحقاً
         Notification::assertNothingSent();
         $this->assertSame(1, AuditLog::where('action', 'employees.imported')->count());
     }

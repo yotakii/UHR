@@ -91,7 +91,7 @@ class OffboardingController extends Controller
     {
         $d = $request->validate(['user_id' => ['required', 'integer'], 'reset' => ['nullable', 'boolean']]);
         $res = $this->flow->successor($this->find($request, $id), $request->user(), (int) $d['user_id'], (bool) ($d['reset'] ?? false));
-        return response()->json(['data' => ExitCase::full($this->find($request, $id), $request->user()), 'password' => $res['password'], 'roles' => $res['roles']]);
+        return response()->json(['data' => ExitCase::full($this->find($request, $id), $request->user()), 'link' => $res['link'], 'roles' => $res['roles']]);
     }
 
     public function followup(Request $request, int $id, string $key): JsonResponse

@@ -12,7 +12,7 @@ const STEP_FIELDS: (keyof NewEmployeeInput)[][] = [['name', 'name_en', 'gender',
 
 /**
  * معالج إضافة موظف (M06 — AddEmployee في الديمو، نافذة 680px بأربع خطوات): البيانات الشخصية، الوظيفة والراتب، العهد، المراجعة.
- * الخادم ينشئ ملفاً «قيد المباشرة» وحساباً بكلمة مرور مؤقتة تُرسل بالبريد، ثم تُفتح صفحة مباشرته.
+ * الخادم ينشئ ملفاً «قيد المباشرة» وحساباً يصل صاحبه رابط تفعيل بالبريد، ثم تُفتح صفحة مباشرته.
  */
 export function AddEmployee({ onClose }: { onClose: () => void }) {
   const L = useL(); const lang = useLang()
@@ -45,7 +45,7 @@ export function AddEmployee({ onClose }: { onClose: () => void }) {
         <Field label={L('الرقم الوطني', 'National ID')} req error={e('national_id')}><input className="field ltr text-start num" inputMode="numeric" value={d.national_id} onChange={x => set('national_id', x.target.value)} /></Field>
         <Field label={L('تاريخ الولادة', 'Birth date')} req error={e('dob')}><input type="date" className="field" value={d.dob} onChange={x => set('dob', x.target.value)} /></Field>
         <Field label={L('الجوال', 'Mobile')} req error={e('phone')}><input className="field ltr text-start" value={d.phone} onChange={x => set('phone', x.target.value)} /></Field>
-        <Field label={L('البريد', 'Email')} req error={e('email')} className="sm:col-span-2" hint={L('يصله عليه حساب الدخول وكلمة مرور مؤقتة.', 'The sign-in account and a temporary password are sent here.')}><input type="email" className="field ltr text-start" value={d.email} onChange={x => set('email', x.target.value)} /></Field>
+        <Field label={L('البريد', 'Email')} req error={e('email')} className="sm:col-span-2" hint={L('يصله عليه رابط تفعيل حساب بوابة الموظف.', 'The employee portal activation link is sent here.')}><input type="email" className="field ltr text-start" value={d.email} onChange={x => set('email', x.target.value)} /></Field>
       </div>}
       {step === 1 && <div className="grid sm:grid-cols-2 gap-3">
         <Field label={L('الإدارة', 'Department')} req error={e('department_id')}><select className="field" value={d.department_id} onChange={x => { set('department_id', x.target.value ? Number(x.target.value) : ''); set('manager_id', '') }}>
@@ -67,7 +67,7 @@ export function AddEmployee({ onClose }: { onClose: () => void }) {
             <span className={`size-5 rounded border grid place-items-center shrink-0 ${on ? 'bg-brand border-brand text-on-brand' : 'border-ink-3'}`}>{on && <Check size={13} />}</span>
             <span className="min-w-0"><span className="block text-[13px] font-semibold">{bi(a.name, lang)}</span><span className="block text-[11px] text-ink-3"><span className="ltr inline-block">{a.tag}</span> · {bi(a.category, lang)}</span></span></button> })}</div>)}
       {step === 3 && <div className="space-y-1.5 text-[14px]">{[[L('الاسم', 'Name'), lang === 'ar' ? d.name : d.name_en], [L('البريد', 'Email'), <span className="ltr inline-block">{d.email}</span>], [L('الإدارة', 'Department'), dept?.[lang]], [L('المسمى', 'Title'), lang === 'ar' ? d.title_ar : d.title_en],
-        [L('الراتب', 'Pay'), <span className="num">{d.salary} {d.currency}</span>], [L('المباشرة', 'Start'), fmtDate(d.hire_date, lang)], [L('العهد', 'Assets'), assets.length || '—'], [L('كلمة مرور الدخول', 'Login password'), L('مؤقتة — تُرسل بالبريد', 'Temporary — sent by email')]].map(([k, v], i) =>
+        [L('الراتب', 'Pay'), <span className="num">{d.salary} {d.currency}</span>], [L('المباشرة', 'Start'), fmtDate(d.hire_date, lang)], [L('العهد', 'Assets'), assets.length || '—'], [L('حساب الدخول', 'Sign-in account'), L('رابط تفعيل يُرسل بالبريد', 'Activation link sent by email')]].map(([k, v], i) =>
         <div key={i} className="flex justify-between gap-3 border-b border-line-2 py-1.5"><span className="text-ink-3">{k}</span><span className="font-semibold text-end">{v}</span></div>)}
         <p className="text-[12px] text-ink-3 pt-2">{L('يُنشأ الملف بحالة «قيد المباشرة» مع قائمة F-19، وتصل العهد للموظف ليوقّع استلامها.', 'The file starts in onboarding with the F-19 checklist; assets go to the employee for signature.')}</p>
         {err && !STEP_FIELDS.flat().some(f => err.field(f)) && <div role="alert" className="text-[13px] text-danger bg-danger-soft rounded px-3 py-2">{err.message}</div>}

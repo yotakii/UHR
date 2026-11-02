@@ -7,7 +7,7 @@ import { Btn, Modal, toast } from '../../../ui/kit'
 
 /**
  * استيراد الموظفين الحاليين (M06): تنزيل القالب ← رفع الملف ← معاينة بأخطاء كل سطر ← الحفظ لملف بلا أخطاء فقط.
- * المستوردون بحالة «على رأس العمل» بلا F-19، ولكلٍّ حساب بكلمة مرور مؤقتة (الإرسال بالبريد اختياري).
+ * المستوردون بحالة «على رأس العمل» بلا F-19، ولكلٍّ حساب بانتظار التفعيل (إرسال رابط التفعيل بالبريد اختياري).
  */
 export function ImportEmployees({ onClose }: { onClose: () => void }) {
   const L = useL()
@@ -50,7 +50,7 @@ export function ImportEmployees({ onClose }: { onClose: () => void }) {
               <td>{bad ? <ul className="text-danger space-y-0.5">{Object.values(r.errors).map((m, i) => <li key={i}>{m}</li>)}</ul> : <span className="text-brand inline-flex items-center gap-1"><CheckCircle2 size={14} />{L('جاهز', 'Ready')}</span>}</td></tr> })}</tbody>
         </table></div>
         <label className="flex items-start gap-2 text-[14px]"><input type="checkbox" checked={invite} onChange={x => setInvite(x.target.checked)} className="mt-1 size-4 accent-[var(--primary)]" />
-          <span>{L('أرسل لكل موظف بريد الدخول بكلمة مرور مؤقتة', 'Email each employee their sign-in with a temporary password')}<span className="block text-[12px] text-ink-3">{L('بدون الإرسال تُنشأ الحسابات ويمكن إعادة تعيين كلمة المرور لاحقاً من «نسيت كلمة المرور».', 'Without it, accounts are created and can be activated later with "Forgot password".')}</span></span></label>
+          <span>{L('أرسل لكل موظف رابط تفعيل حسابه بالبريد', 'Email each employee an activation link')}<span className="block text-[12px] text-ink-3">{L('بدون الإرسال تُنشأ الحسابات «بانتظار التفعيل»، ويُرسل الرابط لاحقاً من «المستخدمون والأدوار» أو من «نسيت كلمة المرور».', 'Without it, accounts are created as "not activated"; send the link later from "Users & roles" or with "Forgot password".')}</span></span></label>
       </>}
     </div>
   </Modal>
