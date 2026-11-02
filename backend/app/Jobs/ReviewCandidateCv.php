@@ -28,4 +28,11 @@ class ReviewCandidateCv implements ShouldQueue
         if (! $r) return;
         Tenant::run($r->company_id, fn () => $svc->run($r));
     }
+
+    /** انتهت المحاولات (أو قُطعت لتجاوز الوقت): لا تبقى «جارية» للأبد */
+    public function failed(\Throwable $e): void
+    {
+        CandidateReview::allCompanies()->whereKey($this->reviewId)->whereIn('status', ['pending', 'running'])
+            ->update(['status' => 'failed', 'error' => mb_substr($e->getMessage(), 0, 500), 'updated_at' => now()]);
+    }
 }

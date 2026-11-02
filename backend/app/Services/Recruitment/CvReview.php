@@ -80,7 +80,7 @@ class CvReview
         if (! $this->ai->available() || ! self::forCompany($c->company_id)['enabled'])
             throw new ApiException(L::t('قراءة السيرة غير متاحة حالياً.', 'CV reading is not available right now.'), 'review_unavailable', 409);
         $r = CandidateReview::where('candidate_id', $c->id)->first();
-        if ($r && in_array($r->status, ['pending', 'running'], true)) throw new ApiException(L::t('القراءة جارية — انتظر قليلاً.', 'The reading is in progress — please wait.'), 'review_running', 409);
+        if ($r && in_array($r->status, ['pending', 'running'], true) && $r->updated_at?->gt(now()->subMinutes(20))) throw new ApiException(L::t('القراءة جارية — انتظر قليلاً.', 'The reading is in progress — please wait.'), 'review_running', 409);
         if (! $r && self::usedThisMonth($c->company_id) >= self::forCompany($c->company_id)['monthly_limit'])
             throw new ApiException(L::t('بلغت الشركة الحد الشهري لقراءة السير.', 'The company reached its monthly CV-reading limit.'), 'review_limit', 409);
         $r = $this->queue($c, true);
@@ -139,7 +139,7 @@ class CvReview
         if (! $f || ! $f->path || ! Storage::disk($f->disk ?: 'local')->exists($f->path)) return '';
         $ext = strtolower(pathinfo((string) ($f->name ?: $f->path), PATHINFO_EXTENSION));
         if (! in_array($ext, ['pdf', 'docx', 'txt'], true)) return '';
-        return mb_substr((string) app(TextExtractor::class)->extract(Storage::disk($f->disk ?: 'local')->path($f->path), $ext), 0, 6000);
+        return mb_substr((string) app(TextExtractor::class)->extract(Storage::disk($f->disk ?: 'local')->path($f->path), $ext), 0, 3500);
     }
 
     /** يحذف الاسم والبريد والهاتف والرقم الوطني والعنوان والروابط من النص قبل إرساله */
@@ -159,7 +159,8 @@ class CvReview
     public static function row(?CandidateReview $r, bool $full = false): ?array
     {
         if (! $r) return null;
-        $base = ['status' => $r->status, 'score' => $r->score, 'fit' => $r->fit];
+        $status = in_array($r->status, ['pending', 'running'], true) && $r->updated_at?->lt(now()->subMinutes(20)) ? 'failed' : $r->status;   // عالقة
+        $base = ['status' => $status, 'score' => $r->score, 'fit' => $r->fit];
         return $full ? $base + ['summary' => $r->summary, 'strengths' => $r->strengths ?? [], 'gaps' => $r->gaps ?? [], 'reviewed_at' => $r->reviewed_at?->toIso8601String()] : $base;
     }
 }

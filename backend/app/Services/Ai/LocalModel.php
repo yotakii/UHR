@@ -31,7 +31,10 @@ class LocalModel implements AiClient
     {
         $r = Http::timeout((int) config('services.ollama.timeout', 300))->post($this->url().'/api/chat', [
             'model' => $this->model(), 'stream' => false, 'format' => $schema,
-            'options' => ['temperature' => 0.2, 'num_ctx' => 4096],
+            // معالج بلا بطاقة رسومية: سياق أصغر، وحد لطول الجواب، وكل الأنوية المسموحة
+            'options' => array_filter(['temperature' => 0.2, 'num_ctx' => (int) config('services.ollama.num_ctx', 3072), 'num_predict' => 450,
+                'num_thread' => (int) config('services.ollama.threads', 0) ?: null], fn ($v) => $v !== null),
+            'keep_alive' => '10m',
             'messages' => [['role' => 'system', 'content' => $system], ['role' => 'user', 'content' => $prompt]],
         ]);
         if (! $r->successful()) throw new \RuntimeException('local model HTTP '.$r->status());
