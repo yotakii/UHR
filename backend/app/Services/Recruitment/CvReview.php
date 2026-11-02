@@ -110,7 +110,7 @@ class CvReview
 
     public const SYSTEM = 'أنت مختص توظيف محايد. تقيّم مدى ملاءمة متقدم لشاغر اعتماداً على المؤهلات والخبرات والمهارات المرتبطة بمتطلبات الشاغر فقط. '
         .'لا تأخذ بالاعتبار العمر أو الجنس أو الجنسية أو الحالة الاجتماعية أو الدين أو مكان السكن أو أي صفة شخصية. '
-        .'أعطِ درجة من 0 إلى 100، وملخصاً من جملتين، وحتى خمس نقاط قوة وحتى خمسة نواقص مقارنة بالمتطلبات. اكتب بالعربية الفصحى المختصرة.';
+        .'أعطِ درجة من 0 إلى 100، وملخصاً في جملة واحدة، وحتى ثلاث نقاط قوة وحتى ثلاثة نواقص مقارنة بالمتطلبات، كل نقطة بضع كلمات. اكتب بالعربية الفصحى المختصرة.';
 
     public const SCHEMA = ['type' => 'object', 'required' => ['score', 'summary', 'strengths', 'gaps'], 'properties' => [
         'score' => ['type' => 'integer', 'minimum' => 0, 'maximum' => 100], 'summary' => ['type' => 'string'],
@@ -139,7 +139,7 @@ class CvReview
         if (! $f || ! $f->path || ! Storage::disk($f->disk ?: 'local')->exists($f->path)) return '';
         $ext = strtolower(pathinfo((string) ($f->name ?: $f->path), PATHINFO_EXTENSION));
         if (! in_array($ext, ['pdf', 'docx', 'txt'], true)) return '';
-        return mb_substr((string) app(TextExtractor::class)->extract(Storage::disk($f->disk ?: 'local')->path($f->path), $ext), 0, 3500);
+        return mb_substr((string) app(TextExtractor::class)->extract(Storage::disk($f->disk ?: 'local')->path($f->path), $ext), 0, (int) config('services.ollama.cv_chars', 2000));
     }
 
     /** يحذف الاسم والبريد والهاتف والرقم الوطني والعنوان والروابط من النص قبل إرساله */

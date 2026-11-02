@@ -129,7 +129,7 @@ services:
     entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 4; ollama pull $${OLLAMA_MODEL}; wait"]
     environment:
       OLLAMA_MODEL: ${UHR_AI_MODEL:-qwen2.5:3b}
-      OLLAMA_KEEP_ALIVE: 5m
+      OLLAMA_KEEP_ALIVE: 30m
       OLLAMA_NUM_PARALLEL: "1"
       OLLAMA_MAX_LOADED_MODELS: "1"
     mem_limit: 4g

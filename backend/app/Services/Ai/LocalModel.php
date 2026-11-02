@@ -4,6 +4,7 @@ namespace App\Services\Ai;
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 /**
  * نموذج مفتوح المصدر يعمل على خادمنا (خدمة ollama في Docker) — مجاني، والبيانات لا تخرج من الخادم.
@@ -37,15 +38,17 @@ class LocalModel implements AiClient
         $shape = json_encode(array_map(fn ($p) => ($p['type'] ?? 'string') === 'array' ? ['…'] : (($p['type'] ?? '') === 'integer' ? 0 : '…'), $schema['properties'] ?? []), JSON_UNESCAPED_UNICODE);
         $body = [
             'model' => $this->model(), 'stream' => false,
-            'options' => array_filter(['temperature' => 0.2, 'num_ctx' => (int) config('services.ollama.num_ctx', 3072), 'num_predict' => (int) config('services.ollama.num_predict', 350),
+            'options' => array_filter(['temperature' => 0.2, 'num_ctx' => (int) config('services.ollama.num_ctx', 2048), 'num_predict' => (int) config('services.ollama.num_predict', 240),
                 'num_thread' => (int) config('services.ollama.threads', 0) ?: null], fn ($v) => $v !== null),
-            'keep_alive' => '10m',
+            'keep_alive' => (string) config('services.ollama.keep_alive', '30m'),
             'messages' => [['role' => 'system', 'content' => $system."\nأجب بكائن JSON واحد فقط بهذا الشكل دون أي نص قبله أو بعده: ".$shape],
                 ['role' => 'user', 'content' => $prompt]],
         ];
         if ($mode === 'schema') $body['format'] = $schema; elseif ($mode === 'json') $body['format'] = 'json';
         $r = Http::timeout((int) config('services.ollama.timeout', 420))->post($this->url().'/api/chat', $body);
         if (! $r->successful()) throw new \RuntimeException('local model HTTP '.$r->status());
+        Log::info('ollama', ['prompt_tokens' => $r->json('prompt_eval_count'), 'out_tokens' => $r->json('eval_count'),
+            'load_s' => round(((int) $r->json('load_duration')) / 1e9, 1), 'total_s' => round(((int) $r->json('total_duration')) / 1e9, 1)]);
         $out = self::extract((string) $r->json('message.content'));
         if (! is_array($out)) throw new \RuntimeException('local model returned invalid JSON');
         return $out;
