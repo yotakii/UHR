@@ -145,3 +145,8 @@ html[lang="ar"] h1, html[lang="ar"] h2, html[lang="ar"] h3, html[lang="ar"] .fon
 html[lang="ar"] .show-root h1, html[lang="ar"] .show-root h2 { line-height: 1.35 !important; font-weight: 700 !important; letter-spacing: 0; }
 html[lang="ar"] .show-root p { line-height: 1.8; }
 html[lang="en"] .show-root h1, html[lang="en"] .show-root h2 { line-height: 1.12; }
+
+/* فرز السير: مستويات الملاءمة — تدرّج لون واحد مرتّب (عالية ← ضعيفة)، مُتحقق منه لكل سمة؛ «لم تُقرأ» رمادي محايد */
+:root { --fit-strong: #005c53; --fit-good: #007c6d; --fit-partial: #009d87; --fit-weak: #37bda2; --fit-none: var(--line); }
+.dark { --fit-strong: #7be9cd; --fit-good: #30ccb1; --fit-partial: #00a692; --fit-weak: #008174; }
+.slate { --fit-strong: #c4caff; --fit-good: #97a1ff; --fit-partial: #6d78ea; --fit-weak: #4c55bc; }

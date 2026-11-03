@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronDown, Download, FileText, Loader2, RotateCcw, ScanText, Search, Sparkles, XCircle } from 'lucide-react'
+import { ChevronDown, Download, FileText, Loader2, RotateCcw, ScanText, Search, SlidersHorizontal, Sparkles, XCircle } from 'lucide-react'
 import { useL, useLang, bi, fmtDate } from '../../../lib/store'
 import { navigate, setQuery, useRoute } from '../../../lib/router'
 import { ApiError } from '../../../lib/api'
 import { STAGES } from '../../../lib/recruitment'
-import { FIT } from '../../../lib/candidates'
 import { fmtEta, screeningExportUrl, useRunScreening, useScreening, type ScreenFilters, type ScreenRow } from '../../../lib/screening'
 import { Badge, Btn, Empty, PageHead, Panel, Progress, Seg, toast } from '../../../ui/kit'
+import { ByJob, FIT_ORDER, FitDistribution, ScreeningKpis, Swatch, TopScores, fitColor, fitLabel, fitOf } from './ScreeningCharts'
 
 const KEYS = ['job', 'dept', 'major', 'q', 'degree', 'years_min', 'years_max', 'city', 'english', 'match_min', 'stage', 'read', 'fit', 'from', 'to', 'sort'] as const
+const ADVANCED = ['dept', 'degree', 'years_min', 'years_max', 'city', 'english', 'match_min', 'stage', 'fit', 'from', 'to'] as const
 
 /**
  * فرز السير (11f): فلاتر بالشاغر والإدارة والاختصاص والمؤهل والخبرة والمدينة والمرحلة وحالة القراءة،
@@ -25,8 +26,9 @@ export function CvScreening() {
   useEffect(() => { if (was.current && d?.batch && !d.batch.running) toast(L(`اكتملت القراءة: ${d.batch.done} سيرة`, `Reading finished: ${d.batch.done} CVs`)); was.current = running }, [running]) // eslint-disable-line react-hooks/exhaustive-deps
   const [sel, setSel] = useState<Set<number>>(new Set())
   const [force, setForce] = useState(false)
-  const [more, setMore] = useState(false)
-  const adv = more ? '' : 'max-md:hidden'
+  const advCount = ADVANCED.filter(k => f[k]).length
+  const [more, setMore] = useState(advCount > 0)
+  const adv = more ? '' : 'hidden'
   const [q, setQ] = useState(route.query.q ?? ''); const [major, setMajor] = useState(route.query.major ?? '')
   useEffect(() => { const t = setTimeout(() => { if ((route.query.q ?? '') !== q.trim()) setQuery({ q: q.trim() || undefined }) }, 400); return () => clearTimeout(t) }, [q]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { const t = setTimeout(() => { if ((route.query.major ?? '') !== major.trim()) setQuery({ major: major.trim() || undefined }) }, 400); return () => clearTimeout(t) }, [major]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -50,7 +52,7 @@ export function CvScreening() {
 
   return <div className="max-w-[1200px] mx-auto space-y-5">
     <PageHead title={L('فرز السير', 'CV screening')}
-      sub={L('اختر المتقدمين بالفلاتر، ثم «قراءة المحدد»: تُقرأ كل سيرة مقابل متطلبات شاغرها، وتظهر النتائج مرتبةً من الأنسب فور وصولها. القراءة استرشادية ولا تنقل أحداً ولا ترفضه.', 'Pick applicants with the filters, then “Read selected”: each CV is read against its job’s requirements, and results appear ranked from the best fit as they arrive. Readings are guidance only and never move or reject anyone.')}
+      sub={L('1. اختر المتقدمين بالفلاتر · 2. اضغط «قراءة المحدد» · 3. تظهر النتائج مرتبة من الأنسب. القراءة للاسترشاد فقط.', '1. Filter applicants · 2. Press “Read selected” · 3. Results appear ranked by best fit. Readings are guidance only.')}
       actions={d?.can.export && <a href={screeningExportUrl(f)} className="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-line bg-surface font-semibold text-[14px] hover:bg-sub"><Download size={16} />{L('تصدير Excel', 'Export to Excel')}</a>} />
 
     {st && !st.available && <div className="rounded-xl border border-line bg-sub px-4 py-3 text-[13.5px] text-ink-2 flex items-center gap-2"><XCircle size={16} className="text-ink-3" />{L('قراءة السير غير متاحة لشركتك حالياً. يمكنك الفرز بالفلاتر والمطابقة.', 'CV reading is not available for your company right now. You can still filter and sort by match.')}</div>}
@@ -74,7 +76,10 @@ export function CvScreening() {
         <datalist id="uhr-majors">{d?.majors.map(m => <option key={m} value={m} />)}</datalist>
         <select className="field" value={f.job ?? ''} onChange={e => set('job', e.target.value)} aria-label={L('الشاغر', 'Job')}>
           <option value="">{L('كل الشواغر', 'All jobs')}</option>{d?.jobs.filter(j => !f.dept || String(j.dept) === f.dept).map(j => <option key={j.id} value={j.id}>{bi(j, lang)} · {j.code}</option>)}</select>
-        <select className="field" value={f.dept ?? ''} onChange={e => setQuery({ dept: e.target.value || undefined, job: undefined })} aria-label={L('الإدارة', 'Department')}>
+        <select className="field" value={f.read ?? ''} onChange={e => set('read', e.target.value)} aria-label={L('حالة القراءة', 'Reading status')}>
+          <option value="">{L('كل حالات القراءة', 'Any reading status')}</option><option value="none">{L('لم تُقرأ', 'Not read')}</option><option value="done">{L('مقروءة', 'Read')}</option>
+          <option value="running">{L('قيد القراءة', 'Reading')}</option><option value="failed">{L('تعذّرت قراءتها', 'Failed')}</option></select>
+        <select className={`field ${adv}`} value={f.dept ?? ''} onChange={e => setQuery({ dept: e.target.value || undefined, job: undefined })} aria-label={L('الإدارة', 'Department')}>
           <option value="">{L('كل الإدارات', 'All departments')}</option>{d?.departments.map(x => <option key={x.id} value={x.id}>{bi(x, lang)}</option>)}</select>
         <select className={`field ${adv}`} value={f.degree ?? ''} onChange={e => set('degree', e.target.value)} aria-label={L('المؤهل', 'Degree')}>
           <option value="">{L('كل المؤهلات', 'Any degree')}</option>{d?.degrees.map((x, i) => <option key={i} value={i}>{L('على الأقل', 'At least')} {bi(x, lang)}</option>)}</select>
@@ -90,18 +95,25 @@ export function CvScreening() {
         <select className={`field ${adv}`} value={f.stage ?? 'open'} onChange={e => set('stage', e.target.value === 'open' ? '' : e.target.value)} aria-label={L('المرحلة', 'Stage')}>
           <option value="open">{L('الطلبات المفتوحة', 'Open applications')}</option><option value="all">{L('كل المراحل', 'All stages')}</option>
           {Object.entries(STAGES).map(([k, v]) => <option key={k} value={k}>{bi(v, lang)}</option>)}</select>
-        <select className={`field ${adv}`} value={f.read ?? ''} onChange={e => set('read', e.target.value)} aria-label={L('حالة القراءة', 'Reading status')}>
-          <option value="">{L('كل حالات القراءة', 'Any reading status')}</option><option value="none">{L('لم تُقرأ', 'Not read')}</option><option value="done">{L('مقروءة', 'Read')}</option>
-          <option value="running">{L('قيد القراءة', 'Reading')}</option><option value="failed">{L('تعذّرت قراءتها', 'Failed')}</option></select>
         <select className={`field ${adv}`} value={f.fit ?? ''} onChange={e => set('fit', e.target.value)} aria-label={L('نتيجة القراءة', 'Reading result')}>
-          <option value="">{L('كل النتائج', 'Any result')}</option>{Object.entries(FIT).map(([k, v]) => <option key={k} value={k}>{lang === 'ar' ? v[0] : v[1]}</option>)}</select>
+          <option value="">{L('كل النتائج', 'Any result')}</option>{FIT_ORDER.filter(k => k !== 'none').map(k => <option key={k} value={k}>{fitLabel(k, lang === 'ar')}</option>)}</select>
         <label className={`flex items-center gap-2 text-[12.5px] text-ink-3 ${adv}`}>{L('من', 'From')}<input className="field num" type="date" value={f.from ?? ''} onChange={e => set('from', e.target.value)} /></label>
         <label className={`flex items-center gap-2 text-[12.5px] text-ink-3 ${adv}`}>{L('إلى', 'To')}<input className="field num" type="date" value={f.to ?? ''} onChange={e => set('to', e.target.value)} /></label>
       </div>
-      <button className="md:hidden mt-3 me-4 inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand" onClick={() => setMore(m => !m)} aria-expanded={more}>
-        <ChevronDown size={14} className={more ? 'rotate-180' : ''} />{more ? L('فلاتر أقل', 'Fewer filters') : L('فلاتر إضافية', 'More filters')}</button>
-      {Object.keys(f).some(k => k !== 'sort') && <button className="mt-3 inline-flex items-center gap-1.5 text-[12.5px] text-ink-3 hover:text-ink" onClick={() => { setQ(''); setMajor(''); setQuery(Object.fromEntries(KEYS.map(k => [k, undefined]))) }}><RotateCcw size={13} />{L('مسح الفلاتر', 'Clear filters')}</button>}
+      <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+        <button className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand" onClick={() => setMore(m => !m)} aria-expanded={more}>
+          <SlidersHorizontal size={14} />{more ? L('فلاتر أقل', 'Fewer filters') : L('فلاتر أكثر', 'More filters')}{advCount > 0 && <span className="num rounded-full text-[11px] leading-[18px] min-w-[18px] px-1 text-center" style={{ background: 'var(--primary)', color: 'var(--on-primary)' }}>{advCount}</span>}</button>
+        {Object.keys(f).some(k => k !== 'sort') && <button className="inline-flex items-center gap-1.5 text-[12.5px] text-ink-3 hover:text-ink" onClick={() => { setQ(''); setMajor(''); setQuery(Object.fromEntries(KEYS.map(k => [k, undefined]))) }}><RotateCcw size={13} />{L('مسح الفلاتر', 'Clear filters')}</button>}
+      </div>
     </Panel>
+
+    {d && rows.length > 0 && <ScreeningKpis rows={rows} total={d.total} />}
+    {d && rows.some(x => x.review?.status === 'done') && <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(320px,1fr))]">
+      <Panel title={L('توزيع الملاءمة', 'Fit distribution')}><FitDistribution rows={rows} active={f.fit} onPick={k => setQuery({ fit: k || undefined })} /></Panel>
+      <Panel title={L('الأعلى درجة', 'Top scores')} sub={L('من 100 — اضغط الاسم لفتح الملف', 'Out of 100 — click a name to open the file')}><TopScores rows={rows} /></Panel>
+      {new Set(rows.map(x => x.job.id)).size > 1 && <Panel title={L('حسب الشاغر', 'By job')} sub={L('طول الشريط = عدد المتقدمين', 'Bar length = number of applicants')}><ByJob rows={rows} onJob={id => setQuery({ job: String(id) })} /></Panel>}
+    </div>}
+    {d && rows.length > 0 && !rows.some(x => x.review?.status === 'done') && <div className="rounded-xl border border-dashed border-line px-4 py-6 text-center text-[13.5px] text-ink-3">{L('لم تُقرأ سير هذه القائمة بعد. حدّد المتقدمين واضغط «قراءة المحدد» لتظهر المخططات والترتيب.', 'These CVs are not read yet. Select applicants and press “Read selected” to see the charts and ranking.')}</div>}
 
     <Panel pad={false} title={<span className="flex items-center gap-2">{L('المتقدمون', 'Applicants')} {d && <span className="text-[13px] text-ink-3 font-normal num">{d.total > d.shown ? `${d.shown} / ${d.total}` : d.total}</span>}{r.isFetching && <Loader2 size={14} className="animate-spin text-brand" />}</span>}
       sub={st?.available && <span className="num">{L(`المستخدم هذا الشهر ${st.used} من ${st.limit} قراءة · متوسط القراءة ${fmtEta(st.avg_seconds, true)}`, `This month ${st.used} of ${st.limit} readings · ${fmtEta(st.avg_seconds, false)} per CV`)}</span>}>
@@ -129,36 +141,36 @@ export function CvScreening() {
 }
 
 function Row({ x, checked, canSelect, onCheck, sortFit }: { x: ScreenRow; checked: boolean; canSelect: boolean; onCheck: (v: boolean) => void; sortFit: boolean }) {
-  const L = useL(); const lang = useLang()
+  const L = useL(); const lang = useLang(); const ar = lang === 'ar'
   const [open, setOpen] = useState(false)
-  const rv = x.review; const done = rv?.status === 'done'
-  const P = lang === 'ar' ? '٪' : '%'
-  return <li className={`px-4 py-3 ${checked ? 'bg-brand-soft/30' : ''}`}>
-    <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
-      {canSelect && <input type="checkbox" className="accent-[var(--brand)] size-4 mt-1" checked={checked} onChange={e => onCheck(e.target.checked)} aria-label={bi(x.name, lang)} />}
-      {sortFit && done && <span className="num text-[12px] font-bold text-ink-3 w-6 mt-0.5 text-center">{x.rank}</span>}
-      <button type="button" onClick={() => navigate(`/hr/candidates/${x.id}?tab=match`)} className="min-w-0 flex-1 basis-[240px] text-start">
-        <span className="block font-semibold">{bi(x.name, lang)} <span className="text-[12px] text-ink-3 ltr inline-block font-normal">{x.ref}</span></span>
-        <span className="block text-[12.5px] text-ink-2">{bi(x.job.title, lang)}{x.job.dept && <span className="text-ink-3"> · {bi(x.job.dept, lang)}</span>}</span>
-        <span className="block text-[12.5px] text-ink-3">{[x.major && [x.phase, x.major].filter(Boolean).join(' — '), L(`${x.years} سنوات خبرة`, `${x.years} yrs`), x.city, x.last].filter(Boolean).join(' · ')}</span>
+  const rv = x.review; const done = rv?.status === 'done'; const k = fitOf(x)
+  const P = ar ? '٪' : '%'
+  return <li className={`relative ps-5 pe-4 py-3 ${checked ? 'bg-brand-soft/30' : ''}`}>
+    <span className="absolute inset-y-2 start-1.5 w-1 rounded-full" style={{ background: k === 'none' ? 'var(--line)' : fitColor(k) }} aria-hidden />
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+      {canSelect && <input type="checkbox" className="accent-[var(--brand)] size-4" checked={checked} onChange={e => onCheck(e.target.checked)} aria-label={bi(x.name, lang)} />}
+      {sortFit && done && <span className="num text-[13px] font-bold text-ink-3 w-6 text-center">{x.rank}</span>}
+      <button type="button" onClick={() => navigate(`/hr/candidates/${x.id}?tab=match`)} className="min-w-0 flex-1 basis-[230px] text-start">
+        <span className="block font-semibold">{bi(x.name, lang)}</span>
+        <span className="block text-[12.5px] text-ink-2">{bi(x.job.title, lang)}{x.major && <span className="text-ink-3"> · {x.major}</span>}<span className="text-ink-3"> · {L(`${x.years} سنوات`, `${x.years} yrs`)}</span></span>
       </button>
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge tone={x.stage === 'rejected' ? 'neutral' : 'info'}>{STAGES[x.stage as keyof typeof STAGES] ? bi(STAGES[x.stage as keyof typeof STAGES], lang) : x.stage}</Badge>
-        <span className="text-[12px] text-ink-3">{L('المطابقة', 'Match')} <b className={`num text-[13px] ${x.match >= 75 ? 'text-brand' : x.match >= 55 ? 'text-brass' : 'text-ink-3'}`}>{x.match}{P}</b></span>
-        {!rv ? <Badge>{L('لم تُقرأ', 'Not read')}</Badge>
+      <div className="flex items-center gap-3 basis-[260px] sm:basis-auto">
+        <span className="text-[12px] text-ink-3 whitespace-nowrap">{L('مطابقة', 'Match')} <b className="num text-ink-2">{x.match}{P}</b></span>
+        {done ? <span className="flex items-center gap-2 min-w-[150px]" title={fitLabel(k, ar)}>
+            <span className="h-2.5 flex-1 rounded-full bg-sub min-w-[70px]"><span className="block h-full rounded-full" style={{ width: `${rv.score}%`, background: fitColor(k) }} /></span>
+            <span className="num text-[16px] font-bold w-8 text-end">{rv.score}</span></span>
+          : !rv ? <span className="text-[12.5px] text-ink-3 min-w-[150px]">{L('لم تُقرأ', 'Not read')}</span>
           : rv.status === 'failed' ? <Badge tone="danger">{L('تعذّرت القراءة', 'Failed')}</Badge>
-          : !done ? <Badge tone="brass"><Loader2 size={12} className="animate-spin" />{L('قيد القراءة', 'Reading')}</Badge>
-          : <span className="inline-flex items-center gap-2"><span className="num text-[18px] font-bold leading-none">{rv.score}<span className="text-[11px] text-ink-3 font-normal">/100</span></span>
-            {rv.fit && <Badge tone={FIT[rv.fit][2]}>{lang === 'ar' ? FIT[rv.fit][0] : FIT[rv.fit][1]}</Badge>}</span>}
-        {done && <button className="size-8 grid place-items-center rounded-lg border border-line hover:bg-sub" onClick={() => setOpen(o => !o)} aria-expanded={open} aria-label={L('التفاصيل', 'Details')}><ChevronDown size={15} className={open ? 'rotate-180' : ''} /></button>}
-        {x.cv && <FileText size={15} className="text-ink-3" aria-label={L('مرفق سيرة', 'CV attached')} />}
+          : <Badge tone="brass"><Loader2 size={12} className="animate-spin" />{L('قيد القراءة', 'Reading')}</Badge>}
+        {done ? <button className="size-8 grid place-items-center rounded-lg border border-line hover:bg-sub" onClick={() => setOpen(o => !o)} aria-expanded={open} aria-label={L('التفاصيل', 'Details')}><ChevronDown size={15} className={open ? 'rotate-180' : ''} /></button> : <span className="size-8" />}
       </div>
     </div>
-    {done && rv.summary && <p className={`mt-1.5 text-[13px] text-ink-2 ${canSelect ? 'ps-8' : ''} ${open ? '' : 'line-clamp-1'}`}>{rv.summary}</p>}
+    {done && <div className={`mt-1 flex items-center gap-2 text-[12.5px] ${canSelect ? 'ps-8' : ''}`}><Swatch k={k} /><span className="font-semibold">{fitLabel(k, ar)}</span>
+      {rv.summary && <span className={`text-ink-2 ${open ? '' : 'line-clamp-1'}`}>— {rv.summary}</span>}</div>}
     {done && open && <div className={`mt-2 grid gap-3 sm:grid-cols-2 text-[13px] ${canSelect ? 'ps-8' : ''}`}>
-      <div><div className="text-[12px] font-semibold text-brand mb-1">{L('نقاط القوة', 'Strengths')}</div><ul className="list-disc ps-5 space-y-0.5">{rv.strengths.map((s, i) => <li key={i}>{s}</li>)}</ul></div>
-      <div><div className="text-[12px] font-semibold text-brass mb-1">{L('النواقص', 'Gaps')}</div><ul className="list-disc ps-5 space-y-0.5">{rv.gaps.map((s, i) => <li key={i}>{s}</li>)}</ul></div>
-      <div className="sm:col-span-2 text-[12px] text-ink-3">{L('تقديم الطلب', 'Applied')} <span className="num">{fmtDate(x.applied_at, lang)}</span></div>
+      <div className="rounded-lg bg-sub px-3 py-2"><div className="text-[12px] font-semibold mb-1">{L('نقاط القوة', 'Strengths')}</div><ul className="list-disc ps-5 space-y-0.5">{rv.strengths.map((t, i) => <li key={i}>{t}</li>)}</ul></div>
+      <div className="rounded-lg bg-sub px-3 py-2"><div className="text-[12px] font-semibold mb-1">{L('النواقص', 'Gaps')}</div><ul className="list-disc ps-5 space-y-0.5">{rv.gaps.map((t, i) => <li key={i}>{t}</li>)}</ul></div>
+      <div className="sm:col-span-2 text-[12px] text-ink-3 flex flex-wrap gap-x-3">{x.city && <span>{x.city}</span>}{x.last && <span>{x.last}</span>}<span>{STAGES[x.stage as keyof typeof STAGES] ? bi(STAGES[x.stage as keyof typeof STAGES], lang) : x.stage}</span><span>{L('تقديم', 'Applied')} <span className="num">{fmtDate(x.applied_at, lang)}</span></span>{x.cv && <span className="inline-flex items-center gap-1"><FileText size={12} />{L('سيرة مرفقة', 'CV attached')}</span>}</div>
     </div>}
   </li>
 }
