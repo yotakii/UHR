@@ -50,7 +50,7 @@ class MailSetup
                 ])]);
                 if ($s['from_address']) config(['mail.from.address' => $s['from_address']]);
                 if ($s['from_name']) config(['mail.from.name' => $s['from_name']]);
-                if (config('mail.default') !== 'array') config(['mail.default' => 'smtp']);
+                if (config('mail.default') !== 'array' && ! app()->runningUnitTests()) config(['mail.default' => 'smtp']);
             }
             Mail::purge('smtp');
         }
