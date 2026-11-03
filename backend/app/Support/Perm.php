@@ -35,6 +35,7 @@ class Perm
         'internal' => ['الترشيح الداخلي', 'Internal nominations'],
         'referrals' => ['الإحالة ونقاطها', 'Referrals & points'],
         'announcements' => ['لوحة الإعلانات', 'Announcements'],
+        'space' => ['الساحة (التواصل الداخلي)', 'Space (internal social)'],
         'employees' => ['ملف الموظف والملفات الإضافية', 'Employee file & documents'],
         'assets' => ['العهد', 'Custody'],
         'policies' => ['السياسات', 'Policies'],
@@ -56,23 +57,23 @@ class Perm
      * إضافات عملية فوق الجدول (موثّقة في CLAUDE.md): HR يعدّل ويعتمد في المتقدمين ويطبع في وحداته، والأدوار التنفيذية تعرض فقط.
      */
     private const DEFAULTS = [
-        'employee' => ['attendance' => 'v:own', 'leaves' => 'cvp:own', 'excuses' => 'cv:own', 'payroll' => 'v:own', 'salary_cert' => 'cvp:own', 'internal' => 'cv:own',
+        'employee' => ['space' => 'vc', 'attendance' => 'v:own', 'leaves' => 'cvp:own', 'excuses' => 'cv:own', 'payroll' => 'v:own', 'salary_cert' => 'cvp:own', 'internal' => 'cv:own',
             'referrals' => 'v:own', 'announcements' => 'v', 'employees' => 'vp:own', 'assets' => 'v:own', 'policies' => 'v', 'org' => 'v', 'discipline' => 'v:own',
             'performance' => 'v:own', 'succession' => 'v:own'],
-        'manager' => ['attendance' => 'vp:team', 'leaves' => 'vdp:team', 'excuses' => 'vd:team', 'jobs' => 'v:team', 'candidates' => 'v:team', 'internal' => 'vd:team',
+        'manager' => ['space' => 'vc', 'attendance' => 'vp:team', 'leaves' => 'vdp:team', 'excuses' => 'vd:team', 'jobs' => 'v:team', 'candidates' => 'v:team', 'internal' => 'vd:team',
             'referrals' => 'v', 'announcements' => 'v', 'employees' => 'vp:team', 'assets' => 'v:team', 'policies' => 'v', 'org' => 'v', 'discipline' => 'cv:team',
             'performance' => 'vc:team', 'succession' => 'vce:team'],
-        'hr_director' => ['attendance' => 'vexp', 'leaves' => 'vdxp', 'excuses' => 'vd', 'payroll' => 'vedxp', 'salary_cert' => 'vdp', 'jobs' => 'vce', 'candidates' => 'vcedxp',
+        'hr_director' => ['space' => 'vcd', 'attendance' => 'vexp', 'leaves' => 'vdxp', 'excuses' => 'vd', 'payroll' => 'vedxp', 'salary_cert' => 'vdp', 'jobs' => 'vce', 'candidates' => 'vcedxp',
             'internal' => 'v', 'referrals' => 've', 'announcements' => 'vcead', 'employees' => 'vcexp', 'assets' => 'vcex', 'policies' => 'vcea', 'org' => 'vexp',
             'discipline' => 'vcedxp', 'performance' => 'vcedx', 'succession' => 'vce', 'settings' => 've', 'audit' => 'v'],
-        'hr_officer' => ['attendance' => 'vexp', 'leaves' => 'vdxp', 'excuses' => 'vd', 'payroll' => 'vedxp', 'salary_cert' => 'vdp', 'jobs' => 'vce', 'candidates' => 'vcedxp',
+        'hr_officer' => ['space' => 'vcd', 'attendance' => 'vexp', 'leaves' => 'vdxp', 'excuses' => 'vd', 'payroll' => 'vedxp', 'salary_cert' => 'vdp', 'jobs' => 'vce', 'candidates' => 'vcedxp',
             'internal' => 'v', 'referrals' => 've', 'announcements' => 'vcea', 'employees' => 'vcexp', 'assets' => 'vcex', 'policies' => 'vcea', 'org' => 'vexp',
             'discipline' => 'vcedxp', 'performance' => 'vcedx', 'succession' => 'vce'],
-        'recruiter' => ['jobs' => 'vcea', 'candidates' => 'vcedxp', 'referrals' => 'v'],
-        'finance' => ['attendance' => 'vx', 'payroll' => 'vedxp', 'salary_cert' => 'vdp', 'employees' => 'v', 'assets' => 'v'],
-        'executive' => ['attendance' => 'v', 'leaves' => 'v', 'payroll' => 'v', 'jobs' => 'v', 'candidates' => 'v', 'employees' => 'v', 'org' => 'vp', 'performance' => 'v', 'discipline' => 'v'],
-        'ceo' => ['attendance' => 'v', 'leaves' => 'v', 'payroll' => 'v', 'jobs' => 'v', 'candidates' => 'v', 'employees' => 'v', 'org' => 'vp', 'performance' => 'v', 'discipline' => 'v'],
-        'admin' => ['attendance' => 've', 'leaves' => 'v', 'excuses' => 'v', 'payroll' => 'v', 'salary_cert' => 'v', 'jobs' => 'v', 'candidates' => 'v', 'internal' => 'v',
+        'recruiter' => ['space' => 'vc', 'jobs' => 'vcea', 'candidates' => 'vcedxp', 'referrals' => 'v'],
+        'finance' => ['space' => 'vc', 'attendance' => 'vx', 'payroll' => 'vedxp', 'salary_cert' => 'vdp', 'employees' => 'v', 'assets' => 'v'],
+        'executive' => ['space' => 'vc', 'attendance' => 'v', 'leaves' => 'v', 'payroll' => 'v', 'jobs' => 'v', 'candidates' => 'v', 'employees' => 'v', 'org' => 'vp', 'performance' => 'v', 'discipline' => 'v'],
+        'ceo' => ['space' => 'vc', 'attendance' => 'v', 'leaves' => 'v', 'payroll' => 'v', 'jobs' => 'v', 'candidates' => 'v', 'employees' => 'v', 'org' => 'vp', 'performance' => 'v', 'discipline' => 'v'],
+        'admin' => ['space' => 'vcd', 'attendance' => 've', 'leaves' => 'v', 'excuses' => 'v', 'payroll' => 'v', 'salary_cert' => 'v', 'jobs' => 'v', 'candidates' => 'v', 'internal' => 'v',
             'referrals' => 've', 'announcements' => 'vcea', 'employees' => 'v', 'assets' => 'v', 'policies' => 'vcea', 'org' => 'vexp', 'discipline' => 'v',
             'performance' => 'v', 'succession' => 'v', 'settings' => 've', 'users' => 'vcea', 'audit' => 'vxa'],
     ];
@@ -89,7 +90,7 @@ class Perm
     public static function matrix(?int $companyId = null): array
     {
         $companyId ??= Tenant::id();
-        return Cache::rememberForever("perm:{$companyId}", function () use ($companyId) {
+        return Cache::rememberForever(self::key($companyId), function () use ($companyId) {
             $rows = $companyId ? RolePermission::allCompanies()->where('company_id', $companyId)->get()->keyBy(fn ($r) => "{$r->role}.{$r->module}") : collect();
             $m = [];
             foreach (self::ROLES as $role) foreach (array_keys(self::MODULES) as $module) {
@@ -100,7 +101,15 @@ class Perm
         });
     }
 
-    public static function forget(?int $companyId = null): void { Cache::forget('perm:'.($companyId ?? Tenant::id())); }
+    public static function forget(?int $companyId = null): void { Cache::forget(self::key($companyId ?? Tenant::id())); }
+
+    /** مفتاح الذاكرة يتغيّر مع تغيّر الوحدات أو القيم الافتراضية في الكود — فلا تبقى مصفوفة قديمة بعد التحديث */
+    private static function key(?int $companyId): string
+    {
+        static $v = null;
+        $v ??= substr(md5(json_encode([self::MODULES, self::DEFAULTS, self::ROLES])), 0, 8);
+        return "perm:{$v}:{$companyId}";
+    }
 
     /** صلاحيات المستخدم: module => ['actions' => [...], 'scope' => أوسع نطاق بين أدواره] — للواجهة والتحقق */
     public static function for(User $user): array

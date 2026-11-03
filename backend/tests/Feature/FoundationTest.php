@@ -50,7 +50,7 @@ class FoundationTest extends TestCase
     {
         $this->login('jobs@atmata.sy');
         $perms = $this->getJson('/api/auth/me')->json('user.perms');
-        $this->assertSame(['jobs', 'candidates', 'referrals'], array_keys($perms));
+        $this->assertSame(['jobs', 'candidates', 'referrals', 'space'], array_keys($perms));
         $this->getJson('/api/hr/jobs')->assertOk();
         $this->getJson('/api/hr/permissions')->assertForbidden();
 

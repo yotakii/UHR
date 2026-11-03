@@ -551,3 +551,33 @@ Route::middleware(['auth', 'fresh', 'perm:policies,view'])->prefix('policies')->
     Route::delete('/versions/{id}', [PolicyLibraryController::class, 'destroyVersion'])->whereNumber('id')->middleware('perm:policies,edit');
     Route::put('/paragraphs/{id}', [PolicyLibraryController::class, 'link'])->whereNumber('id')->middleware('perm:policies,edit');
 });
+
+// «الساحة» (12a) — للبوابتين
+Route::middleware(['auth', 'fresh', 'perm:space,view'])->prefix('space')->group(function () {
+    $C = \App\Http\Controllers\Api\SpaceController::class;
+    Route::get('/', [$C, 'index']);
+    Route::get('/people', [$C, 'people']);
+    Route::get('/posts/{id}', [$C, 'post'])->whereNumber('id');
+    Route::post('/posts', [$C, 'store'])->middleware(['perm:space,create', 'throttle:30,1,space-post']);
+    Route::put('/posts/{id}', [$C, 'update'])->whereNumber('id');
+    Route::delete('/posts/{id}', [$C, 'destroy'])->whereNumber('id');
+    Route::post('/posts/{id}/pin', [$C, 'pin'])->whereNumber('id');
+    Route::post('/posts/{id}/vote', [$C, 'vote'])->whereNumber('id');
+    Route::post('/posts/{id}/best', [$C, 'best'])->whereNumber('id');
+    Route::post('/posts/{id}/comments', [$C, 'comment'])->whereNumber('id')->middleware(['perm:space,create', 'throttle:60,1,space-comment']);
+    Route::put('/comments/{id}', [$C, 'updateComment'])->whereNumber('id');
+    Route::delete('/comments/{id}', [$C, 'destroyComment'])->whereNumber('id');
+    Route::post('/{target}/{id}/react', [$C, 'react'])->where('target', 'post|comment')->whereNumber('id')->middleware('throttle:120,1,space-react');
+    Route::post('/{target}/{id}/report', [$C, 'report'])->where('target', 'post|comment')->whereNumber('id')->middleware('throttle:20,1,space-report');
+    Route::post('/communities', [$C, 'storeCommunity']);
+    Route::put('/communities/{id}', [$C, 'updateCommunity'])->whereNumber('id');
+    Route::post('/communities/{id}/archive', [$C, 'archiveCommunity'])->whereNumber('id');
+    Route::post('/communities/{id}/join', [$C, 'join'])->whereNumber('id');
+    Route::post('/communities/{id}/leave', [$C, 'leave'])->whereNumber('id');
+    Route::get('/communities/{id}/members', [$C, 'members'])->whereNumber('id');
+    Route::post('/communities/{id}/members', [$C, 'setMember'])->whereNumber('id');
+    Route::get('/moderation', [$C, 'reports'])->middleware('perm:space,decide');
+    Route::post('/moderation/{target}/{id}', [$C, 'decide'])->where('target', 'post|comment')->whereNumber('id')->middleware('perm:space,decide');
+    Route::get('/settings', [$C, 'settings']);
+    Route::put('/settings', [$C, 'saveSettings'])->middleware('perm:settings,edit');
+});

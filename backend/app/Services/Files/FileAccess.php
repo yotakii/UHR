@@ -39,6 +39,9 @@ class FileAccess
         if ($n = \App\Models\Announcement::where('image_file_id', $f->id)->orWhere('attachment_file_id', $f->id)->first()) {
             return ['module' => 'announcements', 'owner' => null, 'label' => 'announcement:'.$n->id, 'department_id' => $n->audience === 'department' ? $n->department_id : null];
         }
+        if ($sp = \App\Models\SpacePost::allCompanies()->whereJsonContains('images', $f->id)->first()) {
+            return ['module' => 'space', 'owner' => $sp->user_id, 'label' => 'space-post:'.$sp->id, 'space_post' => $sp->id];
+        }
         if ($v = \App\Models\PolicyVersion::with('document')->where('file_id', $f->id)->first()) {
             // مكتبة السياسات: المنشور والمؤرشف لكل من يقرأ السياسات، والمسودات والوثائق المؤرشفة لمن يديرها فقط
             return ['module' => 'policies', 'owner' => null, 'label' => 'policy:'.($v->document?->code ?: $v->document_id).'#'.$v->number,
@@ -56,6 +59,8 @@ class FileAccess
         // مستندات الموظف: ضمن نطاق رؤية المستخدم (خاصته/فريقه/الكل)، والحساس لأدواره فقط
         // إعلان لإدارة: لموظفيها، ولمن يدير الإعلانات
         if (! empty($owner['department_id']) && ! Perm::can($user, 'announcements', 'create') && \App\Models\Employee::whereKey($user->employee_id ?? 0)->value('department_id') !== $owner['department_id']) return false;
+        // صور الساحة: لمن يرى مجتمع المنشور
+        if (! empty($owner['space_post'])) { $sp = \App\Models\SpacePost::with('community')->find($owner['space_post']); return $sp && app(\App\Services\Space\Space::class)->canSee($user, $sp->community); }
         if (isset($owner['employee_id']) && ! Directory::visible($user, $owner['employee_id'], $owner['module'])) return false;
         return empty($owner['sensitive']) || EmployeeDocs::canSensitive($user);
     }

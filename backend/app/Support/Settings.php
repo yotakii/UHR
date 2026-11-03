@@ -39,6 +39,9 @@ class Settings
             'internal_min_months' => 12, 'internal_no_probation' => true, 'internal_clean_months' => 6],
         // الإعلانات (D-06): اعتماد قبل النشر (لا افتراضياً — HR ينشر مباشرة)، وأقصى حجم للصورة/المرفق
         'announcements' => ['require_approval' => false, 'max_mb' => 10],
+        // «الساحة» (12a): من ينشئ مجتمعات الاهتمام (everyone | moderators)، الصور، مهلة تعديل المنشور، التفاعلات المتاحة، الاستطلاعات والأسئلة، والإخفاء التلقائي بعد عدد بلاغات
+        'space' => ['enabled' => true, 'create_communities' => 'everyone', 'max_images' => 4, 'max_mb' => 8, 'edit_minutes' => 60,
+            'reactions' => ['like', 'love', 'celebrate', 'insightful', 'support'], 'polls' => true, 'questions' => true, 'auto_hide_reports' => 3],
         // M13 تقييم 360 (SRS M13): أوزان الأدوار (مجموعها 100)، السلّم، عدد الزملاء، حدود مستوى الأداء على 9-Box،
         // وجدول المكافآت حسب النتيجة (D-28 — من المالية/HR، فارغ افتراضياً: كل نتيجة تُحوَّل للمراجعة)
         // التعاقب وخطط التطوير (D-23، D-24 — SRS §10.14): مقياس الجاهزية، دورة مراجعة الخطة (ربعية)، ومراجعة خطط التعاقب

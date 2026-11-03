@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed, Megaphone, Gift, ClipboardCheck, SlidersHorizontal, Sprout, KeyRound, Building, UserCog, GitBranch, BellRing, Library, History, DatabaseBackup, ScanText } from 'lucide-react'
+import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed, Megaphone, Gift, ClipboardCheck, SlidersHorizontal, Sprout, KeyRound, Building, UserCog, GitBranch, BellRing, Library, History, DatabaseBackup, ScanText, MessagesSquare } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { useRoute } from '../../lib/router'
 import { can, type SessionUser } from '../../lib/session'
@@ -19,6 +19,8 @@ import { MyApprovals } from './recruitment/Approvals'
 import { JobTest } from './recruitment/JobTest'
 import { CvDatabase } from './recruitment/CvDatabase'
 import { CvScreening } from './recruitment/CvScreening'
+import { SpaceApp } from '../space/Space'
+import { SpaceSettings } from './SpaceSettings'
 import { OnboardingList } from './onboarding/OnboardingList'
 import { OnboardPage } from './onboarding/OnboardPage'
 import { MyDocuments } from '../employee/MyDocuments'
@@ -105,6 +107,7 @@ export function HrApp({ user }: { user: SessionUser }) {
     { item: { to: '/hr/custody', icon: <Package size={18} />, label: L('العهد', 'Custody'), group: g2 }, module: 'assets', view: () => <Custody /> },
     { item: { to: '/hr/discipline', icon: <Gavel size={18} />, label: L('المخالفات والجزاءات', 'Violations & penalties'), count: count('discipline'), group: g2 }, module: 'discipline', view: () => <Discipline /> },
     { item: { to: '/hr/offboarding', icon: <DoorOpen size={18} />, label: L('الاستقالات وإنهاء الخدمة', 'Resignations & exits'), count: count('resignation'), group: g2 }, module: 'employees', view: () => <Offboarding /> },
+    { item: { to: '/hr/space', icon: <MessagesSquare size={17} />, label: L('الساحة', 'Space'), group: g2 }, module: 'space', view: () => <SpaceApp base="/hr/space" /> },
     { item: { to: '/hr/announcements', icon: <Megaphone size={17} />, label: L('الإعلانات', 'Announcements'), group: g2 }, module: 'announcements', view: () => <AnnouncementsHR /> },
     // موظفو الشركة أصحاب الحسابات الإدارية: إجازاتهم وحضورهم كأي موظف (M14)
     { item: { to: '/hr/my-requests', icon: <CalendarPlus size={17} />, label: L('إجازاتي وطلباتي', 'My leave & requests'), group: g2 }, module: u => !!u.employee, view: () => <MyRequests /> },
@@ -130,6 +133,7 @@ export function HrApp({ user }: { user: SessionUser }) {
     { item: { to: '/hr/settings/policies', icon: <Settings2 size={18} />, label: L('سياسات الدوام والإجازات', 'Work & leave policies'), group: g4, hidden: true }, section: 'rules', module: 'policies', view: () => <PolicySettings /> },
     { item: { to: '/hr/settings/performance', icon: <SlidersHorizontal size={17} />, label: L('إعدادات الأداء والتقييم', 'Performance settings'), group: g4, hidden: true }, section: 'rules', module: u => can(u, 'settings', 'edit') && can(u, 'performance'), view: () => <PerformanceSettings /> },
     { item: { to: '/hr/settings/devices', icon: <Nfc size={18} />, label: L('أجهزة الحضور', 'Attendance devices'), group: g4, hidden: true }, section: 'system', module: u => can(u, 'attendance', 'edit'), view: () => <Devices /> },
+    { item: { to: '/hr/settings/space', icon: <MessagesSquare size={18} />, label: L('إعدادات الساحة', 'Space settings'), group: g4, hidden: true }, section: 'system', module: u => can(u, 'settings', 'edit'), view: () => <SpaceSettings /> },
     { item: { to: '/hr/settings/recruitment', icon: <Scale size={18} />, label: L('قواعد التوظيف والمطابقة', 'Recruitment & matching rules'), group: g4, hidden: true }, section: 'rules', module: u => can(u, 'settings') || can(u, 'candidates'), view: () => <RecruitmentSettings /> },
     { item: { to: '/hr/settings/security', icon: <KeyRound size={18} />, label: L('حماية الرواتب', 'Salary protection'), group: g4, hidden: true }, section: 'org', module: u => can(u, 'settings'), view: () => <VaultSettings /> },
     { item: { to: '/hr/settings/documents', icon: <FolderCog size={18} />, label: L('الملفات الإضافية للموظفين', 'Employee documents'), group: g4, hidden: true }, section: 'rules', module: u => can(u, 'settings') && can(u, 'employees'), view: () => <DocumentSettings /> },

@@ -62,5 +62,7 @@ export function hrLink(link: string): string {
   if (k === 'development') return '/hr/development'
   if (k === 'referrals') return '/hr/referrals?tab=red'
   if (k === 'policy') return id ? `/hr/policies?doc=${id}` : '/hr/policies'
+  if (k === 'space') return id ? `/hr/space/p/${id}` : '/hr/space'
+  if (k === 'space-moderation') return '/hr/space/moderation'
   return `/hr/${k}`
 }
