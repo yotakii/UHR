@@ -209,6 +209,11 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
         Route::get('/cv', [CvController::class, 'index']);
     });
     Route::get('/cv/export', [CvController::class, 'export'])->middleware('perm:candidates,export');
+    // فرز السير وقراءتها جماعياً (11f)
+    Route::get('/cv-screening', [\App\Http\Controllers\Api\Hr\CvScreeningController::class, 'index'])->middleware('perm:candidates,view');
+    Route::get('/cv-screening/export', [\App\Http\Controllers\Api\Hr\CvScreeningController::class, 'export'])->middleware('perm:candidates,export');
+    Route::get('/cv-screening/batch/{id}', [\App\Http\Controllers\Api\Hr\CvScreeningController::class, 'batch'])->whereNumber('id')->middleware('perm:candidates,view');
+    Route::post('/cv-screening/run', [\App\Http\Controllers\Api\Hr\CvScreeningController::class, 'run'])->middleware(['perm:candidates,edit', 'throttle:10,1,cv-batch']);
     Route::middleware('perm:candidates,edit')->group(function () {
         Route::post('/candidates/{id}/move', [CandidateController::class, 'move'])->whereNumber('id');
         Route::post('/candidates/{id}/notes', [CandidateController::class, 'note'])->whereNumber('id');

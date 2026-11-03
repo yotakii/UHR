@@ -116,6 +116,7 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 | 11c real-time updates (Laravel Reverb): screens refresh and the bell rings live — task 11 complete | ✅ user said next |
 | 11d free local CV reading (Ollama on the server, background) + user guide PDF | ✅ user said it works (asked for speed — tuned) |
 | 11e accounts by link (activation / new-password links, no temp passwords by mail), outgoing mail from the platform console (SMTP + test), per-company sender name, mail log | 📦 delivered |
+| 11f «فرز السير» bulk CV screening: filters (job, department, field of study, degree, years, city, English, match, stage, reading status/result, dates), select + batch reading, live progress + ETA, ranked results, Excel | 📦 delivered |
 | 12 «الساحة» social space (Viva Engage-like) · 13 «المساعد» AI agent (simple chat for users, user-scoped tools, confirm before actions, no technical setup for companies) · 14 final verification — plan updated Oct 26; AI agent kept Oct 29 | |
 
 **Task 03 delivered:**
@@ -373,6 +374,13 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 - `App\Support\MailSetup`: platform setting `mail` {host, port, encryption tls|ssl|none, username, password (Crypt), from_address, from_name, log_days} — empty host = env MAIL_* (Mailpit). Applied at boot and before every queue job (workers pick changes up without restart; `mail.default` stays `array` in tests). `MessageSending` → sender name = company channel `from_name` (default the company Arabic name) + reply-to, log row with header `X-UHR-Mail`; `MessageSent` → sent; queue `exceptionOccurred` / reported exceptions → failed with the error.
 - Platform page `/platform/mail` «البريد الصادر» (`MailLogController`: GET/PUT `/api/platform/mail`, POST `/mail/test` sync send with the raw error, GET `/mail/log?status&q&company`; audit `platform.mail`, `platform.mail_test`). Company log `GET /api/hr/admin/mail-log` (settings,view) on the channels page (`ui/maillog.tsx`).
 - Tests: `tests/Feature/AccountsMailTest.php` (4) + updated Platform/Onboarding/AdminSettings/InstallFlow/Database/Exit tests.
+
+**Task 11f delivered (Nov 3) — bulk CV screening:**
+- Migration `2026_11_06_000001_add_review_batches`: `review_batches` (company, user, candidate_ids queued, counts {selected, queued, already, running, limit}, filters, force); candidate_reviews + `seconds` (measured run time) + `batch_id`. `CvReview::queue($c, $force, $batchId)`, `CvReview::avgSeconds($company)` (last 20, default 60 s) for the ETA.
+- `Services/Recruitment/CvScreening`: `query($f)` (job, dept, major = `education::text ilike`, q over name/ref/experience/education, degree ≥, years min/max, city, english, match_min, stage open|all|<stage>, read none|done|running|failed, fit, from/to; sort fit (done reading score desc nulls last, then match) | match | years | newest), `row()`, `majors()` (datalist), `status()`, `start($u, $ids, $force)` (≤ 300; skips live readings and, without force, done ones; new readings within the monthly limit; **queued ordered by job then match** so consecutive prompts share the system + job prefix — Ollama reuses that KV cache), `progress($batch)` (done, failed, left, eta = (left + queue ahead) × avg). Audit `cv.batch_review`, `cv.screening_export`.
+- API (`Hr/CvScreeningController`): `GET /api/hr/cv-screening` (candidates,view; ≤ 300 rows + total, status, latest batch of the user, jobs, departments, cities, degrees, majors, can), `POST /run` {ids, force, filters} (candidates,edit, throttle 10/min), `GET /batch/{id}`, `GET /export` (candidates,export; xlsx in the shown order).
+- Frontend `lib/screening.ts` (`fmtEta`), `screens/hr/recruitment/CvScreening.tsx` (`/hr/cv-screening`, nav «فرز السير»; filters in the URL, «فلاتر إضافية» on mobile, select all / unread, re-read toggle, time estimate, batch progress panel polled every 4 s while running, ranked rows with expandable strengths/gaps → candidate file `?tab=match`).
+- Tests: `tests/Feature/CvScreeningTest.php` (2).
 
 **Open questions in SRS** (ask the user only when you reach them):
 - SMS provider for OTP.

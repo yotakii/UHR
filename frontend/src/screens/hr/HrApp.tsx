@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed, Megaphone, Gift, ClipboardCheck, SlidersHorizontal, Sprout, KeyRound, Building, UserCog, GitBranch, BellRing, Library, History, DatabaseBackup } from 'lucide-react'
+import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed, Megaphone, Gift, ClipboardCheck, SlidersHorizontal, Sprout, KeyRound, Building, UserCog, GitBranch, BellRing, Library, History, DatabaseBackup, ScanText } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { useRoute } from '../../lib/router'
 import { can, type SessionUser } from '../../lib/session'
@@ -18,6 +18,7 @@ import { CandidateFile } from './recruitment/CandidateFile'
 import { MyApprovals } from './recruitment/Approvals'
 import { JobTest } from './recruitment/JobTest'
 import { CvDatabase } from './recruitment/CvDatabase'
+import { CvScreening } from './recruitment/CvScreening'
 import { OnboardingList } from './onboarding/OnboardingList'
 import { OnboardPage } from './onboarding/OnboardPage'
 import { MyDocuments } from '../employee/MyDocuments'
@@ -85,6 +86,7 @@ export function HrApp({ user }: { user: SessionUser }) {
       view: () => route.parts[2] && /^\d+$/.test(route.parts[2]) && route.parts[3] === 'test' ? <JobTest id={Number(route.parts[2])} /> : <Jobs /> },
     { item: { to: '/hr/candidates', icon: <Kanban size={18} />, label: L('المتقدمون', 'Applicants'), count: dash?.funnel?.find(f => f.stage === 'new')?.count, group: g1 }, module: 'candidates',
       view: () => route.parts[2] && /^\d+$/.test(route.parts[2]) ? <CandidateFile id={Number(route.parts[2])} /> : <Board /> },
+    { item: { to: '/hr/cv-screening', icon: <ScanText size={18} />, label: L('فرز السير', 'CV screening'), group: g1 }, module: 'candidates', view: () => <CvScreening /> },
     { item: { to: '/hr/cv', icon: <FileSearch size={18} />, label: L('قاعدة السير الذاتية', 'CV database'), group: g1 }, module: 'candidates', view: () => <CvDatabase /> },
     // «اعتماداتي» لكل حساب في الشركة: طلبات المسار الموحد (إجازات، تبريرات، إضافي) وقرارات التعيين F-31 حين تصل لمستواه
     { item: { to: '/hr/approvals', icon: <Stamp size={18} />, label: L('اعتماداتي', 'My approvals'), count: (inbox?.data.length ?? 0) + (dash?.tasks.filter(t => t.link === 'approvals' && t.kind === 'appointment').length ?? 0) || undefined, group: g1 },

@@ -41,7 +41,7 @@ class CvReview
     }
 
     /** بعد إنشاء الطلب: يُجدول القراءة إن كانت الميزة متاحة للشركة ضمن حدها — وإلا لا شيء */
-    public function queue(Candidate $c, bool $force = false): ?CandidateReview
+    public function queue(Candidate $c, bool $force = false, ?int $batchId = null): ?CandidateReview
     {
         if (Audit::muted() || ! $this->ai->available()) return null;   // الخدمة غير مشغّلة ← لا شيء
         if (! $force && $c->stage === 'rejected') return null;
@@ -49,7 +49,7 @@ class CvReview
         if (! $cfg['enabled']) return null;
         $existing = CandidateReview::allCompanies()->where('candidate_id', $c->id)->first();
         if (! $existing && self::usedThisMonth($c->company_id) >= $cfg['monthly_limit']) return null;
-        $r = CandidateReview::allCompanies()->updateOrCreate(['candidate_id' => $c->id], ['company_id' => $c->company_id, 'status' => 'pending', 'error' => null]);
+        $r = CandidateReview::allCompanies()->updateOrCreate(['candidate_id' => $c->id], ['company_id' => $c->company_id, 'status' => 'pending', 'error' => null, 'batch_id' => $batchId]);
         ReviewCandidateCv::dispatch($r->id)->onQueue('ai')->afterCommit();
         return $r;
     }
@@ -93,17 +93,26 @@ class CvReview
     {
         $c = Candidate::allCompanies()->with(['jobOpening.department', 'cv'])->findOrFail($r->candidate_id);
         $r->update(['status' => 'running', 'attempts' => $r->attempts + 1]);
+        $t0 = microtime(true);
         try {
             $out = $this->ai->json(self::SYSTEM, $this->prompt($c), self::SCHEMA);
             $score = max(0, min(100, (int) ($out['score'] ?? 0)));
             $clean = fn ($a) => array_values(array_slice(array_filter(array_map(fn ($x) => mb_substr(trim((string) $x), 0, 200), (array) $a)), 0, 5));
             $r->update(['status' => 'done', 'score' => $score, 'fit' => self::fit($score), 'summary' => mb_substr(trim((string) ($out['summary'] ?? '')), 0, 600),
-                'strengths' => $clean($out['strengths'] ?? []), 'gaps' => $clean($out['gaps'] ?? []), 'model' => $this->ai->model(), 'error' => null, 'reviewed_at' => now()]);
+                'strengths' => $clean($out['strengths'] ?? []), 'gaps' => $clean($out['gaps'] ?? []), 'model' => $this->ai->model(), 'error' => null, 'reviewed_at' => now(),
+                'seconds' => round(microtime(true) - $t0, 1)]);
         } catch (\Throwable $e) {
             $r->update(['status' => 'failed', 'error' => mb_substr($e->getMessage(), 0, 500)]);
             throw $e;
         }
         return $r->refresh();
+    }
+
+    /** متوسط مدة القراءة في الشركة (آخر 20 قراءة) — لتقدير الوقت المتبقي */
+    public static function avgSeconds(int $companyId): float
+    {
+        $v = CandidateReview::allCompanies()->where('company_id', $companyId)->where('status', 'done')->whereNotNull('seconds')->latest('reviewed_at')->limit(20)->pluck('seconds');
+        return $v->count() ? round((float) $v->avg(), 1) : 60.0;
     }
 
     public static function fit(int $score): string { return $score >= 75 ? 'strong' : ($score >= 60 ? 'good' : ($score >= 40 ? 'partial' : 'weak')); }
@@ -161,6 +170,6 @@ class CvReview
         if (! $r) return null;
         $status = in_array($r->status, ['pending', 'running'], true) && $r->updated_at?->lt(now()->subMinutes(20)) ? 'failed' : $r->status;   // عالقة
         $base = ['status' => $status, 'score' => $r->score, 'fit' => $r->fit];
-        return $full ? $base + ['summary' => $r->summary, 'strengths' => $r->strengths ?? [], 'gaps' => $r->gaps ?? [], 'reviewed_at' => $r->reviewed_at?->toIso8601String()] : $base;
+        return $full ? $base + ['summary' => $r->summary, 'strengths' => $r->strengths ?? [], 'gaps' => $r->gaps ?? [], 'reviewed_at' => $r->reviewed_at?->toIso8601String(), 'error' => $status === 'failed' ? true : null] : $base;
     }
 }
