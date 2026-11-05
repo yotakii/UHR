@@ -22,7 +22,9 @@ class FileController extends Controller
         abort_unless(FileAccess::allowed($request->user(), $f, $owner), 403, L::t('لا تملك صلاحية الوصول لهذا الملف.', 'You are not allowed to access this file.'));
         abort_unless(Storage::disk($f->disk)->exists($f->path), 404, L::t('الملف غير موجود.', 'File not found.'));
         $inline = $request->boolean('inline') && preg_match('#^(image/|application/pdf)#', (string) $f->mime);
-        Tenant::run($f->company_id, fn () => Audit::record($inline ? 'file.view' : 'file.download', $f, null, ['name' => $f->name, 'of' => $owner['label']]));
-        return Storage::disk($f->disk)->response($f->path, $f->name, ['Content-Type' => $f->mime ?: 'application/octet-stream', 'Cache-Control' => 'private, no-store'], $inline ? 'inline' : 'attachment');
+        // الصورة الشخصية (67) تُعرض في كل رأس صفحة — لا تُسجَّل مشاهدتها، وتُخزَّن مؤقتاً في المتصفح
+        $avatar = str_starts_with((string) ($owner['label'] ?? ''), 'avatar:');
+        if (! $avatar) Tenant::run($f->company_id, fn () => Audit::record($inline ? 'file.view' : 'file.download', $f, null, ['name' => $f->name, 'of' => $owner['label']]));
+        return Storage::disk($f->disk)->response($f->path, $f->name, ['Content-Type' => $f->mime ?: 'application/octet-stream', 'Cache-Control' => $avatar ? 'private, max-age=3600' : 'private, no-store'], $inline ? 'inline' : 'attachment');
     }
 }

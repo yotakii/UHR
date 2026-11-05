@@ -18,7 +18,7 @@ class Employee extends Model
     {
         return [
             'hire_date' => 'date:Y-m-d', 'dob' => 'date:Y-m-d', 'end_date' => 'date:Y-m-d',
-            'salary' => 'float', 'leave_used' => 'float', 'pay' => 'array',
+            'salary' => 'float', 'leave_used' => 'float', 'pay' => 'array', 'biometrics_at' => 'datetime',
         ];
     }
 

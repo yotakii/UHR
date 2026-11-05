@@ -111,6 +111,11 @@ Route::middleware(['auth', 'fresh', 'portal:candidate'])->prefix('me')->group(fu
 // M14 — «وثائق للتوقيع»: لكل حساب مرتبط بموظف (ومنهم موظفو الموارد البشرية أنفسهم)
 // المسار الموحد للطلبات (SRS §10.1): طلباتي وحضوري لكل حساب له ملف موظف، وصندوق الاعتماد لكل معتمِد (المدير، HR، المستويات العليا)
 Route::middleware(['auth', 'fresh'])->prefix('me')->group(function () {
+    // «حسابي» (67): الصورة، اللغة والمظهر، الاسم لحسابات بلا ملف موظف
+    Route::get('/account', [\App\Http\Controllers\Api\MyAccountController::class, 'show']);
+    Route::put('/account', [\App\Http\Controllers\Api\MyAccountController::class, 'update'])->middleware('throttle:30,1');
+    Route::post('/account/avatar', [\App\Http\Controllers\Api\MyAccountController::class, 'avatar'])->middleware('throttle:10,1');
+    Route::delete('/account/avatar', [\App\Http\Controllers\Api\MyAccountController::class, 'removeAvatar']);
     Route::get('/leave', [MyRequestsController::class, 'index']);
     Route::post('/leave/check', [MyRequestsController::class, 'check'])->middleware('throttle:60,1');
     Route::post('/leave', [MyRequestsController::class, 'store'])->middleware('throttle:20,1');
@@ -185,6 +190,7 @@ Route::middleware(['auth', 'fresh', 'perm:succession,view'])->prefix('developmen
 Route::middleware(['auth', 'fresh'])->prefix('me/documents')->group(function () {
     Route::get('/', [MyDocumentsController::class, 'index']);
     Route::post('/sign', [MyDocumentsController::class, 'sign'])->middleware('throttle:30,1');
+    Route::post('/files/{id}/sign', [MyDocumentsController::class, 'signDoc'])->whereNumber('id')->middleware('throttle:30,1');
 });
 
 // نظام الشركة (M15/M16 + الوحدات): كل مسار محمي بصلاحية الوحدة والإجراء من مصفوفة الشركة (SRS §10.2)
@@ -267,6 +273,10 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
         Route::get('/card/last-read', [DirectoryController::class, 'lastCard']);
         Route::post('/documents', [EmployeeDocController::class, 'store'])->middleware('throttle:30,1');
         Route::post('/documents/{docId}/archive', [EmployeeDocController::class, 'archive'])->whereNumber('docId');
+        // 49: ربط ملف موجود في النظام، وتوقيع الموظف وبصمته
+        Route::get('/linkable', [EmployeeDocController::class, 'linkable']);
+        Route::post('/documents/link', [EmployeeDocController::class, 'link']);
+        Route::post('/biometrics', [EmployeeDocController::class, 'biometrics'])->middleware('throttle:30,1');
     });
     Route::put('/employee-docs/settings', [EmployeeDocController::class, 'saveSettings'])->middleware('perm:settings,edit');
     Route::get('/org', [DirectoryController::class, 'org'])->middleware('perm:org,view');
@@ -467,6 +477,8 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
     // M16 — سجل النماذج وقالب الطباعة
     Route::get('/forms', [FormController::class, 'index'])->middleware('perm:settings,view');
     Route::put('/forms/{id}', [FormController::class, 'update'])->whereNumber('id')->middleware('perm:settings,edit');
+    Route::get('/forms/welcome-memo', [FormController::class, 'memo'])->middleware('perm:settings,view');
+    Route::put('/forms/welcome-memo', [FormController::class, 'saveMemo'])->middleware('perm:settings,edit');
     Route::put('/print-template', [FormController::class, 'updateTemplate'])->middleware('perm:settings,edit');
 });
 

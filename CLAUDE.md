@@ -121,7 +121,8 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 | 15a test notes — quick fixes & clarifications (FEATURES §15) | ✅ user said next |
 | 15b test notes — recruitment (job types/workplace, portal filters, link previews, interview questions, offer budget approval, pay breakdown, CV bank matching) | ✅ user said next |
 | 15c test notes — work schedules & shifts, rota, branches + time zones, attendance stats/trend, past months, manager emergency leave | ✅ user said next |
-| 15d test notes — pay currency + dated exchange rates, sick tiered pay, report templates (bank/insurance/departments/deductions/diff), sheet diff + automatic checks, import error summary, no amounts in print before verification | 📦 delivered |
+| 15d test notes — pay currency + dated exchange rates, sick tiered pay, report templates (bank/insurance/departments/deductions/diff), sheet diff + automatic checks, import error summary, no amounts in print before verification | ✅ user said next |
+| 15e test notes — employee signature + fingerprint, documents needing a signature with due reminders, link system files, F-19 item files, editable welcome memo + audience, form intro/notes, Ctrl K over real data, «حسابي» | 📦 delivered |
 | 12b praise (company-value badges + optional points) + automatic celebrations · 13 «المساعد» AI agent (simple chat for users, user-scoped tools, confirm before actions, no technical setup for companies) · 14 final verification — plan updated Oct 26; AI agent kept Oct 29 | |
 
 **Task 03 delivered:**
@@ -446,6 +447,18 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 - Note 82: exit clearance (F-07) amounts and pending asset values are null (`masked`) before verification — every other printed amount was already masked server-side (offer, certificate, settlement, payslip, sheet).
 - Frontend: `screens/hr/payroll/PayrollExtras.tsx` (PayStrip, CurrencyModal, Reports, DiffView, ChecksView), Payroll tabs `?tab=diff|checks`; `money()` accepts any ISO currency.
 - Tests: `tests/Feature/PayrollNotesTest.php` (3), OnboardingTest summary assertion.
+
+**Batch 15e delivered (Nov 5) — employees & documents notes 49, 51, 53, 54, 63, 67, 74:**
+- Migration `2026_11_12_000001`: employee_documents + `source` upload|linked, `onboarding_item`, `needs_signature`, `sign_due`, `signed_at`, `signature_file_id`, `sign_alerted_at`; employees + `signature_file_id`, `fingerprint_file_id`, `biometrics_at`; form_templates + `intro`, `notes` jsonb {ar, en}; users + `avatar_file_id`.
+- `EmployeeDocs`: `SYSTEM_TYPES` (onboarding, linked — always accepted), `make()` (needs_signature → bell `docs` to the employee), `linkable($e)` (application CV/photo, leave documents, onboarding signatures) + `link()` (409-style 422 `not_linkable` / `already_linked`), `sign()` (owner only, once), `toSign()`, `biometrics()` (signature data URL + fingerprint image png/jpg/bmp/webp; audit `employee.biometrics`), `biometricsOf()`; `sweep()` also alerts once (employee + HR) for unsigned documents whose `sign_due` is within `alert_days` or past.
+- `FileAccess`: employee signature/fingerprint (sensitive), document signatures, avatars (any user of the same company; not audited, cached 1 h); a `linked` employee document also grants access by the employee-document rule.
+- API: `GET /api/hr/employees/{id}/linkable`, `POST …/documents/link`, `POST …/biometrics` (employees,edit); upload accepts `needs_signature`, `sign_due` (≥ today), `onboarding_item`; `HrEmployee` → `biometrics`; `HrOnboarding` → `item_files` (by item) + `biometrics`; `GET /api/me/documents` → `files` (to sign), `POST /api/me/documents/files/{id}/sign`.
+- 53: setting `welcome_memo` {ar, en, audience all|department}; `WelcomeMemo::text` fills `:name :title :department :date :location :manager :company :about` (empty = standard text); memo bells go to the department only when audience = department. `GET|PUT /api/hr/forms/welcome-memo` (settings view/edit; unknown placeholder → 422 `unknown_var`; audit `settings.welcome_memo`).
+- 54: `PUT /api/hr/forms/{id}` takes `intro`/`notes`; `/api/print/{code}` returns them; `Paper` prints the intro after the title and the notes before the footer.
+- 51: `SearchController` searches employees (scoped; name, code, email, titles, phone digits, national ID, NFC UID), candidates (+ mobile), jobs and `records` {k, kind, label, sub, to}: dept, asset, case (discipline ref), exit (ref), cert (service ref_no), policy paragraphs, announcements — each by its module permission/scope.
+- 67: `MyAccountController` `GET|PUT /api/me/account` (locale, theme; name only without an employee file), `POST|DELETE /api/me/account/avatar` (jpg/png/webp ≤ 2 MB); session payload `avatar`, `prefs`; the frontend applies prefs at login and saves header language/theme changes to the account (`onPrefsChange` in `lib/store.ts`).
+- Frontend: `screens/hr/employees/EmployeeFiles.tsx` (BiometricsPanel, LinkFileModal), DocumentsTab (link, print, signature state, `UploadDoc` exported with `item`), OnboardPage (attach per F-19 item, biometrics in «التعهدات»), MyDocuments (`FileToSign`), Forms (intro/notes + `MemoPanel`), Palette records, `screens/account/MyAccount.tsx` (`/hr/account`, `/me/account`; links in both user menus), `Avatar src`, `lib/account.ts`.
+- Tests: `tests/Feature/EmployeeFilesTest.php` (4).
 
 **Open questions in SRS** (ask the user only when you reach them):
 - SMS provider for OTP.

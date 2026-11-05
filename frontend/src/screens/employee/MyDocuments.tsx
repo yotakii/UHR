@@ -3,7 +3,10 @@ import { Check, Loader2 } from 'lucide-react'
 import { useL, useLang, bi, money } from '../../lib/store'
 import { ApiError } from '../../lib/api'
 import { useMe } from '../../lib/session'
-import { useMyDocs, useSignDoc, type DocKey, type MyDocs, type Sig } from '../../lib/onboarding'
+import { useMyDocs, useSignDoc, useSignFile, type DocKey, type MyDocs, type Sig } from '../../lib/onboarding'
+import { fileUrl } from '../../lib/console'
+import { fmtDate } from '../../lib/store'
+import type { EmpDoc } from '../../lib/employees'
 import { Btn, Empty, Field, PageHead, Panel, SignaturePad, toast } from '../../ui/kit'
 import { Paper, SigBox } from '../../ui/docs'
 
@@ -18,10 +21,11 @@ export function MyDocuments() {
   const co = company ? bi(company.name, lang) : ''
   if (isLoading || !data) return <div className="grid place-items-center py-24"><Loader2 className="animate-spin text-brand" /></div>
   const u = data.undertakings; const name = bi(data.employee.name, lang)
-  const nothing = !data.pending.length && (!u || (u.f22.signed_at && u.f20.signed_at && u.conduct.signed_at))
+  const nothing = !data.pending.length && !(data.files?.length) && (!u || (u.f22.signed_at && u.f20.signed_at && u.conduct.signed_at))
   return <div className="max-w-[1000px] mx-auto space-y-5">
     <PageHead title={L('وثائق للتوقيع', 'Documents to sign')} sub={L('التوقيع الإلكتروني هنا له نفس أثر التوقيع الورقي ويُحفظ في ملفك.', 'E-signatures here are stored in your file like paper signatures.')} />
     {nothing && <Panel><Empty title={L('لا توجد وثائق بانتظار توقيعك', 'Nothing waiting for your signature')} /></Panel>}
+    {data.files?.map(f => <FileToSign key={f.id} f={f} />)}
     {data.pending.map(a => <Paper key={a.id} code="CUS" title={L('سند استلام عهدة', 'Custody receipt')} subject={a.tag}>
       <table className="w-full border border-line text-[14px] mb-4"><tbody>{[[L('الأصل', 'Asset'), bi(a.name, lang)], [L('الرمز', 'Tag'), a.tag], [L('الرقم التسلسلي', 'Serial'), a.serial ?? '—'], [L('القيمة التقديرية', 'Value'), money(a.value, 'USD', lang)]].map(([k, v]) =>
         <tr key={k}><td className="border border-line px-3 py-2 bg-sub w-1/3">{k}</td><td className="border border-line px-3 py-2 num">{v}</td></tr>)}</tbody></table>
@@ -79,4 +83,21 @@ function SignRow({ doc, assetId, label, done, mother }: { doc: DocKey; assetId?:
         onClick={() => sign.mutate({ doc, signature: sig!, asset_id: assetId, mother_name: mother ? m.trim() : undefined }, { onSuccess: () => toast(done) })}>{label}</Btn></div>
     {err && !err.field('mother_name') && <div role="alert" className="text-[13px] text-danger">{err.field('signature') ?? err.message}</div>}
   </div>
+}
+
+/** مستند رفعته الموارد البشرية ويحتاج توقيعك بموعد (ملاحظة 74): اقرأه ثم وقّع */
+function FileToSign({ f }: { f: EmpDoc }) {
+  const L = useL(); const lang = useLang()
+  const sign = useSignFile()
+  const [sig, setSig] = useState<string | undefined>()
+  return <Panel title={<span className="flex flex-wrap items-center gap-2">{f.title || bi(f.type_name, lang)}
+    {f.sign_due && <span className={`text-[12px] font-semibold rounded-md px-2 py-0.5 ${f.sign_overdue ? 'bg-danger-soft text-danger' : 'bg-warn-soft text-warn'}`}>{f.sign_overdue ? L('تأخر التوقيع', 'Overdue') : L('وقّع قبل', 'Sign by')} <span className="num">{fmtDate(f.sign_due, lang)}</span></span>}</span>}
+    sub={f.note ?? undefined} action={<a className="text-brand font-semibold text-[13px]" href={fileUrl(f.file.id, true)} target="_blank" rel="noreferrer">{L('فتح المستند', 'Open document')}</a>}>
+    <div className="space-y-3 max-w-[520px]">
+      <p className="text-[13.5px] text-ink-2">{L('اطّلعت على المستند وأوقّع عليه.', 'I have read the document and sign it.')}</p>
+      <SignaturePad value={sig} onChange={setSig} />
+      <Btn kind="primary" disabled={!sig || sign.isPending} icon={sign.isPending ? <Loader2 size={15} className="animate-spin" /> : undefined}
+        onClick={() => sig && sign.mutate({ id: f.id, signature: sig }, { onSuccess: () => toast(L('وُقّع المستند', 'Document signed')), onError: x => toast(x instanceof ApiError ? x.message : L('تعذّر التوقيع', 'Could not sign')) })}>{L('توقيع', 'Sign')}</Btn>
+    </div>
+  </Panel>
 }

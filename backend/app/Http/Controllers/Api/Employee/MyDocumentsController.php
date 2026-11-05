@@ -30,6 +30,7 @@ class MyDocumentsController extends Controller
             'undertakings' => $ob ? ['f22' => $sig('f22'), 'f20' => [...$sig('f20'), 'mother_name' => $ob->f20_mother_name], 'conduct' => $sig('conduct')] : null,
             'pending' => $assets->where('status', 'pending_ack')->values()->map(fn ($a) => HrOnboarding::asset($a)),
             'signed' => $assets->where('status', 'assigned')->values()->map(fn ($a) => HrOnboarding::asset($a)),
+            'files' => \App\Services\People\EmployeeDocs::toSign($e),   // 74: مستندات تطلب توقيعي بموعد
         ]);
     }
 
@@ -40,6 +41,14 @@ class MyDocumentsController extends Controller
             'asset_id' => ['required_if:doc,asset', 'integer'], 'mother_name' => ['nullable', 'string', 'max:120'],
         ]);
         $this->flow->sign($this->me($request), $d['doc'], $d['signature'] ?? null, $d);
+        return $this->index($request);
+    }
+
+    public function signDoc(Request $request, int $id): JsonResponse
+    {
+        $sig = $request->validate(['signature' => ['required', 'string', 'max:450000']])['signature'];
+        $doc = \App\Models\EmployeeDocument::where('employee_id', $this->me($request)->id)->findOrFail($id);
+        app(\App\Services\People\EmployeeDocs::class)->sign($doc, $request->user(), $sig);
         return $this->index($request);
     }
 

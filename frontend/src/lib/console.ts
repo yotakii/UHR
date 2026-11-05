@@ -28,6 +28,7 @@ export interface SearchResult {
   employees: { id: number; code: string; name: Bi; title: Bi; dept: Bi }[]
   candidates: { id: number; ref: string; name: Bi; stage: Stage; job: Bi }[]
   jobs: { id: number; code: string; title: Bi; status: string }[]
+  records?: { k: string; kind: string; label: Bi; sub: Bi; to: string }[]
 }
 export const useSearch = (q: string, enabled: boolean) => useQuery({ queryKey: ['hr', 'search', q], queryFn: () => api<SearchResult>(`/hr/search?q=${encodeURIComponent(q)}`), enabled: enabled && q.trim().length >= 2, staleTime: 15_000 })
 
@@ -51,12 +52,16 @@ export function useSavePerms() {
 }
 
 /* ---------- سجل النماذج وقالب الطباعة ---------- */
-export interface FormRow { id: number; code: string; ref: string; title: Bi; module: string | null; issue: string; issued_on: string | null; sensitive: boolean }
+export interface FormRow { id: number; code: string; ref: string; title: Bi; module: string | null; issue: string; issued_on: string | null; sensitive: boolean; intro?: Bi | null; notes?: Bi | null }
+/** مذكرة الترحيب F-32 (53) */
+export interface WelcomeMemoCfg { ar: string; en: string; audience: 'all' | 'department' }
+export const useWelcomeMemo = () => useQuery({ queryKey: ['hr', 'welcome-memo'], queryFn: () => api<{ data: WelcomeMemoCfg; vars: string[] }>('/hr/forms/welcome-memo') })
+export const useSaveWelcomeMemo = () => useMutation({ mutationFn: (v: WelcomeMemoCfg) => api('/hr/forms/welcome-memo', { method: 'PUT', json: v }), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['hr', 'welcome-memo'] }); queryClient.invalidateQueries({ queryKey: ['hr', 'onboard'] }) } })
 export interface PrintTemplate { logo: boolean; logo_height: number; align: 'start' | 'center' | 'end'; margin_mm: number }
 export const useForms = () => useQuery({ queryKey: ['hr', 'forms'], queryFn: () => api<{ data: FormRow[]; template: PrintTemplate }>('/hr/forms') })
 export function useSaveForm() {
   return useMutation({
-    mutationFn: (f: { id: number; ref: string; title_ar: string; title_en: string; issue: string; issued_on: string; sensitive: boolean }) => api<{ data: FormRow }>(`/hr/forms/${f.id}`, { method: 'PUT', json: f }),
+    mutationFn: (f: { id: number; ref: string; title_ar: string; title_en: string; issue: string; issued_on: string; sensitive: boolean; intro?: Bi; notes?: Bi }) => api<{ data: FormRow }>(`/hr/forms/${f.id}`, { method: 'PUT', json: f }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['hr', 'forms'] }); queryClient.invalidateQueries({ queryKey: ['print'] }) },
   })
 }
@@ -69,7 +74,7 @@ export function useSaveTemplate() {
 
 export interface PrintMeta {
   company: { name: Bi; dept: Bi; logo: string | null }
-  form: { code: string; ref: string; title: Bi | null; issue: string; issued_on: string | null; sensitive: boolean }
+  form: { code: string; ref: string; title: Bi | null; issue: string; issued_on: string | null; sensitive: boolean; intro?: Bi | null; notes?: Bi | null }
   template: PrintTemplate
 }
 /** رأس وتذييل النموذج — company للمتقدم (الشركة التي قدّم لها) */

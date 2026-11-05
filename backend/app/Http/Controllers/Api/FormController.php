@@ -32,8 +32,32 @@ class FormController extends Controller
         $f->update($request->validate([
             'ref' => ['required', 'string', 'max:80'], 'title_ar' => ['required', 'string', 'max:150'], 'title_en' => ['required', 'string', 'max:150'],
             'issue' => ['required', 'string', 'max:10'], 'issued_on' => ['required', 'date'], 'sensitive' => ['boolean'],
+            // 54: نص قابل للتعديل يُطبع بعد العنوان (مقدمة) وقبل التذييل (ملاحظات)
+            'intro' => ['nullable', 'array'], 'intro.ar' => ['nullable', 'string', 'max:3000'], 'intro.en' => ['nullable', 'string', 'max:3000'],
+            'notes' => ['nullable', 'array'], 'notes.ar' => ['nullable', 'string', 'max:3000'], 'notes.en' => ['nullable', 'string', 'max:3000'],
         ], ['required' => L::t('هذا الحقل مطلوب', 'This field is required')]));
         return response()->json(['data' => $this->present($f)]);
+    }
+
+    /** مذكرة الترحيب F-32 (53): نص الشركة ومن تُعمَّم عليه */
+    public function memo(): JsonResponse
+    {
+        return response()->json(['data' => Settings::merged('welcome_memo'), 'vars' => \App\Services\Onboarding\WelcomeMemo::VARS]);
+    }
+
+    public function saveMemo(Request $request): JsonResponse
+    {
+        $d = $request->validate(['ar' => ['nullable', 'string', 'max:4000'], 'en' => ['nullable', 'string', 'max:4000'], 'audience' => ['required', Rule::in(['all', 'department'])]]);
+        foreach (['ar', 'en'] as $l) {
+            preg_match_all('/:([a-z_]+)/', (string) ($d[$l] ?? ''), $m);
+            $bad = array_diff($m[1], \App\Services\Onboarding\WelcomeMemo::VARS);
+            if ($bad) throw \App\Exceptions\ApiException::field($l, L::t('متغير غير معروف: :', 'Unknown placeholder: :').implode('، :', $bad), 'unknown_var');
+        }
+        $before = Settings::merged('welcome_memo');
+        $new = ['ar' => trim((string) ($d['ar'] ?? '')), 'en' => trim((string) ($d['en'] ?? '')), 'audience' => $d['audience']];
+        Settings::put('welcome_memo', $new);
+        Audit::record('settings.welcome_memo', null, $before, $new);
+        return response()->json(['data' => $new]);
     }
 
     public function updateTemplate(Request $request): JsonResponse
@@ -87,6 +111,13 @@ class FormController extends Controller
     private function present(FormTemplate $f): array
     {
         return ['id' => $f->id, 'code' => $f->code, 'ref' => $f->ref, 'title' => ['ar' => $f->title_ar, 'en' => $f->title_en], 'module' => $f->module,
-            'issue' => $f->issue, 'issued_on' => $f->issued_on?->toDateString(), 'sensitive' => $f->sensitive];
+            'issue' => $f->issue, 'issued_on' => $f->issued_on?->toDateString(), 'sensitive' => $f->sensitive,
+            'intro' => self::text($f->intro), 'notes' => self::text($f->notes)];
+    }
+
+    private static function text(?array $t): ?array
+    {
+        $t = ['ar' => trim((string) ($t['ar'] ?? '')), 'en' => trim((string) ($t['en'] ?? ''))];
+        return $t['ar'] === '' && $t['en'] === '' ? null : $t;
     }
 }

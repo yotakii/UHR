@@ -96,6 +96,7 @@ class User extends Authenticatable
             'roles' => $this->roles->pluck('key')->values(),
             'portal' => $this->portal(),
             'must_change_password' => $this->must_change_password,
+            'avatar' => $this->avatar_file_id, 'prefs' => ['locale' => $this->locale, 'theme' => $this->theme],
             'password_policy' => \App\Support\PasswordPolicy::client($this->company_id),
             'employee' => $e ? ['code' => $e->code, 'title' => ['ar' => $e->title_ar, 'en' => $e->title_en], 'dept' => ['ar' => $e->department->name_ar, 'en' => $e->department->name_en], 'gender' => $e->gender] : null,
             'company' => $this->company?->card(),

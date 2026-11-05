@@ -28,8 +28,11 @@ export function applyDocument() {
   h.classList.toggle('dark', prefs.theme !== 'light'); h.classList.toggle('slate', prefs.theme === 'slate')
 }
 
-export function setLang(l: Lang) { prefs = { ...prefs, lang: l }; save(); applyDocument(); emit() }
-export function setTheme(t: Theme) { prefs = { ...prefs, theme: t }; save(); applyDocument(); emit() }
+let prefsListener: ((p: Prefs) => void) | null = null
+/** يُستدعى عند كل تغيير للغة أو المظهر (حفظها في الحساب — 67) */
+export function onPrefsChange(fn: (p: Prefs) => void) { prefsListener = fn }
+export function setLang(l: Lang) { if (prefs.lang === l) return; prefs = { ...prefs, lang: l }; save(); applyDocument(); emit(); prefsListener?.(prefs) }
+export function setTheme(t: Theme) { if (prefs.theme === t) return; prefs = { ...prefs, theme: t }; save(); applyDocument(); emit(); prefsListener?.(prefs) }
 export function getPrefs() { return prefs }
 
 export function usePrefs<T>(sel: (p: Prefs) => T): T {

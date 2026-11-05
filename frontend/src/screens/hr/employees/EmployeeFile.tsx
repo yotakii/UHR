@@ -7,6 +7,7 @@ import { Avatar, Badge, Btn, Empty, KV, Panel, Tabs } from '../../../ui/kit'
 import { Lifecycle, Timeline } from '../../../ui/docs'
 import { EmpBadge } from './Employees'
 import { EditProfile, CardModal } from './EditProfile'
+import { BiometricsPanel } from './EmployeeFiles'
 import { DocumentsTab } from './DocumentsTab'
 import { Masked } from '../../../ui/vault'
 
@@ -71,6 +72,7 @@ export function EmployeeFile({ id }: { id: number }) {
           <KV k={L('الاستحقاق السنوي', 'Annual entitlement')} v={`${e.leave.entitlement} ${L('يوماً', 'days')}`} /><KV k={L('المستخدم', 'Used')} v={<span className="num">{e.leave.used}</span>} />
           <KV k={L('المتبقي', 'Remaining')} v={<span className="num">{e.leave.remaining}</span>} /><KV k={L('إجازات مرضية', 'Sick leave days')} v={<span className="num">{e.leave.sick}</span>} />
         </Panel>
+        <div className="lg:col-span-3"><BiometricsPanel emp={e.id} b={e.biometrics} canEdit={e.can.edit} /></div>
       </div>}
       {tab === 'attendance' && <Panel pad={false}><AttendanceTable rows={e.attendance} /></Panel>}
       {tab === 'leaves' && <Requests e={e} />}

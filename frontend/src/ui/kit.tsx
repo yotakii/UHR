@@ -56,7 +56,9 @@ export function Seg<T extends string>({ value, onChange, options }: { value: T; 
   </div>
 }
 
-export function Avatar({ size = 32, tone = 'brand' }: { name?: string; size?: number; tone?: 'brand' | 'brass' | 'ink' }) {
+export function Avatar({ size = 32, tone = 'brand', src }: { name?: string; size?: number; tone?: 'brand' | 'brass' | 'ink'; src?: number }) {
+  // الصورة الشخصية (67): ملف محمي يُعرض عبر /api/files
+  if (src) return <img src={`/api/files/${src}?inline=1`} alt="" className="rounded-full object-cover border border-line shrink-0" style={{ width: size, height: size }} />
   const cls = tone === 'brand' ? 'bg-brand-soft text-brand border-brand/25' : tone === 'brass' ? 'bg-brass-soft text-brass border-brass/30' : 'bg-info-soft text-info border-info/30'
   return <span className={`inline-grid place-items-center rounded-full border shrink-0 ${cls}`} style={{ width: size, height: size }}><UserRound size={Math.round(size * 0.55)} strokeWidth={1.8} /></span>
 }

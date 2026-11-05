@@ -50,7 +50,10 @@ class OnboardingFlow
             $ob->update(['memo_sent_at' => now(), 'checklist' => $this->mark($ob->checklist, 4)]);
             $e->log(($resend ? 'إعادة تعميم' : 'تعميم').' مذكرة الترحيب على الأقسام', 'Welcome memo '.($resend ? 're-circulated' : 'circulated'), 'info', 'F-32');
             $e->loadMissing('department');
-            $users = User::where('company_id', Tenant::id())->where('active', true)->whereNotNull('employee_id')->where('employee_id', '!=', $e->id)->pluck('id');
+            // 53: التعميم على الشركة كلها أو على إدارة الموظف فقط (إعداد مذكرة الترحيب)
+            $dept = \App\Support\Settings::merged('welcome_memo')['audience'] === 'department';
+            $users = User::where('company_id', Tenant::id())->where('active', true)->whereNotNull('employee_id')->where('employee_id', '!=', $e->id)
+                ->when($dept, fn ($q) => $q->whereIn('employee_id', \App\Models\Employee::where('department_id', $e->department_id)->select('id')))->pluck('id');
             foreach ($users as $u) Notify::user($u, "مذكرة ترحيب: انضم {$e->name} إلى {$e->department->name_ar} بوظيفة {$e->title_ar}", "Welcome: {$e->name_en} joined {$e->department->name_en} as {$e->title_en}");
             $this->advance($e, $ob);
         });

@@ -39,6 +39,10 @@ class HrOnboarding
             'probation_at' => (int) \App\Support\Settings::rule('probation_at'),
             'probation' => ['started' => $ob->probation_started_at?->toDateString(), 'end' => $end, 'due' => $end && Carbon::parse($end)->lte(now()), 'confirmed_at' => $ob->confirmed_at?->toIso8601String()],
             'memo' => ['sent_at' => $ob->memo_sent_at?->toIso8601String(), 'text' => WelcomeMemo::text($e)],
+            // 63: ملفات مرتبطة ببنود F-19، و49: توقيع الموظف وبصمته
+            'item_files' => \App\Models\EmployeeDocument::with(['file', 'uploader'])->where('employee_id', $e->id)->whereNotNull('onboarding_item')->where('status', '!=', 'archived')->orderBy('id')->get()
+                ->groupBy('onboarding_item')->map(fn ($g) => $g->map(fn ($d) => \App\Services\People\EmployeeDocs::row($d))->values()),
+            'biometrics' => \App\Services\People\EmployeeDocs::biometricsOf($e),
             'f22' => $sig('f22'), 'f20' => [...$sig('f20'), 'mother_name' => $ob->f20_mother_name], 'conduct' => $sig('conduct'),
             'assets' => $e->assets->sortBy('id')->values()->map(fn (Asset $a) => self::asset($a)),
             'stock' => $withStock ? Asset::with('category')->where('status', 'available')->orderBy('asset_category_id')->orderBy('tag')->get()->map(fn (Asset $a) => self::asset($a)) : [],

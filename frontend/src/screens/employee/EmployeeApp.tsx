@@ -27,6 +27,7 @@ import { MyAnnouncements } from '../rewards/Announcements'
 import { SpaceApp } from '../space/Space'
 import { PolicyLibrary } from '../policies/PolicyLibrary'
 import { MyHolidays } from './MyHolidays'
+import { MyAccount } from '../account/MyAccount'
 
 /** روابط إشعارات الموظف ← مسارات بوابته */
 export const employeeLink = (link: string) => link.startsWith('policy:') ? `/me/policies?doc=${link.slice(7)}` : link.startsWith('space:') ? `/me/space/p/${link.slice(6)}` : ({ space: '/me/space',  docs: '/me/documents', requests: '/me/requests', approvals: '/me/approvals', attendance: '/me/attendance', payslip: '/me/payslip', services: '/me/services', discipline: '/me/discipline', complaints: '/me/discipline', resignation: '/me/resignation', handover: '/me/resignation', profile: '/me/profile', rewards: '/me/rewards', internal: '/me/rewards', announcements: '/me/news', holidays: '/me/holidays', reviews: '/me/reviews', development: '/me/development' } as Record<string, string>)[link] ?? null
@@ -96,6 +97,7 @@ export function EmployeeApp({ user }: { user: SessionUser }) {
       case 'resignation': return <MyResignation base="/me/resignation" />
       case 'team': return <PortalTeam />
       case 'profile': return <PortalProfile />
+      case 'account': return <MyAccount servicesBase="/me/services" />
       case 'services': return route.parts[2] && /^\d+$/.test(route.parts[2]) ? <CertificatePage id={Number(route.parts[2])} hr={false} back="/me/services" /> : <MyServices base="/me/services" />
       default: return <PortalHome toSign={n} todos={todos} />
     }

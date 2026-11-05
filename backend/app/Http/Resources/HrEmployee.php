@@ -52,6 +52,7 @@ class HrEmployee
                 'id' => $s->id, 'kind' => $s->kind, 'note' => $s->note, 'status' => $s->status, 'at' => $s->created_at?->toIso8601String()]),
             'assets' => $e->assets->sortBy('id')->values()->map(fn (Asset $a) => HrOnboarding::asset($a)),
             'documents' => EmployeeDocs::visible($e, $u)->map(fn ($d) => EmployeeDocs::row($d))->values(),
+            'biometrics' => EmployeeDocs::biometricsOf($e),
             'logs' => $e->logs->sortBy([['at', 'desc'], ['id', 'desc']])->values()->map(fn ($l) => ['at' => $l->at->toIso8601String(), 'ar' => $l->text_ar, 'en' => $l->text_en, 'kind' => $l->kind, 'form' => $l->form]),
             // الراتب الشامل: لمن يرى الرواتب، وبعد التحقق بخطوتين فقط (SRS §4.4)
             'salary' => Perm::can($u, 'payroll') && \App\Services\Security\SalaryVault::sees($u, $e) ? ['amount' => (float) $e->salary, 'currency' => $e->currency, 'pay' => $e->pay, 'contract' => $e->contract] : null,

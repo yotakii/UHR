@@ -20,14 +20,18 @@ export interface EmpDoc {
   id: number; type: string; type_name: Bi; title: string | null; note: string | null
   file: { id: number; name: string; size: number; mime: string | null }
   expires_at: string | null; expiring: boolean; sensitive: boolean; status: 'active' | 'expired' | 'archived'; uploaded_at: string; uploaded_by: Bi | null
+  source?: 'upload' | 'linked'; onboarding_item?: number | null; needs_signature?: boolean; sign_due?: string | null; signed_at?: string | null; sign_overdue?: boolean; signature_file_id?: number | null
 }
+/** توقيع الموظف وبصمته (49) */
+export interface Biometrics { signature: string | null; fingerprint_id: number | null; at: string | null }
+export interface Linkable { id: number; kind: string; ar: string; en: string; name: string; linked: boolean }
 export interface EmpFile extends EmpRow {
   department_id: number; location_id: number; manager_id: number | null; title_ar: string; title_en: string; name_ar: string; name_en: string
   manager: (Bi & { id: number }) | null; national_id: string | null; bank_name?: string | null; bank_account?: string | null; dob: string | null; phone: string | null; nfc_uid: string | null
   end_date: string | null; shift: string; tenure_days: number
   leave: { entitlement: number; used: number; remaining: number; sick: number }
   onboarding: boolean; resigned: boolean
-  attendance: DayRow[]; leaves: LeaveRow[]; services: ServiceRow[]; assets: AssetRow[]; documents: EmpDoc[]; logs: LogRow[]
+  attendance: DayRow[]; leaves: LeaveRow[]; services: ServiceRow[]; assets: AssetRow[]; documents: EmpDoc[]; logs: LogRow[]; biometrics?: Biometrics
   salary: { amount: number; currency: 'USD' | 'SYP'; pay?: { basic: number; housing: number; transport: number; fuel: number } | null; contract?: string | null } | null
   can: { salary: boolean; edit: boolean; sensitive: boolean; onboarding: boolean }
 }
@@ -95,15 +99,29 @@ export const lastCardRead = (id: number, since?: string) => api<{ data: CardRead
 
 const refetchFile = (id: number) => () => queryClient.invalidateQueries({ queryKey: ['hr', 'employee', id] })
 export const useUploadDoc = (id: number) => useMutation({
-  mutationFn: (v: { file: File; type: string; title: string; expires_at: string; sensitive: boolean; note: string }) => {
+  mutationFn: (v: { file: File; type: string; title: string; expires_at: string; sensitive: boolean; note: string; needs_signature?: boolean; sign_due?: string; onboarding_item?: number }) => {
     const fd = new FormData(); fd.append('file', v.file); fd.append('type', v.type)
+    if (v.needs_signature) { fd.append('needs_signature', '1'); if (v.sign_due) fd.append('sign_due', v.sign_due) }
+    if (v.onboarding_item !== undefined) fd.append('onboarding_item', String(v.onboarding_item))
     if (v.title) fd.append('title', v.title)
     if (v.expires_at) fd.append('expires_at', v.expires_at)
     if (v.note) fd.append('note', v.note)
     fd.append('sensitive', v.sensitive ? '1' : '0')
     return api<{ data: EmpDoc }>(`/hr/employees/${id}/documents`, { method: 'POST', body: fd }).then(r => r.data)
   },
-  onSuccess: refetchFile(id),
+  onSuccess: () => { refetchFile(id)(); queryClient.invalidateQueries({ queryKey: ['hr', 'onboard', id] }) },
+})
+export const useLinkable = (id: number, enabled: boolean) => useQuery({ queryKey: ['hr', 'linkable', id], enabled, queryFn: () => api<{ data: Linkable[] }>(`/hr/employees/${id}/linkable`).then(r => r.data) })
+export const useLinkDoc = (id: number) => useMutation({
+  mutationFn: (v: { file_id: number; title?: string; sensitive?: boolean }) => api<{ data: EmpDoc }>(`/hr/employees/${id}/documents/link`, { json: v }).then(r => r.data),
+  onSuccess: () => { refetchFile(id)(); queryClient.invalidateQueries({ queryKey: ['hr', 'linkable', id] }) },
+})
+export const useSaveBiometrics = (id: number) => useMutation({
+  mutationFn: (v: { signature?: string; fingerprint?: File | null }) => {
+    const fd = new FormData(); if (v.signature) fd.append('signature', v.signature); if (v.fingerprint) fd.append('fingerprint', v.fingerprint)
+    return api<{ data: Biometrics }>(`/hr/employees/${id}/biometrics`, { method: 'POST', body: fd }).then(r => r.data)
+  },
+  onSuccess: () => { refetchFile(id)(); queryClient.invalidateQueries({ queryKey: ['hr', 'onboard'] }) },
 })
 export const useArchiveDoc = (id: number) => useMutation({
   mutationFn: (v: { doc: number; restore?: boolean }) => api<{ data: EmpDoc }>(`/hr/employees/${id}/documents/${v.doc}/archive`, { json: { restore: !!v.restore } }).then(r => r.data),

@@ -36,7 +36,11 @@ export function Paper({ code, title, sub, children, actions, company, subject }:
           {sub && <p className="text-[13px] text-ink-2 mt-0.5">{sub}</p>}
         </div>
       </header>
-      <div className="px-5 sm:px-7 py-6 flex-1">{children}</div>
+      <div className="px-5 sm:px-7 py-6 flex-1">
+        {m?.form.intro?.[lang] && <p className="text-[14px] mb-4 whitespace-pre-line max-w-[75ch]">{m.form.intro[lang]}</p>}
+        {children}
+        {m?.form.notes?.[lang] && <div className="text-[12.5px] text-ink-2 mt-5 pt-3 border-t border-line-2 whitespace-pre-line">{m.form.notes[lang]}</div>}
+      </div>
       <footer className="paper-foot px-5 sm:px-7 py-2.5 border-t border-line text-[11.5px] text-ink-3 flex flex-wrap justify-between gap-x-4 gap-y-1 ltr" dir="ltr">
         <span className="font-semibold text-ink-2">{m?.form.ref ?? code}</span>
         <span>Issue:{m?.form.issue ?? '01'}</span>

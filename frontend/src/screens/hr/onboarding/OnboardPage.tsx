@@ -1,5 +1,8 @@
 import { useState } from 'react'
-import { ArrowRight, ArrowLeft, Check, Copy, Send, Loader2, Lock, Undo2, BadgeCheck } from 'lucide-react'
+import { ArrowRight, ArrowLeft, Check, Copy, Send, Loader2, Lock, Undo2, BadgeCheck, Paperclip } from 'lucide-react'
+import { fileUrl } from '../../../lib/console'
+import { BiometricsPanel } from '../employees/EmployeeFiles'
+import { UploadDoc } from '../employees/DocumentsTab'
 import { useL, useLang, bi, fmtDate, fmtDateTime } from '../../../lib/store'
 import { setQuery, useRoute } from '../../../lib/router'
 import { can, useMe } from '../../../lib/session'
@@ -47,6 +50,7 @@ export function OnboardPage({ id }: { id: number }) {
         <Panel title={L('إقرار إبراء الذمة الوقائي', 'Precautionary clearance')} sub={<>F-20{e.f20.mother_name && <> · {L('اسم الأم', "Mother's name")}: {e.f20.mother_name}</>}</>}><SigBox label={L('توقيع الموظف', 'Employee signature')} name={bi(e.name, lang)} sig={e.f20.signature ?? undefined} at={e.f20.signed_at ?? undefined} /></Panel>
         <Panel title={L('إقرار ميثاق السلوك المهني', 'Code of conduct acknowledgment')}><SigBox label={L('توقيع الموظف', 'Employee signature')} name={bi(e.name, lang)} sig={e.conduct.signature ?? undefined} at={e.conduct.signed_at ?? undefined} /></Panel>
         <p className="text-[13px] text-ink-3 md:col-span-3">{L('يوقّع الموظف التعهدات من حسابه في قسم «وثائق للتوقيع».', 'The employee signs these from "Documents to sign" in their account.')}</p>
+        <div className="md:col-span-3"><BiometricsPanel emp={e.id} b={e.biometrics} canEdit={editable} /></div>
       </div>}
       {tab === 'log' && <Panel><Timeline items={e.logs.map(l => ({ ...l, form: l.form ?? undefined }))} /></Panel>}
     </div>
@@ -59,6 +63,8 @@ export function OnboardPage({ id }: { id: number }) {
 
 function Checklist({ e, editable }: { e: OnboardFile; editable: boolean }) {
   const L = useL(); const lang = useLang()
+  const [attach, setAttach] = useState<number | null>(null)
+  const files = (i: number) => e.item_files?.[i] ?? []
   const toggle = useToggleItem(e.id)
   const closed = !!e.probation.confirmed_at
   const autoHint = { memo: L('يُنجز بتعميم مذكرة الترحيب', 'Done by circulating the welcome memo'), f22: L('يُنجز بتوقيع الموظف على F-22', 'Done when the employee signs F-22'), f20: L('يُنجز بتوقيع الموظف على F-20', 'Done when the employee signs F-20'),
@@ -73,7 +79,12 @@ function Checklist({ e, editable }: { e: OnboardFile; editable: boolean }) {
         <span className="text-[12px] text-ink-3 num w-5 shrink-0 mt-0.5">{i + 1}</span>
         <span className={`flex-1 text-[14px] ${s.done ? 'text-ink-3 line-through' : ''}`}>{bi(s, lang)}</span>
         {s.auto && !s.done && <Lock size={13} className="mt-1 text-ink-3 shrink-0" aria-label={autoHint[s.auto]} />}
-      </button></li> })}</ol>
+      </button>
+      {(files(i).length > 0 || editable) && <div className="flex flex-wrap items-center gap-1.5 ps-[60px] py-1 border-b border-line-2" data-noprint>
+        {files(i).map(f => <a key={f.id} href={fileUrl(f.file.id, true)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[12px] rounded-md bg-sub px-2 py-0.5 hover:text-brand max-w-[200px]"><Paperclip size={11} /><span className="truncate">{f.title || f.file.name}</span></a>)}
+        {editable && <button onClick={() => setAttach(i)} className="text-[12px] text-brand inline-flex items-center gap-1"><Paperclip size={12} />{L('إرفاق ملف', 'Attach file')}</button>}
+      </div>}</li> })}</ol>
+    {attach !== null && <UploadDoc emp={e.id} canSensitive={false} item={attach} itemLabel={bi(e.items[attach], lang)} onClose={() => setAttach(null)} />}
     <p className="text-[12px] text-ink-3 mt-3 flex items-center gap-1.5" data-noprint><Lock size={12} />{L('البنود المقفلة تُنجز تلقائياً من مصدرها: التعميم، التوقيعات، العهد، والتثبيت.', 'Locked items complete automatically from their source: the memo, signatures, custody and confirmation.')}</p>
   </Paper>
 }

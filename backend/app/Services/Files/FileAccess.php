@@ -22,6 +22,15 @@ class FileAccess
     /** @return array{module: string, owner: ?int, label: string, employee_id?: int, sensitive?: bool}|null */
     public static function owner(StoredFile $f): ?array
     {
+        // 49/74: توقيع الموظف وبصمته، وتوقيعه على مستند — ملف الموظف بنطاق الرؤية
+        if ($e = \App\Models\Employee::with('user')->where('signature_file_id', $f->id)->orWhere('fingerprint_file_id', $f->id)->first()) {
+            return ['module' => 'employees', 'owner' => $e->user?->id, 'label' => 'biometrics:'.$e->code, 'employee_id' => $e->id, 'sensitive' => true];
+        }
+        if ($d = EmployeeDocument::with('employee.user')->where('signature_file_id', $f->id)->first()) {
+            return ['module' => 'employees', 'owner' => $d->employee?->user?->id, 'label' => 'doc-signature:'.$d->employee?->code, 'employee_id' => $d->employee_id, 'sensitive' => $d->sensitive];
+        }
+        // 67: الصورة الشخصية — لكل مستخدمي الشركة
+        if ($u = User::where('avatar_file_id', $f->id)->first()) return ['module' => 'avatar', 'owner' => $u->id, 'label' => 'avatar:'.$u->id];
         if ($c = Candidate::allCompanies()->where('cv_file_id', $f->id)->orWhere('photo_file_id', $f->id)->first()) {
             return ['module' => 'candidates', 'owner' => $c->user_id, 'label' => ($c->cv_file_id === $f->id ? 'cv:' : 'photo:').$c->ref];
         }
@@ -52,7 +61,16 @@ class FileAccess
 
     public static function allowed(User $user, StoredFile $f, ?array $owner): bool
     {
+        if (self::check($user, $f, $owner)) return true;
+        // ملف موجود رُبط بملف موظف (49): يُتاح أيضاً بقاعدة مستندات الموظف
+        $d = EmployeeDocument::with('employee.user')->where('file_id', $f->id)->where('source', 'linked')->first();
+        return $d && self::check($user, $f, ['module' => 'employees', 'owner' => $d->employee?->user?->id, 'label' => 'employee-doc', 'employee_id' => $d->employee_id, 'sensitive' => $d->sensitive]);
+    }
+
+    private static function check(User $user, StoredFile $f, ?array $owner): bool
+    {
         if (! $owner) return false;
+        if ($owner['module'] === 'avatar') return $user->company_id && $user->company_id === $f->company_id || $owner['owner'] === $user->id;
         if ($owner['owner'] && $owner['owner'] === $user->id) return true;
         if (! $user->company_id || $user->company_id !== $f->company_id || ! Perm::can($user, $owner['module'])) return false;
         if (! empty($owner['manage_only']) && ! Perm::can($user, $owner['module'], 'edit')) return false;

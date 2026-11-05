@@ -9,8 +9,28 @@ use Illuminate\Support\Carbon;
 /** F-32 — نص مذكرة الترحيب من بيانات الموظف وطلب توظيفه، بصيغة التذكير/التأنيث (memo في Onboarding.tsx) */
 class WelcomeMemo
 {
+    /** المتغيرات المسموحة في نص الشركة */
+    public const VARS = ['name', 'title', 'department', 'date', 'location', 'manager', 'company', 'about'];
+
     /** @return array{ar: string, en: string} */
     public static function text(Employee $e): array
+    {
+        $def = self::standard($e);
+        $cfg = \App\Support\Settings::merged('welcome_memo');
+        if (trim($cfg['ar']) === '' && trim($cfg['en']) === '') return $def;
+        $e->loadMissing(['department', 'location', 'manager']);
+        $co = Tenant::company();
+        $ed = $e->candidate?->education[0] ?? null;
+        $vars = fn (string $l) => [':name' => $l === 'ar' ? $e->name : $e->name_en, ':title' => $l === 'ar' ? $e->title_ar : $e->title_en,
+            ':department' => $l === 'ar' ? $e->department->name_ar : $e->department->name_en, ':date' => Carbon::parse($e->hire_date)->format('d-m-Y'),
+            ':location' => $l === 'ar' ? $e->location->name_ar : $e->location->name_en, ':manager' => ($l === 'ar' ? $e->manager?->name : $e->manager?->name_en) ?? '—',
+            ':company' => $l === 'ar' ? ($co?->name_ar ?? '') : ($co?->name_en ?? ''), ':about' => $ed && ! empty($ed['phase']) ? trim($ed['phase'].(! empty($ed['major']) ? ' — '.$ed['major'] : '')) : ''];
+        $fill = fn (string $t, string $l) => strtr($t, $vars($l));
+        return ['ar' => trim($cfg['ar']) !== '' ? $fill($cfg['ar'], 'ar') : $def['ar'], 'en' => trim($cfg['en']) !== '' ? $fill($cfg['en'], 'en') : $def['en']];
+    }
+
+    /** @return array{ar: string, en: string} */
+    public static function standard(Employee $e): array
     {
         $e->loadMissing(['department', 'location', 'manager', 'candidate']);
         $co = Tenant::company();

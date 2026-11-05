@@ -25,10 +25,34 @@ class EmployeeDocController extends Controller
         $d = $request->validate([
             'file' => ['required', 'file'], 'type' => ['required', 'string', 'max:30'], 'title' => ['nullable', 'string', 'max:190'],
             'expires_at' => ['nullable', 'date_format:Y-m-d'], 'sensitive' => ['nullable', 'boolean'], 'note' => ['nullable', 'string', 'max:500'],
+            'needs_signature' => ['nullable', 'boolean'], 'sign_due' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:today'], 'onboarding_item' => ['nullable', 'integer', 'between:0,27'],
         ]);
+        $d['needs_signature'] = $request->boolean('needs_signature');
         $e = Directory::scoped($request->user())->findOrFail($id);
         $doc = $this->docs->upload($e, $request->file('file'), $d, $request->user());
         return response()->json(['data' => EmployeeDocs::row($doc->load(['file', 'uploader']))], 201);
+    }
+
+    public function linkable(Request $request, int $id): JsonResponse
+    {
+        $e = Directory::scoped($request->user())->findOrFail($id);
+        return response()->json(['data' => EmployeeDocs::linkable($e)]);
+    }
+
+    public function link(Request $request, int $id): JsonResponse
+    {
+        $d = $request->validate(['file_id' => ['required', 'integer'], 'type' => ['nullable', 'string', 'max:30'], 'title' => ['nullable', 'string', 'max:190'], 'note' => ['nullable', 'string', 'max:500'], 'sensitive' => ['nullable', 'boolean']]);
+        $e = Directory::scoped($request->user())->findOrFail($id);
+        $doc = $this->docs->link($e, (int) $d['file_id'], $d, $request->user());
+        return response()->json(['data' => EmployeeDocs::row($doc->load(['file', 'uploader']))], 201);
+    }
+
+    public function biometrics(Request $request, int $id): JsonResponse
+    {
+        $d = $request->validate(['signature' => ['nullable', 'string', 'max:450000'], 'fingerprint' => ['nullable', 'file', 'max:5120']]);
+        $e = Directory::scoped($request->user())->findOrFail($id);
+        $e = $this->docs->biometrics($e, $d['signature'] ?? null, $request->file('fingerprint'), $request->user());
+        return response()->json(['data' => EmployeeDocs::biometricsOf($e)]);
     }
 
     public function archive(Request $request, int $id, int $docId): JsonResponse

@@ -6,5 +6,5 @@ namespace App\Models;
 class FormTemplate extends Model
 {
     use Concerns\BelongsToCompany;
-    protected function casts(): array { return ['issued_on' => 'date', 'sensitive' => 'boolean']; }
+    protected function casts(): array { return ['issued_on' => 'date', 'sensitive' => 'boolean', 'intro' => 'array', 'notes' => 'array']; }
 }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { LogOut, Menu, Building2, UserRound, ExternalLink, Bell, Search, Users, Kanban, Briefcase } from 'lucide-react'
+import { LogOut, Menu, Building2, UserRound, ExternalLink, Bell, Search, Users, Kanban, Briefcase, Settings2, Package, FileText, ShieldAlert, Megaphone, Network, Award, DoorOpen } from 'lucide-react'
 import { useL, useLang, bi, fmtDateTime } from '../../lib/store'
 import { navigate, useRoute } from '../../lib/router'
 import { can, useLogout, type SessionUser } from '../../lib/session'
@@ -48,10 +48,11 @@ export function Shell({ items, user, org, sub, children, linkOf, search }: { ite
         <a href="/jobs" className="w-full h-10 rounded-xl border border-white/15 font-semibold flex items-center justify-center gap-2 hover:bg-white/5 text-[13px]"><ExternalLink size={15} />{L('بوابة فرص العمل', 'Jobs portal')}</a>
         <div className="relative">
           {menu && <div className="absolute bottom-full mb-2 inset-x-0 bg-surface text-ink border border-line rounded-xl p-1 z-50 shadow-xl fadeup">
+            {user.portal !== 'platform' && <a href="/hr/account" onClick={() => setMenu(false)} className="w-full flex items-center gap-2 px-3 h-9 rounded-lg hover:bg-sub text-[13px]"><Settings2 size={15} />{L('حسابي', 'My account')}</a>}
             <button onClick={() => logout.mutate()} className="w-full flex items-center gap-2 px-3 h-9 rounded-lg hover:bg-sub text-[13px] text-danger"><LogOut size={15} />{L('تسجيل الخروج', 'Sign out')}</button>
           </div>}
           <button onClick={() => setMenu(!menu)} className="w-full flex items-center gap-3 rounded-xl bg-white/5 p-2.5 text-start hover:bg-white/10" aria-haspopup="menu">
-            <span className="size-9 rounded-full grid place-items-center bg-info text-on-brand"><UserRound size={18} /></span>
+            {user.avatar ? <img src={`/api/files/${user.avatar}?inline=1`} alt="" className="size-9 rounded-full object-cover" /> : <span className="size-9 rounded-full grid place-items-center bg-info text-on-brand"><UserRound size={18} /></span>}
             <span className="flex-1 min-w-0"><span className="block text-[13px] font-semibold truncate">{bi(user.name, lang)}</span><span className="block text-[11px] text-side-fg/55 truncate ltr text-start">{user.email}</span></span>
           </button>
         </div>
@@ -120,19 +121,22 @@ function Palette({ items, search, onClose }: { items: NavItem[]; search?: Search
   const { data, isFetching } = useSearch(debounced, !!search)
   const t = q.trim().toLowerCase()
   type R = { k: string; label: string; sub: string; icon: ReactNode; to: string }
+  const recIcon: Record<string, ReactNode> = { asset: <Package size={16} />, dept: <Network size={16} />, case: <ShieldAlert size={16} />, exit: <DoorOpen size={16} />, cert: <Award size={16} />, policy: <FileText size={16} />, news: <Megaphone size={16} /> }
   const res: R[] = [
     ...items.filter(it => !t || it.label.toLowerCase().includes(t)).map(it => ({ k: 'p' + it.to, label: it.label, sub: L('صفحة', 'Page'), icon: it.icon, to: it.to })),
     ...(search && data && debounced === q.trim() ? [
       ...data.employees.map(e => ({ k: 'e' + e.id, label: bi(e.name, lang), sub: `${e.code} · ${bi(e.title, lang)}`, icon: <Users size={16} />, to: search.employee(e.id) })),
       ...data.candidates.map(c => ({ k: 'c' + c.id, label: bi(c.name, lang), sub: `${L('متقدم', 'Applicant')} · ${c.ref} · ${bi(c.job, lang)}`, icon: <Kanban size={16} />, to: search.candidate(c.id) })),
       ...data.jobs.map(j => ({ k: 'j' + j.id, label: bi(j.title, lang), sub: `${L('شاغر', 'Opening')} · ${j.code}`, icon: <Briefcase size={16} />, to: search.job(j.id) })),
+      // 51: سجلات فعلية — عهد، إدارات، مخالفات، خروج، شهادات، سياسات، إعلانات
+      ...(data.records ?? []).map(r => ({ k: 'r' + r.k, label: bi(r.label, lang), sub: bi(r.sub, lang), icon: recIcon[r.kind] ?? <FileText size={16} />, to: r.to })),
     ] : []),
   ]
   const pick = (r?: R) => { if (!r) return; onClose(); navigate(r.to) }
   return <div className="fixed inset-0 z-[70] bg-black/55 grid place-items-start justify-center pt-[12vh] px-4" onMouseDown={onClose} data-noprint>
     <div className="w-full max-w-[560px] bg-surface border border-line rounded-2xl shadow-2xl overflow-hidden fadeup" onMouseDown={e => e.stopPropagation()} role="dialog" aria-label={L('البحث في النظام', 'Search the platform')}>
       <div className="flex items-center gap-3 px-4 h-14 border-b border-line"><Search size={18} className="text-ink-3" />
-        <input autoFocus value={q} onChange={e => { setQ(e.target.value); setI(0) }} placeholder={search ? L('اسم موظف، رقم وظيفي، متقدم، أو صفحة…', 'Employee, ID, applicant or page…') : L('اسم صفحة…', 'Page name…')} className="flex-1 bg-transparent outline-none text-[15px]"
+        <input autoFocus value={q} onChange={e => { setQ(e.target.value); setI(0) }} placeholder={search ? L('موظف، جوال، رقم وطني، عهدة، رقم ملف، سياسة، أو صفحة…', 'Employee, phone, ID, asset, reference, policy or page…') : L('اسم صفحة…', 'Page name…')} className="flex-1 bg-transparent outline-none text-[15px]"
           onKeyDown={e => { if (e.key === 'ArrowDown') { e.preventDefault(); setI(Math.min(res.length - 1, i + 1)) } if (e.key === 'ArrowUp') { e.preventDefault(); setI(Math.max(0, i - 1)) } if (e.key === 'Enter') pick(res[i]); if (e.key === 'Escape') onClose() }} /></div>
       <div className="max-h-[50vh] overflow-y-auto p-2">
         {res.length === 0 && <div className="p-6 text-center text-ink-3 text-[13px]">{isFetching ? L('جارٍ البحث…', 'Searching…') : L('لا نتائج مطابقة', 'No matches')}</div>}

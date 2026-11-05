@@ -1,3 +1,4 @@
+import type { Biometrics, EmpDoc } from './employees'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { api } from './api'
 import { queryClient } from './session'
@@ -18,6 +19,7 @@ export interface OnboardFile extends Joiner {
   memo: { sent_at: string | null; text: Bi }
   f22: Sig; f20: Sig & { mother_name: string | null }; conduct: Sig
   assets: AssetRow[]; stock: AssetRow[]; logs: LogRow[]
+  item_files?: Record<string, EmpDoc[]>; biometrics?: Biometrics   // 63 / 49
 }
 
 export const useOnboardingList = () => useQuery({ queryKey: ['hr', 'onboarding'], queryFn: () => api<{ joiners: Joiner[]; pending: PendingAppointment[] | null }>('/hr/onboarding') })
@@ -72,6 +74,7 @@ export interface MyDocs {
   employee: { name: Bi; code: string; national_id: string | null; title: Bi; status: EmpStatus }
   undertakings: { f22: Sig; f20: Sig & { mother_name: string | null }; conduct: Sig } | null
   pending: AssetRow[]; signed: AssetRow[]
+  files?: EmpDoc[]   // 74: مستندات تطلب توقيعي بموعد
 }
 export type DocKey = 'f22' | 'f20' | 'conduct' | 'asset'
 export const useMyDocs = () => useQuery({ queryKey: ['me', 'documents'], queryFn: () => api<MyDocs>('/me/documents') })
@@ -79,5 +82,9 @@ export const useSignDoc = () => useMutation({
   mutationFn: (v: { doc: DocKey; signature: string; asset_id?: number; mother_name?: string }) => api<MyDocs>('/me/documents/sign', { method: 'POST', json: v }),
   onSuccess: d => { queryClient.setQueryData(['me', 'documents'], d); queryClient.invalidateQueries({ queryKey: ['notices'] }) },
 })
+export const useSignFile = () => useMutation({
+  mutationFn: (v: { id: number; signature: string }) => api<MyDocs>(`/me/documents/files/${v.id}/sign`, { method: 'POST', json: { signature: v.signature } }),
+  onSuccess: d => { queryClient.setQueryData(['me', 'documents'], d); queryClient.invalidateQueries({ queryKey: ['notices'] }) },
+})
 /** عدد الوثائق بانتظار التوقيع (لشارة القائمة) */
-export const pendingDocs = (d?: MyDocs) => !d ? 0 : d.pending.length + (d.undertakings ? (['f22', 'f20', 'conduct'] as const).filter(k => !d.undertakings![k].signed_at).length : 0)
+export const pendingDocs = (d?: MyDocs) => !d ? 0 : d.pending.length + (d.files?.length ?? 0) + (d.undertakings ? (['f22', 'f20', 'conduct'] as const).filter(k => !d.undertakings![k].signed_at).length : 0)

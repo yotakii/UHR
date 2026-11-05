@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Loader2, Pencil, Save, Lock, Printer } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { useMe, can } from '../../lib/session'
-import { useForms, useSaveForm, useSaveTemplate, type FormRow, type PrintTemplate } from '../../lib/console'
+import { useForms, useSaveForm, useSaveTemplate, useSaveWelcomeMemo, useWelcomeMemo, type FormRow, type PrintTemplate, type WelcomeMemoCfg } from '../../lib/console'
 import type { ApiError } from '../../lib/api'
 import { Badge, Btn, Field, Modal, PageHead, Panel, Seg, toast } from '../../ui/kit'
 
@@ -17,6 +17,7 @@ export function Forms() {
   return <div className="max-w-[1200px] mx-auto space-y-5">
     <PageHead title={L('النماذج وقالب الطباعة', 'Forms & print template')} sub={L('كل نموذج يُطبع بشعار الشركة وتذييل ثابت: الرمز · الإصدار · التاريخ. طباعة النماذج الحساسة تُسجَّل.', 'Every form prints with the company logo and a fixed footer: code · issue · date. Printing sensitive forms is logged.')} />
     <TemplatePanel initial={data.template} editable={editable} />
+    <MemoPanel editable={editable} />
     <Panel title={L('سجل النماذج', 'Forms registry')} sub={L(`${data.data.length} نموذجاً`, `${data.data.length} forms`)} pad={false}>
       <div><table className="tbl w-full">
         <thead><tr><th>{L('النموذج', 'Form')}</th><th className="hidden md:table-cell">{L('الرمز المطبوع', 'Printed code')}</th><th className="hidden sm:table-cell">{L('الإصدار', 'Issue')}</th><th className="hidden sm:table-cell">{L('تاريخ الإصدار', 'Issued on')}</th><th className="hidden md:table-cell">{L('حساس', 'Sensitive')}</th><th /></tr></thead>
@@ -74,10 +75,11 @@ function TemplatePanel({ initial, editable }: { initial: PrintTemplate; editable
 function FormEdit({ f, onClose }: { f: FormRow; onClose: () => void }) {
   const L = useL()
   const save = useSaveForm()
-  const [v, setV] = useState({ ref: f.ref, title_ar: f.title.ar, title_en: f.title.en, issue: f.issue, issued_on: f.issued_on ?? '', sensitive: f.sensitive })
+  const [v, setV] = useState({ ref: f.ref, title_ar: f.title.ar, title_en: f.title.en, issue: f.issue, issued_on: f.issued_on ?? '', sensitive: f.sensitive,
+    intro: { ar: f.intro?.ar ?? '', en: f.intro?.en ?? '' }, notes: { ar: f.notes?.ar ?? '', en: f.notes?.en ?? '' } })
   const err = save.error as ApiError | null
   const set = (p: Partial<typeof v>) => setV(x => ({ ...x, ...p }))
-  return <Modal open onClose={onClose} title={<span>{L('تعديل نموذج', 'Edit form')} <span className="ltr text-ink-3 text-[13px]">{f.code}</span></span>}
+  return <Modal open onClose={onClose} width={680} title={<span>{L('تعديل نموذج', 'Edit form')} <span className="ltr text-ink-3 text-[13px]">{f.code}</span></span>}
     footer={<><Btn onClick={onClose}>{L('إلغاء', 'Cancel')}</Btn><Btn kind="primary" disabled={save.isPending} icon={save.isPending ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
       onClick={() => save.mutate({ id: f.id, ...v }, { onSuccess: () => { toast(L('حُفظ النموذج', 'Form saved')); onClose() } })}>{L('حفظ', 'Save')}</Btn></>}>
     <div className="grid sm:grid-cols-2 gap-4">
@@ -88,6 +90,35 @@ function FormEdit({ f, onClose }: { f: FormRow; onClose: () => void }) {
       <Field label={L('تاريخ الإصدار', 'Issued on')} req error={err?.field('issued_on')}><input type="date" className="field ltr" value={v.issued_on} onChange={e => set({ issued_on: e.target.value })} /></Field>
       <label className="sm:col-span-2 flex items-center gap-2 text-[14px]"><input type="checkbox" checked={v.sensitive} onChange={e => set({ sensitive: e.target.checked })} className="size-4 accent-[var(--primary)]" />
         {L('نموذج حساس — تُسجَّل كل طباعة له في سجل التدقيق', 'Sensitive — every print is recorded in the audit log')}</label>
+      <div className="sm:col-span-2 border-t border-line pt-3 text-[13px] text-ink-3">{L('محتوى إضافي يُطبع مع النموذج: فقرة بعد العنوان، وملاحظات قبل التذييل. اتركه فارغاً لعدم الطباعة.', 'Extra content printed with the form: a paragraph after the title and notes before the footer. Leave empty to print nothing.')}</div>
+      <Field label={L('فقرة المقدمة (عربي)', 'Intro (Arabic)')}><textarea className="field min-h-20" maxLength={3000} value={v.intro.ar} onChange={e => set({ intro: { ...v.intro, ar: e.target.value } })} /></Field>
+      <Field label={L('فقرة المقدمة (إنكليزي)', 'Intro (English)')}><textarea className="field min-h-20 ltr" maxLength={3000} value={v.intro.en} onChange={e => set({ intro: { ...v.intro, en: e.target.value } })} /></Field>
+      <Field label={L('ملاحظات قبل التذييل (عربي)', 'Notes (Arabic)')}><textarea className="field min-h-20" maxLength={3000} value={v.notes.ar} onChange={e => set({ notes: { ...v.notes, ar: e.target.value } })} /></Field>
+      <Field label={L('ملاحظات قبل التذييل (إنكليزي)', 'Notes (English)')}><textarea className="field min-h-20 ltr" maxLength={3000} value={v.notes.en} onChange={e => set({ notes: { ...v.notes, en: e.target.value } })} /></Field>
     </div>
   </Modal>
+}
+
+/** مذكرة الترحيب F-32 (ملاحظة 53): نص الشركة بمتغيرات، والتعميم على الشركة كلها أو على إدارة الموظف */
+function MemoPanel({ editable }: { editable: boolean }) {
+  const L = useL()
+  const { data } = useWelcomeMemo()
+  const save = useSaveWelcomeMemo()
+  const [v, setV] = useState<WelcomeMemoCfg | null>(null)
+  useEffect(() => { if (data) setV(data.data) }, [data])
+  if (!data || !v) return null
+  const dirty = JSON.stringify(v) !== JSON.stringify(data.data)
+  const names: Record<string, string> = { name: L('اسم الموظف', 'name'), title: L('المسمى', 'title'), department: L('الإدارة', 'department'), date: L('تاريخ المباشرة', 'start date'), location: L('مقر العمل', 'location'), manager: L('المدير المباشر', 'manager'), company: L('اسم الشركة', 'company'), about: L('المؤهل', 'qualification') }
+  return <Panel title={L('مذكرة الترحيب F-32', 'Welcome memo F-32')} sub={L('تُعمَّم عند مباشرة كل موظف جديد. اترك النص فارغاً لاستخدام النص الافتراضي.', 'Circulated when each new employee starts. Leave empty to use the default text.')}
+    action={editable && <Btn kind="primary" size="sm" icon={save.isPending ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} disabled={!dirty || save.isPending}
+      onClick={() => save.mutate(v, { onSuccess: () => toast(L('حُفظت المذكرة', 'Memo saved')), onError: e => toast((e as ApiError).message) })}>{L('حفظ', 'Save')}</Btn>}>
+    <fieldset disabled={!editable} className="space-y-3">
+      <Field label={L('تُعمَّم على', 'Circulate to')} div><Seg value={v.audience} onChange={a => setV({ ...v, audience: a })} options={[{ v: 'all', label: L('كل موظفي الشركة', 'Everyone') }, { v: 'department', label: L('إدارة الموظف الجديد فقط', "The new employee's department")} ]} /></Field>
+      <div className="grid md:grid-cols-2 gap-3">
+        <Field label={L('النص بالعربية', 'Arabic text')}><textarea className="field min-h-36" maxLength={4000} value={v.ar} onChange={e => setV({ ...v, ar: e.target.value })} placeholder={L('مثال: يسرّنا الترحيب بانضمام :name إلى فريق :department بوظيفة :title اعتباراً من :date.', 'e.g. We welcome :name to :department as :title from :date.')} /></Field>
+        <Field label={L('النص بالإنكليزية', 'English text')}><textarea className="field min-h-36 ltr" maxLength={4000} value={v.en} onChange={e => setV({ ...v, en: e.target.value })} /></Field>
+      </div>
+      <div className="flex flex-wrap gap-1.5 text-[12px]">{data.vars.map(x => <span key={x} className="rounded-md bg-sub px-2 py-0.5"><span className="ltr inline-block font-mono">:{x}</span> {names[x] ?? ''}</span>)}</div>
+    </fieldset>
+  </Panel>
 }

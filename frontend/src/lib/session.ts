@@ -2,11 +2,13 @@ import { QueryClient, useMutation, useQuery } from '@tanstack/react-query'
 import { api } from './api'
 import { navigate } from './router'
 import type { Bi } from './types'
+import { onPrefsChange, setLang, setTheme } from './store'
 
 export type Portal = 'platform' | 'hr' | 'employee' | 'candidate'
 export interface CompanyCard { slug: string; name: Bi; short: Bi; brand_latin: string | null; logo: string | null }
 export interface SessionUser {
   id: number; email: string; name: Bi; roles: string[]; portal: Portal; must_change_password: boolean; password_policy?: { min: number; upper: boolean; symbol: boolean }
+  avatar?: number | null; prefs?: { locale: 'ar' | 'en'; theme: 'slate' | 'dark' | 'light' }
   employee: { code: string; title: Bi; dept: Bi; gender: 'M' | 'F' } | null
   company: CompanyCard | null
   /** صلاحيات الوحدات (SRS §10.2) — للإخفاء في الواجهة فقط، والخادم يتحقق في كل طلب */
@@ -25,8 +27,15 @@ export function useMe() {
 // تبديل المستخدم: نُسقط كل بيانات المستخدم السابق، ونحدّث ['me'] في مكانه (لا clear حتى لا ينفصل مراقب useMe)
 const setMe = (r: { user: SessionUser | null }) => { queryClient.removeQueries({ predicate: q => !(q.queryKey[0] === 'me' && q.queryKey.length === 1) && q.queryKey[0] !== 'public' }); queryClient.setQueryData(['me'], r.user) }
 
+/** اللغة والمظهر محفوظان في الحساب (67): يُطبَّقان عند الدخول، وكل تغيير من أزرار الرأس يُحفظ في الحساب */
+const applyPrefs = (u: SessionUser | null) => { if (!u?.prefs) return; syncing = false; setLang(u.prefs.locale); setTheme(u.prefs.theme); syncing = true }
+let syncing = true
+onPrefsChange(p => {
+  if (!syncing || !queryClient.getQueryData(['me'])) return
+  api('/me/account', { method: 'PUT', json: { locale: p.lang, theme: p.theme } }).catch(() => { /* يكفي المحلي */ })
+})
 export function useLogin() {
-  return useMutation({ mutationFn: (v: { email: string; password: string }) => api<{ user: SessionUser }>('/auth/login', { json: v }), onSuccess: setMe })
+  return useMutation({ mutationFn: (v: { email: string; password: string }) => api<{ user: SessionUser }>('/auth/login', { json: v }), onSuccess: r => { setMe(r); applyPrefs(r.user) } })
 }
 /** رابط تفعيل الحساب / تعيين كلمة المرور (11e): يختار كلمة المرور ثم يدخل مباشرة */
 export function useActivate(token: string) {
