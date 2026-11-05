@@ -99,7 +99,6 @@ class AppointmentFlow
         $emp->log("صدور قرار التعيين {$ap->decision_no} ومنح الرقم الوظيفي {$emp->code}", "Decision {$ap->decision_no} issued, employee ID {$emp->code}", 'ok', 'F-31');
         Onboarding::create(['employee_id' => $emp->id, 'checklist' => F19::blank(0, 8)]);
         $ap->update(['employee_id' => $emp->id]);
-        if ($before['title'] !== $emp->title_ar) app(\App\Services\Space\Celebrations::class)->promotion($emp, $before['title']);   // 12b
         $c->update(['stage' => 'hired', 'stage_at' => now()->toDateString()]);
         $c->log("تم التعيين — الرقم الوظيفي {$emp->code}", "Hired — employee ID {$emp->code}", 'ok');
 
@@ -131,6 +130,7 @@ class AppointmentFlow
             'salary' => $o?->total() ?: $emp->salary, 'currency' => $o?->currency ?? $emp->currency, 'contract' => $o?->contract ?? $emp->contract, 'pay' => $o ? ['basic' => $o->basic, 'housing' => $o->housing, 'transport' => $o->transport, 'fuel' => $o->fuel] : $emp->pay, 'manager_id' => $job->department_id === $before['dept'] ? $emp->manager_id : ($mgr ?? $emp->manager_id)]);
         $emp->log("نقل/ترقية داخلية بقرار {$ap->decision_no}: {$before['title']} ← {$emp->title_ar}", "Internal move by decision {$ap->decision_no}: now {$emp->title_en}", 'ok', 'F-27');
         $ap->update(['employee_id' => $emp->id]);
+        if ($before['title'] !== $emp->title_ar) app(\App\Services\Space\Celebrations::class)->promotion($emp, $before['title']);   // 12b
         $c->update(['stage' => 'hired', 'stage_at' => now()->toDateString()]);
         $c->log("اعتُمد النقل الداخلي — {$emp->code}", "Internal move approved — {$emp->code}", 'ok');
         \App\Models\InternalApplication::where('candidate_id', $c->id)->update(['decided_at' => now()]);
