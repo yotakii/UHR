@@ -27,11 +27,13 @@ class EmployeeProfile
             'department_id' => ['required', 'integer'], 'location_id' => ['required', 'integer'], 'manager_id' => ['nullable', 'integer'],
             'email' => ['required', 'email', 'max:190'], 'phone' => ['nullable', 'string', 'max:40', 'regex:/^\+?[0-9\s()-]{6,39}$/'],
             'national_id' => ['nullable', 'regex:/^\d{6,20}$/'], 'dob' => ['nullable', 'date_format:Y-m-d', 'before:-16 years'],
-        ], [], [
+            'bank_name' => ['sometimes', 'nullable', 'string', 'max:120'], 'bank_account' => ['sometimes', 'nullable', 'regex:/^[A-Za-z0-9 -]{4,40}$/'],
+        ], [], ['bank_name' => L::t('البنك', 'Bank'), 'bank_account' => L::t('رقم الحساب / IBAN', 'Account / IBAN'),
             'name' => L::t('الاسم', 'Name'), 'name_en' => L::t('الاسم بالإنكليزية', 'English name'), 'title_ar' => L::t('المسمى الوظيفي', 'Job title'),
             'title_en' => L::t('المسمى بالإنكليزية', 'English title'), 'email' => L::t('البريد', 'Email'), 'phone' => L::t('الجوال', 'Mobile'), 'national_id' => L::t('الرقم الوطني', 'National ID'), 'dob' => L::t('تاريخ الولادة', 'Birth date'),
         ])->validate();
         $d['email'] = mb_strtolower(trim($d['email']));
+        if (isset($d['bank_account'])) $d['bank_account'] = strtoupper(preg_replace('/\s+/', '', $d['bank_account'])) ?: null;
 
         if (! Department::whereKey($d['department_id'])->exists()) throw ApiException::field('department_id', L::t('الإدارة غير موجودة', 'Unknown department'), 'unknown');
         if (! Location::whereKey($d['location_id'])->exists()) throw ApiException::field('location_id', L::t('مقر العمل غير موجود', 'Unknown location'), 'unknown');

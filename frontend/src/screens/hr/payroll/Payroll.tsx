@@ -5,7 +5,8 @@ import { ApiError } from '../../../lib/api'
 import { setQuery, useRoute } from '../../../lib/router'
 import { minsLabel } from '../../../lib/employees'
 import { downloadSheet, useOpenSheet, usePayroll, useSheetAction, type SheetRow } from '../../../lib/payroll'
-import { Badge, Btn, Drawer, Empty, PageHead, Panel, toast } from '../../../ui/kit'
+import { Badge, Btn, Drawer, Empty, PageHead, Panel, Tabs, toast } from '../../../ui/kit'
+import { ChecksView, CurrencyModal, DiffView, PayStrip, Reports } from './PayrollExtras'
 import { Lifecycle } from '../../../ui/docs'
 import { DecisionDialog } from '../../../ui/decision'
 import { Masked, ProtectedBlock } from '../../../ui/vault'
@@ -25,6 +26,8 @@ export function Payroll() {
   const openS = useOpenSheet(); const act = useSheetAction()
   const [dlg, setDlg] = useState<'approve' | 'reopen' | 'close' | null>(null)
   const [row, setRow] = useState<SheetRow | null>(null)
+  const [curDlg, setCurDlg] = useState(false)
+  const tab = (['diff', 'checks'] as const).find(t => t === route.query.tab) ?? 'sheet'
   const s = d?.sheet
   const fail = (e: unknown) => toast(e instanceof ApiError ? e.message : L('تعذّر التنفيذ', 'Could not complete'))
   const months = [...new Set([now, ...(d?.months.map(m => m.month) ?? []), ...[1, 2, 3].map(i => { const x = new Date(now + '-01T12:00'); x.setMonth(x.getMonth() - i); return x.toISOString().slice(0, 7) })])].sort().reverse()
@@ -32,7 +35,7 @@ export function Payroll() {
   const label = (m: string) => new Date(m + '-01T12:00').toLocaleDateString(lang === 'ar' ? 'ar-SY-u-nu-latn' : 'en-GB', { month: 'long', year: 'numeric' })
   const stLabel = { draft: L('مسودة', 'Draft'), calculated: L('محتسب', 'Calculated'), approved: L('معتمد', 'Approved'), closed: L('مُغلق', 'Closed') }
   const idx = s ? STEPS.indexOf(s.status) : -1
-  const cur = d?.rows[0]?.money?.currency ?? 'USD'
+  const cur = s?.totals?.currency ?? s?.pay_currency ?? d?.rows[0]?.money?.currency ?? 'USD'
   const amt = (n: number | null | undefined) => <Masked others value={n ?? null}>{money(n ?? 0, cur, lang)}</Masked>
   const T = s?.totals
 
@@ -56,18 +59,27 @@ export function Payroll() {
         <Lifecycle steps={STEPS.map((k, i) => ({ label: stLabel[k], done: i <= idx && (k !== 'draft' || idx > 0), current: i === idx + 1 && s.status !== 'closed',
           code: k === 'calculated' ? fmtDateTime(s.calculated.at ?? undefined, lang) : k === 'approved' && s.approved.at ? fmtDateTime(s.approved.at, lang) : k === 'closed' && s.closed.at ? fmtDateTime(s.closed.at, lang) : undefined }))} />
         {s.note && <p className="mt-3 text-[13px] text-ink-2">{L('ملاحظة', 'Note')}: {s.note}</p>}
+        {d.sheet && <PayStrip d={d} onEdit={() => setCurDlg(true)} />}
+        {s.missing_rates.length > 0 && <div role="alert" className="mt-3 flex items-center gap-2 text-[13px] text-danger bg-danger-soft rounded-lg px-3 py-2"><AlertTriangle size={15} />
+          {L(`ينقص سعر صرف (${s.missing_rates.join('، ')} → ${s.pay_currency}) بتاريخ الصرف — لا يُعتمد الكشف قبل إضافته.`, `Missing exchange rate (${s.missing_rates.join(', ')} → ${s.pay_currency}) on the pay date — the sheet cannot be approved until it is added.`)}</div>}
+        {T && !T.currency && T.by_currency && <div className="mt-3 text-[12.5px] text-ink-3">{L('الصافي حسب العملة: ', 'Net by currency: ')}{Object.entries(T.by_currency).map(([c, v]) => money(v, c, lang)).join(' · ')}</div>}
         {T && <div className="mt-4 grid [grid-template-columns:repeat(auto-fill,minmax(150px,1fr))] gap-3">
           {([[L('الموظفون', 'Employees'), T.employees], [L('الرواتب', 'Salaries'), amt(T.base)], [L('أجر الإضافي', 'Overtime pay'), amt(T.ot_pay)],
             [L('الاقتطاعات', 'Deductions'), amt(T.deductions)], [L('السلف', 'Advances'), amt(T.advance)], [L('الصافي', 'Net'), amt(T.net)]] as const).map(([k, v]) =>
             <div key={k} className="rounded-xl border border-line px-3 py-2"><div className="text-[12px] text-ink-3">{k}</div><div className="font-bold num text-[16px]">{v}</div></div>)}
         </div>}
       </Panel>
-      {d.incomplete.length > 0 && <Panel title={<span className="flex items-center gap-2 text-danger"><AlertTriangle size={16} />{L(`أيام ناقصة بلا خروج (${d.incomplete.length}) — تمنع الإغلاق`, `Incomplete days (${d.incomplete.length}) — they block closing`)}</span>} pad={false}>
+      <Reports d={d} />
+      <Tabs value={tab} onChange={v => setQuery({ tab: v === 'sheet' ? undefined : v })} tabs={[{ v: 'sheet', label: L('الكشف', 'Sheet'), count: d.rows.length },
+        { v: 'diff', label: L('الفروقات', 'Changes'), count: d.diff?.rows.filter(r => r.alert).length }, { v: 'checks', label: L('التحقق', 'Checks'), count: d.checks.length }]} />
+      {tab === 'diff' && <DiffView d={d} />}
+      {tab === 'checks' && <ChecksView d={d} />}
+      {tab === 'sheet' && d.incomplete.length > 0 && <Panel title={<span className="flex items-center gap-2 text-danger"><AlertTriangle size={16} />{L(`أيام ناقصة بلا خروج (${d.incomplete.length}) — تمنع الإغلاق`, `Incomplete days (${d.incomplete.length}) — they block closing`)}</span>} pad={false}>
         <ul className="divide-y divide-line-2">{d.incomplete.slice(0, 30).map(x => <li key={x.employee_id + x.date} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-2.5 text-[13.5px]">
           <span className="flex-1 min-w-[180px]">{bi(x.name, lang)} <span className="text-ink-3 ltr inline-block">{x.code}</span></span><span className="num">{fmtDate(x.date, lang)}</span>
           {d.can.attendance && <a className="text-brand font-semibold text-[13px]" href={`/hr/attendance?date=${x.date}`}>{L('تصحيح', 'Correct')}</a>}</li>)}</ul>
       </Panel>}
-      <Panel pad={false}>{d.rows.length === 0 ? <Empty title={L('لا توجد صفوف', 'No rows')} /> :
+      {tab === 'sheet' && <Panel pad={false}>{d.rows.length === 0 ? <Empty title={L('لا توجد صفوف', 'No rows')} /> :
         <table className="tbl"><thead><tr><th>{L('الموظف', 'Employee')}</th><th className="hidden sm:table-cell">{L('الحضور', 'Present')}</th><th className="hidden md:table-cell">{L('غياب / إجازات', 'Absent / leave')}</th>
           <th className="hidden lg:table-cell">{L('التأخير والحسم', 'Late & deduction')}</th><th className="hidden lg:table-cell">{L('الإضافي', 'Overtime')}</th><th>{L('الصافي', 'Net')}</th></tr></thead>
           <tbody>{d.rows.map(r => <tr key={r.id} className="cursor-pointer hover:bg-sub" onClick={() => setRow(r)}>
@@ -77,12 +89,14 @@ export function Payroll() {
             <td className="num hidden md:table-cell">{r.data.absent ? <span className="text-danger">{r.data.absent}</span> : '—'}{r.data.justified_absent ? <span className="text-ink-3"> +{r.data.justified_absent} {L('مبرر', 'just.')}</span> : ''} / {r.data.leave || '—'}</td>
             <td className="num hidden lg:table-cell">{r.data.late ? <>{minsLabel(r.data.late, lang)} <span className="text-ink-3">→ {minsLabel(Math.round(r.data.deduct), lang)}</span></> : '—'}</td>
             <td className="num hidden lg:table-cell">{r.data.ot_paid ? <span className="text-brand">{minsLabel(r.data.ot_paid, lang)}</span> : '—'}{r.data.ot_raw > r.data.ot_paid ? <span className="text-ink-3 text-[11.5px]"> / {minsLabel(r.data.ot_raw, lang)}</span> : ''}</td>
-            <td className="num font-semibold"><Masked others compact value={r.money}>{r.money && money(r.money.net, r.money.currency, lang)}</Masked></td></tr>)}</tbody></table>}</Panel>
+            <td className="num font-semibold"><Masked others compact value={r.money}>{r.pay ? <>{money(r.pay.net, r.pay.currency, lang)}{r.pay.from !== r.pay.currency && r.money && <div className="text-[11.5px] font-normal text-ink-3">{money(r.money.net, r.money.currency, lang)}</div>}</>
+              : r.money && money(r.money.net, r.money.currency, lang)}</Masked></td></tr>)}</tbody></table>}</Panel>}
     </>}
     {row && <Drawer open onClose={() => setRow(null)} width={520}>
       <header className="flex items-center justify-between gap-3 px-5 h-14 border-b border-line-2"><h3 className="font-display font-bold text-[15px] truncate">{bi(row.employee.name, lang)}</h3>
         <button className="p-1.5 rounded-lg hover:bg-sub" onClick={() => setRow(null)} aria-label={L('إغلاق', 'Close')}><X size={18} /></button></header>
       <div className="flex-1 overflow-y-auto p-5"><RowDetail r={d?.rows.find(x => x.id === row.id) ?? row} /></div></Drawer>}
+    {curDlg && d?.sheet && <CurrencyModal d={d} onClose={() => setCurDlg(false)} />}
     {s && <DecisionDialog open={!!dlg} onClose={() => setDlg(null)} tone={dlg === 'reopen' ? 'danger' : 'primary'}
       title={dlg === 'approve' ? L('اعتماد الكشف', 'Approve the sheet') : dlg === 'reopen' ? L('إرجاع الكشف للاحتساب', 'Send the sheet back') : L('إغلاق الكشف', 'Close the sheet')}
       subject={<>{label(s.month)}{T?.net != null ? ` — ${money(T.net, cur, lang)}` : ''}{dlg === 'close' && <div className="text-[12.5px] text-ink-3 mt-1">{L('بعد الإغلاق لا تعديل، وتُخصم السلف ويُبلغ كل موظف بكشفه.', 'After closing nothing changes; advances are deducted and every employee is notified.')}</div>}</>}
@@ -113,6 +127,7 @@ function RowDetail({ r }: { r: SheetRow }) {
       {!!m.discipline && line(L(`جزاءات المخالفات (${t.discipline_days ?? 0} يوم)`, `Disciplinary deductions (${t.discipline_days ?? 0} d)`), money(m.discipline, m.currency, lang), 'text-danger')}
       {line(L('السلفة', 'Advance'), money(m.advance, m.currency, lang), 'text-danger')}
       <div className="flex justify-between pt-3 text-[16px] font-bold"><span>{L('الصافي', 'Net')}</span><span className="num text-brand">{money(m.net, m.currency, lang)}</span></div>
+      {r.pay && r.pay.from !== r.pay.currency && <div className="flex justify-between pt-1 text-[14px] font-semibold"><span>{L('الصافي بعملة الصرف', 'Net in pay currency')} <span className="text-[12px] font-normal text-ink-3 num ltr inline-block">(× {r.pay.rate.toLocaleString('en-US', { maximumFractionDigits: 6 })})</span></span><span className="num">{money(r.pay.net, r.pay.currency, lang)}</span></div>}
     </div> : <ProtectedBlock others masked>{null}</ProtectedBlock>}
     {t.incomplete_dates.length > 0 && <div className="text-[12.5px] text-danger">{L('أيام ناقصة: ', 'Incomplete: ')}<span className="num">{t.incomplete_dates.join('، ')}</span></div>}
   </div>

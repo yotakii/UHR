@@ -23,7 +23,7 @@ export interface EmpDoc {
 }
 export interface EmpFile extends EmpRow {
   department_id: number; location_id: number; manager_id: number | null; title_ar: string; title_en: string; name_ar: string; name_en: string
-  manager: (Bi & { id: number }) | null; national_id: string | null; dob: string | null; phone: string | null; nfc_uid: string | null
+  manager: (Bi & { id: number }) | null; national_id: string | null; bank_name?: string | null; bank_account?: string | null; dob: string | null; phone: string | null; nfc_uid: string | null
   end_date: string | null; shift: string; tenure_days: number
   leave: { entitlement: number; used: number; remaining: number; sick: number }
   onboarding: boolean; resigned: boolean
@@ -33,7 +33,7 @@ export interface EmpFile extends EmpRow {
 }
 export interface ProfileInput {
   name: string; name_en: string; gender: 'M' | 'F'; title_ar: string; title_en: string; department_id: number; location_id: number; manager_id: number | null
-  email: string; phone: string; national_id: string; dob: string
+  email: string; phone: string; national_id: string; dob: string; bank_name: string; bank_account: string
 }
 export interface DocHistory { action: 'upload' | 'view' | 'download' | 'archive' | 'restore' | 'update'; by: Bi | null; at: string }
 export interface DocSettings { types: { key: string; ar: string; en: string }[]; extensions: string[]; max_mb: number; alert_days: number; sensitive_roles: string[] }

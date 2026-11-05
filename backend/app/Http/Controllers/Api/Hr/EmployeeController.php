@@ -46,7 +46,7 @@ class EmployeeController extends Controller
     {
         $request->validate(['file' => ['required', 'file', 'max:5120']]);
         $rows = $import->preview($request->file('file'));
-        return response()->json(['rows' => $rows, 'ok' => count(array_filter($rows, fn ($r) => ! $r['errors'])), 'errors' => count(array_filter($rows, fn ($r) => $r['errors']))]);
+        return response()->json(['rows' => $rows, 'ok' => count(array_filter($rows, fn ($r) => ! $r['errors'])), 'errors' => count(array_filter($rows, fn ($r) => $r['errors'])), 'summary' => EmployeeImport::summary($rows)]);
     }
 
     public function import(Request $request, EmployeeImport $import): JsonResponse

@@ -12,7 +12,7 @@ class MonthSheet extends Model
 
     public const STATUSES = ['draft', 'calculated', 'approved', 'closed'];
 
-    protected function casts(): array { return ['totals' => 'array', 'calculated_at' => 'datetime', 'approved_at' => 'datetime', 'closed_at' => 'datetime']; }
+    protected function casts(): array { return ['totals' => 'array', 'rates' => 'array', 'pay_date' => 'date', 'calculated_at' => 'datetime', 'approved_at' => 'datetime', 'closed_at' => 'datetime']; }
     public function rows(): HasMany { return $this->hasMany(MonthSheetRow::class); }
     public function calculator(): BelongsTo { return $this->belongsTo(User::class, 'calculated_by'); }
     public function approver(): BelongsTo { return $this->belongsTo(User::class, 'approved_by'); }

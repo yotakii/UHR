@@ -36,6 +36,7 @@ export function MyPayslip() {
         {!!m.discipline && row(L(`جزاءات المخالفات (${t.discipline_days ?? 0} يوم)`, `Disciplinary deductions (${t.discipline_days ?? 0} d)`), m.discipline, true)}
         {m.advance > 0 && row(L('سلفة', 'Advance'), m.advance, true)}
         <div className="flex justify-between pt-3 mt-1 text-[17px] font-bold"><span>{L('الصافي', 'Net')}</span><span className="num text-brand">{money(m.net, cur, lang)}</span></div>
+        {p.pay && p.pay.from !== p.pay.currency && <div className="flex justify-between pt-1 text-[14px] font-semibold"><span>{L('المصروف بعملة الصرف', 'Paid in')} <span className="text-[12px] font-normal text-ink-3 num ltr inline-block">(1 {p.pay.from} = {p.pay.rate.toLocaleString('en-US', { maximumFractionDigits: 6 })} {p.pay.currency})</span></span><span className="num">{money(p.pay.net, p.pay.currency, lang)}</span></div>}
         </>}
         <p className="text-[11.5px] text-ink-3 mt-3">{L('كشف تقديري محسوب من بيانات الحضور؛ الكشف الرسمي يصدر عن الإدارة المالية.', 'Estimate from attendance data; the official payslip is issued by Finance.')}</p>
       </Panel>

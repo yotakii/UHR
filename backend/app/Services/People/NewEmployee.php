@@ -106,6 +106,9 @@ class NewEmployee
 
         $v['code'] = $import ? ($txt('code') ?: null) : null;
         if ($v['code'] && (in_array($v['code'], $seen['codes'] ?? [], true) || Employee::where('code', $v['code'])->exists())) $err['code'] = L::t('الرقم الوظيفي مستخدم', 'Employee ID already used');
+        $v['bank_name'] = mb_substr($txt('bank_name'), 0, 120) ?: null;
+        $v['bank_account'] = strtoupper(preg_replace('/\s+/', '', $txt('bank_account'))) ?: null;
+        if ($v['bank_account'] && ! preg_match('/^[A-Z0-9-]{4,40}$/', $v['bank_account'])) $err['bank_account'] = L::t('رقم الحساب: حروف لاتينية وأرقام (4–40)', 'Account number: Latin letters and digits (4–40)');
         $v['nfc_uid'] = $import ? (strtoupper($txt('nfc_uid')) ?: null) : null;
         if ($v['nfc_uid'] && Employee::allCompanies()->where('nfc_uid', $v['nfc_uid'])->exists()) $err['nfc_uid'] = L::t('رقم البطاقة مسجّل لموظف آخر', 'Card UID belongs to another employee');
         return [$v, $err];
@@ -151,7 +154,7 @@ class NewEmployee
         return Employee::create([
             'code' => $code, 'name' => $v['name'], 'name_en' => $v['name_en'], 'gender' => $v['gender'], 'title_ar' => $v['title_ar'], 'title_en' => $v['title_en'],
             'department_id' => $v['department_id'], 'location_id' => $v['location_id'], 'email' => $v['email'], 'phone' => $v['phone'], 'hire_date' => $v['hire_date'],
-            'dob' => $v['dob'], 'national_id' => $v['national_id'], 'salary' => $v['salary'], 'currency' => $v['currency'], 'contract' => $v['contract'] ?? null, 'pay' => $v['pay'] ?? null, 'status' => $status, 'nfc_uid' => $nfc, 'manager_id' => $v['manager_id'],
+            'dob' => $v['dob'], 'national_id' => $v['national_id'], 'salary' => $v['salary'], 'currency' => $v['currency'], 'contract' => $v['contract'] ?? null, 'pay' => $v['pay'] ?? null, 'bank_name' => $v['bank_name'] ?? null, 'bank_account' => $v['bank_account'] ?? null, 'status' => $status, 'nfc_uid' => $nfc, 'manager_id' => $v['manager_id'],
         ]);
     }
 

@@ -33,6 +33,7 @@ class EmployeeImport
         'title_ar' => ['المسمى الوظيفي*', 'مطور برمجيات'], 'title_en' => ['المسمى بالإنكليزية*', 'Software developer'], 'location' => ['رمز مقر العمل*', 'dam'],
         'manager_code' => ['الرقم الوظيفي للمدير', ''], 'salary' => ['الراتب الشامل*', '900'], 'currency' => ['العملة USD/SYP/EUR', 'USD'],
         'hire_date' => ['تاريخ المباشرة* YYYY-MM-DD', '2022-03-01'], 'nfc_uid' => ['رقم بطاقة الحضور NFC', ''],
+        'bank_name' => ['البنك', ''], 'bank_account' => ['رقم الحساب / IBAN', ''],
     ];
 
     public function __construct(private NewEmployee $factory) {}
@@ -69,6 +70,24 @@ class EmployeeImport
             $seen['emails'][] = $v['email']; if ($v['national_id']) $seen['ids'][] = $v['national_id']; if ($v['code']) $seen['codes'][] = $v['code'];
             $out[] = ['row' => $n, 'values' => $v, 'raw' => $r, 'errors' => $err];
         }
+        return $out;
+    }
+
+    /**
+     * ملخص أخطاء المعاينة حسب الحقل (ملاحظة الاختبار 72): كم سطراً فيه هذا الخطأ وأرقام أول الأسطر — يغني عن التدقيق سطراً بسطر.
+     * @return list<array{field: string, label: string, count: int, rows: list<int>}>
+     */
+    public static function summary(array $rows): array
+    {
+        $map = ['department_id' => 'department', 'location_id' => 'location', 'manager_id' => 'manager_code'];
+        $out = [];
+        foreach ($rows as $r) foreach (array_keys($r['errors']) as $f) {
+            $col = $map[$f] ?? $f;
+            $out[$col] ??= ['field' => $col, 'label' => trim(str_replace('*', '', self::COLUMNS[$col][0] ?? $col)), 'count' => 0, 'rows' => []];
+            $out[$col]['count']++;
+            if (count($out[$col]['rows']) < 12) $out[$col]['rows'][] = $r['row'];
+        }
+        usort($out, fn ($a, $b) => $b['count'] <=> $a['count']);
         return $out;
     }
 

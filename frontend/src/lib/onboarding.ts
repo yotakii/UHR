@@ -60,7 +60,7 @@ const upload = (file: File, extra: Record<string, string> = {}) => {
   for (const [k, v] of Object.entries(extra)) fd.append(k, v)
   return fd
 }
-export const usePreviewImport = () => useMutation({ mutationFn: (file: File) => api<{ rows: ImportRow[]; ok: number; errors: number }>('/hr/employees/import/preview', { method: 'POST', body: upload(file) }) })
+export const usePreviewImport = () => useMutation({ mutationFn: (file: File) => api<{ rows: ImportRow[]; ok: number; errors: number; summary?: { field: string; label: string; count: number; rows: number[] }[] }>('/hr/employees/import/preview', { method: 'POST', body: upload(file) }) })
 export const useCommitImport = () => useMutation({
   mutationFn: (v: { file: File; invite: boolean }) => api<{ created: number; codes: string[] }>('/hr/employees/import', { method: 'POST', body: upload(v.file, { invite: v.invite ? '1' : '0' }) }),
   onSuccess: () => { for (const k of ['onboarding', 'dashboard', 'employee-lookups']) queryClient.invalidateQueries({ queryKey: ['hr', k] }) },

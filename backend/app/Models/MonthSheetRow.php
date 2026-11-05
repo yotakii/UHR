@@ -11,7 +11,7 @@ class MonthSheetRow extends Model
 
     protected bool $audit = false;
 
-    protected function casts(): array { return ['data' => 'array', 'money' => 'array', 'salary' => 'float']; }
+    protected function casts(): array { return ['data' => 'array', 'money' => 'array', 'pay' => 'array', 'salary' => 'float']; }
     public function sheet(): BelongsTo { return $this->belongsTo(MonthSheet::class, 'month_sheet_id'); }
     public function employee(): BelongsTo { return $this->belongsTo(Employee::class); }
 }

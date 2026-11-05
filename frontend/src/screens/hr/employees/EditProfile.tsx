@@ -13,7 +13,7 @@ export function EditProfile({ e, onClose }: { e: EmpFile; onClose: () => void })
   const { data: lk } = useLookups()
   const save = useUpdateProfile(e.id)
   const [d, setD] = useState<ProfileInput>({ name: e.name_ar, name_en: e.name_en, gender: e.gender, title_ar: e.title_ar, title_en: e.title_en, department_id: e.department_id, location_id: e.location_id,
-    manager_id: e.manager_id, email: e.email, phone: e.phone ?? '', national_id: e.national_id ?? '', dob: e.dob ?? '' })
+    manager_id: e.manager_id, email: e.email, phone: e.phone ?? '', national_id: e.national_id ?? '', dob: e.dob ?? '', bank_name: e.bank_name ?? '', bank_account: e.bank_account ?? '' })
   const err = save.error instanceof ApiError ? save.error : null
   const x = (k: string) => err?.field(k)
   const set = <K extends keyof ProfileInput>(k: K, v: ProfileInput[K]) => { setD(p => ({ ...p, [k]: v })); if (err) save.reset() }
@@ -32,6 +32,8 @@ export function EditProfile({ e, onClose }: { e: EmpFile; onClose: () => void })
       <Field label={L('الرقم الوطني', 'National ID')} error={x('national_id')}><input className="field ltr text-start num" inputMode="numeric" value={d.national_id} onChange={v => set('national_id', v.target.value)} /></Field>
       <Field label={L('تاريخ الولادة', 'Birth date')} error={x('dob')}><input type="date" className="field" value={d.dob} onChange={v => set('dob', v.target.value)} /></Field>
       <Field label={L('الجوال', 'Mobile')} error={x('phone')}><input className="field ltr text-start" value={d.phone} onChange={v => set('phone', v.target.value)} /></Field>
+      <Field label={L('البنك', 'Bank')} error={x('bank_name')}><input className="field" value={d.bank_name} maxLength={120} onChange={v => set('bank_name', v.target.value)} /></Field>
+      <Field label={L('رقم الحساب / IBAN', 'Account / IBAN')} error={x('bank_account')} hint={L('يظهر في كشف البنك الشهري.', 'Used in the monthly bank sheet.')}><input className="field ltr text-start num" value={d.bank_account} maxLength={40} onChange={v => set('bank_account', v.target.value)} /></Field>
       <Field label={L('البريد', 'Email')} req error={x('email')} className="sm:col-span-2" hint={L('البريد هو اسم الدخول للموظف — تغييره يغيّر حسابه أيضاً.', "The email is the employee's sign-in name — changing it changes their account too.")}>
         <input type="email" className="field ltr text-start" value={d.email} onChange={v => set('email', v.target.value)} /></Field>
       <Field label={L('الإدارة', 'Department')} req error={x('department_id')}><select className="field" value={d.department_id} onChange={v => set('department_id', Number(v.target.value))}>

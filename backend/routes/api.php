@@ -411,6 +411,13 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
         Route::post('/payroll', [PayrollController::class, 'open'])->middleware('perm:payroll,edit');
         Route::post('/payroll/{id}/{action}', [PayrollController::class, 'act'])->whereNumber('id')->whereIn('action', ['calculate', 'approve', 'reopen', 'close']);
         Route::get('/payroll/{id}/export', [PayrollController::class, 'export'])->whereNumber('id')->middleware('perm:payroll,export');
+        // عملة الصرف وأسعار الصرف (73/78)، قوالب التقارير (75)
+        Route::post('/payroll/{id}/pay', [PayrollController::class, 'pay'])->whereNumber('id')->middleware('perm:payroll,edit');
+        Route::get('/payroll/{id}/report/{kind}', [PayrollController::class, 'report'])->whereNumber('id')->middleware('perm:payroll,export');
+        Route::get('/payroll/rates', [PayrollController::class, 'rates']);
+        Route::post('/payroll/rates', [PayrollController::class, 'saveRate'])->middleware('perm:payroll,edit');
+        Route::delete('/payroll/rates/{id}', [PayrollController::class, 'deleteRate'])->whereNumber('id')->middleware('perm:payroll,edit');
+        Route::put('/payroll/settings', [PayrollController::class, 'saveSettings'])->middleware('perm:settings,edit');
     });
 
     // جداول الدوام والورديات والمناوبات (ملاحظات 24 و76) والفروع ومناطقها الزمنية (80)

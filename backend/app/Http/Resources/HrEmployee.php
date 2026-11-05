@@ -38,7 +38,7 @@ class HrEmployee
             'department_id' => $e->department_id, 'location_id' => $e->location_id, 'manager_id' => $e->manager_id,
             'title_ar' => $e->title_ar, 'title_en' => $e->title_en, 'name_ar' => $e->name, 'name_en' => $e->name_en,
             'manager' => $e->manager ? ['id' => $e->manager->id, 'ar' => $e->manager->name, 'en' => $e->manager->name_en] : null,
-            'national_id' => $e->national_id, 'dob' => $e->dob?->toDateString(), 'phone' => $e->phone, 'nfc_uid' => $e->nfc_uid,
+            'national_id' => $e->national_id, 'bank_name' => $e->bank_name, 'bank_account' => $e->bank_account, 'dob' => $e->dob?->toDateString(), 'phone' => $e->phone, 'nfc_uid' => $e->nfc_uid,
             'end_date' => $e->end_date?->toDateString(), 'shift' => $hm($shift['start']).' – '.$hm($shift['end']),
             'tenure_days' => Directory::tenureDays($e),
             'leave' => ['entitlement' => $ent, 'used' => $e->leave_used, 'remaining' => round($ent - $e->leave_used, 1), 'sick' => $e->sick_used],

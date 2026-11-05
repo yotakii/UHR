@@ -210,6 +210,8 @@ class OnboardingTest extends TestCase
         $p = $this->post('/api/hr/employees/import/preview', ['file' => $file([$good, $second, $bad])])->assertOk();
         $this->assertSame([2, 1], [$p->json('ok'), $p->json('errors')]);
         $this->assertEqualsCanonicalizing(['gender', 'email', 'department_id', 'salary', 'hire_date'], array_keys($p->json('rows.2.errors')));
+        // ملخص الأخطاء حسب الحقل (ملاحظة 72)
+        $this->assertSame(['count' => 1, 'rows' => [$p->json('rows.2.row')]], array_intersect_key(collect($p->json('summary'))->firstWhere('field', 'department'), ['count' => 0, 'rows' => 0]));
         $this->post('/api/hr/employees/import', ['file' => $file([$good, $second, $bad])])->assertStatus(422)->assertJsonPath('code', 'import_errors');
         $this->assertFalse(Employee::where('email', 'mazen.issa@alfarada.sy')->exists());
 

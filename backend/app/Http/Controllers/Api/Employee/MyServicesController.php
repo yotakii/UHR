@@ -55,7 +55,7 @@ class MyServicesController extends Controller
         $e = $this->me($request);
         $open = SalaryVault::open($request->user());
         $closed = MonthSheetRow::with('sheet')->where('employee_id', $e->id)->whereHas('sheet', fn ($q) => $q->where('status', 'closed'))->get()
-            ->sortByDesc(fn ($r) => $r->sheet->month)->values()->map(fn ($r) => ['month' => $r->sheet->month, 'status' => 'closed', 'data' => $r->data, 'money' => $open ? $r->money : null, 'closed_at' => $r->sheet->closed_at?->toIso8601String()]);
+            ->sortByDesc(fn ($r) => $r->sheet->month)->values()->map(fn ($r) => ['month' => $r->sheet->month, 'status' => 'closed', 'data' => $r->data, 'money' => $open ? $r->money : null, 'pay' => $open ? $r->pay : null, 'closed_at' => $r->sheet->closed_at?->toIso8601String()]);
         $month = Payroll::currentMonth();
         $live = MonthCalc::compute($e, $month);
         if (! $open) $live['money'] = null;

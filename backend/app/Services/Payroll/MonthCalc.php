@@ -39,6 +39,35 @@ class MonthCalc
         return min($to, $limit);
     }
 
+    /**
+     * نسبة أجر كل يوم مرضي في الفترة حسب ترتيبه في السنة الميلادية (تُعدّ الأيام المرضية المعتمدة منذ 1 كانون الثاني).
+     * @return array<string,int> date => paid %
+     */
+    public static function sickPay(Employee $e, string $start, string $end): array
+    {
+        $r = Settings::policy('leave_rules', $end);
+        $first = (int) ($r['sick_first_days'] ?? 0);
+        if ($first <= 0) return [];
+        $second = (int) ($r['sick_second_days'] ?? 0);
+        $keys = collect(Settings::policy('leave_types', $end))->filter(fn ($t) => ($t['balance'] ?? null) === 'sick')->pluck('key')->all();
+        if (! $keys) return [];
+        $yearStart = substr($start, 0, 4).'-01-01';
+        $dates = [];
+        LeaveRequest::where('employee_id', $e->id)->where('status', 'approved')->whereIn('type', $keys)->where('to', '>=', $yearStart)->where('from', '<=', $end)->orderBy('from')->get()
+            ->each(function (LeaveRequest $l) use (&$dates, $yearStart, $end) {
+                for ($d = Carbon::parse(max($l->from->toDateString(), $yearStart).' 12:00:00'); $d->toDateString() <= min($l->to->toDateString(), $end); $d->addDay()) $dates[$d->toDateString()] = true;
+            });
+        ksort($dates);
+        $out = []; $n = 0; $year = null;
+        foreach (array_keys($dates) as $date) {
+            if (substr($date, 0, 4) !== $year) { $year = substr($date, 0, 4); $n = 0; }
+            $n++;
+            if ($date < $start) continue;
+            $out[$date] = $n <= $first ? (int) ($r['sick_first_paid'] ?? 70) : ($n <= $first + $second ? (int) ($r['sick_second_paid'] ?? 80) : 0);
+        }
+        return $out;
+    }
+
     /** @return array{data: array, money: array} */
     public static function compute(Employee $e, string $month, ?string $upTo = null): array
     {
@@ -57,6 +86,8 @@ class MonthCalc
                 $pct = (int) (LeaveService::type($l->type)['paid'] ?? 100);
                 for ($d = Carbon::parse(max($l->from->toDateString(), $start).' 12:00:00'); $d->toDateString() <= min($l->to->toDateString(), $end); $d->addDay()) $paid[$d->toDateString()] = $pct;
             });
+        // الإجازة المرضية بالشرائح (leave_rules): أول sick_first_days يوم بالسنة بنسبة sick_first_paid، ثم sick_second_days بنسبة sick_second_paid، وما بعدها بلا أجر
+        foreach (self::sickPay($e, $start, $end) as $date => $pct) if (isset($paid[$date])) $paid[$date] = $pct;
         $assigned = OvertimeRequest::where('employee_id', $e->id)->where('status', 'approved')->whereBetween('date', [$start, $end])->get()
             ->groupBy(fn ($o) => $o->date->toDateString())->map(fn ($g) => (int) $g->sum('minutes'))->all();
 

@@ -20,8 +20,9 @@ export function fmtTime(iso: string | undefined) {
   return `${h < 10 ? '0' : ''}${h}:${m < 10 ? '0' : ''}${m}`
 }
 export function fmtNum(n: number) { return n.toLocaleString('en-US') }
-export function money(n: number, cur: 'USD' | 'SYP', lang: 'ar' | 'en') {
+export function money(n: number, cur: string, lang: 'ar' | 'en') {
   if (cur === 'USD') return `$${fmtNum(Math.round(n))}`
+  if (cur !== 'SYP') return `${fmtNum(Math.round(n * 100) / 100)} ${cur}`
   return lang === 'ar' ? `${fmtNum(Math.round(n))} ل.س` : `SYP ${fmtNum(Math.round(n))}`
 }
 export function daysBetween(a: string, b: string) { return Math.round((new Date(b.slice(0, 10) + 'T12:00:00').getTime() - new Date(a.slice(0, 10) + 'T12:00:00').getTime()) / DAY) }

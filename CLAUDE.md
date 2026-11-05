@@ -120,7 +120,8 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 | 12a «الساحة» social space: communities (company / department / interest public|private), posts with images, polls, questions + best answer, pins, reactions, comments + replies, @mentions, reports + moderation, settings | 📦 delivered |
 | 15a test notes — quick fixes & clarifications (FEATURES §15) | ✅ user said next |
 | 15b test notes — recruitment (job types/workplace, portal filters, link previews, interview questions, offer budget approval, pay breakdown, CV bank matching) | ✅ user said next |
-| 15c test notes — work schedules & shifts, rota, branches + time zones, attendance stats/trend, past months, manager emergency leave | 📦 delivered |
+| 15c test notes — work schedules & shifts, rota, branches + time zones, attendance stats/trend, past months, manager emergency leave | ✅ user said next |
+| 15d test notes — pay currency + dated exchange rates, sick tiered pay, report templates (bank/insurance/departments/deductions/diff), sheet diff + automatic checks, import error summary, no amounts in print before verification | 📦 delivered |
 | 12b praise (company-value badges + optional points) + automatic celebrations · 13 «المساعد» AI agent (simple chat for users, user-scoped tools, confirm before actions, no technical setup for companies) · 14 final verification — plan updated Oct 26; AI agent kept Oct 29 | |
 
 **Task 03 delivered:**
@@ -434,6 +435,17 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 - Manager emergency leave (#60): `LeaveService::submitForTeam` (direct manager only → 403 `not_your_team`; types with `notice` false only → 422 `team_leave_type`; the manager level is dropped (≥ HR level kept) and logged; employee notified) — `POST /api/me/team/leave`; inbox returns `team_leave_types`; TeamApprovals «إجازة طارئة لموظف من فريقك» with `ConfirmSend`.
 - Frontend: `lib/attendance.ts` (schedules/roster/branches/trend hooks, `hm`), `screens/hr/attendance/Schedules.tsx` (`Schedules` `/hr/settings/schedules` — cards, form, assign modal, period assignments; `Branches` `/hr/settings/branches`), Attendance tabs «الاتجاه الأسبوعي» (`TrendView`) and «المناوبات» (`RosterView`), totals strip + payroll link, branch select; «جداول الدوام» button.
 - Tests: `tests/Feature/SchedulesTest.php` (5).
+
+**Batch 15d delivered (Nov 5) — payroll notes 72, 73, 75, 78, 82:**
+- Migration `2026_11_11_000001`: `exchange_rates` (company, date, from, to, rate = 1 from in to, note, created_by; unique company+date+pair), month_sheets `pay_currency` (null = each salary currency), `pay_date`, `rates` jsonb {cur: {rate, date}|null}; month_sheet_rows `pay` jsonb (amounts converted + currency, rate, from); employees `bank_name`, `bank_account` (IBAN, uppercased, no spaces; EditProfile + import columns).
+- Setting `payroll_sheet` {currency '', pay_day 0 = last day, diff_alert_pct 10} (`PUT /api/hr/payroll/settings`, settings,edit, audit `settings.payroll_sheet`). `ExchangeRate::lookup($from, $to, $date)` = latest rate on/before the date, or the inverse of the reverse pair.
+- `Payroll`: `open` takes the default currency + `payDate()`; `calculate` → `convert()`; `setPay()` (draft/calculated only, audit `payroll.pay_currency`); missing rates → approve/close 409 `rate_missing`; `totals` in the pay currency (+ `currency`, `by_currency`, `missing_rates`); `amounts($row)` = pay ?: money; `diff($s)` vs the previous sheet (prev/net/delta/pct/changes per component, new/left/currency, alert ≥ diff_alert_pct); `checks()` = rate_missing, net_zero, incomplete, no_bank, big_change, new, left.
+- `MonthCalc::sickPay($e, $start, $end)`: sick-balance leave days numbered per calendar year → `leave_rules` sick_first_paid / sick_second_paid / 0 beyond; overrides the type's paid % in `compute`.
+- `Services/Payroll/SheetReports`: `build($s, bank|insurance|departments|deductions|diff)` + `extras()` (summary, diff, checks sheets appended to the main Excel export). `GET /api/hr/payroll/{id}/report/{kind}` (payroll,export, `SalaryVault::requireAll`, audit `payroll.report`); `POST /payroll/{id}/pay`, `GET|POST /payroll/rates`, `DELETE /payroll/rates/{id}` (payroll,edit). Payload: sheet pay fields, rows `pay` + `see`, `diff`, `checks` (scoped, masked), `can.settings`. Payslips return `pay`.
+- Employee import preview returns `summary` (errors by field with first row numbers); the modal has «الأسطر الخاطئة فقط» and a CSV error report.
+- Note 82: exit clearance (F-07) amounts and pending asset values are null (`masked`) before verification — every other printed amount was already masked server-side (offer, certificate, settlement, payslip, sheet).
+- Frontend: `screens/hr/payroll/PayrollExtras.tsx` (PayStrip, CurrencyModal, Reports, DiffView, ChecksView), Payroll tabs `?tab=diff|checks`; `money()` accepts any ISO currency.
+- Tests: `tests/Feature/PayrollNotesTest.php` (3), OnboardingTest summary assertion.
 
 **Open questions in SRS** (ask the user only when you reach them):
 - SMS provider for OTP.

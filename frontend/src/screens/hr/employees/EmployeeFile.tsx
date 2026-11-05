@@ -54,6 +54,7 @@ export function EmployeeFile({ id }: { id: number }) {
       {tab === 'overview' && <div className="grid lg:grid-cols-3 gap-4">
         <Panel title={L('البيانات الشخصية', 'Personal')}>
           <KV k={L('الرقم الوطني', 'National ID')} v={<span className="ltr num">{e.national_id || '—'}</span>} /><KV k={L('تاريخ الولادة', 'Born')} v={fmtDate(e.dob ?? undefined, lang)} />
+          <KV k={L('الحساب البنكي', 'Bank account')} v={e.bank_account ? <span>{e.bank_name ? `${e.bank_name} · ` : ''}<span className="ltr num">{e.bank_account}</span></span> : '—'} />
           <KV k={L('الجوال', 'Mobile')} v={<span className="ltr">{e.phone || '—'}</span>} /><KV k={L('البريد', 'Email')} v={<span className="ltr break-all">{e.email}</span>} />
           <KV k={L('بطاقة NFC', 'NFC card')} v={<span className="flex items-center gap-3 flex-wrap justify-end"><span className="ltr num">{e.nfc_uid || '—'}</span>
             {e.can.edit && <button onClick={() => setCard(true)} className="text-brand text-[13px] font-semibold inline-flex items-center gap-1"><CreditCard size={13} />{e.nfc_uid ? L('تغيير البطاقة', 'Change card') : L('ربط بطاقة', 'Link card')}</button>}</span>} />

@@ -68,6 +68,17 @@ class ExitCase
         $open = $self ? \App\Services\Security\SalaryVault::open($viewer) : \App\Services\Security\SalaryVault::sees($viewer, $r->employee);
         $out['settlement'] = $money && $open ? ($r->status === 'closed' ? $r->settlement : ExitFlow::settlement($r)) : null;
         $out['settlement_masked'] = $money && ! $open;
+        // ملاحظة 82: لا مبالغ مالية في براءة الذمة (F-07) قبل التحقق — ولا في طباعتها
+        if (! $open && is_array($out['clearance'] ?? null)) {
+            $out['clearance'] = array_map(function ($sec) {
+                $sec['items'] = array_map(function ($it) {
+                    if (($it['value'] ?? null) !== null) { $it['value'] = null; $it['masked'] = true; }
+                    if (isset($it['pending'])) $it['pending'] = collect($it['pending'])->map(fn ($a) => ['value' => null] + $a)->values();
+                    return $it;
+                }, $sec['items'] ?? []);
+                return $sec;
+            }, $out['clearance']);
+        }
         $out['can'] = ['interview' => $hr && $r->kind === 'resignation' && in_array($r->status, Resignation::PENDING, true),
             'waive' => ($hr || $isManager) && $r->kind === 'resignation' && $r->isOpen(),
             'withdrawal' => $hr && ($r->withdrawal['status'] ?? null) === 'pending' && $r->isOpen(),
