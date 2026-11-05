@@ -9,7 +9,7 @@ export interface PublicJob {
   min_years: number; hard_to_fill: boolean; posted_at: string; closes_at: string | null
 }
 export interface PublicJobFull extends PublicJob {
-  requirements: Bi[]; openings: number; degree: number; degree_label: Bi | null; requires_photo: boolean; company_about: Bi
+  requirements: Bi[]; openings: number; degree: number; degree_label: Bi | null; requires_photo: boolean; min_age?: number; company_about: Bi
   referral?: { valid: boolean; code: string; by?: Bi }
 }
 export interface Portal {

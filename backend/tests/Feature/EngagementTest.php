@@ -131,6 +131,7 @@ class EngagementTest extends TestCase
         $this->login('hr@alfarada.sy');
         $this->postJson("/api/hr/candidates/{$c->id}/move", ['stage' => 'technical'])->assertOk();
         $offer = ['title' => 'محاسب أول', 'contract' => 'fixed', 'currency' => 'USD', 'basic' => 1200, 'housing' => 100, 'transport' => 40, 'fuel' => 30, 'leave_days' => 21, 'start_date' => '2026-11-01'];
+        $this->unlockSalaries(false);
         $this->putJson("/api/hr/candidates/{$c->id}/offer", $offer)->assertOk();
         $this->login('samer.halabi@alfarada.sy');
         $this->assertSame('sent', $this->getJson('/api/me/internal')->json('data.0.offer.status'));

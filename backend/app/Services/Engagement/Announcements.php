@@ -23,7 +23,7 @@ use Illuminate\Support\Str;
  */
 class Announcements
 {
-    public const TAGS = ['people', 'payroll', 'training', 'policy', 'event'];
+    public const TAGS = ['people', 'payroll', 'training', 'policy', 'event', 'holiday'];
 
     public static function config(): array { return array_merge(Settings::DEFAULTS['announcements'], Settings::get('announcements') ?? []); }
 
@@ -31,10 +31,10 @@ class Announcements
     {
         if ($a && in_array($a->status, ['published', 'expired'], true) && $a->published_at?->isPast()) throw new ApiException(L::t('الإعلان المنشور لا يُعدَّل — أنشئ إعلاناً جديداً أو أرشفه.', 'A published announcement cannot be edited — archive it or post a new one.'), 'published', 409);
         $d = Validator::make($in, ['title_ar' => ['required', 'string', 'min:3', 'max:190'], 'title_en' => ['nullable', 'string', 'max:190'], 'text_ar' => ['required', 'string', 'min:5', 'max:5000'],
-            'text_en' => ['nullable', 'string', 'max:5000'], 'tag' => ['required', 'in:'.implode(',', self::TAGS)], 'audience' => ['required', 'in:all,department'],
+            'text_en' => ['nullable', 'string', 'max:5000'], 'contact_email' => ['nullable', 'email:rfc', 'max:190'], 'tag' => ['required', 'in:'.implode(',', self::TAGS)], 'audience' => ['required', 'in:all,department'],
             'department_id' => ['nullable', 'required_if:audience,department', 'integer'], 'publish_at' => ['nullable', 'date'], 'expires_at' => ['nullable', 'date', ! empty($in['publish_at']) ? 'after:publish_at' : 'after:now']],
             ['expires_at.after' => L::t('تاريخ الانتهاء بعد تاريخ النشر.', 'The expiry date must be after the publish date.')],
-            ['title_ar' => L::t('العنوان', 'Title'), 'text_ar' => L::t('النص', 'Text'), 'department_id' => L::t('الإدارة', 'Department')])->validate();
+            ['title_ar' => L::t('العنوان', 'Title'), 'text_ar' => L::t('النص', 'Text'), 'contact_email' => L::t('بريد التواصل', 'Contact email'), 'department_id' => L::t('الإدارة', 'Department')])->validate();
         if (($d['audience'] ?? 'all') === 'department' && ! \App\Models\Department::whereKey($d['department_id'])->exists()) throw ApiException::field('department_id', L::t('اختر الإدارة.', 'Choose the department.'), 'invalid');
         $max = (int) self::config()['max_mb'];
         $store = function (?UploadedFile $f, array $mimes, string $field) use ($max, $by) {
@@ -46,7 +46,7 @@ class Announcements
             return StoredFile::create(['disk' => 'local', 'path' => $path, 'name' => $f->getClientOriginalName(), 'size' => $f->getSize(), 'mime' => $f->getMimeType(), 'uploaded_by' => $by->id])->id;
         };
         $row = ['title_ar' => trim($d['title_ar']), 'title_en' => trim((string) ($d['title_en'] ?? '')) ?: null, 'text_ar' => trim($d['text_ar']), 'text_en' => trim((string) ($d['text_en'] ?? '')) ?: trim($d['text_ar']),
-            'tag' => $d['tag'], 'audience' => $d['audience'], 'department_id' => $d['audience'] === 'department' ? (int) $d['department_id'] : null,
+            'contact_email' => mb_strtolower(trim((string) ($d['contact_email'] ?? ''))) ?: null, 'tag' => $d['tag'], 'audience' => $d['audience'], 'department_id' => $d['audience'] === 'department' ? (int) $d['department_id'] : null,
             'published_at' => ! empty($d['publish_at']) ? $d['publish_at'] : now(), 'expires_at' => $d['expires_at'] ?? null];
         if ($id = $store($image, ['jpg', 'jpeg', 'png', 'webp'], 'image')) $row['image_file_id'] = $id;
         if ($id = $store($file, ['pdf', 'docx', 'xlsx', 'jpg', 'png'], 'attachment')) $row['attachment_file_id'] = $id;
@@ -108,7 +108,7 @@ class Announcements
 
     public static function row(Announcement $a, bool $admin = false): array
     {
-        $r = ['id' => $a->id, 'title' => ['ar' => $a->title_ar ?: mb_substr($a->text_ar, 0, 60), 'en' => $a->title_en ?: $a->title_ar ?: mb_substr($a->text_en, 0, 60)], 'text' => ['ar' => $a->text_ar, 'en' => $a->text_en],
+        $r = ['id' => $a->id, 'title' => ['ar' => $a->title_ar ?: mb_substr($a->text_ar, 0, 60), 'en' => $a->title_en ?: $a->title_ar ?: mb_substr($a->text_en, 0, 60)], 'text' => ['ar' => $a->text_ar, 'en' => $a->text_en], 'contact_email' => $a->contact_email,
             'tag' => $a->tag, 'audience' => $a->audience, 'department' => $a->department ? ['id' => $a->department->id, 'ar' => $a->department->name_ar, 'en' => $a->department->name_en] : null,
             'image' => $a->image_file_id, 'attachment' => $a->attachment ? ['id' => $a->attachment->id, 'name' => $a->attachment->name] : null,
             'published_at' => $a->published_at?->toIso8601String(), 'expires_at' => $a->expires_at?->toIso8601String(), 'status' => $a->status];

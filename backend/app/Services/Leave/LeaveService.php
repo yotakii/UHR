@@ -49,6 +49,8 @@ class LeaveService
         return ['entitlement' => $ent, 'used' => (float) $e->leave_used, 'held' => round($held, 2), 'remaining' => round($ent - $e->leave_used - $held, 2), 'sick' => (float) $e->sick_used,
             'emergency' => ['used' => $mine->where('type', 'emergency')->filter(fn ($l) => $l->from->year === $year)->count(), 'limit' => (int) $r['emergency_per_year']],
             'unpaid' => ['used' => round($mine->where('type', 'unpaid')->filter(fn ($l) => $l->from->year === $year)->sum(fn ($l) => (float) $l->days), 2), 'limit' => (int) $r['unpaid_max_per_year']],
+            'sick_limit' => (int) ($r['sick_first_days'] ?? 0) + (int) ($r['sick_second_days'] ?? 0),
+            'sick_tiers' => [['days' => (int) ($r['sick_first_days'] ?? 0), 'paid' => (int) ($r['sick_first_paid'] ?? 70)], ['days' => (int) ($r['sick_second_days'] ?? 0), 'paid' => (int) ($r['sick_second_paid'] ?? 80)]],
             'probation' => in_array($e->status, ['onboarding', 'probation'], true)];
     }
 
@@ -92,6 +94,7 @@ class LeaveService
         if ($t['key'] === 'emergency' && $b['emergency']['used'] >= $b['emergency']['limit']) $err['type'] = L::t("استُنفد عدد الإجازات الطارئة لهذه السنة ({$b['emergency']['limit']}).", "This year's emergency leaves are used up ({$b['emergency']['limit']}).");
         if ($t['balance'] === 'unpaid' && $b['unpaid']['used'] + $days > $b['unpaid']['limit']) $err['to'] = L::t("الحد السنوي للإجازة غير المدفوعة {$b['unpaid']['limit']} يوماً.", "The yearly unpaid limit is {$b['unpaid']['limit']} days.");
         if ($t['balance'] === 'annual' && $days > $b['remaining']) $warn['over_balance'] = ['days' => $days, 'remaining' => $b['remaining']];
+        if ($t['balance'] === 'sick' && $b['sick_limit'] > 0 && $b['sick'] + $days > $b['sick_limit']) $warn['over_sick'] = ['days' => $days, 'used' => $b['sick'], 'limit' => $b['sick_limit']];
 
         // مهلة التقديم حسب المدة (الطارئة والمرضية والوفاة وما شابهها معفاة)
         if ($t['notice']) {
@@ -151,7 +154,7 @@ class LeaveService
     public function decide(LeaveRequest $l, User $u, bool $approve, ?string $note): LeaveRequest
     {
         $w = $l->warnings ?? [];
-        $needs = isset($w['over_balance']) || (isset($w['conflict']) && self::rules()['conflict_note_required']);
+        $needs = isset($w['over_balance']) || isset($w['over_sick']) || (isset($w['conflict']) && self::rules()['conflict_note_required']);
         $guard = function (LeaveRequest $l, RequestStep $s) {
             $last = ! RequestStep::where('subject_type', $s->subject_type)->where('subject_id', $s->subject_id)->where('status', 'waiting')->exists();
             if ($last && $l->type !== 'justify' && (self::type($l->type)['doc'] ?? 'none') === 'required' && ! $l->doc_file_id) {

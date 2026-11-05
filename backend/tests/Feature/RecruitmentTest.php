@@ -113,6 +113,9 @@ class RecruitmentTest extends TestCase
         $this->login('hr@alfarada.sy');
         $c = Candidate::where('stage', 'technical')->whereNotNull('user_id')->firstOrFail();
         $offer = ['title' => 'مهندس برمجيات', 'contract' => 'fixed', 'currency' => 'USD', 'basic' => 900, 'housing' => 100, 'transport' => 40, 'fuel' => 30, 'leave_days' => 14, 'start_date' => '2026-11-01'];
+        // ملاحظة الاختبار 82: مبالغ العرض لا تُكتب ولا تظهر قبل التحقق
+        $this->putJson("/api/hr/candidates/{$c->id}/offer", $offer)->assertStatus(403)->assertJsonPath('code', 'salary_locked');
+        $this->unlockSalaries(false);
         $this->putJson("/api/hr/candidates/{$c->id}/offer", ['start_date' => '2026-01-01'] + $offer)->assertStatus(422)->assertJsonValidationErrors('start_date');
         $this->putJson("/api/hr/candidates/{$c->id}/offer", $offer)->assertOk()->assertJsonPath('data.stage', 'offer')->assertJsonPath('data.offer.status', 'sent')->assertJsonPath('data.offer.total', 1070);
         Notification::assertSentTo($c->user, CandidateMessage::class, fn ($n) => $n->template === 'offer_sent');

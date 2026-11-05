@@ -34,6 +34,7 @@ export function Applied() {
         <Btn onClick={() => { clearSubmission(); go('jobs') }}>{L('تصفّح فرصاً أخرى', 'Browse more jobs')}</Btn>
       </div>
       <div className="mt-6"><Badge tone="info">{L('الخطوة التالية: الفرز الأولي من الموارد البشرية', 'Next: HR screening')}</Badge></div>
+      <p className="mt-5 text-[14px] font-semibold text-brand">{L('شكراً لاستخدامكم نظام UHR', 'Thank you for using UHR')}</p>
     </div>
   </div>
 }

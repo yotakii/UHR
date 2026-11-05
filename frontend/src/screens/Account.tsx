@@ -35,9 +35,9 @@ export function ForceChangePassword({ user }: { user: SessionUser }) {
             <p className="text-ink-2 text-[13px] mt-1">{L('لحماية حسابك، اختر كلمة مرور خاصة بك قبل المتابعة.', 'To protect your account, choose your own password before continuing.')}</p></div></div>
         <form className="p-6 space-y-4" noValidate onSubmit={x => { x.preventDefault(); m.mutate({ current_password: cur, ...v }) }}>
           <Field label={L('كلمة المرور المؤقتة', 'Temporary password')} req error={e?.field('current_password')}><input className="field ltr text-start" type="password" value={cur} onChange={x => { setCur(x.target.value); m.reset() }} autoComplete="current-password" autoFocus /></Field>
-          <PasswordFields v={v} set={(k, x) => { setV(s => ({ ...s, [k]: x })); m.reset() }} errs={{ password: e?.field('password') }} />
+          <PasswordFields policy={user.password_policy} v={v} set={(k, x) => { setV(s => ({ ...s, [k]: x })); m.reset() }} errs={{ password: e?.field('password') }} />
           {e && !e.field('password') && !e.field('current_password') && <div role="alert" className="text-[13px] text-danger bg-danger-soft rounded px-3 py-2">{e.message}</div>}
-          <Btn kind="primary" size="lg" className="w-full" type="submit" disabled={m.isPending || !cur || !passwordOk(v)}>{L('حفظ والمتابعة', 'Save and continue')}</Btn>
+          <Btn kind="primary" size="lg" className="w-full" type="submit" disabled={m.isPending || !cur || !passwordOk(v, user.password_policy)}>{L('حفظ والمتابعة', 'Save and continue')}</Btn>
         </form>
       </section>
     </main>

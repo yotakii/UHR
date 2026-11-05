@@ -54,7 +54,7 @@ class CustodyTest extends TestCase
         $d = $this->getJson('/api/hr/custody')->assertOk()->json();
         $this->assertSame(Asset::allCompanies()->whereHas('company', fn ($q) => $q->where('slug', 'alfarada'))->count(), $d['summary']['total']);
         $this->assertSame(8, $d['summary']['available']);
-        $this->assertCount(5, $d['categories']);
+        $this->assertCount(7, $d['categories']);   // + أدوات مكتبية، أدوات عمل مخصصة (ملاحظة الاختبار 52)
         $this->assertSame(1, count($this->getJson('/api/hr/custody?q=Kia&status=assigned')->json('data')) >= 1 ? 1 : 0);
 
         $cat = $d['categories'][0]['id'];

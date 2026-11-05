@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Paperclip } from 'lucide-react'
+import { History, Paperclip } from 'lucide-react'
 import { useL, useLang, bi, fmtDateTime, todayISO, addDays } from '../../lib/store'
 import { ApiError } from '../../lib/api'
 import { useRoute } from '../../lib/router'
-import { checkLeave, useAttachDoc, useCancelLeave, useMyLeave, useSubmitLeave, type Check, type LeaveInput } from '../../lib/requests'
-import { Btn, Empty, Field, PageHead, Panel, toast } from '../../ui/kit'
-import { DecisionDialog } from '../../ui/decision'
+import { checkLeave, useAttachDoc, useCancelLeave, useMyLeave, useSubmitLeave, type Check, type LeaveInput, type ReqRow } from '../../lib/requests'
+import { Btn, Empty, Field, Modal, PageHead, Panel, toast } from '../../ui/kit'
+import { ConfirmSend, DecisionDialog } from '../../ui/decision'
 import { DocLink, LeaveStatus, Period, StepsPath, Warnings } from './parts'
 
 /**
@@ -24,6 +24,7 @@ export function MyRequests() {
   const [busy, setBusy] = useState(false)
   const [tried, setTried] = useState(false)
   const [cancelId, setCancelId] = useState<number | null>(null)
+  const [hist, setHist] = useState<{ group: 'annual' | 'sick' | 'emergency' | 'unpaid'; title: string } | null>(null)
   const type = d?.types.find(t => t.key === v.type)
   const hourly = type?.unit === 'hour'
   const set = (p: Partial<LeaveInput>) => setV(x => { const n = { ...x, ...p }; if (n.to < n.from) n.to = n.from; return n })
@@ -63,9 +64,13 @@ export function MyRequests() {
     <PageHead title={L('إجازاتي وطلباتي', 'My leave & requests')}
       sub={L(`رصيدك من الإجازة السنوية: ${b.remaining} من ${b.entitlement} يوماً${b.held ? ` (${b.held} محجوزة لطلبات قيد الاعتماد)` : ''}`, `Annual leave balance: ${b.remaining} of ${b.entitlement} days${b.held ? ` (${b.held} held by pending requests)` : ''}`)} />
     <div className="grid [grid-template-columns:repeat(auto-fill,minmax(150px,1fr))] gap-3 mb-4">
-      {([[L('السنوية المتبقية', 'Annual left'), `${b.remaining}`, `/ ${b.entitlement}`], [L('المستخدم', 'Used'), `${b.used}`, L('يوم', 'days')], [L('مرضية هذا العام', 'Sick this year'), `${b.sick}`, L('يوم', 'days')],
-        [L('اضطرارية', 'Emergency'), `${b.emergency.used}`, `/ ${b.emergency.limit}`], [L('بلا راتب', 'Unpaid'), `${b.unpaid.used}`, `/ ${b.unpaid.limit}`]] as const).map(([k, n, s]) =>
-        <div key={k} className="rounded-2xl border border-line bg-surface px-4 py-3"><div className="text-[12px] text-ink-3">{k}</div><div className="text-[22px] font-bold num">{n} <span className="text-[12px] font-normal text-ink-3">{s}</span></div></div>)}
+      {([['annual', L('السنوية المتبقية', 'Annual left'), `${b.remaining}`, `/ ${b.entitlement}`], ['annual', L('المستخدم', 'Used'), `${b.used}`, L('يوم', 'days')],
+        ['sick', L('مرضية هذا العام', 'Sick this year'), `${b.sick}`, b.sick_limit ? `/ ${b.sick_limit}` : L('يوم', 'days')],
+        ['emergency', L('اضطرارية', 'Emergency'), `${b.emergency.used}`, `/ ${b.emergency.limit}`], ['unpaid', L('بلا راتب', 'Unpaid'), `${b.unpaid.used}`, `/ ${b.unpaid.limit}`]] as const).map(([g, k, n, s]) =>
+        <button key={k} type="button" onClick={() => setHist({ group: g, title: k })} title={L('عرض سجل الطلبات', 'Show request history')}
+          className="text-start rounded-2xl border border-line bg-surface px-4 py-3 hover:border-brand/50 hover:bg-sub/40 transition-colors">
+          <div className="text-[12px] text-ink-3 flex items-center justify-between gap-1">{k}<History size={13} className="opacity-60" /></div>
+          <div className="text-[22px] font-bold num">{n} <span className="text-[12px] font-normal text-ink-3">{s}</span></div></button>)}
     </div>
     <div className="grid lg:grid-cols-[380px_1fr] gap-4 items-start">
       <Panel title={L('طلب جديد', 'New request')} sub={b.probation ? L('أنت في فترة التجربة — الإجازة المأجورة بحسب السياسة', 'You are on probation — paid leave follows the policy') : undefined}>
@@ -91,7 +96,8 @@ export function MyRequests() {
               <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" onChange={x => setFile(x.target.files?.[0] ?? null)} /></label></Field>}
           {chk && <Warnings r={{ warnings: chk.warnings }} />}
           {chk?.levels.length ? <div className="text-[12px] text-ink-3">{L('المسار: ', 'Path: ')}{chk.levels.map(l => bi(l, lang)).join(' ← ')}</div> : null}
-          <Btn kind="primary" className="w-full" disabled={busy || !!(tried && chk && Object.keys(chk.errors).length)} onClick={send}>{busy ? L('جارٍ الإرسال…', 'Sending…') : L('إرسال الطلب', 'Submit request')}</Btn>
+          <ConfirmSend block label={L('إرسال الطلب', 'Submit request')} busy={busy} disabled={!!(tried && chk && Object.keys(chk.errors).length)} onConfirm={send}
+            summary={type ? `${bi(type, lang)} · ${hourly ? L(`${v.hours} ساعة في ${v.from}`, `${v.hours} h on ${v.from}`) : `${v.from} → ${v.to}${chk ? L(` (${chk.days} يوم)`, ` (${chk.days} d)`) : ''}`}` : undefined} />
         </div>
       </Panel>
       <Panel title={L('طلباتي', 'My requests')} pad={false}>{d.requests.length === 0 ? <Empty title={L('لا توجد طلبات بعد', 'No requests yet')} /> :
@@ -107,6 +113,18 @@ export function MyRequests() {
               {r.can_cancel && <Btn size="sm" kind="danger" onClick={() => setCancelId(r.id)}>{L('إلغاء', 'Cancel')}</Btn>}</div></td>
           </tr>)}</tbody></table>}</Panel>
     </div>
+    {hist && <Modal open onClose={() => setHist(null)} width={640} title={L(`سجل الطلبات — ${hist.title}`, `Request history — ${hist.title}`)}>
+      {(() => {
+        const group = (r: ReqRow) => { const t = d.types.find(x => x.key === r.type); return hist.group === 'emergency' ? r.type === 'emergency' : t?.balance === hist.group || (hist.group === 'annual' && r.type === 'annual') }
+        const rows = d.requests.filter(group)
+        const sick = hist.group === 'sick' && b.sick_tiers?.length ? <p className="text-[12.5px] text-ink-3 mb-3">{L(`حسب السياسة: ${b.sick_tiers.map(t => `${t.days} يوماً بأجر ${t.paid}٪`).join(' ثم ')} في السنة.`, `Per policy: ${b.sick_tiers.map(t => `${t.days} days at ${t.paid}% pay`).join(', then ')} a year.`)}</p> : null
+        return <>{sick}{rows.length === 0 ? <Empty title={L('لا توجد طلبات سابقة من هذا النوع', 'No earlier requests of this kind')} /> :
+          <ul className="divide-y divide-line-2 border border-line rounded-lg">{rows.map(r => <li key={r.id} className="px-3 py-2.5 flex items-center gap-3 text-[13.5px]">
+            <div className="flex-1 min-w-0"><div className="font-medium">{bi(r.type_name, lang)}{r.days ? <span className="text-ink-3 font-normal"> · {L(`${r.days} يوم`, `${r.days} d`)}</span> : null}</div>
+              <div className="text-[12.5px]"><Period r={r} /></div>{r.reason && <div className="text-[12px] text-ink-3 truncate">{r.reason}</div>}</div>
+            <LeaveStatus s={r.status} /></li>)}</ul>}</>
+      })()}
+    </Modal>}
     <DecisionDialog open={cancelId !== null} onClose={() => setCancelId(null)} tone="danger" title={L('إلغاء الطلب', 'Cancel the request')} confirmLabel={L('تأكيد الإلغاء', 'Confirm cancel')}
       onConfirm={() => cancel.mutateAsync(cancelId!).then(() => toast(L('أُلغي الطلب', 'Request cancelled')))} />
   </div>

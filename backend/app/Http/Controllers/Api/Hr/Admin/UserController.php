@@ -46,9 +46,14 @@ class UserController extends Controller
     /** صلاحية روابط التفعيل وتعيين كلمة المرور (ساعات) */
     public function saveSettings(Request $request): JsonResponse
     {
-        $d = $request->validate(['invite_hours' => ['required', 'integer', 'between:1,720']], [], ['invite_hours' => L::t('صلاحية الرابط', 'Link validity')]);
+        $d = $request->validate(['invite_hours' => ['required', 'integer', 'between:1,720'], 'pw_min' => ['sometimes', 'integer', 'between:6,64'], 'pw_upper' => ['sometimes', 'boolean'], 'pw_symbol' => ['sometimes', 'boolean'],
+            'max_attempts' => ['sometimes', 'integer', 'between:3,20'], 'lock_minutes' => ['sometimes', 'integer', 'between:1,1440']], [],
+            ['invite_hours' => L::t('صلاحية الرابط', 'Link validity'), 'pw_min' => L::t('أقل طول لكلمة المرور', 'Minimum password length'), 'max_attempts' => L::t('المحاولات المسموحة', 'Allowed attempts'), 'lock_minutes' => L::t('مدة القفل', 'Lock duration')]);
         $before = Settings::merged('accounts');
-        Settings::put('accounts', ['invite_hours' => (int) $d['invite_hours']]);
+        $new = $before;
+        foreach (['invite_hours', 'pw_min', 'max_attempts', 'lock_minutes'] as $k) if (array_key_exists($k, $d)) $new[$k] = (int) $d[$k];
+        foreach (['pw_upper', 'pw_symbol'] as $k) if (array_key_exists($k, $d)) $new[$k] = (bool) $d[$k];
+        Settings::put('accounts', array_intersect_key($new, Settings::DEFAULTS['accounts']));
         Audit::record('settings.accounts', null, $before, Settings::merged('accounts'));
         return response()->json(['settings' => Settings::merged('accounts')]);
     }

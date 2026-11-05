@@ -266,6 +266,9 @@ class EmployeeDirectoryTest extends TestCase
         Tenant::set($e->company);
         $new = Employee::create(['code' => 'UHR-2001', 'name' => 'تجربة', 'name_en' => 'Trial', 'gender' => 'M', 'title_ar' => 'محاسب', 'title_en' => 'Accountant',
             'department_id' => $e->department_id, 'location_id' => $e->location_id, 'email' => 'trial@alfarada.sy', 'hire_date' => '2026-10-12', 'status' => 'onboarding', 'manager_id' => $e->department->head_id]);
+        // ملاحظة الاختبار 41: لا يظهر في الهيكل قبل المباشرة الفعلية
+        $this->assertNull(collect($this->getJson('/api/hr/org')->json('data'))->firstWhere('id', $new->id));
+        $new->update(['status' => 'active']);
         $node = collect($this->getJson('/api/hr/org')->json('data'))->firstWhere('id', $new->id);
         $this->assertSame($e->department->head_id, $node['manager_id']);
     }

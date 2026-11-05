@@ -11,7 +11,7 @@ export interface Person { id: number; code: string; name: Bi; title: Bi }
 export interface ReqRow {
   kind: 'leave' | 'justify' | 'overtime' | 'service' | 'penalty' | 'exit' | 'internal' | 'salary'; id: number; type: string; type_name: Bi; employee: Person | null; from: string; to: string; hours?: number | null; minutes?: number | null
   ref_date?: string | null; days?: number | null; reason: string; status: ReqStatus
-  warnings: { over_balance?: { days: number; remaining: number }; conflict?: (Bi & { from: string; to: string })[]; issue?: string }
+  warnings: { over_balance?: { days: number; remaining: number }; over_sick?: { days: number; used: number; limit: number }; conflict?: (Bi & { from: string; to: string })[]; issue?: string }
   substitute?: Bi | null; doc?: { id: number; name: string } | null; doc_required?: boolean; paid?: number | null; requested_by?: Bi | null
   amount?: number | null; currency?: 'USD' | 'SYP'; addressee?: { name?: string; cr_no?: string; email?: string; phone?: string } | null; notify_consent?: boolean; data?: { phone?: string } | null; ref_no?: string | null; issued_at?: string | null
   penalty?: { kind: string; days?: number; label: Bi }; last_day?: string; notice_short?: boolean; interview_needed?: boolean; case?: { id: number; ref_no: string; occurrence: number; description: string; type: Bi | null } | null
@@ -20,7 +20,7 @@ export interface ReqRow {
   created_at: string; steps: Step[]; step_id: number | null; can_act: boolean; can_cancel: boolean
 }
 export interface LeaveType { key: string; ar: string; en: string; unit: 'day' | 'hour'; max_days: number | null; notice: boolean; doc: 'none' | 'optional' | 'required'; paid: number; balance: string | null }
-export interface Balance { entitlement: number; used: number; held: number; remaining: number; sick: number; emergency: { used: number; limit: number }; unpaid: { used: number; limit: number }; probation: boolean }
+export interface Balance { entitlement: number; used: number; held: number; remaining: number; sick: number; sick_limit?: number; sick_tiers?: { days: number; paid: number }[]; emergency: { used: number; limit: number }; unpaid: { used: number; limit: number }; probation: boolean }
 export interface MyLeave {
   balance: Balance; types: LeaveType[]; rules: { notice: { max_days: number; days_before: number }[]; hourly_notice_days: number; substitute_required: boolean; hourly_max_per_day: number; justify_hours: number; emergency_report_hours: number }
   requests: ReqRow[]; colleagues: { id: number; code: string; ar: string; en: string; same_dept: boolean }[]

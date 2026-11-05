@@ -60,7 +60,7 @@ export function Apply({ slug, code, refCode }: { slug: string; code: string; ref
   })
 
   const next = async () => {
-    const e = validateStep(step, f, L, { account: dup.account, requiresPhoto: job?.requires_photo }); setErrs(e)
+    const e = validateStep(step, f, L, { account: dup.account, requiresPhoto: job?.requires_photo, minAge: job?.min_age }); setErrs(e)
     if (Object.keys(e).length) return
     if (step === 0) {
       setChecking(true)
@@ -72,7 +72,7 @@ export function Apply({ slug, code, refCode }: { slug: string; code: string; ref
     }
     goStep(step + 1)
   }
-  const send = () => { const e = validateStep(3, f, L, { account: dup.account, requiresPhoto: job?.requires_photo }); setErrs(e); if (!Object.keys(e).length) submit.mutate() }
+  const send = () => { const e = validateStep(3, f, L, { account: dup.account, requiresPhoto: job?.requires_photo, minAge: job?.min_age }); setErrs(e); if (!Object.keys(e).length) submit.mutate() }
 
   const onFile = (file?: File) => {
     if (!file) return
@@ -134,6 +134,7 @@ export function Apply({ slug, code, refCode }: { slug: string; code: string; ref
           <Field label={L('زمرة الدم', 'Blood type')} error={errs.blood}><select className="field" value={f.blood} onChange={e => set('blood', e.target.value)}><option value="">—</option>{['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].map(b => <option key={b}>{b}</option>)}</select></Field>
           <Field label={L('الجوال', 'Mobile')} req error={errs.mobile}>{input('mobile', { className: 'ltr text-start', type: 'tel', autoComplete: 'tel' })}</Field>
           <Field label={L('البريد الإلكتروني', 'Email')} req error={errs.email} hint={signedIn ? L('بريد حسابك', 'Your account email') : L('سيكون اسم الدخول لمتابعة طلباتك', 'This will be your login to track your applications')}>{input('email', { className: 'ltr text-start', type: 'email', autoComplete: 'email', disabled: signedIn })}</Field>
+          {!signedIn && dup.account !== 'existing' && <Field label={L('تأكيد البريد الإلكتروني', 'Confirm email')} req error={errs.email_confirm} hint={L('أعد كتابة بريدك — ستصلك عليه رسائل الطلب', 'Type your email again — application messages go there')}>{input('email_confirm', { className: 'ltr text-start', type: 'email', autoComplete: 'off', onPaste: (e: { preventDefault: () => void }) => e.preventDefault() })}</Field>}
           <Field label={L('عنوان السكن الحالي', 'Current address')} req error={errs.address} className="sm:col-span-2">{input('address')}</Field>
           <Field label="LinkedIn" className="sm:col-span-2" error={errs.linkedin}>{input('linkedin', { className: 'ltr text-start' })}</Field>
         </div>}
@@ -172,7 +173,7 @@ export function Apply({ slug, code, refCode }: { slug: string; code: string; ref
           <div className="grid sm:grid-cols-3 gap-4">
             <Field label={L('الراتب الشهري المتوقع (دولار)', 'Expected monthly salary (USD)')} req error={errs.salary}>{input('salary', { type: 'number', min: 1, className: 'num' })}</Field>
             <Field label={L('تاريخ الجاهزية للمباشرة', 'Available from')} error={errs.availability}>{input('availability', { type: 'date' })}</Field>
-            <Field label={L('كيف عرفت بالوظيفة؟', 'How did you hear?')} error={errs.source}><select className="field" value={f.source} onChange={e => set('source', e.target.value)}><option value="website">{L('موقع الشركة', 'Company website')}</option><option value="linkedin">LinkedIn</option><option value="referral">{L('ترشيح من موظف', 'Employee referral')}</option><option value="expo">{L('المعرض', 'Exhibition')}</option></select></Field>
+            <Field label={L('كيف عرفت بالوظيفة؟', 'How did you hear?')} error={errs.source}><select className="field" value={f.source} onChange={e => set('source', e.target.value)}><option value="website">{L('موقع الشركة', 'Company website')}</option><option value="linkedin">LinkedIn</option><option value="facebook">Facebook</option><option value="whatsapp">WhatsApp</option><option value="telegram">Telegram</option><option value="referral">{L('ترشيح من موظف', 'Employee referral')}</option><option value="other">{L('أخرى', 'Other')}</option></select></Field>
             {f.source === 'referral' && <Field label={L('رمز الإحالة', 'Referral code')} hint={L('من رابط الموظف الذي رشّحك، مثل UHR1007-J1', 'From the referring employee’s link, e.g. UHR1007-J1')} error={errs.ref_code}>{input('ref_code', { className: 'ltr text-start uppercase' })}</Field>}
           </div>
           <div>

@@ -21,12 +21,12 @@ class ViolationCatalog
 
     /** [group, title_ar, title_en, article, penalties, auto] */
     public const DEFAULTS = [
-        ['time', 'التأخر عن مواعيد العمل لمدة تصل إلى 15 دقيقة دون إنذار أو عذر مقبول إذا لم يترتب عن التأخير تعطيل عمال آخرين', 'Late up to 15 minutes without excuse, no disruption to others', '95/ب/3', ['W', 'D0.25', 'D0.5', 'D1'], 'late15'],
-        ['time', 'التأخر عن مواعيد العمل لمدة تصل إلى 15 دقيقة دون إنذار أو عذر مقبول إذا ترتب عن التأخير تعطيل عمال آخرين', 'Late up to 15 minutes without excuse, disrupting others', '95/ب/3', ['D0.25', 'D1', 'D2', 'D3'], null],
-        ['time', 'التأخر عن مواعيد العمل أكثر من 15 دقيقة ولا يزيد عن 30 دقيقة دون إنذار أو عذر مقبول إذا لم يترتب عن التأخير تعطيل عمال آخرين', 'Late 15–30 minutes without excuse, no disruption to others', '95/ب/3', ['D0.25', 'D0.5', 'D1', 'D2'], 'late30'],
-        ['time', 'التأخر عن مواعيد العمل أكثر من 15 دقيقة ولا يزيد عن 30 دقيقة دون إنذار أو عذر مقبول إذا ترتب عن التأخير تعطيل عمال آخرين', 'Late 15–30 minutes without excuse, disrupting others', '95/ب/3', ['D0.5', 'D1', 'D2', 'D3'], null],
-        ['time', 'التأخر عن مواعيد العمل أكثر من 30 دقيقة ولا يزيد عن 60 دقيقة دون إنذار أو عذر مقبول إذا لم يترتب عن التأخير تعطيل عمال آخرين', 'Late 30–60 minutes without excuse, no disruption to others', '95/ب/3', ['D0.5', 'D1', 'D2', 'D3'], 'late60'],
-        ['time', 'التأخر عن مواعيد العمل أكثر من 30 دقيقة ولا يزيد عن 60 دقيقة دون إنذار أو عذر مقبول إذا ترتب عن التأخير تعطيل عمال آخرين', 'Late 30–60 minutes without excuse, disrupting others', '95/ب/3', ['D1', 'D2', 'D3', 'D4'], null],
+        ['time', 'التأخر حتى 15 دقيقة دون إنذار أو عذر مقبول — دون تعطيل أعمال الآخرين', 'Late up to 15 minutes without excuse, no disruption to others', '95/ب/3', ['W', 'D0.25', 'D0.5', 'D1'], 'late15'],
+        ['time', 'التأخر حتى 15 دقيقة دون إنذار أو عذر مقبول — مع تعطيل أعمال الآخرين', 'Late up to 15 minutes without excuse, disrupting others', '95/ب/3', ['D0.25', 'D1', 'D2', 'D3'], null],
+        ['time', 'التأخر من 16 إلى 30 دقيقة دون إنذار أو عذر مقبول — دون تعطيل أعمال الآخرين', 'Late 15–30 minutes without excuse, no disruption to others', '95/ب/3', ['D0.25', 'D0.5', 'D1', 'D2'], 'late30'],
+        ['time', 'التأخر من 16 إلى 30 دقيقة دون إنذار أو عذر مقبول — مع تعطيل أعمال الآخرين', 'Late 15–30 minutes without excuse, disrupting others', '95/ب/3', ['D0.5', 'D1', 'D2', 'D3'], null],
+        ['time', 'التأخر من 31 إلى 60 دقيقة دون إنذار أو عذر مقبول — دون تعطيل أعمال الآخرين', 'Late 30–60 minutes without excuse, no disruption to others', '95/ب/3', ['D0.5', 'D1', 'D2', 'D3'], 'late60'],
+        ['time', 'التأخر من 31 إلى 60 دقيقة دون إنذار أو عذر مقبول — مع تعطيل أعمال الآخرين', 'Late 30–60 minutes without excuse, disrupting others', '95/ب/3', ['D1', 'D2', 'D3', 'D4'], null],
         ['time', 'التأخر عن مواعيد الحضور ساعة أو أكثر دون إنذار أو عذر مقبول', 'Late one hour or more without excuse', '95/ب/3', ['A'], 'late_over'],
         ['time', 'الغياب عن العمل يوماً كاملاً أو أياماً لا تتجاوز الخمسة بدون إذن أو عذر مقبول (مع حسم أجر أيام الغياب)', 'Absence of up to five days without leave or excuse (absent days are also unpaid)', '95/ب/3', ['D0.25', 'D0.5', 'D1', 'D2'], 'absent'],
         ['time', 'ترك العمل أو الانصراف قبل الميعاد المحدد بدون إذن أو عذر', 'Leaving work early without permission or excuse', '95/ب/3', ['D0.25', 'D0.5', 'D1', 'D2'], 'early'],

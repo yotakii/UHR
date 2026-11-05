@@ -33,7 +33,7 @@ class CompanyDefaults
         \App\Support\Forms::seed();
         foreach (Settings::POLICY_DEFAULTS as $key => $value) Policy::firstOrCreate(['key' => $key, 'effective_from' => '2020-01-01'], ['value' => $value]);
 
-        $cats = ['computers' => ['حواسب', 'Computers'], 'phones' => ['هواتف', 'Phones'], 'cards' => ['بطاقات', 'Cards'], 'vehicles' => ['مركبات', 'Vehicles'], 'peripherals' => ['ملحقات', 'Peripherals']];
+        $cats = ['computers' => ['حواسب', 'Computers'], 'phones' => ['هواتف', 'Phones'], 'cards' => ['بطاقات', 'Cards'], 'vehicles' => ['مركبات', 'Vehicles'], 'peripherals' => ['ملحقات', 'Peripherals'], 'office' => ['أدوات مكتبية', 'Office supplies'], 'tools' => ['أدوات عمل مخصصة', 'Job-specific tools']];
         foreach ($cats as $code => [$ar, $en]) AssetCategory::updateOrCreate(['code' => $code], ['name_ar' => $ar, 'name_en' => $en]);
 
         $comp = [['جودة العمل', 'Quality'], ['الالتزام', 'Reliability'], ['العمل الجماعي', 'Teamwork'], ['المبادرة', 'Initiative'], ['التواصل', 'Communication'], ['المعرفة الفنية', 'Expertise']];

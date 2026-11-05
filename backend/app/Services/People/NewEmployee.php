@@ -66,7 +66,8 @@ class NewEmployee
             $v[$k] = self::date($r[$k] ?? null);
             if ($v[$k] === false || ($req && ! $v[$k])) $err[$k] = $v[$k] === false ? L::t("{$ar}: صيغة غير صحيحة (YYYY-MM-DD)", "{$en}: invalid date (YYYY-MM-DD)") : L::t("{$ar} مطلوب", "{$en} is required");
         }
-        if ($v['dob'] && Carbon::parse($v['dob'])->diffInYears(now()) < 16) $err['dob'] = L::t('العمر أقل من 16 سنة', 'Younger than 16');
+        $min = (int) \App\Support\Settings::rule('min_age');
+        if ($v['dob'] && Carbon::parse($v['dob'])->diffInYears(now()) < $min) $err['dob'] = L::t("العمر أقل من {$min} سنة", "Younger than {$min}");
 
         $dept = $r['department_id'] ?? null ? Department::find((int) $r['department_id']) : self::byCodeOrName(Department::class, $txt('department'));
         $loc = $r['location_id'] ?? null ? Location::where('active', true)->find((int) $r['location_id']) : self::byCodeOrName(Location::class, $txt('location'));

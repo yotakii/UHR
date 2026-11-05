@@ -46,7 +46,7 @@ class DepartmentController extends Controller
     private function valid(Request $request, ?Department $d = null): array
     {
         $v = $request->validate([
-            'code' => ['required', 'string', 'regex:/^[a-z][a-z0-9_]{1,19}$/', Rule::unique('departments', 'code')->where('company_id', \App\Support\Tenant::id())->ignore($d?->id)],
+            'code' => ['required', 'string', 'regex:/^[A-Za-z][A-Za-z0-9_-]{1,19}$/', Rule::unique('departments', 'code')->where('company_id', \App\Support\Tenant::id())->ignore($d?->id)],
             'ar' => ['required', 'string', 'max:120'], 'en' => ['required', 'string', 'max:120'], 'headcount' => ['required', 'integer', 'between:0,10000'],
             'color' => ['required', Rule::in(self::COLORS)], 'sort' => ['nullable', 'integer', 'between:0,999'], 'active' => ['required', 'boolean'],
             'head_id' => ['nullable', 'integer', Rule::exists('employees', 'id')->where('company_id', \App\Support\Tenant::id())],

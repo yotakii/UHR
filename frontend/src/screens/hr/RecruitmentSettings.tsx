@@ -126,6 +126,7 @@ export function RecruitmentSettings() {
         <Panel title={L('أخرى', 'Other')}>
           {num(r.cv_retention_months, v => setR({ ...r, cv_retention_months: v }), L('مدة الاحتفاظ بالسيرة قبل الأرشفة', 'Keep CVs before archiving'), { max: 120, suffix: L('شهر', 'mo') })}
           {num(r.probation_at, v => setR({ ...r, probation_at: v }), L('بنود F-19 المنجزة لبدء فترة التجربة', 'F-19 items done to start probation'), { max: 28, suffix: L('بند', 'items') })}
+          {num(r.min_age ?? 18, v => setR({ ...r, min_age: v }), L('الحد الأدنى لعمر المتقدم أو الموظف', 'Minimum age of applicants and employees'), { max: 30, suffix: L('سنة', 'y') })}
         </Panel>
         <Panel title={L('الترشيح الداخلي (F-27)', 'Internal applications (F-27)')}>
           {num(r.internal_min_months, v => setR({ ...r, internal_min_months: v }), L('أقل مدة خدمة للترشيح', 'Minimum service to apply'), { max: 120, suffix: L('شهر', 'mo') })}

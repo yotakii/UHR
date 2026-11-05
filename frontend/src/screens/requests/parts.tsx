@@ -45,9 +45,10 @@ export function Warnings({ r }: { r: Pick<ReqRow, 'warnings'> & Partial<Pick<Req
   const L = useL(); const lang = useLang()
   const w = r.warnings
   const noDoc = r.doc_required && !r.doc && (!r.status || r.status.startsWith('pending'))
-  if (!w.over_balance && !w.conflict?.length && !noDoc) return null
+  if (!w.over_balance && !w.over_sick && !w.conflict?.length && !noDoc) return null
   return <div className="mt-1 space-y-0.5 text-[11.5px]">
     {w.over_balance && <div className="text-danger">{L(`يتجاوز الرصيد: ${w.over_balance.days} من ${w.over_balance.remaining} متبقٍ`, `Over balance: ${w.over_balance.days} of ${w.over_balance.remaining} left`)}</div>}
+    {w.over_sick && <div className="text-danger">{L(`يتجاوز حد المرضية السنوي: ${w.over_sick.used} + ${w.over_sick.days} من ${w.over_sick.limit} يوماً`, `Over the yearly sick limit: ${w.over_sick.used} + ${w.over_sick.days} of ${w.over_sick.limit} days`)}</div>}
     {w.conflict?.length ? <div className="text-warn">{L('تعارض في الإدارة: ', 'Clash in department: ')}{w.conflict.map(c => bi(c, lang)).join('، ')}</div> : null}
     {noDoc && <div className="text-warn">{L('المستند المطلوب لم يُرفق بعد', 'Required document not attached yet')}</div>}
   </div>
@@ -65,7 +66,7 @@ export function DecideButtons({ r, rejectMin }: { r: ReqRow; rejectMin: number }
   if (!r.can_act || !r.step_id) return null
   const pending = r.steps.find(s => s.status === 'pending')
   const last = r.steps.filter(s => s.status === 'waiting').length === 0
-  const needsNote = !!r.warnings.over_balance || !!r.warnings.conflict?.length
+  const needsNote = !!r.warnings.over_balance || !!r.warnings.over_sick || !!r.warnings.conflict?.length
   return <>
     <div className="flex gap-1.5 justify-end flex-wrap max-sm:flex-col max-sm:items-stretch">
       <Btn size="sm" kind="primary" onClick={() => setD('approve')}>{last ? L('اعتماد نهائي', 'Final approve') : pending ? L(`اعتماد ${pending.role.ar}`, `Approve as ${pending.role.en}`) : L('اعتماد', 'Approve')}</Btn>

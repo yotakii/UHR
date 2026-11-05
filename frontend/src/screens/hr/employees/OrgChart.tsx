@@ -25,7 +25,10 @@ export function OrgChart() {
 
   const emps = data.data
   const kids = (id: number) => emps.filter(e => e.manager_id === id && e.id !== id)
-  const root = emps.find(e => !e.manager_id) ?? emps[0]
+  // كل من لا مدير له داخل القائمة جذرٌ (ملاحظة الاختبار 65: موظف بلا مدير — مثل مدير الموارد البشرية — كان يختفي من العرض ويظهر في الطباعة فقط)
+  const ids = new Set(emps.map(e => e.id))
+  const roots = emps.filter(e => !e.manager_id || !ids.has(e.manager_id) || e.manager_id === e.id).sort((a, b) => kids(b.id).length - kids(a.id).length)
+  const root = roots[0] ?? emps[0]
   const ql = q.trim().toLowerCase()
   const hit = (e: OrgNode) => !!ql && (e.name.ar.includes(q.trim()) || e.name.en.toLowerCase().includes(ql) || e.code.toLowerCase().includes(ql))
   const isOpen = (e: OrgNode, depth: number) => !closed[e.id] && (depth < 2 || !!ql || closed[e.id] === false)
@@ -75,11 +78,11 @@ export function OrgChart() {
       <div ref={box} className="hidden md:block rounded-2xl border border-line bg-sub/40 overflow-hidden p-4" style={{ direction: 'ltr' }}>
         <div className="relative" style={{ height: size.h ? size.h * scale + 16 : undefined }}>
           <div ref={tree} className="absolute top-2 w-max origin-top-left transition-transform" style={{ left: Math.max(0, (size.cw - size.w * scale) / 2), transform: `scale(${scale})` }}>
-            <ul className="flex justify-center pb-4" style={{ direction: 'ltr' }}><Node e={root} depth={0} /></ul>
+            <ul className="flex justify-center items-start gap-6 pb-4" style={{ direction: 'ltr' }}>{roots.map(r => <Node key={r.id} e={r} depth={0} />)}</ul>
           </div>
         </div>
       </div>
-      <ul className="md:hidden space-y-1.5"><Row e={root} depth={0} /></ul>
+      <ul className="md:hidden space-y-1.5">{roots.map(r => <Row key={r.id} e={r} depth={0} />)}</ul>
     </>}
   </div>
 }

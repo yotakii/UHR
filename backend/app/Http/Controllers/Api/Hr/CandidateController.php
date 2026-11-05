@@ -82,6 +82,7 @@ class CandidateController extends Controller
             'basic' => ['required', 'numeric', 'min:1', 'max:100000000'], 'housing' => ['required', 'numeric', 'min:0'], 'transport' => ['required', 'numeric', 'min:0'], 'fuel' => ['required', 'numeric', 'min:0'],
             'leave_days' => ['required', 'integer', 'between:0,60'], 'start_date' => ['required', 'date', 'after_or_equal:today'],
         ], ['required' => L::t('هذا الحقل مطلوب', 'This field is required'), 'start_date.after_or_equal' => L::t('تاريخ المباشرة لا يكون في الماضي', 'The start date cannot be in the past'), 'basic.min' => L::t('أدخل الراتب الأساسي', 'Enter the basic salary')]);
+        \App\Services\Security\SalaryVault::require($request->user());   // كتابة مبالغ العرض بعد التحقق فقط
         $c = Candidate::findOrFail($id);
         $this->pipeline->offer($c, $data, $request->user());
         return response()->json(['data' => HrCandidate::full($c->refresh(), $request->user())]);

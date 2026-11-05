@@ -31,6 +31,7 @@ class PublicJob
         return self::card($j) + [
             'requirements' => $j->requirements, 'openings' => $j->openings, 'degree' => $j->degree,
             'degree_label' => MatchScore::DEGREES[$j->degree] ?? null, 'requires_photo' => $j->requires_photo,
+            'min_age' => (int) \App\Support\Tenant::run($j->company_id, fn () => \App\Support\Settings::rule('min_age')),
             'company_about' => ['ar' => $j->company->about_ar, 'en' => $j->company->about_en],
         ];
     }

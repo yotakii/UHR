@@ -1,7 +1,7 @@
-import type { ReactNode } from 'react'
-import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed, Megaphone, Gift, ClipboardCheck, SlidersHorizontal, Sprout, KeyRound, Building, UserCog, GitBranch, BellRing, Library, History, DatabaseBackup, ScanText, MessagesSquare } from 'lucide-react'
+import { useEffect, type ReactNode } from 'react'
+import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed, Megaphone, Gift, ClipboardCheck, SlidersHorizontal, Sprout, KeyRound, Building, UserCog, GitBranch, BellRing, Library, History, DatabaseBackup, ScanText, MessagesSquare, ArrowRight, ArrowLeft, X, CalendarDays } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
-import { useRoute } from '../../lib/router'
+import { navigate, useRoute } from '../../lib/router'
 import { can, type SessionUser } from '../../lib/session'
 import { useDashboard } from '../../lib/console'
 import { useInbox } from '../../lib/requests'
@@ -9,6 +9,7 @@ import { hrLink } from '../../lib/hr'
 import { Empty, PageHead } from '../../ui/kit'
 import { Shell, type NavItem } from '../console/Shell'
 import { Dashboard } from './Dashboard'
+import { MyHolidays } from '../employee/MyHolidays'
 import { Jobs } from './Jobs'
 import { Permissions } from './Permissions'
 import { Forms } from './Forms'
@@ -118,6 +119,7 @@ export function HrApp({ user }: { user: SessionUser }) {
     { item: { to: '/hr/my-discipline', icon: <ShieldAlert size={17} />, label: L('إنذاراتي وشكاواي', 'Warnings & complaints'), group: g2 }, module: u => !!u.employee, view: () => <MyDiscipline /> },
     { item: { to: '/hr/my-resignation', icon: <LogOut size={17} />, label: L('الاستقالة', 'Resignation'), group: g2 }, module: u => !!u.employee, view: () => <MyResignation base="/hr/my-resignation" /> },
     { item: { to: '/hr/my-reviews', icon: <ClipboardCheck size={17} />, label: L('تقييماتي', 'My reviews'), group: g2 }, module: u => !!u.employee, view: () => <MyReviews /> },
+    { item: { to: '/hr/my-holidays', icon: <CalendarDays size={17} />, label: L('العطل الرسمية', 'Public holidays'), group: g2 }, module: () => true, view: () => <MyHolidays /> },
     { item: { to: '/hr/my-rewards', icon: <Gift size={17} />, label: L('مكافآتي', 'My rewards'), group: g2 }, module: u => !!u.employee, view: () => <MyRewards /> },
     { item: { to: '/hr/my-news', icon: <Megaphone size={17} />, label: L('إعلانات الشركة', 'Company news'), group: g2 }, module: u => !!u.employee && !can(u, 'announcements'), view: () => <MyAnnouncements /> },
     { item: { to: '/hr/my-documents', icon: <FileSignature size={17} />, label: L('وثائقي للتوقيع', 'My documents'), group: g2 }, module: u => !!u.employee, view: () => <MyDocuments /> },
@@ -151,8 +153,23 @@ export function HrApp({ user }: { user: SessionUser }) {
 
   return <Shell items={allowed.map(p => p.item)} user={user} org={user.company ? bi(user.company.short, lang) : ''} sub={L('مركز عمليات الموارد البشرية', 'People Operations Center')}
     linkOf={hrLink} search={{ employee: id => `/hr/employees/${id}`, candidate: id => `/hr/candidates/${id}`, job: () => '/hr/jobs' }}>
+    {page?.section && <SettingsBar title={page.item.label} />}
     {page?.view ? page.view() : page ? <Soon title={page.item.label} task={page.task!} /> : <NotAllowed />}
   </Shell>
+}
+
+/** ملاحظة الاختبار 43: كل صفحة إعدادات لها شريط «الإعدادات ‹ الصفحة» وزر إغلاق يعيد إلى مركز الإعدادات (Esc أيضاً إن لم تكن نافذة مفتوحة) */
+function SettingsBar({ title }: { title: string }) {
+  const L = useL(); const lang = useLang()
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => { if (e.key === 'Escape' && !document.querySelector('[role="dialog"]') && !(e.target as HTMLElement)?.closest?.('input,textarea,select')) navigate('/hr/settings') }
+    window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k)
+  }, [])
+  return <div className="max-w-[1200px] mx-auto mb-3 flex items-center gap-2 text-[13px]" data-noprint>
+    <a href="/hr/settings" className="text-ink-3 hover:text-brand inline-flex items-center gap-1">{lang === 'ar' ? <ArrowRight size={14} /> : <ArrowLeft size={14} />}{L('الإعدادات', 'Settings')}</a>
+    <span className="text-ink-3">/</span><span className="font-semibold truncate">{title}</span>
+    <a href="/hr/settings" className="ms-auto inline-flex items-center gap-1 rounded-lg border border-line px-2.5 py-1 text-ink-2 hover:bg-sub" aria-label={L('إغلاق الإعدادات', 'Close settings')}><X size={14} />{L('إغلاق', 'Close')}</a>
+  </div>
 }
 
 function Soon({ title, task }: { title: string; task: string }) {

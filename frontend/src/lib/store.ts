@@ -50,3 +50,18 @@ export function ev(ar: string, en: string, kind: LogEvent['kind'] = 'info', form
 }
 
 export * from './dates'
+
+/** تقسيم نص عادي إلى نص وروابط وبريد إلكتروني (للتعاميم وما شابهها) — يُعرض كعناصر React لا HTML */
+export type LinkChunk = { t: 'text' | 'url' | 'email'; v: string }
+export function linkChunks(s: string): LinkChunk[] {
+  const out: LinkChunk[] = []
+  const re = /(https?:\/\/[^\s<>()]+[^\s<>().,،؛:!?])|([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/g
+  let last = 0
+  for (const m of s.matchAll(re)) {
+    if (m.index! > last) out.push({ t: 'text', v: s.slice(last, m.index) })
+    out.push({ t: m[1] ? 'url' : 'email', v: m[0] })
+    last = m.index! + m[0].length
+  }
+  if (last < s.length) out.push({ t: 'text', v: s.slice(last) })
+  return out
+}

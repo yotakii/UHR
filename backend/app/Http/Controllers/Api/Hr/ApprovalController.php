@@ -17,12 +17,13 @@ class ApprovalController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
+        $pay = \App\Services\Security\SalaryVault::open($user);
         $items = Appointment::with(['approvals', 'candidate.jobOpening.department', 'candidate.offer'])->latest('issued_at')->get()
             ->filter(fn ($ap) => ($cur = AppointmentFlow::current($ap)) && AppointmentFlow::canDecide($user, $cur))
             ->map(fn ($ap) => ['candidate' => HrCandidate::card($ap->candidate) + ['name_ar' => $ap->candidate->name, 'gender' => $ap->candidate->gender],
                 'job' => ['title' => ['ar' => $ap->candidate->jobOpening->title_ar, 'en' => $ap->candidate->jobOpening->title_en], 'dept' => ['ar' => $ap->candidate->jobOpening->department->name_ar, 'en' => $ap->candidate->jobOpening->department->name_en]],
-                'offer' => $ap->candidate->offer ? ['title' => $ap->candidate->offer->title, 'currency' => $ap->candidate->offer->currency, 'basic' => $ap->candidate->offer->basic, 'housing' => $ap->candidate->offer->housing,
-                    'transport' => $ap->candidate->offer->transport, 'fuel' => $ap->candidate->offer->fuel, 'total' => $ap->candidate->offer->total(), 'start_date' => $ap->candidate->offer->start_date?->toDateString(),
+                'offer' => $ap->candidate->offer ? ['title' => $ap->candidate->offer->title, 'currency' => $ap->candidate->offer->currency, 'basic' => $pay ? $ap->candidate->offer->basic : null, 'housing' => $pay ? $ap->candidate->offer->housing : null,
+                    'transport' => $pay ? $ap->candidate->offer->transport : null, 'fuel' => $pay ? $ap->candidate->offer->fuel : null, 'total' => $pay ? $ap->candidate->offer->total() : null, 'masked' => ! $pay, 'start_date' => $ap->candidate->offer->start_date?->toDateString(),
                     'contract' => $ap->candidate->offer->contract, 'leave_days' => $ap->candidate->offer->leave_days] : null,
                 'appointment' => HrCandidate::appointment($ap, $ap->candidate, $user)])->values();
         return response()->json(['data' => $items]);

@@ -45,3 +45,22 @@ export function DecisionDialog({ open, onClose, title, subject, confirmLabel, to
     </div>
   </Modal>
 }
+
+/**
+ * زر إرسال بخطوتين (ملاحظة الاختبار 84): الضغطة الأولى تعرض «تأكيد الإرسال / تراجع» مع ملخص قصير، والثانية ترسل.
+ * يُستخدم لطلبات الموظف (الإجازة، الخدمات…) — القرارات تمر أصلاً بنافذة القرار ذات الخطوتين.
+ */
+export function ConfirmSend({ label, confirmLabel, summary, busy, disabled, onConfirm, className = '', block }: {
+  label: ReactNode; confirmLabel?: ReactNode; summary?: ReactNode; busy?: boolean; disabled?: boolean; onConfirm: () => void; className?: string; block?: boolean
+}) {
+  const L = useL()
+  const [ask, setAsk] = useState(false)
+  useEffect(() => { if (disabled) setAsk(false) }, [disabled])
+  if (!ask) return <Btn kind="primary" className={`${block ? 'w-full' : ''} ${className}`} disabled={disabled || busy} onClick={() => setAsk(true)}>{label}</Btn>
+  return <div className={`rounded-lg border border-brand/40 bg-brand-soft/60 p-2.5 ${block ? 'w-full' : ''} ${className}`} role="group" aria-label={L('تأكيد الإرسال', 'Confirm sending')}>
+    <div className="text-[13px] font-semibold flex items-center gap-1.5"><ShieldCheck size={15} className="text-brand" />{L('تأكيد إرسال الطلب؟', 'Send this request?')}</div>
+    {summary && <div className="text-[12.5px] text-ink-2 mt-1">{summary}</div>}
+    <div className="flex gap-2 mt-2 justify-end"><Btn size="sm" onClick={() => setAsk(false)} disabled={busy}>{L('تراجع', 'Back')}</Btn>
+      <Btn size="sm" kind="primary" disabled={busy} onClick={() => { onConfirm() }} autoFocus>{busy ? L('جارٍ الإرسال…', 'Sending…') : confirmLabel ?? L('تأكيد الإرسال', 'Confirm and send')}</Btn></div>
+  </div>
+}

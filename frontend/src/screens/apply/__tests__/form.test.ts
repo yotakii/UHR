@@ -3,7 +3,7 @@ import { emptyForm, validateStep, toFormData, stepOf, fromProfile, type ApplyFor
 
 const L = (_ar: string, en: string) => en
 const filled = (): ApplyForm => ({
-  ...emptyForm(), name: 'سارة الأحمد', gender: 'F', marital: 'single', dob: '1997-03-14', national_id: '0102', mobile: '+963 944 555 123', email: 'sara@mail.sy', address: 'دمشق',
+  ...emptyForm(), name: 'سارة الأحمد', gender: 'F', marital: 'single', dob: '1997-03-14', national_id: '0102', mobile: '+963 944 555 123', email: 'sara@mail.sy', email_confirm: 'Sara@mail.sy', address: 'دمشق',
   institute: 'جامعة دمشق', major: 'محاسبة', years_exp: '4', salary: '750', password: 'Sara2026pw', password_confirmation: 'Sara2026pw', agree_info: true, agree_medical: true, agree_data: true,
 })
 
@@ -18,6 +18,15 @@ describe('F-28 wizard validation', () => {
   it('passes a complete form on every step', () => {
     for (const i of [0, 1, 2, 3]) expect(validateStep(i, filled(), L)).toEqual({})
   })
+  it('requires the email twice and a minimum age (tests 20 and 55)', () => {
+    const today = new Date('2026-10-12T12:00:00')
+    expect(validateStep(0, { ...filled(), email_confirm: 'sarah@mail.sy' }, L).email_confirm).toMatch(/do not match/)
+    expect(validateStep(0, { ...filled(), email_confirm: '' }, L, { account: 'existing' }).email_confirm).toBeUndefined()
+    expect(validateStep(0, { ...filled(), dob: '2008-10-13' }, L, { today }).dob).toBe('Applicants must be at least 18 years old')
+    expect(validateStep(0, { ...filled(), dob: '2008-10-12' }, L, { today }).dob).toBeUndefined()
+    expect(validateStep(0, { ...filled(), dob: '2006-10-13' }, L, { today, minAge: 20 }).dob).toBe('Applicants must be at least 20 years old')
+  })
+
   it('checks email format, password strength and both declarations', () => {
     expect(validateStep(0, { ...filled(), email: 'bad' }, L).email).toBe('Invalid email format')
     const e = validateStep(3, { ...filled(), password: 'abcdefgh', password_confirmation: 'x', agree_info: false }, L)

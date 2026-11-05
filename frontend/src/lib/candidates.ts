@@ -16,7 +16,7 @@ export interface CandCard {
 export interface MatchPart { key: string; ar: string; en: string; weight: number; score: number; note_ar: string; note_en: string }
 export interface HrOffer {
   title: string; contract: 'fixed' | 'open' | 'project'; currency: 'USD' | 'SYP'; basic: number; housing: number; transport: number; fuel: number; total: number
-  leave_days: number; start_date: string; issued_at: string; status: OfferStatus; responded_at: string | null; note: string | null; signature: string | null
+  leave_days: number; start_date: string; issued_at: string; status: OfferStatus; masked?: boolean; responded_at: string | null; note: string | null; signature: string | null
 }
 export interface Approval { id: number; level: number; role: Bi; name: string; status: 'pending' | 'approved' | 'rejected'; at: string | null }
 export interface HrAppointment {
@@ -48,7 +48,7 @@ export const FIT: Record<CvFit, [string, string, 'brand' | 'info' | 'brass' | 'n
   strong: ['ملاءمة عالية', 'Strong fit', 'brand'], good: ['ملاءمة جيدة', 'Good fit', 'info'], partial: ['ملاءمة جزئية', 'Partial fit', 'brass'], weak: ['ملاءمة ضعيفة', 'Weak fit', 'neutral'],
 }
 export type OfferInput = Pick<HrOffer, 'title' | 'contract' | 'currency' | 'basic' | 'housing' | 'transport' | 'fuel' | 'leave_days' | 'start_date'>
-export interface Rules { match_threshold: number; review_min: number; reject_max: number; auto_reject: boolean; auto_screen: boolean; sla_alerts: boolean; whatsapp_nudge: boolean; referral_stages: number[]; hard_to_fill_x: number; cv_retention_months: number; probation_at: number; internal_min_months: number; internal_no_probation: boolean; internal_clean_months: number }
+export interface Rules { match_threshold: number; review_min: number; reject_max: number; auto_reject: boolean; auto_screen: boolean; sla_alerts: boolean; whatsapp_nudge: boolean; referral_stages: number[]; hard_to_fill_x: number; cv_retention_months: number; probation_at: number; min_age?: number; internal_min_months: number; internal_no_probation: boolean; internal_clean_months: number }
 /** معايرة المطابقة — كل القيم نسب مئوية (عدا السنوات ومعامل الخصم) */
 export interface MatchConfig {
   weights: Record<'exp' | 'deg' | 'sal' | 'eng' | 'file', number>
@@ -59,7 +59,7 @@ export interface MatchConfig {
   file: { cv: boolean; education: boolean; experience: boolean; refs: boolean; linkedin: boolean }
 }
 export interface RulesData { rules: Rules; stage_sla: Record<string, number>; match: MatchConfig; defaults: { rules: Rules; stage_sla: Record<string, number>; match: MatchConfig } }
-export interface MyApprovalItem { candidate: CandCard & { name_ar: string; gender: 'M' | 'F' }; job: { title: Bi; dept: Bi }; offer: (OfferInput & { total: number }) | null; appointment: HrAppointment }
+export interface MyApprovalItem { candidate: CandCard & { name_ar: string; gender: 'M' | 'F' }; job: { title: Bi; dept: Bi }; offer: (OfferInput & { total: number | null; masked?: boolean }) | null; appointment: HrAppointment }
 
 export const useBoard = (job?: number, q?: string) => useQuery({
   queryKey: ['hr', 'candidates', job ?? 0, q ?? ''],

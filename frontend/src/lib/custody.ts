@@ -14,7 +14,7 @@ export interface AssetRow {
 export interface Movement { action: string; at: string; employee: (Bi & { id: number }) | null; condition: Condition | null; note: string | null; by: Bi | null }
 export interface CustodyPage {
   summary: { issued: number; issued_value: number; pending: number; available: number; maintenance: number; retired: number; total: number }
-  data: AssetRow[]; categories: (Bi & { id: number; code: string })[]; employees: (Bi & { id: number; code: string })[]
+  data: AssetRow[]; categories: (Bi & { id: number; code: string; count: number })[]; employees: (Bi & { id: number; code: string })[]
   can: { create: boolean; edit: boolean; export: boolean }
 }
 export interface AssetInput { name_ar: string; name_en: string; asset_category_id: number | ''; serial: string; value: number | ''; condition: Condition; purchased_at: string; notes: string }
@@ -29,6 +29,10 @@ export const useSaveAsset = (id: number | null) => useMutation({
 export const useAssetAction = () => useMutation({
   mutationFn: (v: { id: number; action: 'issue' | 'return' | 'status'; body: Record<string, unknown> }) => api<{ data: AssetRow }>(`/hr/custody/${v.id}/${v.action}`, { json: v.body }).then(r => r.data), onSuccess: refresh,
 })
+export const useSaveCategory = () => useMutation({
+  mutationFn: (v: { id?: number; code?: string; name_ar: string; name_en: string }) => api(v.id ? `/hr/custody/categories/${v.id}` : '/hr/custody/categories', { method: v.id ? 'PUT' : 'POST', json: v }), onSuccess: refresh,
+})
+export const useDeleteCategory = () => useMutation({ mutationFn: (id: number) => api(`/hr/custody/categories/${id}`, { method: 'DELETE' }), onSuccess: refresh })
 export async function downloadCustody(f: { q: string; status: string; category: string }) {
   const r = await fetch(`/api/hr/custody/export?${qs(f)}`, { credentials: 'same-origin', headers: { 'X-XSRF-TOKEN': xsrf() } })
   if (!r.ok) throw new Error(String(r.status))

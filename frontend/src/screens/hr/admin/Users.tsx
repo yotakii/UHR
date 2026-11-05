@@ -3,7 +3,7 @@ import { KeyRound, Loader2, Lock, LockOpen, Pencil, Plus, Search, ShieldOff, Unl
 import { useL, useLang, bi, fmtDateTime } from '../../../lib/store'
 import { ApiError } from '../../../lib/api'
 import { setQuery, useRoute } from '../../../lib/router'
-import { useAdminUsers, useCreateUser, useUpdateUser, useUserAction, useSaveAccountSettings, type AdminUser, type UserAction } from '../../../lib/admin'
+import { useAdminUsers, useCreateUser, useUpdateUser, useUserAction, useSaveAccountSettings, type AdminUser, type UserAction, type AccountSettings } from '../../../lib/admin'
 import { Badge, Btn, Empty, Field, Modal, PageHead, Panel, Seg, toast } from '../../../ui/kit'
 import { DecisionDialog } from '../../../ui/decision'
 import { InviteLinkModal } from '../../../ui/invite'
@@ -26,7 +26,7 @@ export function Users() {
     unlock: L('فك قفل الدخول', 'Unlock sign-in'), 'reset-mfa': L('إلغاء ربط التحقق بخطوتين', 'Reset two-step verification') }
   return <div className="max-w-[1200px] mx-auto space-y-5">
     <PageHead title={L('المستخدمون والأدوار', 'Users & roles')} sub={L('حسابات الشركة وأدوارها. الصلاحيات التفصيلية لكل دور من صفحة «الصلاحيات».', 'Company accounts and their roles. Detailed permissions per role are on the “Permissions” page.')}
-      actions={<>{d?.can.settings && <Btn icon={<Settings2 size={16} />} onClick={() => setSettings(true)}>{L('صلاحية الروابط', 'Link validity')}</Btn>}
+      actions={<>{d?.can.settings && <Btn icon={<Settings2 size={16} />} onClick={() => setSettings(true)}>{L('سياسة الحسابات', 'Account policy')}</Btn>}
         {d?.can.create && <Btn kind="primary" icon={<Plus size={16} />} onClick={() => setCreate(true)}>{L('حساب جديد', 'New account')}</Btn>}</>} />
     <div className="flex flex-wrap items-center gap-2">
       <form className="relative flex-1 min-w-[220px] max-w-md" onSubmit={e => { e.preventDefault(); setQuery({ q: q || undefined }) }}>
@@ -61,20 +61,32 @@ export function Users() {
         : L('يصله رابط تفعيل جديد، ويتوقف الرابط السابق.', 'They receive a new activation link; the previous one stops working.')}</div>}</>}
       onConfirm={() => act.mutateAsync({ id: ask!.u.id, action: ask!.a }).then(r => { if (r.link) setLink({ email: r.data.email, url: r.link, reset: r.data.activated }); else toast(L('تم', 'Done')) }).catch(e => { toast(e instanceof ApiError ? e.message : String(e)); throw e })} />
     {link && <InviteLinkModal email={link.email} link={link.url} reset={link.reset} onClose={() => setLink(null)} />}
-    {settings && d && <LinkSettings hours={d.settings.invite_hours} onClose={() => setSettings(false)} />}
+    {settings && d && <LinkSettings s={d.settings} onClose={() => setSettings(false)} />}
   </div>
 }
 
-function LinkSettings({ hours, onClose }: { hours: number; onClose: () => void }) {
+/** سياسة الحسابات: صلاحية الروابط + كلمة المرور + محاولات الدخول (ملاحظة الاختبار 81) */
+function LinkSettings({ s, onClose }: { s: AccountSettings; onClose: () => void }) {
   const L = useL()
   const save = useSaveAccountSettings()
-  const [v, setV] = useState(String(hours))
+  const [v, setV] = useState<AccountSettings>({ invite_hours: s.invite_hours, pw_min: s.pw_min ?? 8, pw_upper: !!s.pw_upper, pw_symbol: !!s.pw_symbol, max_attempts: s.max_attempts ?? 5, lock_minutes: s.lock_minutes ?? 5 })
   const err = save.error instanceof ApiError ? save.error : null
-  return <Modal open onClose={onClose} title={L('صلاحية روابط الحساب', 'Account link validity')}
-    footer={<><Btn onClick={onClose}>{L('إلغاء', 'Cancel')}</Btn><Btn kind="primary" disabled={save.isPending} onClick={() => save.mutate({ invite_hours: Number(v) }, { onSuccess: () => { toast(L('حُفظت', 'Saved')); onClose() } })}>{L('حفظ', 'Save')}</Btn></>}>
-    <Field label={L('مدة صلاحية رابط التفعيل ورابط كلمة المرور (بالساعات)', 'Activation and password links stay valid for (hours)')} error={err?.field('invite_hours')} hint={L('من 1 إلى 720 ساعة. تنطبق على الروابط الجديدة.', '1–720 hours. Applies to new links.')}>
-      <input className="field num ltr text-start" type="number" min={1} max={720} value={v} onChange={e => setV(e.target.value)} /></Field>
-    <p className="mt-3 text-[12.5px] text-ink-3">{L('الافتراضي 72 ساعة (3 أيام).', 'Default 72 hours (3 days).')}</p>
+  const num = (k: 'invite_hours' | 'pw_min' | 'max_attempts' | 'lock_minutes', label: string, min: number, max: number, hint?: string) =>
+    <Field label={label} error={err?.field(k)} hint={hint}><input className="field num ltr text-start" type="number" min={min} max={max} value={v[k]} onChange={e => setV({ ...v, [k]: Number(e.target.value) })} /></Field>
+  const tog = (k: 'pw_upper' | 'pw_symbol', label: string) => <label className="flex items-center gap-2 text-[13.5px] cursor-pointer"><input type="checkbox" className="accent-[var(--primary)] size-4" checked={v[k]} onChange={e => setV({ ...v, [k]: e.target.checked })} />{label}</label>
+  return <Modal open onClose={onClose} width={620} title={L('سياسة الحسابات', 'Account policy')}
+    footer={<><Btn onClick={() => setV({ invite_hours: 72, pw_min: 8, pw_upper: false, pw_symbol: false, max_attempts: 5, lock_minutes: 5 })}>{L('القيم الافتراضية', 'Defaults')}</Btn><span className="flex-1" />
+      <Btn onClick={onClose}>{L('إلغاء', 'Cancel')}</Btn><Btn kind="primary" disabled={save.isPending} onClick={() => save.mutate(v, { onSuccess: () => { toast(L('حُفظت', 'Saved')); onClose() } })}>{L('حفظ', 'Save')}</Btn></>}>
+    <div className="space-y-5">
+      <section><h4 className="font-semibold text-[14px] mb-2">{L('كلمة المرور', 'Password')}</h4>
+        <div className="grid sm:grid-cols-2 gap-3 items-end">{num('pw_min', L('أقل عدد أحرف', 'Minimum length'), 6, 64, L('من 6 إلى 64. الحرف والرقم مطلوبان دائماً.', '6–64. A letter and a number are always required.'))}
+          <div className="space-y-2 pb-1">{tog('pw_upper', L('حرف لاتيني كبير وآخر صغير', 'Upper- and lowercase letters'))}{tog('pw_symbol', L('رمز واحد على الأقل', 'At least one symbol'))}</div></div>
+        <p className="text-[12px] text-ink-3 mt-2">{L('تنطبق عند اختيار كلمة مرور جديدة أو تغييرها؛ كلمات المرور الحالية تبقى صالحة.', 'Applies when a password is chosen or changed; current passwords keep working.')}</p></section>
+      <section><h4 className="font-semibold text-[14px] mb-2">{L('محاولات الدخول', 'Sign-in attempts')}</h4>
+        <div className="grid sm:grid-cols-2 gap-3">{num('max_attempts', L('المحاولات الخاطئة قبل القفل', 'Wrong attempts before lock'), 3, 20)}{num('lock_minutes', L('مدة القفل (دقيقة)', 'Lock duration (minutes)'), 1, 1440)}</div></section>
+      <section><h4 className="font-semibold text-[14px] mb-2">{L('روابط الحساب', 'Account links')}</h4>
+        {num('invite_hours', L('صلاحية رابط التفعيل ورابط كلمة المرور (ساعة)', 'Activation and password links valid for (hours)'), 1, 720, L('من 1 إلى 720. تنطبق على الروابط الجديدة.', '1–720. Applies to new links.'))}</section>
+    </div>
   </Modal>
 }
 

@@ -36,6 +36,7 @@ class HrCandidate
         $c->loadMissing([...self::WITH, 'cv', 'photo', 'interview', 'offer.signature', 'internalEmployee', 'logs', 'jobOpening.location']);
         $job = $c->jobOpening; $o = $c->offer; $ap = $c->appointment;
         $m = MatchScore::compute($c, $job);
+        $pay = \App\Services\Security\SalaryVault::open($viewer);   // ملاحظة الاختبار 82: مبالغ العرض لا تظهر (ولا تُطبع) قبل التحقق
         return array_merge(self::card($c), [
             'name_ar' => $c->name, 'name_en' => $c->name_en, 'gender' => $c->gender, 'marital' => $c->marital, 'nationality' => $c->nationality, 'dob' => $c->dob?->toDateString(), 'pob' => $c->pob,
             'national_id' => $c->national_id, 'blood' => $c->blood, 'email' => $c->email, 'mobile' => $c->mobile, 'address' => $c->address, 'linkedin' => $c->linkedin,
@@ -50,8 +51,8 @@ class HrCandidate
             'match_parts' => $m['parts'],
             'interview' => $c->interview ? ['ratings' => $c->interview->ratings, 'notes' => $c->interview->notes, 'recommendation' => $c->interview->recommendation,
                 'interviewer' => $c->interview->interviewer, 'date' => $c->interview->date?->toDateString(), 'pct' => $c->interview->pct] : null,
-            'offer' => $o ? ['title' => $o->title, 'contract' => $o->contract, 'currency' => $o->currency, 'basic' => $o->basic, 'housing' => $o->housing, 'transport' => $o->transport, 'fuel' => $o->fuel,
-                'total' => $o->total(), 'leave_days' => $o->leave_days, 'start_date' => $o->start_date?->toDateString(), 'issued_at' => $o->issued_at?->toIso8601String(), 'status' => $o->status,
+            'offer' => $o ? ['title' => $o->title, 'contract' => $o->contract, 'currency' => $o->currency, 'basic' => $pay ? $o->basic : null, 'housing' => $pay ? $o->housing : null, 'transport' => $pay ? $o->transport : null, 'fuel' => $pay ? $o->fuel : null,
+                'masked' => ! $pay, 'total' => $pay ? $o->total() : null, 'leave_days' => $o->leave_days, 'start_date' => $o->start_date?->toDateString(), 'issued_at' => $o->issued_at?->toIso8601String(), 'status' => $o->status,
                 'responded_at' => $o->responded_at?->toIso8601String(), 'note' => $o->note, 'signature' => MyApplicationResource::dataUrl($o->signature)] : null,
             'appointment' => $ap ? self::appointment($ap, $c, $viewer) : null,
             'keep_cv' => $c->keep_cv, 'cv_status' => $c->cv_status,

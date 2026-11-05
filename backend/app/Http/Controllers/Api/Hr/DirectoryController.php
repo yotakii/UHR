@@ -84,7 +84,12 @@ class DirectoryController extends Controller
     public function org(Request $request): JsonResponse
     {
         $u = $request->user();
-        $list = Employee::current()->with('department')->orderBy('code')->get(['id', 'code', 'name', 'name_en', 'gender', 'title_ar', 'title_en', 'department_id', 'manager_id', 'status']);
+        $all = Employee::current()->with('department')->orderBy('code')->get(['id', 'code', 'name', 'name_en', 'gender', 'title_ar', 'title_en', 'department_id', 'manager_id', 'status', 'hire_date']);
+        // ملاحظة الاختبار 41: الموظف الجديد لا يظهر في الهيكل قبل أن يباشر فعلياً (قيد التعيين أو تاريخ مباشرته لم يأتِ)؛ من يتبعه يُنقل لمديره
+        $today = now()->toDateString();
+        $hidden = $all->filter(fn ($e) => $e->status === 'onboarding' || ($e->hire_date && $e->hire_date->toDateString() > $today))->keyBy('id');
+        $up = function (?int $id) use ($hidden) { $n = 0; while ($id && $hidden->has($id) && $n++ < 20) $id = $hidden[$id]->manager_id; return $id; };
+        $list = $all->reject(fn ($e) => $hidden->has($e->id))->each(fn ($e) => $e->manager_id = $up($e->manager_id))->values();
         $open = Perm::can($u, 'employees') ? Directory::scoped($u)->pluck('id')->flip() : collect();
         return response()->json([
             'data' => $list->map(fn ($e) => ['id' => $e->id, 'code' => $e->code, 'name' => ['ar' => $e->name, 'en' => $e->name_en], 'title' => ['ar' => $e->title_ar, 'en' => $e->title_en],

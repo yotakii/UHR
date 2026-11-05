@@ -1,9 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { Download, FileSpreadsheet, Loader2, Pencil, Plus, Search, Wrench, X } from 'lucide-react'
+import { Download, FileSpreadsheet, Loader2, Pencil, Plus, Search, Tags, Trash2, Wrench, X } from 'lucide-react'
 import { useL, useLang, bi, fmtDate, fmtDateTime } from '../../../lib/store'
 import { ApiError } from '../../../lib/api'
 import { setQuery, useRoute } from '../../../lib/router'
-import { downloadCustody, useAssetAction, useAssetHistory, useCustody, useSaveAsset, type AssetInput, type AssetRow, type AssetStatus, type Condition, type CustodyPage } from '../../../lib/custody'
+import { downloadCustody, useDeleteCategory, useSaveCategory, useAssetAction, useAssetHistory, useCustody, useSaveAsset, type AssetInput, type AssetRow, type AssetStatus, type Condition, type CustodyPage } from '../../../lib/custody'
 import { Badge, Btn, Drawer, Empty, Field, Modal, PageHead, Panel, Seg, toast } from '../../../ui/kit'
 import { DecisionDialog } from '../../../ui/decision'
 import { ImportAssets } from './ImportAssets'
@@ -30,6 +30,7 @@ export function Custody() {
   const [back, setBack] = useState<AssetRow | null>(null)
   const [form, setForm] = useState<AssetRow | 'new' | null>(null)
   const [imp, setImp] = useState(false)
+  const [cats, setCats] = useState(false)
   const open = route.query.asset ? Number(route.query.asset) : null
   const set = (k: string, v: string) => setQuery({ ...route.query, [k]: v && v !== 'all' ? v : undefined })
   const s = d?.summary
@@ -38,6 +39,7 @@ export function Custody() {
       sub={s ? L(`${s.issued} أصلاً مسلّماً بقيمة ${money(s.issued_value)} — ${s.available} في المستودع${s.pending ? ` · ${s.pending} بانتظار التوقيع` : ''}${s.maintenance ? ` · ${s.maintenance} في الصيانة` : ''}`,
         `${s.issued} assets issued worth ${money(s.issued_value)} — ${s.available} in stock${s.pending ? ` · ${s.pending} awaiting signature` : ''}${s.maintenance ? ` · ${s.maintenance} in maintenance` : ''}`) : undefined}
       actions={d && <div className="flex flex-wrap gap-2">
+        {d.can.create && <Btn icon={<Tags size={16} />} onClick={() => setCats(true)}>{L('الفئات', 'Categories')}</Btn>}
         {d.can.create && <Btn icon={<FileSpreadsheet size={16} />} onClick={() => setImp(true)}>{L('استيراد من Excel', 'Import from Excel')}</Btn>}
         {d.can.export && <Btn icon={<Download size={16} />} onClick={() => downloadCustody(f).catch(() => toast(L('تعذّر التصدير', 'Export failed')))}>Excel</Btn>}
         {d.can.create && <Btn kind="primary" icon={<Plus size={16} />} onClick={() => setForm('new')}>{L('إضافة أصل', 'Add asset')}</Btn>}
@@ -69,6 +71,7 @@ export function Custody() {
     {back && <ReturnModal a={back} onClose={() => setBack(null)} />}
     {d && form && <AssetForm a={form === 'new' ? null : form} d={d} onClose={() => setForm(null)} />}
     {imp && <ImportAssets onClose={() => setImp(false)} />}
+    {cats && d && <CategoriesModal d={d} onClose={() => setCats(false)} />}
     {d && open && <AssetDrawer id={open} d={d} onClose={() => setQuery({ ...route.query, asset: undefined })} onEdit={a => setForm(a)} onIssue={setIssue} onReturn={setBack} />}
   </div>
 }
@@ -106,6 +109,35 @@ function ReturnModal({ a, onClose }: { a: AssetRow; onClose: () => void }) {
       {c === 'damaged' && <p className="text-[13px] text-warn">{L('الأصل التالف يذهب للصيانة ولا يُسلَّم حتى يُعاد للمستودع.', 'A damaged asset goes to maintenance and cannot be issued until it is back in stock.')}</p>}
       <Field label={L('ملاحظة', 'Note')}><textarea className="field" value={note} maxLength={500} onChange={e => setNote(e.target.value)} /></Field>
     </div>
+  </Modal>
+}
+
+/** ملاحظة الاختبار 52: فئات العهد قابلة للإدارة — إضافة، تعديل الاسم، حذف فئة لا أصول فيها */
+function CategoriesModal({ d, onClose }: { d: CustodyPage; onClose: () => void }) {
+  const L = useL(); const lang = useLang()
+  const save = useSaveCategory(); const del = useDeleteCategory()
+  const [edit, setEdit] = useState<{ id?: number; code: string; name_ar: string; name_en: string } | null>(null)
+  const err = save.error instanceof ApiError ? save.error : null
+  const submit = () => edit && save.mutate(edit, { onSuccess: () => { toast(L('حُفظت الفئة', 'Category saved')); setEdit(null) } })
+  return <Modal open onClose={onClose} title={L('فئات العهد', 'Asset categories')} width={620} footer={<Btn onClick={onClose}>{L('إغلاق', 'Close')}</Btn>}>
+    <ul className="divide-y divide-line-2 border border-line rounded-lg">
+      {d.categories.map(c => <li key={c.id} className="flex items-center gap-3 px-3 py-2.5 text-[14px]">
+        <span className="flex-1 min-w-0"><b>{bi(c, lang)}</b> <span className="text-ink-3 text-[12px] ltr inline-block">{c.code}</span></span>
+        <span className="text-[12px] text-ink-3">{L(`${c.count} أصل`, `${c.count} assets`)}</span>
+        <button className="p-1.5 rounded hover:bg-sub text-ink-3" aria-label={L('تعديل', 'Edit')} onClick={() => { save.reset(); setEdit({ id: c.id, code: c.code, name_ar: c.ar, name_en: c.en }) }}><Pencil size={15} /></button>
+        <button className="p-1.5 rounded hover:bg-sub text-ink-3 hover:text-danger disabled:opacity-30" disabled={c.count > 0 || del.isPending} title={c.count > 0 ? L('فيها أصول', 'Has assets') : undefined} aria-label={L('حذف', 'Delete')}
+          onClick={() => window.confirm(L(`حذف الفئة «${c.ar}»؟`, `Delete category “${c.en}”?`)) && del.mutateAsync(c.id).then(() => toast(L('حُذفت الفئة', 'Category deleted'))).catch(e => toast(e instanceof ApiError ? e.message : L('تعذّر الحذف', 'Could not delete')))}><Trash2 size={15} /></button>
+      </li>)}
+    </ul>
+    {edit ? <div className="mt-4 grid sm:grid-cols-3 gap-3 items-end">
+      <Field label={L('الاسم', 'Name')} req error={err?.field('name_ar')}><input className="field" value={edit.name_ar} onChange={e => setEdit({ ...edit, name_ar: e.target.value })} autoFocus /></Field>
+      <Field label={L('الاسم بالإنكليزية', 'English name')} req error={err?.field('name_en')}><input className="field ltr" value={edit.name_en} onChange={e => setEdit({ ...edit, name_en: e.target.value })} /></Field>
+      <Field label={L('الرمز', 'Code')} req error={err?.field('code')} hint={edit.id ? L('لا يتغير بعد الإنشاء', 'Fixed after creation') : L('أحرف إنكليزية صغيرة', 'Lowercase letters')}>
+        <input className="field ltr" disabled={!!edit.id} value={edit.code} onChange={e => setEdit({ ...edit, code: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') })} /></Field>
+      <div className="sm:col-span-3 flex gap-2 justify-end"><Btn onClick={() => setEdit(null)}>{L('إلغاء', 'Cancel')}</Btn><Btn kind="primary" disabled={save.isPending} onClick={submit}>{L('حفظ الفئة', 'Save category')}</Btn></div>
+    </div>
+      : <Btn className="mt-4" icon={<Plus size={15} />} onClick={() => { save.reset(); setEdit({ code: '', name_ar: '', name_en: '' }) }}>{L('فئة جديدة', 'New category')}</Btn>}
+    <p className="text-[12px] text-ink-3 mt-3">{L('أمثلة: أدوات مكتبية، أدوات عمل مخصصة (مساطر للمهندسين، كاميرا للمصورين).', 'Examples: office supplies, job-specific tools (rulers for engineers, a camera for photographers).')}</p>
   </Modal>
 }
 

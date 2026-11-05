@@ -61,7 +61,7 @@ class DisciplineTest extends TestCase
         $company = $this->emp('UHR-1007')->company_id;
         $counts = ViolationType::allCompanies()->where('company_id', $company)->selectRaw('"group", count(*) n')->groupBy('group')->pluck('n', 'group')->all();
         $this->assertEquals(['time' => 10, 'work' => 18, 'conduct' => 13], $counts);
-        $late = $this->type('التأخر عن مواعيد العمل لمدة تصل إلى 15');
+        $late = $this->type('التأخر حتى 15 دقيقة');
         $this->assertEquals([['kind' => 'warning'], ['kind' => 'deduct', 'days' => 0.25], ['kind' => 'deduct', 'days' => 0.5], ['kind' => 'deduct', 'days' => 1]], $late->penalties);
 
         $this->login('samer.halabi@alfarada.sy');
@@ -78,7 +78,7 @@ class DisciplineTest extends TestCase
 
     public function test_manager_opens_employee_defends_hr_investigates_and_decides_then_acknowledgement(): void
     {
-        $t = $this->type('التأخر عن مواعيد العمل لمدة تصل إلى 15');
+        $t = $this->type('التأخر حتى 15 دقيقة');
         $samer = $this->emp('UHR-1007');
         $this->login('alaa.sheikhani@alfarada.sy');   // مدير سامر
         $mine = $this->getJson('/api/me/discipline')->assertOk()->json();

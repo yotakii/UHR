@@ -31,9 +31,30 @@ class CustodyController extends Controller
         $q = $this->custody->list($f);
         if (Perm::scope($u, 'assets') !== 'all') $q->whereIn('employee_id', Directory::scoped($u, 'assets')->select('id'));
         return response()->json(['summary' => $this->custody->summary(), 'data' => $q->limit(1000)->get()->map(fn ($a) => Custody::row($a)),
-            'categories' => AssetCategory::orderBy('id')->get()->map(fn ($c) => ['id' => $c->id, 'code' => $c->code, 'ar' => $c->name_ar, 'en' => $c->name_en]),
+            'categories' => AssetCategory::withCount('assets')->orderBy('id')->get()->map(fn ($c) => ['id' => $c->id, 'code' => $c->code, 'ar' => $c->name_ar, 'en' => $c->name_en, 'count' => $c->assets_count]),
             'employees' => Employee::current()->orderBy('code')->get(['id', 'code', 'name', 'name_en'])->map(fn ($e) => ['id' => $e->id, 'code' => $e->code, 'ar' => $e->name, 'en' => $e->name_en]),
             'can' => ['create' => Perm::can($u, 'assets', 'create'), 'edit' => Perm::can($u, 'assets', 'edit'), 'export' => Perm::can($u, 'assets', 'export')]]);
+    }
+
+    /** ملاحظة الاختبار 52: فئات العهد تديرها الشركة (إضافة، تعديل الاسم، حذف فئة غير مستخدمة) */
+    public function saveCategory(Request $request, ?int $id = null): JsonResponse
+    {
+        $c = $id ? AssetCategory::findOrFail($id) : new AssetCategory;
+        $v = $request->validate([
+            'code' => [$id ? 'sometimes' : 'required', 'string', 'regex:/^[a-z][a-z0-9_]{1,19}$/', \Illuminate\Validation\Rule::unique('asset_categories', 'code')->where('company_id', \App\Support\Tenant::id())->ignore($id)],
+            'name_ar' => ['required', 'string', 'max:60'], 'name_en' => ['required', 'string', 'max:60'],
+        ], ['code.regex' => \App\Support\L::t('الرمز بأحرف إنكليزية صغيرة وأرقام فقط (مثل office_tools)', 'Code: lowercase letters, digits and _ only (e.g. office_tools)'),
+            'code.unique' => \App\Support\L::t('هذا الرمز مستخدم لفئة أخرى', 'This code is used by another category')]);
+        $c->fill($id ? collect($v)->except('code')->all() : $v)->save();
+        return response()->json(['data' => ['id' => $c->id, 'code' => $c->code, 'ar' => $c->name_ar, 'en' => $c->name_en]], $id ? 200 : 201);
+    }
+
+    public function deleteCategory(int $id): JsonResponse
+    {
+        $c = AssetCategory::findOrFail($id);
+        if (Asset::where('asset_category_id', $c->id)->exists()) throw new \App\Exceptions\ApiException(\App\Support\L::t('لا يمكن حذف فئة فيها أصول — انقل أصولها أولاً', 'A category with assets cannot be deleted — move its assets first'), 'category_in_use', 409);
+        $c->delete();
+        return response()->json(['ok' => true]);
     }
 
     public function store(Request $request): JsonResponse

@@ -35,6 +35,8 @@ class Settings
             'cv_retention_months' => 24,
             // المباشرة F-19: عدد البنود المنجزة الذي ينقل الموظف إلى فترة التجربة
             'probation_at' => 14,
+            // ملاحظة الاختبار 55: الحد الأدنى لعمر المتقدم والموظف الجديد
+            'min_age' => 18,
             // الاستقطاب الداخلي (D-22، SRS §10.14): أدنى مدة خدمة بالأشهر، خارج فترة التجربة، وبلا إنذار أو جزاء خلال أشهر
             'internal_min_months' => 12, 'internal_no_probation' => true, 'internal_clean_months' => 6],
         // الإعلانات (D-06): اعتماد قبل النشر (لا افتراضياً — HR ينشر مباشرة)، وأقصى حجم للصورة/المرفق
@@ -82,7 +84,7 @@ class Settings
         // نسخ بيانات الشركة (zip): عدد النسخ المحفوظة، وهل تشمل الملفات المرفوعة
         'backup' => ['keep' => 5, 'include_files' => true],
         // الحسابات (11e): صلاحية رابط تفعيل الحساب أو تعيين كلمة المرور بالساعات
-        'accounts' => ['invite_hours' => 72],
+        'accounts' => ['invite_hours' => 72, 'pw_min' => 8, 'pw_upper' => false, 'pw_symbol' => false, 'max_attempts' => 5, 'lock_minutes' => 5],
         'stage_sla' => ['new' => 2, 'screening' => 3, 'interview' => 5, 'technical' => 5, 'offer' => 4],
         // الخروج M11 (HR.01-03، SRS §10.8): أسباب الاستقالة، أسباب انتهاء الخدمة (م37) والفصل (F-03)، أسئلة الاستبيان ومقابلة الخروج،
         // وجهات تسليم العهدة F-07 وبنودها (auto = يُحسب من النظام: handover من F-05، assets من سجل العهد، leave من الرصيد)
@@ -178,6 +180,8 @@ class Settings
             'hourly_notice_days' => 1, 'exec_after_days' => 7, 'substitute_required' => true, 'conflict_note_required' => true,
             'emergency_per_year' => 3, 'emergency_report_hours' => 12, 'hourly_max_per_day' => 5, 'hourly_day_hours' => 8,
             'unpaid_max_per_year' => 30, 'reject_min' => 10, 'reminder_hours' => 24, 'justify_hours' => 48, 'probation_paid' => false,
+            // المرضية (نظام العاملين م. الإجازة المرضية): 90 يوماً بـ70٪ ثم 90 يوماً بـ80٪ في السنة — الحد السنوي = مجموعهما
+            'sick_first_days' => 90, 'sick_first_paid' => 70, 'sick_second_days' => 90, 'sick_second_paid' => 80,
         ],
         // أنواع الإجازات (HR.01-01 + نظام العاملين): paid نسبة الأجر، balance من أي رصيد، max_days للطلب، notice تطبيق مهلة التقديم،
         // doc المستند (none|optional|required)، after_months شرط خدمة، confirmed بعد التجربة، once مرة واحدة، calendar أيام تقويمية، exec مستوى ثالث دائماً

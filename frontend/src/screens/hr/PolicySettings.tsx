@@ -154,6 +154,12 @@ function LeaveRulesEditor({ v, set, editable }: { v: PolicyValues['leave_rules']
     {n('emergency_per_year', L('الطارئة في السنة', 'Emergency per year'), L('يوم', 'days'))}
     {n('emergency_report_hours', L('الإبلاغ عن الطارئة خلال', 'Report emergency within'), L('ساعة', 'h'))}
     {n('unpaid_max_per_year', L('غير المدفوعة في السنة', 'Unpaid per year'), L('يوم', 'days'))}
+    <div className="text-[12.5px] font-semibold text-ink-2 pt-2">{L('الإجازة المرضية في السنة', 'Sick leave per year')}</div>
+    {n('sick_first_days', L('المرحلة الأولى', 'First stage'), L('يوم', 'days'))}
+    {n('sick_first_paid', L('أجر المرحلة الأولى', 'First stage pay'), '%')}
+    {n('sick_second_days', L('المرحلة الثانية', 'Second stage'), L('يوم', 'days'))}
+    {n('sick_second_paid', L('أجر المرحلة الثانية', 'Second stage pay'), '%')}
+    <p className="text-[12px] text-ink-3">{L(`الحد السنوي = ${(v.sick_first_days ?? 0) + (v.sick_second_days ?? 0)} يوماً؛ تجاوزه يحتاج ملاحظة من المعتمِد.`, `Yearly limit = ${(v.sick_first_days ?? 0) + (v.sick_second_days ?? 0)} days; going over needs an approver note.`)}</p>
     {n('exec_after_days', L('مستوى الإدارة العليا لما يزيد على', 'Executive level above'), L('يوم', 'days'))}
     {n('reject_min', L('أقل طول لسبب الرفض', 'Min rejection reason'), L('حرف', 'chars'))}
     {n('reminder_hours', L('تذكير المعتمِد بعد', 'Remind approver after'), L('ساعة', 'h'))}

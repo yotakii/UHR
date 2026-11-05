@@ -48,7 +48,7 @@ class Portal
                 'tenure_days' => $e->hire_date ? (int) $e->hire_date->diffInDays(now()) : 0, 'resigned' => in_array($e->status, ['resigning', 'terminated'], true), 'onboarding' => (bool) $ob],
             'today' => ['date' => $today, 'in' => $row['in'], 'out' => $row['out'], 'late' => $row['late'], 'status' => $row['status'], 'checkin' => $this->canCheckIn($e, $d, $row['status'])],
             'geo' => $this->geo(), 'balance' => ['annual' => ['left' => $bal['remaining'], 'of' => $bal['entitlement'], 'used' => $bal['used']],
-                'sick' => ['used' => $bal['sick'], 'of' => $sick['max_days'] ?? null], 'points' => (int) $e->points],
+                'sick' => ['used' => $bal['sick'], 'of' => ($bal['sick_limit'] ?: null) ?? $sick['max_days'] ?? null], 'points' => (int) $e->points],
             'recent' => $recent, 'team' => $this->team($e, 8)];
     }
 

@@ -33,7 +33,7 @@ export function JobPage({ slug, code, refCode }: { slug: string; code: string; r
             <JobMeta j={j} /></div>
           <Btn size="sm" icon={<Link2 size={14} />} onClick={copy}><span className="hidden sm:inline">{L('نسخ الرابط', 'Copy link')}</span></Btn>
         </div>
-        <p className="text-ink-2 mt-4 max-w-[70ch]">{bi(j.summary, lang)}</p>
+        <p className="text-ink-2 mt-4 max-w-[70ch] whitespace-pre-line">{bi(j.summary, lang)}</p>
         {!!j.requirements?.length && <><h2 className="font-semibold mt-5 mb-2">{L('المتطلبات', 'Requirements')}</h2>
           <ul className="space-y-1.5">{j.requirements.map((r, i) => <li key={i} className="flex gap-2 text-[14px]"><CheckCircle2 size={16} className="text-brand shrink-0 mt-0.5" />{bi(r, lang)}</li>)}</ul></>}
         <div className="flex flex-wrap gap-2 mt-5">

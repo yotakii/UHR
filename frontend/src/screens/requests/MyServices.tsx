@@ -6,7 +6,7 @@ import { navigate, useRoute } from '../../lib/router'
 import { useCancelService, useMyServices, useSubmitService, type ServiceInput, type ServiceKind } from '../../lib/payroll'
 import { Btn, Empty, Field, Modal, PageHead, Panel, toast } from '../../ui/kit'
 import { Masked } from '../../ui/vault'
-import { DecisionDialog } from '../../ui/decision'
+import { ConfirmSend, DecisionDialog } from '../../ui/decision'
 import { LeaveStatus, Period, StepsPath } from './parts'
 
 const ICONS: Record<ServiceKind, ReactNode> = { salary_cert: <FileText size={20} />, experience_cert: <FileSignature size={20} />, advance: <Banknote size={20} />, data_update: <UserRound size={20} /> }
@@ -63,7 +63,7 @@ function ServiceModal({ kind, onClose, available, currency }: { kind: ServiceKin
       .catch(e => e instanceof ApiError && setErr(Object.keys(e.errors).length ? Object.fromEntries(Object.entries(e.errors).map(([k, m]) => [k, m[0]])) : { note: e.message }))
   }
   const titles: Record<ServiceKind, string> = { salary_cert: L('شهادة راتب', 'Salary certificate'), experience_cert: L('شهادة عمل / تعريف', 'Employment certificate'), advance: L('سلفة على الراتب', 'Salary advance'), data_update: L('تحديث بيانات شخصية', 'Personal data update') }
-  return <Modal open onClose={onClose} title={titles[kind]} footer={<><Btn onClick={onClose}>{L('إلغاء', 'Cancel')}</Btn><Btn kind="primary" disabled={submit.isPending} onClick={send}>{L('إرسال الطلب', 'Submit')}</Btn></>}>
+  return <Modal open onClose={onClose} title={titles[kind]} footer={<><Btn onClick={onClose}>{L('إلغاء', 'Cancel')}</Btn><ConfirmSend label={L('إرسال الطلب', 'Submit')} busy={submit.isPending} onConfirm={send} summary={titles[kind]} /></>}>
     <div className="space-y-3">
       {kind === 'salary_cert' && <>
         <p className="text-[13px] text-ink-3">{L('بيانات الجهة الطالبة إلزامية — الطلب الناقص لا يُرسل.', 'The requesting organisation’s details are required.')}</p>

@@ -42,7 +42,7 @@ function DeptForm({ dept, colors, employees, onClose }: { dept: Dept | null; col
     <div className="grid sm:grid-cols-2 gap-4">
       <Field label={L('الاسم بالعربية', 'Arabic name')} req error={err?.field('ar')}><input className="field" value={v.ar} onChange={e => setV({ ...v, ar: e.target.value })} /></Field>
       <Field label={L('الاسم بالإنكليزية', 'English name')} req error={err?.field('en')}><input className="field ltr text-start" value={v.en} onChange={e => setV({ ...v, en: e.target.value })} /></Field>
-      <Field label={L('الرمز', 'Code')} req hint="a-z 0-9 _" error={err?.field('code')}><input className="field ltr text-start" value={v.code} onChange={e => setV({ ...v, code: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') })} /></Field>
+      <Field label={L('الرمز', 'Code')} req hint={L('حروف لاتينية وأرقام و - أو _ (مثل HR-01)', 'Latin letters, digits, - or _ (e.g. HR-01)')} error={err?.field('code')}><input className="field ltr text-start" value={v.code} onChange={e => setV({ ...v, code: e.target.value.replace(/[^A-Za-z0-9_-]/g, '') })} /></Field>
       <Field label={L('الملاك العددي المعتمد', 'Approved headcount')} error={err?.field('headcount')}><input type="number" min={0} className="field num" value={v.headcount} onChange={e => setV({ ...v, headcount: Number(e.target.value) })} /></Field>
       <Field label={L('رئيس الإدارة', 'Head of department')} className="sm:col-span-2" error={err?.field('head_id')}><select className="field" value={v.head_id ?? ''} onChange={e => setV({ ...v, head_id: e.target.value ? Number(e.target.value) : null })}>
         <option value="">—</option>{heads.map(e => <option key={e.id} value={e.id}>{bi(e, lang)} · {e.code}</option>)}</select></Field>

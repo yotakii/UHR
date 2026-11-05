@@ -80,7 +80,7 @@ export function Reset({ token, email }: { token: string; email: string }) {
   </AuthCard>
 }
 
-type InviteInfo = { email: string; name: { ar: string; en: string }; kind: 'invite' | 'reset'; company: { ar: string; en: string; logo: string | null } | null; expires_at: string | null }
+type InviteInfo = { email: string; name: { ar: string; en: string }; kind: 'invite' | 'reset'; company: { ar: string; en: string; logo: string | null } | null; expires_at: string | null; password?: { min: number; upper: boolean; symbol: boolean } }
 
 /** رابط تفعيل الحساب أو تعيين كلمة المرور (يصل بالبريد): يختار كلمة المرور ويدخل مباشرة */
 export function Activate({ token }: { token: string }) {
@@ -106,9 +106,9 @@ export function Activate({ token }: { token: string }) {
     <p className="text-[13.5px] text-ink-2 mb-4">{reset ? L('اختر كلمة مرور جديدة لحسابك. بعد الحفظ تدخل مباشرة.', 'Choose a new password for your account. You will be signed in right after.')
       : L('اختر كلمة مرور لحسابك. ستستخدمها مع بريدك في كل دخول، ثم تدخل الآن مباشرة.', 'Choose a password for your account. You will use it with your email from now on, and you will be signed in right away.')}</p>
     <form onSubmit={x => { x.preventDefault(); m.mutate(v, { onSuccess: () => navigate('/') }) }} className="space-y-4" noValidate>
-      <PasswordFields v={v} set={(k, x) => { setV(s => ({ ...s, [k]: x })); m.reset() }} errs={{ password: e?.field('password') }} label={reset ? undefined : L('كلمة المرور', 'Password')} />
+      <PasswordFields policy={d.password} v={v} set={(k, x) => { setV(s => ({ ...s, [k]: x })); m.reset() }} errs={{ password: e?.field('password') }} label={reset ? undefined : L('كلمة المرور', 'Password')} />
       {e && !e.field('password') && <div role="alert" className="text-[13px] text-danger bg-danger-soft rounded px-3 py-2">{e.message}</div>}
-      <Btn kind="primary" size="lg" className="w-full" type="submit" disabled={m.isPending || !passwordOk(v)}>{reset ? L('حفظ والدخول', 'Save and sign in') : L('تفعيل الحساب والدخول', 'Activate and sign in')}</Btn>
+      <Btn kind="primary" size="lg" className="w-full" type="submit" disabled={m.isPending || !passwordOk(v, d.password)}>{reset ? L('حفظ والدخول', 'Save and sign in') : L('تفعيل الحساب والدخول', 'Activate and sign in')}</Btn>
     </form>
   </AuthCard>
 }

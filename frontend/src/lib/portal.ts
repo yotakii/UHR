@@ -33,3 +33,8 @@ export const position = () => new Promise<{ lat: number; lng: number }>((ok, no)
   if (!navigator.geolocation) return no(new Error('geo'))
   navigator.geolocation.getCurrentPosition(p => ok({ lat: p.coords.latitude, lng: p.coords.longitude }), no, { enableHighAccuracy: true, timeout: 12000 })
 })
+
+/** العطل الرسمية للشركة (ملاحظتا الاختبار 26 و27) */
+export interface HolidayGroup { from: string; to: string; days: number; ar: string; en: string; state: 'past' | 'now' | 'upcoming' }
+export interface MyHolidays { year: number; years: number[]; data: HolidayGroup[]; total: number; work_days: number[] }
+export const useMyHolidays = (year: number) => useQuery({ queryKey: ['me', 'holidays', year], queryFn: () => api<MyHolidays>(`/me/holidays?year=${year}`), placeholderData: p => p })

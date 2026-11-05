@@ -6,9 +6,16 @@ import { useIssueOffer, type CandFile, type OfferInput } from '../../../lib/cand
 import type { ApiError } from '../../../lib/api'
 import { Badge, Btn, Field, Panel, toast } from '../../../ui/kit'
 import { OfferDoc, Paper, SigBox } from '../../../ui/docs'
+import { ProtectedBlock } from '../../../ui/vault'
+
+/** عرض العمل F-29: مبالغه لا تظهر ولا تُطبع ولا تُكتب قبل التحقق (ملاحظة الاختبار 82) */
+export function OfferTab({ c, readOnly }: { c: CandFile; readOnly: boolean }) {
+  const L = useL()
+  return <ProtectedBlock masked={!!c.offer?.masked} title={L('مبالغ عرض العمل محمية', 'Offer amounts are protected')}><OfferInner c={c} readOnly={readOnly} /></ProtectedBlock>
+}
 
 /** عرض العمل F-29 (OfferTab في الديمو): إعداد العرض وإصداره، أو عرضه بحالته وتوقيع المتقدم */
-export function OfferTab({ c, readOnly }: { c: CandFile; readOnly: boolean }) {
+function OfferInner({ c, readOnly }: { c: CandFile; readOnly: boolean }) {
   const L = useL(); const lang = useLang()
   const me = useMe().data
   const issue = useIssueOffer(c.id)

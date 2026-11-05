@@ -4,6 +4,7 @@ import { useL, useLang, bi, money, fmtDate } from '../../../lib/store'
 import { useDecideApproval, useMyApprovals, type HrAppointment } from '../../../lib/candidates'
 import { Badge, Btn, Empty, KV, PageHead, Panel, toast } from '../../../ui/kit'
 import { DecisionDoc } from '../../../ui/docs'
+import { Masked } from '../../../ui/vault'
 import { DecisionDialog } from '../../../ui/decision'
 
 /** أزرار قرار المستوى الحالي — تظهر لصاحبه فقط (الخادم يتحقق أيضاً) */
@@ -44,7 +45,7 @@ export function MyApprovals({ embedded = false }: { embedded?: boolean }) {
           sub={<span className="ltr inline-block">{it.appointment.decision_no}</span>} action={<div className="flex flex-wrap gap-2"><ApprovalActions ap={it.appointment} who={bi(it.candidate.name, lang)} /></div>}>
           <DecisionDoc c={{ name: it.candidate.name_ar }} ap={it.appointment} jobTitle={bi(it.job.title, lang)} deptName={bi(it.job.dept, lang)} />
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-x-6 mt-4">
-            {it.offer && <KV k={L('إجمالي الراتب الشهري', 'Monthly package')} v={<span className="num">{money(it.offer.total, it.offer.currency, lang)}</span>} />}
+            {it.offer && <KV k={L('إجمالي الراتب الشهري', 'Monthly package')} v={<Masked value={it.offer.total}><span className="num">{money(it.offer.total ?? 0, it.offer.currency, lang)}</span></Masked>} />}
             {it.offer && <KV k={L('تاريخ المباشرة', 'Start date')} v={fmtDate(it.offer.start_date, lang)} />}
             <KV k={L('الملاك العددي / الموجود', 'Headcount / current')} v={<span className="num">{it.appointment.headcount.approved || '—'} / {it.appointment.headcount.current}</span>} />
             <KV k={L('مطابقة الشهادة', 'Degree check')} v={it.appointment.degree_ok ? L('مطابق', 'Matches') : <span className="text-danger">{L('أدنى من المطلوب', 'Below requirement')}</span>} />

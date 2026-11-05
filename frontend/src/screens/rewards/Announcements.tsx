@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Megaphone, Plus, Pencil, Paperclip, Check, Undo2, Archive, Settings2 } from 'lucide-react'
-import { useL, useLang, bi, fmtDate, fmtDateTime } from '../../lib/store'
+import { Megaphone, Plus, Pencil, Paperclip, Check, Undo2, Archive, Settings2, Mail } from 'lucide-react'
+import { useL, useLang, bi, fmtDate, fmtDateTime, linkChunks } from '../../lib/store'
 import { ApiError } from '../../lib/api'
 import { fileUrl } from '../../lib/console'
 import { setQuery, useRoute } from '../../lib/router'
@@ -8,7 +8,9 @@ import { useAnnouncementsHr, useAnnSettings, useArchiveAnnouncement, useDecideAn
 import { Badge, Btn, Empty, Field, Modal, PageHead, Panel, Seg, Tabs, toast } from '../../ui/kit'
 import { DecisionDialog } from '../../ui/decision'
 
-const tagName = (t: AnnTag, L: (a: string, e: string) => string) => ({ people: L('موظفون', 'People'), payroll: L('رواتب', 'Payroll'), training: L('تدريب', 'Training'), policy: L('سياسات', 'Policy'), event: L('فعالية', 'Event') })[t]
+const tagName = (t: AnnTag, L: (a: string, e: string) => string) => ({ people: L('موظفون', 'People'), payroll: L('رواتب', 'Payroll'), training: L('تدريب', 'Training'), policy: L('سياسات', 'Policy'), event: L('فعالية', 'Event'), holiday: L('عطل رسمية', 'Public holidays') })[t]
+/** لون ثابت لكل فئة إعلان */
+const tagTone = (t: AnnTag) => (({ people: 'brand', payroll: 'warn', training: 'info', policy: 'neutral', event: 'brass', holiday: 'danger' } as const)[t] ?? 'info')
 
 function StatusBadge({ a }: { a: Announcement }) {
   const L = useL()
@@ -19,15 +21,23 @@ function StatusBadge({ a }: { a: Announcement }) {
   return <Badge tone="brand">{L('منشور', 'Published')}</Badge>
 }
 
+/** النص مع الروابط والبريد قابلة للنقر (ملاحظة الاختبار 66) */
+function Linked({ text }: { text: string }) {
+  return <>{linkChunks(text).map((c, i) => c.t === 'text' ? c.v : c.t === 'email'
+    ? <a key={i} href={`mailto:${c.v}`} className="text-brand underline ltr inline-block">{c.v}</a>
+    : <a key={i} href={c.v} target="_blank" rel="noreferrer noopener" className="text-brand underline break-all">{c.v}</a>)}</>
+}
+
 /** بطاقة إعلان كما يراها الموظف */
 export function AnnouncementCard({ a }: { a: Announcement }) {
   const L = useL(); const lang = useLang()
   return <article className="rounded-2xl border border-line bg-surface overflow-hidden">
     {a.image && <img src={fileUrl(a.image)} alt="" className="w-full max-h-[260px] object-cover" />}
     <div className="p-4">
-      <div className="flex flex-wrap items-center gap-2 text-[12px] text-ink-3"><Badge tone="info">{tagName(a.tag, L)}</Badge>{a.department && <Badge>{bi(a.department, lang)}</Badge>}<span className="num">{fmtDate(a.published_at ?? undefined, lang)}</span></div>
+      <div className="flex flex-wrap items-center gap-2 text-[12px] text-ink-3"><Badge tone={tagTone(a.tag)} dot>{tagName(a.tag, L)}</Badge>{a.department && <Badge>{bi(a.department, lang)}</Badge>}<span className="num">{fmtDate(a.published_at ?? undefined, lang)}</span></div>
       <h3 className="mt-2 font-display font-bold text-[16px]">{bi(a.title, lang)}</h3>
-      <p className="mt-1 text-[14px] text-ink-2 whitespace-pre-line">{bi(a.text, lang)}</p>
+      <p className="mt-1 text-[14px] text-ink-2 whitespace-pre-line break-words"><Linked text={bi(a.text, lang)} /></p>
+      {a.contact_email && <a href={`mailto:${a.contact_email}`} className="mt-2 me-3 inline-flex items-center gap-1.5 text-brand text-[13px] font-semibold"><Mail size={14} /><span className="ltr">{a.contact_email}</span></a>}
       {a.attachment && <a href={fileUrl(a.attachment.id)} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1.5 text-brand text-[13px] font-semibold"><Paperclip size={14} />{a.attachment.name}</a>}
     </div>
   </article>
@@ -67,7 +77,7 @@ export function AnnouncementsHR() {
       <div key={a.id} className="rounded-2xl border border-line bg-surface overflow-hidden flex flex-col">
         {a.image && <img src={fileUrl(a.image)} alt="" className="w-full h-[150px] object-cover" />}
         <div className="p-4 flex-1">
-          <div className="flex flex-wrap items-center gap-1.5"><StatusBadge a={a} /><Badge tone="info">{tagName(a.tag, L)}</Badge><Badge>{a.department ? bi(a.department, lang) : L('كل الموظفين', 'Everyone')}</Badge></div>
+          <div className="flex flex-wrap items-center gap-1.5"><StatusBadge a={a} /><Badge tone={tagTone(a.tag)} dot>{tagName(a.tag, L)}</Badge><Badge>{a.department ? bi(a.department, lang) : L('كل الموظفين', 'Everyone')}</Badge></div>
           <h3 className="mt-2 font-display font-bold">{bi(a.title, lang)}</h3>
           <p className="mt-1 text-[13px] text-ink-2 line-clamp-3 whitespace-pre-line">{bi(a.text, lang)}</p>
           {a.attachment && <a href={fileUrl(a.attachment.id)} target="_blank" rel="noreferrer" className="mt-1.5 inline-flex items-center gap-1 text-brand text-[12.5px]"><Paperclip size={13} />{a.attachment.name}</a>}
@@ -95,7 +105,7 @@ const local = (iso: string | null | undefined) => { if (!iso) return ''; const x
 function AnnForm({ a, d, onClose }: { a: Announcement | null; d: AnnouncementsHr; onClose: () => void }) {
   const L = useL(); const lang = useLang()
   const save = useSaveAnnouncement(a?.id ?? null)
-  const [v, setV] = useState<AnnInput>({ title_ar: a?.title_ar ?? '', title_en: a?.title_en ?? '', text_ar: a?.text_ar ?? '', text_en: a?.text_en ?? '', tag: a?.tag ?? 'people', audience: a?.audience ?? 'all',
+  const [v, setV] = useState<AnnInput>({ title_ar: a?.title_ar ?? '', title_en: a?.title_en ?? '', text_ar: a?.text_ar ?? '', text_en: a?.text_en ?? '', contact_email: a?.contact_email ?? '', tag: a?.tag ?? 'people', audience: a?.audience ?? 'all',
     department_id: a?.department_id ?? '', publish_at: local(a?.published_at), expires_at: local(a?.expires_at) })
   const [image, setImage] = useState<File | null>(null); const [file, setFile] = useState<File | null>(null)
   const err = save.error instanceof ApiError ? save.error : null
@@ -110,8 +120,10 @@ function AnnForm({ a, d, onClose }: { a: Announcement | null; d: AnnouncementsHr
       <Field label={L('العنوان بالإنكليزية', 'English title')} error={err?.field('title_en')}><input className="field ltr" value={v.title_en} onChange={e => set('title_en', e.target.value)} /></Field>
       <Field req label={L('النص بالعربية', 'Arabic text')} error={err?.field('text_ar')} className="sm:col-span-2"><textarea className="field min-h-[110px]" value={v.text_ar} onChange={e => set('text_ar', e.target.value)} /></Field>
       <Field label={L('النص بالإنكليزية', 'English text')} className="sm:col-span-2"><textarea className="field ltr" value={v.text_en} onChange={e => set('text_en', e.target.value)} /></Field>
+      <Field label={L('بريد للتواصل (اختياري)', 'Contact email (optional)')} error={err?.field('contact_email')} hint={L('يظهر زر «مراسلة» في الإعلان. البريد والروابط المكتوبة داخل النص تصبح قابلة للنقر أيضاً.', 'Shows an email button. Emails and links typed in the text become clickable too.')} className="sm:col-span-2">
+        <input type="email" className="field ltr text-start" placeholder="hr@company.com" value={v.contact_email} onChange={e => set('contact_email', e.target.value.trim())} /></Field>
     </div>
-    <Field div label={L('الفئة', 'Category')} className="mt-3"><Seg value={v.tag} onChange={x => set('tag', x)} options={d.tags.map(t => ({ v: t, label: tagName(t, L) }))} /></Field>
+    <Field div label={L('الفئة', 'Category')} className="mt-3"><Seg value={v.tag} onChange={x => set('tag', x)} options={d.tags.map(t => ({ v: t, label: <span className="inline-flex items-center gap-1.5"><Badge tone={tagTone(t)} dot>{tagName(t, L)}</Badge></span> }))} /></Field>
     <div className="grid sm:grid-cols-2 gap-3 mt-3">
       <Field div label={L('الجمهور', 'Audience')}><Seg value={v.audience} onChange={x => set('audience', x)} options={[{ v: 'all', label: L('كل الموظفين', 'Everyone') }, { v: 'department', label: L('إدارة محددة', 'One department') }]} /></Field>
       {v.audience === 'department' && <Field req label={L('الإدارة', 'Department')} error={err?.field('department_id')}><select className="field" value={v.department_id} onChange={e => set('department_id', e.target.value ? Number(e.target.value) : '')}>

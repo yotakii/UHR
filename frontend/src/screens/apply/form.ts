@@ -7,7 +7,7 @@ export type Experience = { company: string; position: string; from: string; to: 
 
 export interface ApplyForm {
   name: string; name_en: string; gender: '' | 'M' | 'F'; marital: string; nationality: string; dob: string; pob: string; national_id: string; blood: string
-  mobile: string; email: string; address: string; linkedin: string
+  mobile: string; email: string; email_confirm: string; address: string; linkedin: string
   degree: string; institute: string; major: string; grad_year: string; grade: string; english: string; years_exp: string
   experience: Experience[]
   ref_name: string; ref_job: string; ref_phone: string
@@ -19,7 +19,7 @@ export interface ApplyForm {
 export const emptyExperience = (): Experience => ({ company: '', position: '', from: '', to: '', reason: '' })
 
 export const emptyForm = (refCode?: string): ApplyForm => ({
-  name: '', name_en: '', gender: '', marital: '', nationality: 'سورية', dob: '', pob: '', national_id: '', blood: '', mobile: '+963 ', email: '', address: '', linkedin: '',
+  name: '', name_en: '', gender: '', marital: '', nationality: 'سورية', dob: '', pob: '', national_id: '', blood: '', mobile: '+963 ', email: '', email_confirm: '', address: '', linkedin: '',
   degree: '2', institute: '', major: '', grad_year: '', grade: '', english: 'good', years_exp: '',
   experience: [emptyExperience()], ref_name: '', ref_job: '', ref_phone: '',
   shifts: 'no', travel: 'no', public_sector: 'no', conviction: 'no', salary: '', availability: '', source: refCode ? 'referral' : 'website', ref_code: refCode ?? '',
@@ -49,7 +49,7 @@ export const PHOTO_EXT = /\.(jpe?g|png)$/i
 
 /** في أي خطوة يقع الحقل — للانتقال لأول خطوة فيها خطأ من الخادم */
 const STEP_FIELDS: string[][] = [
-  ['name', 'name_en', 'gender', 'marital', 'nationality', 'dob', 'pob', 'national_id', 'blood', 'mobile', 'email', 'address', 'linkedin'],
+  ['name', 'name_en', 'gender', 'marital', 'nationality', 'dob', 'pob', 'national_id', 'blood', 'mobile', 'email', 'email_confirm', 'address', 'linkedin'],
   ['degree', 'institute', 'major', 'grad_year', 'grade', 'english', 'years_exp', 'experience'],
   ['ref_name', 'ref_job', 'ref_phone', 'shifts', 'travel', 'public_sector', 'conviction', 'salary', 'availability', 'source', 'ref_code', 'cv', 'photo'],
   ['password', 'password_confirmation', 'agree_info', 'agree_medical', 'agree_data', 'keep_cv'],
@@ -65,7 +65,15 @@ export type Errors = Record<string, string>
 
 /** وضع الحساب في الخطوة 4: جديد (إنشاء كلمة مرور)، موجود (كلمة مروره)، مسجّل الدخول (بلا كلمة مرور) */
 export type Account = 'new' | 'existing' | 'signed_in'
-export type StepOptions = { account?: Account; requiresPhoto?: boolean }
+export type StepOptions = { account?: Account; requiresPhoto?: boolean; minAge?: number; today?: Date }
+
+/** العمر بالسنوات الكاملة في تاريخ معيّن */
+export function ageOn(dob: string, on: Date): number {
+  const d = new Date(dob + 'T00:00:00'); if (isNaN(d.getTime())) return NaN
+  let a = on.getFullYear() - d.getFullYear()
+  if (on.getMonth() < d.getMonth() || (on.getMonth() === d.getMonth() && on.getDate() < d.getDate())) a--
+  return a
+}
 
 /** تحقق الخطوة i — نفس قواعد الخادم */
 export function validateStep(i: number, f: ApplyForm, L: T, opts: StepOptions = {}): Errors {
@@ -77,6 +85,9 @@ export function validateStep(i: number, f: ApplyForm, L: T, opts: StepOptions = 
     need('name', 'gender', 'marital', 'nationality', 'dob', 'national_id', 'email', 'address')
     if (f.mobile.replace(/\D/g, '').length < 10) e.mobile = L('أدخل رقم الجوال كاملاً مع رمز الدولة', 'Enter the full mobile number with country code')
     if (f.email.trim() && !/^\S+@\S+\.\S+$/.test(f.email.trim())) e.email = L('صيغة البريد غير صحيحة', 'Invalid email format')
+    else if (account === 'new' && f.email.trim().toLowerCase() !== f.email_confirm.trim().toLowerCase()) e.email_confirm = L('البريدان غير متطابقين — تأكد من كتابة بريدك بدقة', 'The two emails do not match — check your email carefully')
+    const min = opts.minAge ?? 18
+    if (f.dob && ageOn(f.dob, opts.today ?? new Date()) < min) e.dob = L(`يجب ألا يقل عمر المتقدم عن ${min} سنة`, `Applicants must be at least ${min} years old`)
   }
   if (i === 1) {
     need('institute', 'major', 'years_exp')

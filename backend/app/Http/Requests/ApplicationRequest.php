@@ -23,7 +23,8 @@ class ApplicationRequest extends FormRequest
     public const MARITAL = ['single', 'married', 'divorced', 'widowed'];
     public const BLOOD = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
     public const ENGLISH = ['excellent', 'good', 'fair', 'weak'];
-    public const SOURCES = ['website', 'linkedin', 'referral', 'expo'];
+    /** «expo» يبقى مقبولاً للبيانات القديمة فقط — لا يظهر في النموذج */
+    public const SOURCES = ['website', 'linkedin', 'facebook', 'whatsapp', 'telegram', 'referral', 'other', 'expo'];
     public const CV_MAX_KB = 10240;
 
     public const PHOTO_MAX_KB = 2048;
@@ -69,7 +70,7 @@ class ApplicationRequest extends FormRequest
             'gender' => ['required', Rule::in(['M', 'F'])],
             'marital' => ['required', Rule::in(self::MARITAL)],
             'nationality' => ['required', 'string', 'max:60'],
-            'dob' => ['required', 'date', 'before:-15 years', 'after:1940-01-01'],
+            'dob' => ['required', 'date', 'before_or_equal:'.now()->subYears($this->minAge())->toDateString(), 'after:1940-01-01'],
             'pob' => ['nullable', 'string', 'max:80'],
             'national_id' => ['required', 'string', 'max:30'],
             'blood' => ['nullable', Rule::in(self::BLOOD)],
@@ -133,7 +134,7 @@ class ApplicationRequest extends FormRequest
             'required' => $req,
             'job.exists' => L::t('هذه الوظيفة غير متاحة للتقديم حالياً.', 'This position is not open for applications.'),
             'email.email' => L::t('صيغة البريد غير صحيحة', 'Invalid email format'),
-            'dob.before' => L::t('تحقق من تاريخ الولادة', 'Check the date of birth'), 'dob.after' => L::t('تحقق من تاريخ الولادة', 'Check the date of birth'),
+            'dob.before_or_equal' => L::t('لا يُقبل التقديم لمن يقل عمره عن '.$this->minAge().' سنة.', 'Applicants must be at least '.$this->minAge().' years old.'), 'dob.after' => L::t('تحقق من تاريخ الولادة', 'Check the date of birth'),
             'date' => L::t('تاريخ غير صالح', 'Invalid date'),
             'integer' => L::t('أدخل رقماً صحيحاً', 'Enter a whole number'),
             'between' => L::t('القيمة خارج المجال المسموح', 'Value out of range'),
@@ -162,5 +163,12 @@ class ApplicationRequest extends FormRequest
             'message' => L::t('راجع الحقول المعلّمة وأكمل البيانات المطلوبة.', 'Check the highlighted fields and complete the required data.'),
             'code' => 'validation', 'errors' => $validator->errors(),
         ], 422));
+    }
+
+    /** الحد الأدنى للعمر من قواعد توظيف الشركة صاحبة الشاغر (ملاحظة 55) */
+    public function minAge(): int
+    {
+        static $memo = null;
+        return $memo ??= (int) \App\Support\Tenant::run($this->job()->company_id, fn () => \App\Support\Settings::rule('min_age'));
     }
 }

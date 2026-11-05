@@ -55,17 +55,17 @@ export const useInternalOffer = () => useMutation({
 })
 
 // ── الإعلانات ──
-export type AnnTag = 'people' | 'payroll' | 'training' | 'policy' | 'event'
+export type AnnTag = 'people' | 'payroll' | 'training' | 'policy' | 'event' | 'holiday'
 export interface Announcement {
   id: number; title: Bi; text: Bi; tag: AnnTag; audience: 'all' | 'department'; department: (Bi & { id: number }) | null
-  image: number | null; attachment: { id: number; name: string } | null; published_at: string | null; expires_at: string | null; status: 'draft' | 'pending' | 'published' | 'expired'
+  contact_email?: string | null; image: number | null; attachment: { id: number; name: string } | null; published_at: string | null; expires_at: string | null; status: 'draft' | 'pending' | 'published' | 'expired'
   title_ar?: string; title_en?: string | null; text_ar?: string; text_en?: string; department_id?: number | null; author?: Bi | null; notified_at?: string | null; created_by?: number
 }
 export interface AnnouncementsHr {
   data: Announcement[]; departments: (Bi & { id: number })[]; tags: AnnTag[]; config: { require_approval: boolean; max_mb: number }; reject_min: number
   can: { create: boolean; decide: boolean; archive: boolean; settings: boolean }
 }
-export interface AnnInput { title_ar: string; title_en: string; text_ar: string; text_en: string; tag: AnnTag; audience: 'all' | 'department'; department_id: number | ''; publish_at: string; expires_at: string }
+export interface AnnInput { title_ar: string; title_en: string; text_ar: string; text_en: string; contact_email: string; tag: AnnTag; audience: 'all' | 'department'; department_id: number | ''; publish_at: string; expires_at: string }
 
 const refreshAnn = () => { queryClient.invalidateQueries({ queryKey: ['hr', 'announcements'] }); queryClient.invalidateQueries({ queryKey: ['me', 'announcements'] }) }
 export const useAnnouncementsHr = () => useQuery({ queryKey: ['hr', 'announcements'], queryFn: () => api<AnnouncementsHr>('/hr/announcements') })

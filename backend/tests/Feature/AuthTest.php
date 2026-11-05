@@ -70,6 +70,21 @@ class AuthTest extends TestCase
         $this->postJson('/api/auth/login', [])->assertStatus(422)->assertJsonValidationErrors(['email', 'password']);
     }
 
+    /** ملاحظة الاختبار 81: سياسة كلمة المرور وعدد المحاولات من إعداد الشركة */
+    public function test_password_policy_and_attempts_follow_company_settings(): void
+    {
+        $samer = \App\Models\User::where('email', 'samer.halabi@alfarada.sy')->first();
+        \App\Support\Tenant::run($samer->company_id, fn () => \App\Support\Settings::put('accounts', [...\App\Support\Settings::DEFAULTS['accounts'], 'pw_min' => 10, 'pw_symbol' => true, 'max_attempts' => 3, 'lock_minutes' => 30]));
+        foreach (range(1, 2) as $i) $this->login('samer.halabi@alfarada.sy', 'bad')->assertStatus(422)->assertJsonPath('remaining', 3 - $i);
+        $this->login('samer.halabi@alfarada.sy', 'bad')->assertStatus(423)->assertJsonPath('minutes', 30);
+        $samer->refresh()->forceFill(['locked_until' => null, 'failed_logins' => 0])->save();
+
+        $this->login('samer.halabi@alfarada.sy')->assertOk();
+        $this->assertSame(['min' => 10, 'upper' => false, 'symbol' => true], $this->getJson('/api/auth/me')->json('user.password_policy'));
+        $this->postJson('/api/auth/password', ['current_password' => '123456', 'password' => 'abcdefgh12', 'password_confirmation' => 'abcdefgh12'])->assertStatus(422)->assertJsonValidationErrors('password');
+        $this->postJson('/api/auth/password', ['current_password' => '123456', 'password' => 'abcdefg1!x', 'password_confirmation' => 'abcdefg1!x'])->assertOk();
+    }
+
     public function test_five_failures_lock_the_account_then_it_unlocks(): void
     {
         foreach (range(1, 4) as $i) $this->login('samer.halabi@alfarada.sy', 'bad')->assertStatus(422);

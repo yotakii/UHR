@@ -36,6 +36,7 @@ export interface PolicyValues {
     notice: { max_days: number; days_before: number }[]; hourly_notice_days: number; exec_after_days: number; substitute_required: boolean; conflict_note_required: boolean
     emergency_per_year: number; emergency_report_hours: number; hourly_max_per_day: number; hourly_day_hours: number; unpaid_max_per_year: number
     reject_min: number; reminder_hours: number; justify_hours: number; probation_paid: boolean
+    sick_first_days: number; sick_first_paid: number; sick_second_days: number; sick_second_paid: number
   }
   leave_types: LeaveTypePolicy[]
   payroll: { start_date: string | null; month_days: number; day_hours: number; absent_days: number; justified_absent_days: number; insurance_base: number; insurance_rate: number

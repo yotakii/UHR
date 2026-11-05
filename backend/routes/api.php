@@ -149,6 +149,7 @@ Route::middleware(['auth', 'fresh'])->prefix('me')->group(function () {
     Route::get('/home', [MyPortalController::class, 'home']);
     Route::post('/checkin', [MyPortalController::class, 'checkIn'])->middleware('throttle:10,1');
     Route::get('/team', [MyPortalController::class, 'team']);
+    Route::get('/holidays', [MyPortalController::class, 'holidays']);
     Route::get('/my-file', [MyPortalController::class, 'profile']);
     Route::put('/my-file/phone', [MyPortalController::class, 'phone'])->middleware('throttle:10,1');
     // M13 — نماذج تقييم 360 المطلوبة مني ونتائجي
@@ -291,6 +292,9 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
         Route::post('/import/preview', [CustodyController::class, 'preview'])->middleware(['perm:assets,create', 'throttle:30,1']);
         Route::post('/import', [CustodyController::class, 'import'])->middleware(['perm:assets,create', 'throttle:10,1']);
         Route::post('/', [CustodyController::class, 'store'])->middleware('perm:assets,create');
+        Route::post('/categories', [CustodyController::class, 'saveCategory'])->middleware('perm:assets,create');
+        Route::put('/categories/{id}', [CustodyController::class, 'saveCategory'])->whereNumber('id')->middleware('perm:assets,create');
+        Route::delete('/categories/{id}', [CustodyController::class, 'deleteCategory'])->whereNumber('id')->middleware('perm:assets,create');
         Route::get('/{id}', [CustodyController::class, 'history'])->whereNumber('id')->middleware('perm:assets,view');
         Route::middleware('perm:assets,edit')->group(function () {
             Route::put('/{id}', [CustodyController::class, 'update'])->whereNumber('id');

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode, type KeyboardEvent } from 'react'
 import { Plus, Trash2, X, AlertTriangle, Globe, Building2, Lock } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { ApiError } from '../../lib/api'
@@ -33,6 +33,16 @@ export function JobForm({ open, id, company, onClose }: { open: boolean; id: num
     })
   }, [open, id, existing])
   const set = <K extends keyof JobInput>(k: K, x: JobInput[K]) => { setV(s => ({ ...s, [k]: x })); if (save.error) save.reset() }
+  /** Enter داخل متطلب: ينتقل للسطر التالي، وفي آخر سطر يضيف متطلباً جديداً (حتى 12) */
+  const reqEnter = (e: KeyboardEvent<HTMLDivElement>) => {
+    const t = e.target as HTMLInputElement
+    if (e.key !== 'Enter' || !t.dataset.req || e.nativeEvent.isComposing) return
+    e.preventDefault()
+    const [i, side] = t.dataset.req.split('-'); const next = Number(i) + 1
+    const focus = () => requestAnimationFrame(() => (document.querySelector(`[data-req="${next}-${side}"]`) as HTMLInputElement | null)?.focus())
+    if (next < v.requirements.length) return focus()
+    if (v.requirements.length < 12 && t.value.trim()) { set('requirements', [...v.requirements, { ar: '', en: '' }]); focus() }
+  }
   const e = save.error instanceof ApiError ? save.error : null
   const err = (k: string) => e?.field(k) ?? Object.entries(e?.errors ?? {}).find(([f]) => f.startsWith(k + '.'))?.[1]?.[0]
   const submit = () => save.mutate(v, { onSuccess: j => { toast(j.portal_status === 'pending' ? L('حُفظ الشاغر — بانتظار مراجعة المنصة قبل البوابة', 'Saved — awaiting platform review for the portal') : L('حُفظ الشاغر', 'Position saved')); onClose() } })
@@ -79,9 +89,10 @@ export function JobForm({ open, id, company, onClose }: { open: boolean; id: num
         <div>
           <div className="flex items-center justify-between mb-1.5"><span className="text-[13px] font-medium text-ink-2">{L('المتطلبات', 'Requirements')}<span className="text-danger"> *</span></span>
             {v.requirements.length < 12 && <Btn size="sm" kind="ghost" icon={<Plus size={14} />} onClick={() => set('requirements', [...v.requirements, { ar: '', en: '' }])}>{L('إضافة', 'Add')}</Btn>}</div>
-          <div className="space-y-2">{v.requirements.map((r, i) => <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-2">
-            <input className="field" placeholder={L('بالعربية', 'Arabic')} value={r.ar} aria-label={L('المتطلب بالعربية', 'Requirement in Arabic')} onChange={x => set('requirements', v.requirements.map((y, j) => j === i ? { ...y, ar: x.target.value } : y))} />
-            <input className="field ltr text-start" placeholder="English" value={r.en} aria-label={L('المتطلب بالإنكليزية', 'Requirement in English')} onChange={x => set('requirements', v.requirements.map((y, j) => j === i ? { ...y, en: x.target.value } : y))} />
+          <p className="text-[12px] text-ink-3 mb-2">{L('اضغط Enter في آخر متطلب لإضافة سطر جديد.', 'Press Enter in the last requirement to add a new line.')}</p>
+          <div className="space-y-2" onKeyDown={reqEnter}>{v.requirements.map((r, i) => <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-2">
+            <input className="field" data-req={`${i}-ar`} placeholder={L('بالعربية', 'Arabic')} value={r.ar} aria-label={L('المتطلب بالعربية', 'Requirement in Arabic')} onChange={x => set('requirements', v.requirements.map((y, j) => j === i ? { ...y, ar: x.target.value } : y))} />
+            <input className="field ltr text-start" data-req={`${i}-en`} placeholder="English" value={r.en} aria-label={L('المتطلب بالإنكليزية', 'Requirement in English')} onChange={x => set('requirements', v.requirements.map((y, j) => j === i ? { ...y, en: x.target.value } : y))} />
             <button type="button" className="px-2 text-ink-3 hover:text-danger disabled:opacity-30" disabled={v.requirements.length === 1} onClick={() => set('requirements', v.requirements.filter((_, j) => j !== i))} aria-label={L('حذف', 'Remove')}><Trash2 size={16} /></button>
           </div>)}</div>
           {err('requirements') && <span className="block text-[12px] text-danger mt-1">{err('requirements')}</span>}

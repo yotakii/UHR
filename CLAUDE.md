@@ -118,6 +118,7 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 | 11e accounts by link (activation / new-password links, no temp passwords by mail), outgoing mail from the platform console (SMTP + test), per-company sender name, mail log | 📦 delivered |
 | 11f «فرز السير» bulk CV screening: filters (job, department, field of study, degree, years, city, English, match, stage, reading status/result, dates), select + batch reading, live progress + ETA, ranked results, Excel | 📦 delivered |
 | 12a «الساحة» social space: communities (company / department / interest public|private), posts with images, polls, questions + best answer, pins, reactions, comments + replies, @mentions, reports + moderation, settings | 📦 delivered |
+| 15a test notes — quick fixes & clarifications (FEATURES §15) | 📦 delivered |
 | 12b praise (company-value badges + optional points) + automatic celebrations · 13 «المساعد» AI agent (simple chat for users, user-scoped tools, confirm before actions, no technical setup for companies) · 14 final verification — plan updated Oct 26; AI agent kept Oct 29 | |
 
 **Task 03 delivered:**
@@ -392,6 +393,22 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 - API `/api/space` (auth, fresh, `perm:space,view`; create routes `space,create`; moderation `space,decide`; settings PUT `settings,edit`).
 - Frontend: `lib/space.ts` (`parseBody`, `ago`, hooks, infinite feed), `screens/space/{parts,PostCard,Space}.tsx` — `SpaceApp base="/hr/space"|"/me/space"` (feed `…`, community `…/c/{id}`, post `…/p/{id}`, moderation `…/moderation`): communities sidebar (select on mobile), composer (post/question/poll, images, @ autocomplete `MentionBox`), post cards (reactions picker, poll bars, best answer, menu edit/pin/report/hide/delete, image viewer), comments with replies, community header (join/leave/members/edit/archive), moderation queue; `screens/hr/SpaceSettings.tsx`. HR nav «الساحة» in «شؤون الموظفين»; employee portal tab «الساحة». Notice links `space:{id}`, `space`, `space-moderation`.
 - Tests: `tests/Feature/SpaceTest.php` (3), `frontend/src/lib/__tests__/space.test.ts`.
+
+**Batch 15a delivered (Nov 5) — test-notes quick fixes (FEATURES §15; user ignored notes 1, 21, 25, 28, 64; 77+86 → per-company portal in 15f; 61+62 → task management in 15g):**
+- Violations: the six lateness titles are shortened («التأخر حتى 15 دقيقة / من 16 إلى 30 / من 31 إلى 60 … — دون|مع تعطيل أعمال الآخرين»), migration `2026_11_08_000001` renames existing rows by exact old text.
+- Announcements: tag `holiday` («عطل رسمية») + `tagTone` colours; `contact_email` column (migration `2026_11_08_000003`, `email:rfc`, mailto button); emails/URLs inside the text are clickable via `linkChunks()` (`lib/store.ts`, React elements, never HTML).
+- Departments: code regex `^[A-Za-z][A-Za-z0-9_-]{1,19}$` (dash allowed).
+- Apply: sources website/linkedin/facebook/whatsapp/telegram/referral/other (`expo` still valid for old rows); `email_confirm` (client-only, new accounts, paste blocked); rule `min_age` (default 18, 15–30, `Settings::rule('min_age')`, `ApplicationRequest::minAge()`, `PublicJob::full` returns it, NewEmployee checks it; RecruitmentSettings «أخرى»); thank-you line on `Applied`.
+- Job form: Enter in a requirement moves to the next row / adds one (`data-req`); job page summary keeps line breaks.
+- Custody categories: defaults + `office`, `tools` (migration `2026_11_08_000002` for existing companies); `POST|PUT|DELETE /api/hr/custody/categories[/{id}]` (assets,create; delete only when unused → 409 `category_in_use`); «الفئات» modal.
+- Leave: `leave_rules.sick_first_days/paid` 90/70 + `sick_second_days/paid` 90/80 → `balance.sick_limit`, `sick_tiers`; warning `over_sick` needs an approver note (payroll still uses the type's `paid` — tiered pay in 15d). Balance tiles open a history modal of that group. `ConfirmSend` (`ui/decision.tsx`) = two-step submit for leave and services.
+- `/me/holidays` + `/hr/my-holidays` (`screens/employee/MyHolidays.tsx`, `GET /api/me/holidays?year` groups consecutive same-name days, state past/now/upcoming, years, work_days).
+- Settings pages: `SettingsBar` in `HrApp` (crumb + «إغلاق» → `/hr/settings`, Esc when no dialog/input).
+- Org chart: onboarding / future-hire employees hidden server-side (their reports re-parented upward); every manager-less node is a root (forest) in view and print.
+- Password policy (`App\Support\PasswordPolicy`, company setting `accounts` pw_min 8, pw_upper, pw_symbol, max_attempts 5, lock_minutes 5; applicants use defaults): login lockout, change/reset/activate rules + messages, session payload `password_policy`, invite info `password`; `PasswordFields`/`passwordOk` take `policy`; Users page «سياسة الحسابات» modal (`PUT /api/hr/admin/users/settings` merges keys). `AuthController::MAX_ATTEMPTS` removed.
+- Offer amounts (F-29) masked until verification: `HrCandidate::full` offer money null + `masked`, `/api/hr/approvals` too; `PUT /candidates/{id}/offer` → `SalaryVault::require` (403 `salary_locked`); `OfferTab` wrapped in `ProtectedBlock`.
+- Guide: new section «الأرقام والرموز وقواعد العمل» (`id="codes"`, notes 10/11/16/17/18/32/37/38 + answers 29/34/35/36/40/71/79/83/85).
+- Tests: AuthTest +1 (policy), RecruitmentTest offer lock, form.test (email confirm + min age).
 
 **Open questions in SRS** (ask the user only when you reach them):
 - SMS provider for OTP.
