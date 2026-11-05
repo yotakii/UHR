@@ -1,6 +1,7 @@
+import { Masked } from '../../ui/vault'
 import { useState } from 'react'
 import { Printer } from 'lucide-react'
-import { useL, useLang, bi, fmtDateTime, todayISO, addDays } from '../../lib/store'
+import { useL, useLang, bi, fmtDateTime, todayISO, addDays, money } from '../../lib/store'
 import { ApiError } from '../../lib/api'
 import { useAssignOvertime, useInbox, useSetDelegate, type ReqRow } from '../../lib/requests'
 import { Btn, Empty, Field, PageHead, Panel, toast } from '../../ui/kit'
@@ -21,6 +22,10 @@ export function RequestTable({ rows, rejectMin, empty, certHref }: { rows: ReqRo
           {r.interview_needed && r.can_act && r.steps.find(s => s.status === 'pending')?.role.en === 'Human Resources' && <a className="text-brand font-semibold" href={`/hr/offboarding?status=all&id=${r.id}`}>{L('سجّل مقابلة الاستقالة أولاً', 'Record the interview first')}</a>}</div>}
         {r.kind === 'penalty' && r.case && r.penalty && <div className="text-[12.5px]"><b>{bi(r.penalty.label, lang)}</b> · <span className="ltr inline-block num text-ink-3">{r.case.ref_no}</span> · {L(`المرة ${r.case.occurrence}`, `occurrence ${r.case.occurrence}`)}
           {r.case.type && <div className="text-[12px] text-ink-3 max-w-[300px]">{bi(r.case.type, lang)}</div>}{r.requested_by && <div className="text-[12px] text-ink-3">{L('اقتراح', 'Proposed by')}: {bi(r.requested_by, lang)}</div>}</div>}
+        {r.kind === 'offer_budget' && r.candidate && r.budget && <div className="text-[12.5px]"><a className="text-brand font-semibold" href={`/hr/candidates/${r.candidate.id}?tab=offer`}>{bi(r.candidate.name, lang)}</a>
+          <span className="text-ink-3"> · {r.candidate.job ? bi(r.candidate.job, lang) : ''} · <span className="ltr inline-block">{r.candidate.ref}</span></span>
+          <div><Masked value={r.budget.total}><span className="num text-danger font-semibold">{money(r.budget.total ?? 0, r.budget.currency, lang)}</span> <span className="text-ink-3">{L('مقابل حد', 'vs. limit')} <span className="num">{money(r.budget.max ?? 0, r.budget.job_currency, lang)}</span></span></Masked></div>
+          {r.requested_by && <div className="text-[12px] text-ink-3">{L('من', 'By')}: {bi(r.requested_by, lang)}</div>}</div>}
         <div className="lg:hidden text-[12px] text-ink-2 max-w-[260px] break-words">{r.reason}</div>
         <Warnings r={r} /><DocLink r={r} /><div className="md:hidden mt-1"><StepsPath steps={r.steps} /></div><div className="sm:hidden mt-1"><LeaveStatus s={r.status} /></div></td>
       <td className="hidden lg:table-cell text-ink-2 max-w-[220px]">{r.reason}</td>

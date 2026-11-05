@@ -7,8 +7,8 @@ import { useCreateEmployee, useLookups, type NewEmployeeInput } from '../../../l
 import { Btn, Field, Modal, Seg, toast } from '../../../ui/kit'
 
 const today = () => new Date().toISOString().slice(0, 10)
-const BLANK: NewEmployeeInput = { name: '', name_en: '', gender: 'M', national_id: '', dob: '', phone: '+963 9', email: '', department_id: '', title_ar: '', title_en: '', location_id: '', manager_id: '', salary: '', currency: 'USD', hire_date: today() }
-const STEP_FIELDS: (keyof NewEmployeeInput)[][] = [['name', 'name_en', 'gender', 'national_id', 'dob', 'phone', 'email'], ['department_id', 'title_ar', 'title_en', 'location_id', 'manager_id', 'salary', 'currency', 'hire_date']]
+const BLANK: NewEmployeeInput = { name: '', name_en: '', gender: 'M', national_id: '', dob: '', phone: '+963 9', email: '', department_id: '', title_ar: '', title_en: '', location_id: '', manager_id: '', salary: '', currency: 'USD', hire_date: today(), contract: 'fixed', basic: '', housing: 0, transport: 0, fuel: 0 }
+const STEP_FIELDS: (keyof NewEmployeeInput)[][] = [['name', 'name_en', 'gender', 'national_id', 'dob', 'phone', 'email'], ['department_id', 'title_ar', 'title_en', 'location_id', 'manager_id', 'salary', 'basic', 'housing', 'transport', 'fuel', 'contract', 'currency', 'hire_date']]
 
 /**
  * معالج إضافة موظف (M06 — AddEmployee في الديمو، نافذة 680px بأربع خطوات): البيانات الشخصية، الوظيفة والراتب، العهد، المراجعة.
@@ -26,9 +26,10 @@ export function AddEmployee({ onClose }: { onClose: () => void }) {
   const set = <K extends keyof NewEmployeeInput>(k: K, v: NewEmployeeInput[K]) => { setD(x => ({ ...x, [k]: v })); if (err) create.reset() }
   const steps = [L('البيانات الشخصية', 'Personal'), L('الوظيفة والراتب', 'Job & pay'), L('العهد', 'Custody'), L('المراجعة', 'Review')]
   const missing = (s: number) => s === 0 ? !d.name.trim() || !d.name_en.trim() || !d.national_id.trim() || !d.dob || d.phone.replace(/\D/g, '').length < 9 || !/^\S+@\S+\.\S+$/.test(d.email)
-    : s === 1 ? !d.department_id || !d.title_ar.trim() || !d.title_en.trim() || !d.location_id || d.salary === '' || !d.hire_date : false
+    : s === 1 ? !d.department_id || !d.title_ar.trim() || !d.title_en.trim() || !d.location_id || d.basic === '' || !d.hire_date : false
   const dept = lk?.departments.find(x => x.id === d.department_id)
-  const finish = () => create.mutate({ ...d, asset_ids: assets }, {
+  const total = [d.basic, d.housing, d.transport, d.fuel].reduce<number>((a, x) => a + (Number(x) || 0), 0)
+  const finish = () => create.mutate({ ...d, salary: total, asset_ids: assets }, {
     onSuccess: r => { toast(L(`أُنشئ ملف الموظف ${r.code} وبدأت المباشرة`, `Employee ${r.code} created — onboarding started`)); onClose(); navigate(`/hr/onboarding/${r.id}`) },
     onError: x => { if (x instanceof ApiError) { const bad = STEP_FIELDS.findIndex(fs => fs.some(f => x.field(f))); if (bad >= 0) setStep(bad); else toast(x.message) } },
   })
@@ -57,8 +58,14 @@ export function AddEmployee({ onClose }: { onClose: () => void }) {
         <Field label={L('المدير المباشر', 'Manager')} error={e('manager_id')} className="sm:col-span-2"><select className="field" value={d.manager_id} onChange={x => set('manager_id', x.target.value ? Number(x.target.value) : '')}>
           <option value="">{dept?.head ? L(`رئيس الإدارة تلقائياً — ${dept.head.ar}`, `Department head — ${dept.head.en}`) : L('رئيس الإدارة تلقائياً', 'Department head')}</option>
           {lk.managers.filter(m => !d.department_id || m.department_id === d.department_id).map(m => <option key={m.id} value={m.id}>{m[lang]} — {m.code}</option>)}</select></Field>
-        <Field label={L('الراتب الشامل', 'Total pay')} req error={e('salary')}><div className="flex gap-2"><input type="number" min={0} className="field num flex-1" value={d.salary} onChange={x => set('salary', x.target.value === '' ? '' : Number(x.target.value))} />
-          <select className="field !w-24" value={d.currency} onChange={x => set('currency', x.target.value)} aria-label={L('العملة', 'Currency')}>{lk.currencies.map(c => <option key={c}>{c}</option>)}</select></div></Field>
+        <Field label={L('نوع العقد', 'Contract type')} error={e('contract')}><select className="field" value={d.contract} onChange={x => set('contract', x.target.value as NewEmployeeInput['contract'])}>
+          <option value="fixed">{L('محدد المدة (سنة قابلة للتجديد)', 'Fixed term (renewable year)')}</option><option value="open">{L('غير محدد المدة', 'Open-ended')}</option><option value="project">{L('عقد مشروع', 'Project contract')}</option></select></Field>
+        <Field label={L('العملة', 'Currency')}><select className="field" value={d.currency} onChange={x => set('currency', x.target.value)}>{lk.currencies.map(c => <option key={c}>{c}</option>)}</select></Field>
+        <div className="sm:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-3">
+          {([['basic', L('الراتب الأساسي', 'Basic salary'), true], ['housing', L('بدل السكن / غلاء المعيشة', 'Housing / COL'), false], ['transport', L('بدل المواصلات', 'Transport'), false], ['fuel', L('بدل المحروقات', 'Fuel'), false]] as const).map(([k, label, req]) =>
+            <Field key={k} label={label} req={req} error={e(k)}><input type="number" min={0} className="field num" value={d[k]} onChange={x => set(k, x.target.value === '' ? '' : Number(x.target.value))} /></Field>)}
+        </div>
+        <div className="sm:col-span-2 text-[13px] text-ink-2 -mt-1">{L('الراتب الشامل', 'Total pay')}: <b className="num">{total.toLocaleString('en-US')} {d.currency}</b> <span className="text-ink-3">— {L('كما في عرض العمل، ويُحفظ مفصّلاً في ملف الموظف.', 'as in the job offer; saved in detail on the employee file.')}</span></div>
         <Field label={L('تاريخ المباشرة', 'Start date')} req error={e('hire_date')}><input type="date" className="field" value={d.hire_date} onChange={x => set('hire_date', x.target.value)} /></Field>
       </div>}
       {step === 2 && (lk.assets.length === 0 ? <p className="text-[14px] text-ink-3 py-6 text-center">{L('لا توجد عهد متاحة في المستودع — يمكن التسليم لاحقاً من صفحة المباشرة.', 'No assets in stock — you can issue later from the onboarding page.')}</p> :
@@ -67,7 +74,7 @@ export function AddEmployee({ onClose }: { onClose: () => void }) {
             <span className={`size-5 rounded border grid place-items-center shrink-0 ${on ? 'bg-brand border-brand text-on-brand' : 'border-ink-3'}`}>{on && <Check size={13} />}</span>
             <span className="min-w-0"><span className="block text-[13px] font-semibold">{bi(a.name, lang)}</span><span className="block text-[11px] text-ink-3"><span className="ltr inline-block">{a.tag}</span> · {bi(a.category, lang)}</span></span></button> })}</div>)}
       {step === 3 && <div className="space-y-1.5 text-[14px]">{[[L('الاسم', 'Name'), lang === 'ar' ? d.name : d.name_en], [L('البريد', 'Email'), <span className="ltr inline-block">{d.email}</span>], [L('الإدارة', 'Department'), dept?.[lang]], [L('المسمى', 'Title'), lang === 'ar' ? d.title_ar : d.title_en],
-        [L('الراتب', 'Pay'), <span className="num">{d.salary} {d.currency}</span>], [L('المباشرة', 'Start'), fmtDate(d.hire_date, lang)], [L('العهد', 'Assets'), assets.length || '—'], [L('حساب الدخول', 'Sign-in account'), L('رابط تفعيل يُرسل بالبريد', 'Activation link sent by email')]].map(([k, v], i) =>
+        [L('الراتب', 'Pay'), <span className="num">{total.toLocaleString('en-US')} {d.currency}</span>], [L('المباشرة', 'Start'), fmtDate(d.hire_date, lang)], [L('العهد', 'Assets'), assets.length || '—'], [L('حساب الدخول', 'Sign-in account'), L('رابط تفعيل يُرسل بالبريد', 'Activation link sent by email')]].map(([k, v], i) =>
         <div key={i} className="flex justify-between gap-3 border-b border-line-2 py-1.5"><span className="text-ink-3">{k}</span><span className="font-semibold text-end">{v}</span></div>)}
         <p className="text-[12px] text-ink-3 pt-2">{L('يُنشأ الملف بحالة «قيد المباشرة» مع قائمة F-19، وتصل العهد للموظف ليوقّع استلامها.', 'The file starts in onboarding with the F-19 checklist; assets go to the employee for signature.')}</p>
         {err && !STEP_FIELDS.flat().some(f => err.field(f)) && <div role="alert" className="text-[13px] text-danger bg-danger-soft rounded px-3 py-2">{err.message}</div>}

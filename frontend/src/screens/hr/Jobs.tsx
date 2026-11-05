@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Plus, ExternalLink, Globe, Building2, Lock, Lock as LockIcon, Unlock, Link2, ClipboardCheck } from 'lucide-react'
+import { Plus, ExternalLink, Globe, Building2, Lock, Lock as LockIcon, Unlock, Link2, ClipboardCheck, Users, Send, X } from 'lucide-react'
 import { useL, useLang, bi, fmtDate } from '../../lib/store'
-import { navigate } from '../../lib/router'
-import { useHrJobs, useJobStatus, type HrJob } from '../../lib/hr'
+import { navigate, setQuery, useRoute } from '../../lib/router'
+import { useCvMatches, useHrJobs, useInviteCv, useJobStatus, type HrJob } from '../../lib/hr'
+import { ApiError } from '../../lib/api'
 import { can, useMe } from '../../lib/session'
 import { DEGREES, STAGES, type Stage } from '../../lib/recruitment'
-import { Badge, Btn, Empty, PageHead, Panel, toast } from '../../ui/kit'
+import { Badge, Btn, Drawer, Empty, PageHead, Panel, toast } from '../../ui/kit'
 import { DecisionDialog } from '../../ui/decision'
 import { JobForm } from './JobForm'
 
@@ -22,6 +23,9 @@ export function Jobs() {
   const [edit, setEdit] = useState<{ open: boolean; id: number | null }>({ open: false, id: null })
   const [toggle, setToggle] = useState<HrJob | null>(null)
   const company = data?.company
+  const route = useRoute()
+  const matches = route.query.matches ? Number(route.query.matches) : null
+  const canCand = can(me, 'candidates')
   const publicUrl = (j: HrJob) => `/jobs/${company?.slug}/${encodeURIComponent(j.code)}`
   const copy = (j: HrJob) => navigator.clipboard?.writeText(location.origin + publicUrl(j)).then(() => toast(L('تم نسخ رابط الوظيفة', 'Job link copied')), () => {})
   return <div className="max-w-[1280px] mx-auto">
@@ -55,11 +59,13 @@ export function Jobs() {
           <td onClick={e => e.stopPropagation()}><div className="flex flex-wrap gap-1 justify-end">
             <Btn size="sm" kind={j.test_enabled ? 'secondary' : 'ghost'} onClick={() => navigate(`/hr/jobs/${j.id}/test`)} title={L('الاختبار الأولي', 'Preliminary test')} aria-label={L('الاختبار الأولي', 'Preliminary test')}>
               <ClipboardCheck size={15} className={j.test_enabled ? 'text-brand' : undefined} /><span className="hidden xl:inline">{L('الاختبار', 'Test')}</span></Btn>
+            {canCand && <Btn size="sm" kind="ghost" onClick={() => setQuery({ matches: String(j.id) })} title={L('مطابقة من قاعدة السير', 'Matches from the CV database')} aria-label={L('مطابقة من قاعدة السير', 'Matches from the CV database')}><Users size={15} /></Btn>}
             {j.visibility !== 'internal' && j.accepting && <Btn size="sm" kind="ghost" onClick={() => copy(j)} aria-label={L('نسخ الرابط', 'Copy link')} title={L('نسخ الرابط', 'Copy link')}><Link2 size={15} /></Btn>}
             {canEdit && j.status !== 'draft' && <Btn size="sm" kind={j.status === 'open' ? 'danger' : 'secondary'} icon={j.status === 'open' ? <LockIcon size={14} /> : <Unlock size={14} />} onClick={() => setToggle(j)}>{j.status === 'open' ? L('إغلاق', 'Close') : L('إعادة فتح', 'Reopen')}</Btn>}
           </div></td>
         </tr>)}</tbody></table></div>}
     </Panel>
+    {matches && <CvMatchesDrawer id={matches} onClose={() => setQuery({ matches: undefined })} canInvite={can(me, 'candidates', 'edit')} />}
     <JobForm open={edit.open} id={edit.id} company={company} onClose={() => setEdit({ open: false, id: null })} />
     <DecisionDialog open={!!toggle} onClose={() => setToggle(null)} tone={toggle?.status === 'open' ? 'danger' : 'primary'}
       title={toggle?.status === 'open' ? L('إغلاق الشاغر', 'Close position') : L('إعادة فتح الشاغر', 'Reopen position')}
@@ -79,4 +85,34 @@ function Publishing({ j }: { j: HrJob }) {
     : j.portal_status === 'rejected' ? <span title={j.portal_note ?? ''}><Badge tone="danger" dot>{L('لم يُنشر — اقرأ السبب', 'Not published — see reason')}</Badge></span> : null
   const state = j.status === 'draft' ? <Badge>{L('مسودة', 'Draft')}</Badge> : j.status === 'closed' || !j.accepting ? <Badge tone="danger">{L('مغلق', 'Closed')}</Badge> : j.closes_at ? <span className="text-[11px] text-ink-3">{L('حتى', 'until')} {fmtDate(j.closes_at, lang)}</span> : null
   return <div className="flex flex-col items-start gap-1">{where}{review}{state}</div>
+}
+
+/**
+ * سير قاعدة الشركة المطابقة للشاغر (ملاحظة الاختبار 46): تُقاس بنفس معادلة المطابقة على متطلبات الشاغر،
+ * لمن وافق على حفظ سيرته ولم يتقدم لهذا الشاغر. «دعوة للتقديم» ترسل بريداً برابط التقديم — لا يُنشأ طلب تلقائياً.
+ */
+function CvMatchesDrawer({ id, onClose, canInvite }: { id: number; onClose: () => void; canInvite: boolean }) {
+  const L = useL(); const lang = useLang()
+  const q = useCvMatches(id)
+  const inv = useInviteCv(id)
+  const d = q.data
+  return <Drawer open onClose={onClose} width={640}>
+    <div className="flex items-start justify-between gap-3 p-5 border-b border-line-2">
+      <div><h3 className="font-semibold text-[16px]">{L('مطابقة من قاعدة السير الذاتية', 'Matches from the CV database')}</h3>
+        {d && <div className="text-[13px] text-ink-3">{bi(d.job.title, lang)} · <span className="ltr inline-block">{d.job.code}</span> · {L(`مطابقة ${d.min}٪ فأكثر`, `${d.min}%+ match`)}</div>}</div>
+      <button onClick={onClose} className="p-1 rounded hover:bg-sub text-ink-3" aria-label={L('إغلاق', 'Close')}><X size={18} /></button>
+    </div>
+    <div className="p-5">
+      {!d ? <Empty title={q.isError ? L('تعذّر التحميل', 'Could not load') : L('جارٍ الحساب…', 'Calculating…')} />
+        : d.data.length === 0 ? <Empty title={L('لا توجد سير مطابقة حالياً', 'No matching CVs right now')}>{L('تُعرض هنا سير من وافقوا على حفظ سيرتهم لفرص قادمة، إذا طابقت متطلبات هذا الشاغر.', 'CVs of applicants who agreed to be kept for future openings appear here when they match this job.')}</Empty>
+        : <ul className="divide-y divide-line-2 border border-line rounded-lg">{d.data.map(m => <li key={m.id} className="p-3 flex items-center gap-3">
+          <span className={`size-11 shrink-0 rounded-full grid place-items-center text-[13px] font-bold num ${m.score >= 75 ? 'bg-brand text-on-brand' : m.score >= 60 ? 'bg-brand-soft text-brand' : 'bg-sub text-ink-2'}`}>{m.score}</span>
+          <div className="flex-1 min-w-0"><a className="font-semibold hover:text-brand" href={`/hr/candidates/${m.id}`}>{bi(m.name, lang)}</a>
+            <div className="text-[12.5px] text-ink-3 truncate">{[m.major, L(`${m.years} سنوات خبرة`, `${m.years} yrs`), L(`تقدّم سابقاً: ${m.last_job.ar ?? ''}`, `Applied before: ${m.last_job.en ?? ''}`)].filter(Boolean).join(' · ')}</div></div>
+          {m.invited ? <Badge tone="info">{L('دُعي', 'Invited')}</Badge>
+            : canInvite && d.job.accepting && <Btn size="sm" icon={<Send size={14} />} disabled={inv.isPending} onClick={() => inv.mutateAsync(m.id).then(() => toast(L('أُرسلت الدعوة بالبريد', 'Invitation emailed'))).catch(e => toast(e instanceof ApiError ? e.message : L('تعذّر الإرسال', 'Could not send')))}>{L('دعوة للتقديم', 'Invite to apply')}</Btn>}
+        </li>)}</ul>}
+      {d && !d.job.accepting && d.data.length > 0 && <p className="text-[12.5px] text-warn mt-3">{L('الشاغر لا يستقبل طلبات الآن — افتحه لإرسال الدعوات.', 'The job is not accepting applications — open it to send invitations.')}</p>}
+    </div>
+  </Drawer>
 }

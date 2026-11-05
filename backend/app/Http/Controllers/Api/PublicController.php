@@ -37,6 +37,10 @@ class PublicController extends Controller
             'filters' => [
                 'cities' => Location::whereIn('id', $jobs->pluck('location_id')->unique())->orderBy('id')->get()->map(fn ($l) => ['code' => $l->code, 'ar' => $l->name_ar, 'en' => $l->name_en])->values(),
                 'types' => collect(JobOpening::TYPES)->only($jobs->pluck('employment_type')->unique())->map(fn ($t, $k) => ['code' => $k] + $t)->values(),
+                'workplaces' => collect(JobOpening::WORKPLACES)->only($jobs->pluck('workplace')->unique())->map(fn ($t, $k) => ['code' => $k] + $t)->values(),
+                // فلتر الراتب (ملاحظة 09) — عتبات بعملة كل شاغر، من الحد الأعلى للنطاق
+                'salary' => ['USD' => [300, 500, 800, 1200, 2000], 'SYP' => [3000000, 5000000, 8000000, 12000000]],
+                'currencies' => $jobs->pluck('currency')->unique()->values(),
             ],
         ]);
     }
@@ -45,12 +49,19 @@ class PublicController extends Controller
     public function jobs(Request $request): JsonResponse
     {
         $f = $request->validate(['company' => ['nullable', 'string', 'max:40'], 'city' => ['nullable', 'string', 'max:20'], 'type' => ['nullable', 'string', 'max:20'],
-            'exp' => ['nullable', 'integer', 'between:0,60'], 'q' => ['nullable', 'string', 'max:80']]);
+            'exp' => ['nullable', 'string', 'max:5'], 'q' => ['nullable', 'string', 'max:80'], 'workplace' => ['nullable', 'string', 'max:10'],
+            'salary' => ['nullable', 'integer', 'min:0', 'max:1000000000'], 'currency' => ['nullable', 'in:USD,SYP']]);
         $q = JobOpening::allCompanies()->onPortal()->with(PublicJob::WITH);
         if ($f['company'] ?? null) $q->whereHas('company', fn ($c) => $c->where('slug', $f['company']));
         if ($f['city'] ?? null) $q->whereHas('location', fn ($l) => $l->where('code', $f['city']));
         if ($f['type'] ?? null) $q->where('employment_type', $f['type']);
-        if (isset($f['exp'])) $q->where('min_years', '<=', $f['exp']);
+        if ($f['workplace'] ?? null) $q->where('workplace', $f['workplace']);
+        // الخبرة: شريحة (0-1، 1-3، 3-5، 5+، 10+) = سنوات الخبرة المطلوبة في الشاغر؛ رقم قديم في الرابط = «حتى N سنوات»
+        if (($e = $f['exp'] ?? null) !== null && $e !== '') {
+            if ($band = JobOpening::EXP_BANDS[$e] ?? null) $q->whereBetween('min_years', $band);
+            elseif (ctype_digit($e)) $q->where('min_years', '<=', (int) $e);
+        }
+        if ($f['salary'] ?? null) $q->where('currency', $f['currency'] ?? 'USD')->where('salary_max', '>=', $f['salary']);
         if ($term = trim((string) ($f['q'] ?? ''))) {
             $like = '%'.mb_strtolower($term).'%';
             $q->where(fn ($w) => $w->whereRaw('lower(title_ar) like ?', [$like])->orWhereRaw('lower(title_en) like ?', [$like])
@@ -91,6 +102,20 @@ class PublicController extends Controller
         $c = Company::where('slug', $slug)->first();
         if (! $c?->logo_path || ! Storage::disk('public')->exists($c->logo_path)) return response('', 404);
         return Storage::disk('public')->response($c->logo_path, null, ['Cache-Control' => 'public, max-age=86400']);
+    }
+
+    /** وسوم المعاينة لبرامج المراسلة والشبكات — المسار نفسه الذي شاركه المستخدم */
+    public function og(Request $request, \App\Services\Portal\SharePreview $p): Response
+    {
+        $path = '/'.ltrim(substr((string) $request->query('path', '/'), 0, 300), '/');
+        return response($p->html($path), 200, ['Content-Type' => 'text/html; charset=utf-8', 'Cache-Control' => 'public, max-age=600']);
+    }
+
+    public function ogImage(\App\Services\Portal\SharePreview $p, ?string $slug = null): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    {
+        $c = $slug ? Company::where('slug', $slug)->where('status', 'active')->first() : null;
+        abort_if($slug && ! $c, 404);
+        return response()->file($p->image($c), ['Content-Type' => 'image/png', 'Cache-Control' => 'public, max-age=86400']);
     }
 
     /** خريطة الموقع لمحركات البحث: البوابة، صفحات الشركات، الشواغر المنشورة */

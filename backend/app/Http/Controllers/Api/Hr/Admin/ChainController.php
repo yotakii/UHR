@@ -24,7 +24,7 @@ class ChainController extends Controller
         'leave' => ['الإجازات', 'Leave'], 'justification' => ['تبرير الغياب والتأخير', 'Justifications'], 'overtime' => ['التكليف بالإضافي F-04', 'Overtime assignment F-04'],
         'service' => ['طلبات الخدمات والشهادات', 'Services & certificates'], 'advance' => ['السلفة', 'Salary advance'], 'internal' => ['الترشيح الداخلي F-27', 'Internal application F-27'],
         'resignation' => ['الاستقالة F-02', 'Resignation F-02'], 'termination' => ['إنهاء العقد F-03', 'Termination F-03'], 'penalty' => ['الجزاءات الأشد', 'Higher penalties'],
-        'appointment' => ['قرار التعيين F-31', 'Appointment decision F-31'], 'salary_access' => ['إذن الاطلاع على الرواتب', 'Salary data access'],
+        'appointment' => ['قرار التعيين F-31', 'Appointment decision F-31'], 'salary_access' => ['إذن الاطلاع على الرواتب', 'Salary data access'], 'offer_budget' => ['عرض عمل يتجاوز الميزانية', 'Job offer over budget'],
     ];
 
     /** الأدوار المسموحة كمستوى («manager» = المدير المباشر للموظف) */
@@ -37,7 +37,7 @@ class ChainController extends Controller
         $name = fn (?int $id) => ($u = $users->firstWhere('id', $id)) ? ['ar' => $u->displayName('ar'), 'en' => $u->displayName('en')] : null;
         $roles = Role::whereIn('key', self::LEVEL_ROLES)->get()->keyBy('key');
         return response()->json([
-            'data' => collect(self::TYPES)->map(fn ($t, $k) => ['type' => $k, 'ar' => $t[0], 'en' => $t[1], 'manager_allowed' => $k !== 'appointment' && $k !== 'salary_access',
+            'data' => collect(self::TYPES)->map(fn ($t, $k) => ['type' => $k, 'ar' => $t[0], 'en' => $t[1], 'manager_allowed' => ! in_array($k, ['appointment', 'salary_access', 'offer_budget'], true),
                 'levels' => array_map(fn ($lv) => $lv + ['user' => $name($lv['user_id'] ?? null), 'deputy' => $name($lv['deputy_id'] ?? null)], $chains->get($k)?->levels ?? Workflow::chain($k))])->values(),
             'roles' => collect(self::LEVEL_ROLES)->map(fn ($r) => ['key' => $r, 'ar' => $r === 'manager' ? 'المدير المباشر' : ($roles[$r]->name_ar ?? $r), 'en' => $r === 'manager' ? 'Direct manager' : ($roles[$r]->name_en ?? $r)])->values(),
             'users' => $users->map(fn ($u) => ['id' => $u->id, 'ar' => $u->displayName('ar'), 'en' => $u->displayName('en'), 'email' => $u->email, 'roles' => $u->roles->pluck('key')])->values(),
@@ -54,7 +54,7 @@ class ChainController extends Controller
         ], [], ['levels.*.role_ar' => L::t('اسم المستوى', 'Level name'), 'levels.*.role_en' => L::t('اسم المستوى', 'Level name')]);
         $ids = User::where('company_id', \App\Support\Tenant::id())->pluck('id')->all();
         foreach ($d['levels'] as $i => $lv) {
-            if ($lv['role_key'] === 'manager' && in_array($type, ['appointment', 'salary_access'], true)) throw ValidationException::withMessages(["levels.$i.role_key" => [L::t('هذا المسار لا يرتبط بموظف — اختر دوراً.', 'This path has no employee — choose a role.')]]);
+            if ($lv['role_key'] === 'manager' && in_array($type, ['appointment', 'salary_access', 'offer_budget'], true)) throw ValidationException::withMessages(["levels.$i.role_key" => [L::t('هذا المسار لا يرتبط بموظف — اختر دوراً.', 'This path has no employee — choose a role.')]]);
             foreach (['user_id', 'deputy_id'] as $f) if (! empty($lv[$f]) && ! in_array((int) $lv[$f], $ids, true)) throw ValidationException::withMessages(["levels.$i.$f" => [L::t('المستخدم ليس من الشركة.', 'The user is not in this company.')]]);
             if (! empty($lv['deputy_id']) && (int) $lv['deputy_id'] === (int) ($lv['user_id'] ?? 0)) throw ValidationException::withMessages(["levels.$i.deputy_id" => [L::t('النائب يجب أن يختلف عن صاحب المستوى.', 'The deputy must differ from the level owner.')]]);
         }

@@ -67,11 +67,14 @@ class CandidateController extends Controller
 
     public function interview(Request $request, int $id): JsonResponse
     {
-        $rules = ['notes' => ['nullable', 'string', 'max:2000'], 'recommendation' => ['required', Rule::in(['recommended', 'reserve', 'rejected'])], 'ratings' => ['required', 'array']];
+        $rules = ['notes' => ['nullable', 'string', 'max:2000'], 'recommendation' => ['required', Rule::in(['recommended', 'reserve', 'rejected'])], 'ratings' => ['required', 'array'],
+            'answers' => ['nullable', 'array'], 'answers.questions' => ['nullable', 'array', 'max:20'], 'answers.questions.*.q' => ['required', 'string', 'max:300'], 'answers.questions.*.note' => ['nullable', 'string', 'max:1000'],
+            'answers.questions.*.score' => ['nullable', 'integer', 'between:1,5'], 'answers.skills' => ['nullable', 'array', 'max:15'], 'answers.skills.*.s' => ['required', 'string', 'max:120'],
+            'answers.skills.*.score' => ['nullable', 'integer', 'between:1,5'], 'answers.skills.*.note' => ['nullable', 'string', 'max:500']];
         foreach (F25::keys() as $k) $rules["ratings.{$k}"] = ['required', 'integer', 'between:1,5'];
         $data = $request->validate($rules, ['ratings.*.required' => L::t('قيّم كل المعايير', 'Rate every criterion')]);
         $c = Candidate::findOrFail($id);
-        $this->pipeline->interview($c, $data['ratings'], $data['notes'] ?? null, $data['recommendation'], $request->user());
+        $this->pipeline->interview($c, $data['ratings'], $data['notes'] ?? null, $data['recommendation'], $request->user(), $data['answers'] ?? null);
         return response()->json(['data' => HrCandidate::full($c->refresh(), $request->user())]);
     }
 
@@ -80,11 +83,11 @@ class CandidateController extends Controller
         $data = $request->validate([
             'title' => ['required', 'string', 'max:150'], 'contract' => ['required', Rule::in(['fixed', 'open', 'project'])], 'currency' => ['required', Rule::in(['USD', 'SYP'])],
             'basic' => ['required', 'numeric', 'min:1', 'max:100000000'], 'housing' => ['required', 'numeric', 'min:0'], 'transport' => ['required', 'numeric', 'min:0'], 'fuel' => ['required', 'numeric', 'min:0'],
-            'leave_days' => ['required', 'integer', 'between:0,60'], 'start_date' => ['required', 'date', 'after_or_equal:today'],
+            'leave_days' => ['required', 'integer', 'between:0,60'], 'start_date' => ['required', 'date', 'after_or_equal:today'], 'budget_reason' => ['nullable', 'string', 'max:1000'],
         ], ['required' => L::t('هذا الحقل مطلوب', 'This field is required'), 'start_date.after_or_equal' => L::t('تاريخ المباشرة لا يكون في الماضي', 'The start date cannot be in the past'), 'basic.min' => L::t('أدخل الراتب الأساسي', 'Enter the basic salary')]);
         \App\Services\Security\SalaryVault::require($request->user());   // كتابة مبالغ العرض بعد التحقق فقط
         $c = Candidate::findOrFail($id);
-        $this->pipeline->offer($c, $data, $request->user());
+        $this->pipeline->offer($c, collect($data)->except('budget_reason')->all(), $request->user(), $data['budget_reason'] ?? null);
         return response()->json(['data' => HrCandidate::full($c->refresh(), $request->user())]);
     }
 

@@ -22,7 +22,9 @@ class MyApplicationResource extends JsonResource
 
     public function toArray(Request $request): array
     {
-        $job = $this->jobOpening; $o = $this->offer; $ap = $this->appointment;
+        $job = $this->jobOpening; $ap = $this->appointment;
+        // عرض بانتظار موافقة الميزانية أو أُعيد لفريق التوظيف لا يظهر للمتقدم
+        $o = $this->offer && ! in_array($this->offer->status, ['pending_approval', 'returned'], true) ? $this->offer : null;
         return [
             'id' => $this->id, 'company' => $job->company->card(),
             'ref' => $this->ref, 'created_at' => $this->created_at?->toIso8601String(), 'stage' => $this->stage,

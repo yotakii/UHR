@@ -79,6 +79,8 @@ export function Board() {
                     : c.sla === 'due' ? <Badge tone="warn">{L('يستحق اليوم', 'Due today')}</Badge>
                     : c.offer === 'accepted' ? <Badge tone="brand">{L('وقّع العرض', 'Offer signed')}</Badge>
                     : c.offer === 'negotiation' ? <Badge tone="warn">{L('طلب تعديل', 'Negotiating')}</Badge>
+                    : c.offer === 'pending_approval' ? <Badge tone="brass">{L('عرض بانتظار الموافقة', 'Offer awaiting approval')}</Badge>
+                    : c.offer === 'returned' ? <Badge tone="danger">{L('عرض لم يُوافق عليه', 'Offer not approved')}</Badge>
                     : c.stage === 'hired' || c.stage === 'rejected' ? null : <span className="text-ink-3 shrink-0">{c.days_in_stage} {L('ي بالمرحلة', 'd in stage')}</span>}
                 </div>
               </article>)}

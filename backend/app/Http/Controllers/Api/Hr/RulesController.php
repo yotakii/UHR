@@ -20,8 +20,8 @@ class RulesController extends Controller
 {
     public function show(): JsonResponse
     {
-        return response()->json(['rules' => self::rules(), 'stage_sla' => Settings::get('stage_sla'), 'match' => Settings::match(),
-            'defaults' => ['rules' => Settings::DEFAULTS['rules'], 'stage_sla' => Settings::DEFAULTS['stage_sla'], 'match' => Settings::DEFAULTS['match']]]);
+        return response()->json(['rules' => self::rules(), 'stage_sla' => Settings::get('stage_sla'), 'match' => Settings::match(), 'interview_bank' => Settings::merged('interview_bank'),
+            'defaults' => ['rules' => Settings::DEFAULTS['rules'], 'stage_sla' => Settings::DEFAULTS['stage_sla'], 'match' => Settings::DEFAULTS['match'], 'interview_bank' => Settings::DEFAULTS['interview_bank']]]);
     }
 
     /** قواعد الشركة مكمّلة بالقيم الافتراضية للمفاتيح الجديدة (ويُسقط ما أُلغي مثل referral_points) */
@@ -41,6 +41,9 @@ class RulesController extends Controller
             'rules.internal_min_months' => ['sometimes', 'integer', 'between:0,120'], 'rules.internal_no_probation' => ['sometimes', 'boolean'], 'rules.internal_clean_months' => ['sometimes', 'integer', 'between:0,60'],
             'stage_sla' => ['required', 'array'], 'stage_sla.*' => ['integer', 'between:0,60'],
             'match' => ['sometimes', 'array'],
+            'interview_bank' => ['sometimes', 'array'], 'interview_bank.questions' => ['present_with:interview_bank', 'array', 'max:40'], 'interview_bank.questions.*.ar' => ['required', 'string', 'max:300'], 'interview_bank.questions.*.en' => ['nullable', 'string', 'max:300'],
+            'interview_bank.skills' => ['present_with:interview_bank', 'array', 'max:30'], 'interview_bank.skills.*.ar' => ['required', 'string', 'max:120'], 'interview_bank.skills.*.en' => ['nullable', 'string', 'max:120'],
+            'rules.offer_budget' => ['sometimes', 'in:approval,block,off'], 'rules.offer_needs_interview' => ['sometimes', 'boolean'],
         ]);
         $r = $d['rules'];
         if (! ($r['reject_max'] < $r['review_min'] && $r['review_min'] < $r['match_threshold'])) {
@@ -53,6 +56,8 @@ class RulesController extends Controller
         Settings::put('rules', array_intersect_key($r + self::rules(), Settings::DEFAULTS['rules']));
         Settings::put('stage_sla', array_intersect_key($d['stage_sla'], Settings::DEFAULTS['stage_sla']) + Settings::get('stage_sla'));
         if ($match) Settings::put('match', $match);
+        if (isset($d['interview_bank'])) Settings::put('interview_bank', ['questions' => array_values(array_map(fn ($q) => ['ar' => trim($q['ar']), 'en' => trim((string) ($q['en'] ?? ''))], $d['interview_bank']['questions'] ?? [])),
+            'skills' => array_values(array_map(fn ($q) => ['ar' => trim($q['ar']), 'en' => trim((string) ($q['en'] ?? ''))], $d['interview_bank']['skills'] ?? []))]);
         // النسب المعروضة للطلبات المفتوحة تتبع المعايرة والنطاقات الجديدة
         $changed = MatchScore::recompute();
         Audit::record('settings.recruitment_rules', null, $before, ['rules' => $r, 'stage_sla' => $d['stage_sla'], 'match' => $match, 'recomputed' => $changed]);

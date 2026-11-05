@@ -19,6 +19,7 @@ class PublicJob
             'city' => ['code' => $j->location->code, 'ar' => $j->location->name_ar, 'en' => $j->location->name_en],
             'type' => JobOpening::TYPES[$j->employment_type] ?? ['ar' => $j->employment_type, 'en' => $j->employment_type],
             'type_code' => $j->employment_type,
+            'workplace' => ['code' => $j->workplace ?? 'onsite'] + (JobOpening::WORKPLACES[$j->workplace ?? 'onsite'] ?? JobOpening::WORKPLACES['onsite']),
             'min_years' => $j->min_years,
             'hard_to_fill' => $j->hard_to_fill,
             'posted_at' => $j->posted_at?->toDateString(),
@@ -30,7 +31,7 @@ class PublicJob
     {
         return self::card($j) + [
             'requirements' => $j->requirements, 'openings' => $j->openings, 'degree' => $j->degree,
-            'degree_label' => MatchScore::DEGREES[$j->degree] ?? null, 'requires_photo' => $j->requires_photo,
+            'degree_label' => MatchScore::DEGREES[$j->degree] ?? null, 'requires_photo' => $j->requires_photo, 'currency' => $j->currency,
             'min_age' => (int) \App\Support\Tenant::run($j->company_id, fn () => \App\Support\Settings::rule('min_age')),
             'company_about' => ['ar' => $j->company->about_ar, 'en' => $j->company->about_en],
         ];

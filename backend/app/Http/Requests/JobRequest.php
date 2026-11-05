@@ -22,6 +22,7 @@ class JobRequest extends FormRequest
             'department_id' => ['required', Rule::exists('departments', 'id')->where('company_id', Tenant::id())],
             'location_id' => ['required', Rule::exists('locations', 'id')],
             'employment_type' => ['required', Rule::in(array_keys(JobOpening::TYPES))],
+            'workplace' => ['sometimes', Rule::in(array_keys(JobOpening::WORKPLACES))],
             'openings' => ['required', 'integer', 'between:1,500'],
             'min_years' => ['required', 'integer', 'between:0,40'],
             'degree' => ['required', 'integer', 'between:0,4'],
@@ -32,6 +33,9 @@ class JobRequest extends FormRequest
             'requirements' => ['required', 'array', 'min:1', 'max:12'],
             'requirements.*.ar' => ['required', 'string', 'max:200'], 'requirements.*.en' => ['required', 'string', 'max:200'],
             'visibility' => ['required', Rule::in(JobOpening::VISIBILITY)],
+            // أسئلة المقابلة والمهارات المطلوب قياسها (ملاحظتا 30 و58) — تظهر في نموذج المقابلة F-25
+            'interview' => ['nullable', 'array'], 'interview.questions' => ['nullable', 'array', 'max:15'], 'interview.questions.*.ar' => ['required', 'string', 'max:300'], 'interview.questions.*.en' => ['nullable', 'string', 'max:300'],
+            'interview.skills' => ['nullable', 'array', 'max:12'], 'interview.skills.*.ar' => ['required', 'string', 'max:120'], 'interview.skills.*.en' => ['nullable', 'string', 'max:120'],
             'closes_at' => ['nullable', 'date', 'after_or_equal:today'],
             'hard_to_fill' => ['boolean'], 'requires_photo' => ['boolean'],
             // أوزان مطابقة خاصة بالشاغر (اختياري) — مجموعها 100، وإلا تُستخدم أوزان الشركة

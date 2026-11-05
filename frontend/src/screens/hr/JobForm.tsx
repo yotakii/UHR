@@ -2,14 +2,14 @@ import { useEffect, useState, type ReactNode, type KeyboardEvent } from 'react'
 import { Plus, Trash2, X, AlertTriangle, Globe, Building2, Lock } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { ApiError } from '../../lib/api'
-import { useHrJob, useLookups, useSaveJob, type HrCompany, type JobInput, type MatchWeights, type Visibility } from '../../lib/hr'
+import { useHrJob, useLookups, useSaveJob, type HrCompany, type JobInput, type MatchWeights, type Visibility, type Workplace } from '../../lib/hr'
 import { useRules } from '../../lib/candidates'
 import { Btn, Drawer, Field, Seg, toast } from '../../ui/kit'
 
 const EMPTY: JobInput = {
-  title_ar: '', title_en: '', department_id: '', location_id: '', employment_type: 'full_time', openings: 1, min_years: 0, degree: 2,
+  title_ar: '', title_en: '', department_id: '', location_id: '', employment_type: 'full_time', workplace: 'onsite', openings: 1, min_years: 0, degree: 2,
   salary_min: '', salary_max: '', currency: 'USD', summary_ar: '', summary_en: '', requirements: [{ ar: '', en: '' }],
-  visibility: 'public', closes_at: '', hard_to_fill: false, requires_photo: false, status: 'open', match_weights: null,
+  visibility: 'public', closes_at: '', hard_to_fill: false, requires_photo: false, status: 'open', match_weights: null, interview: { questions: [], skills: [] },
 }
 
 /** إنشاء/تعديل شاغر ونشره (لوحة 620px) — الحقول باللغتين، ومكان النشر وحالة مراجعة المنصة */
@@ -26,7 +26,7 @@ export function JobForm({ open, id, company, onClose }: { open: boolean; id: num
   }, [open, id])
   useEffect(() => {
     if (open && id && existing) setV({
-      title_ar: existing.title_ar, title_en: existing.title_en, department_id: existing.department_id, location_id: existing.location_id, employment_type: existing.employment_type,
+      title_ar: existing.title_ar, title_en: existing.title_en, department_id: existing.department_id, location_id: existing.location_id, employment_type: existing.employment_type, workplace: existing.workplace_code ?? 'onsite', interview: existing.interview ?? { questions: [], skills: [] },
       openings: existing.openings, min_years: existing.min_years, degree: existing.degree, salary_min: existing.salary_min, salary_max: existing.salary_max, currency: existing.currency,
       summary_ar: existing.summary_ar, summary_en: existing.summary_en, requirements: existing.requirements.length ? existing.requirements : [{ ar: '', en: '' }],
       visibility: existing.visibility, closes_at: existing.closes_at ?? '', hard_to_fill: existing.hard_to_fill, requires_photo: existing.requires_photo, status: existing.status, match_weights: existing.match_weights,
@@ -45,7 +45,7 @@ export function JobForm({ open, id, company, onClose }: { open: boolean; id: num
   }
   const e = save.error instanceof ApiError ? save.error : null
   const err = (k: string) => e?.field(k) ?? Object.entries(e?.errors ?? {}).find(([f]) => f.startsWith(k + '.'))?.[1]?.[0]
-  const submit = () => save.mutate(v, { onSuccess: j => { toast(j.portal_status === 'pending' ? L('حُفظ الشاغر — بانتظار مراجعة المنصة قبل البوابة', 'Saved — awaiting platform review for the portal') : L('حُفظ الشاغر', 'Position saved')); onClose() } })
+  const submit = () => save.mutate({ ...v, interview: { questions: v.interview.questions.filter(q => q.ar.trim()), skills: v.interview.skills.filter(q => q.ar.trim()) } }, { onSuccess: j => { toast(j.portal_status === 'pending' ? L('حُفظ الشاغر — بانتظار مراجعة المنصة قبل البوابة', 'Saved — awaiting platform review for the portal') : L('حُفظ الشاغر', 'Position saved')); onClose() } })
   const num = (s: string) => (s === '' ? '' : Number(s))
   const visOpts: { v: Visibility; icon: ReactNode; label: string; hint: string }[] = [
     { v: 'internal', icon: <Lock size={14} />, label: L('داخلي', 'Internal'), hint: L('للموظفين فقط — الاستقطاب الداخلي', 'Employees only — internal hiring') },
@@ -68,6 +68,7 @@ export function JobForm({ open, id, company, onClose }: { open: boolean; id: num
           <Field label={L('الإدارة', 'Department')} req error={err('department_id')}><select className="field" value={v.department_id} onChange={x => set('department_id', num(x.target.value))}><option value="">—</option>{lk?.departments.map(d => <option key={d.id} value={d.id}>{bi(d, lang)}</option>)}</select></Field>
           <Field label={L('المدينة', 'City')} req error={err('location_id')}><select className="field" value={v.location_id} onChange={x => set('location_id', num(x.target.value))}><option value="">—</option>{lk?.locations.map(d => <option key={d.id} value={d.id}>{bi(d, lang)}</option>)}</select></Field>
           <Field label={L('نوع الدوام', 'Job type')} req error={err('employment_type')}><select className="field" value={v.employment_type} onChange={x => set('employment_type', x.target.value)}>{lk?.types.map(t => <option key={t.code} value={t.code}>{bi(t, lang)}</option>)}</select></Field>
+          <Field label={L('مكان العمل', 'Workplace')} req error={err('workplace')}><select className="field" value={v.workplace} onChange={x => set('workplace', x.target.value as Workplace)}>{(lk?.workplaces ?? []).map(t => <option key={t.code} value={t.code}>{bi(t, lang)}</option>)}</select></Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label={L('الشواغر', 'Openings')} req error={err('openings')}><input type="number" min={1} className="field num" value={v.openings} onChange={x => set('openings', Number(x.target.value))} /></Field>
             <Field label={L('سنوات الخبرة', 'Years of experience')} req error={err('min_years')}><input type="number" min={0} className="field num" value={v.min_years} onChange={x => set('min_years', Number(x.target.value))} /></Field>
@@ -97,6 +98,8 @@ export function JobForm({ open, id, company, onClose }: { open: boolean; id: num
           </div>)}</div>
           {err('requirements') && <span className="block text-[12px] text-danger mt-1">{err('requirements')}</span>}
         </div>
+
+        <InterviewEditor v={v.interview} set={x => set('interview', x)} />
 
         <section className="rounded-xl border border-line p-4 space-y-4 bg-canvas/40">
           <h4 className="font-semibold">{L('النشر', 'Publishing')}</h4>
@@ -138,4 +141,29 @@ function WeightsField({ value, onChange, error }: { value: MatchWeights | null; 
     {value && <div className={`text-[12px] ${sum === 100 ? 'text-ink-3' : 'text-danger'}`}>{L('المجموع', 'Total')} <span className="num">{sum}</span>/100</div>}
     {error && <div className="text-[12px] text-danger">{error}</div>}
   </div>
+}
+
+/** أسئلة المقابلة والمهارات المطلوب قياسها لهذا الشاغر (ملاحظتا الاختبار 30 و58) — تظهر للمقابِل في نموذج F-25 */
+function InterviewEditor({ v, set }: { v: JobInput['interview']; set: (v: JobInput['interview']) => void }) {
+  const L = useL()
+  const bank = useRules().data?.interview_bank
+  const [open, setOpen] = useState(v.questions.length > 0 || v.skills.length > 0)
+  const list = (k: 'questions' | 'skills', label: string, max: number, ph: string) => <div>
+    <div className="flex items-center justify-between mb-1.5"><span className="text-[13px] font-medium text-ink-2">{label}</span>
+      {v[k].length < max && <Btn size="sm" kind="ghost" icon={<Plus size={14} />} onClick={() => set({ ...v, [k]: [...v[k], { ar: '', en: '' }] })}>{L('إضافة', 'Add')}</Btn>}</div>
+    <div className="space-y-2">{v[k].map((r, i) => <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-2">
+      <input className="field" placeholder={ph} value={r.ar} onChange={x => set({ ...v, [k]: v[k].map((y, j) => j === i ? { ...y, ar: x.target.value } : y) })} aria-label={label} />
+      <input className="field ltr text-start" placeholder="English" value={r.en} onChange={x => set({ ...v, [k]: v[k].map((y, j) => j === i ? { ...y, en: x.target.value } : y) })} aria-label={label + ' (EN)'} />
+      <button type="button" className="px-2 text-ink-3 hover:text-danger" onClick={() => set({ ...v, [k]: v[k].filter((_, j) => j !== i) })} aria-label={L('حذف', 'Remove')}><Trash2 size={16} /></button>
+    </div>)}</div>
+  </div>
+  return <section className="rounded-xl border border-line p-4 space-y-4">
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <div><h4 className="font-semibold">{L('أسئلة المقابلة والمهارات', 'Interview questions & skills')}</h4>
+        <p className="text-[12px] text-ink-3">{L('تظهر للمقابِل في نموذج المقابلة F-25 ويمكنه تبديل أي سؤال أثناءها. إن تُركت فارغة يُستخدم بنك أسئلة الشركة.', 'Shown to the interviewer in F-25, who can swap any question. Left empty, the company question bank is used.')}</p></div>
+      <div className="flex gap-2">{bank && <Btn size="sm" onClick={() => { set({ questions: bank.questions.map(q => ({ ...q })), skills: bank.skills.map(q => ({ ...q })) }); setOpen(true) }}>{L('نسخ من بنك الشركة', 'Copy from the company bank')}</Btn>}
+        {!open && <Btn size="sm" onClick={() => setOpen(true)}>{L('تخصيص', 'Customise')}</Btn>}</div>
+    </div>
+    {open && <>{list('questions', L('الأسئلة', 'Questions'), 15, L('نص السؤال', 'Question'))}{list('skills', L('المهارات الأساسية المطلوب قياسها', 'Core skills to assess'), 12, L('المهارة', 'Skill'))}</>}
+  </section>
 }

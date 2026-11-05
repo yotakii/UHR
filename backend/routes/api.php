@@ -67,6 +67,10 @@ Route::prefix('public')->group(function () {
     Route::get('/portal', [PublicController::class, 'portal']);
     Route::get('/jobs', [PublicController::class, 'jobs']);
     Route::get('/sitemap.xml', [PublicController::class, 'sitemap']);
+    // معاينة الروابط المشاركة (ملاحظة 33): Nginx يوجّه برامج المعاينة إلى og، والصورة العريضة لكل شركة
+    Route::get('/og', [PublicController::class, 'og']);
+    Route::get('/og-image.png', [PublicController::class, 'ogImage']);
+    Route::get('/og-image/{slug}.png', [PublicController::class, 'ogImage']);
     Route::get('/companies/{slug}', [PublicController::class, 'company']);
     Route::get('/companies/{slug}/logo', [PublicController::class, 'logo']);
     Route::get('/jobs/{slug}/{code}', [PublicController::class, 'job']);
@@ -193,6 +197,9 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
         Route::get('/jobs/{id}', [JobController::class, 'show'])->whereNumber('id');
         Route::get('/jobs/{id}/test', [JobTestController::class, 'show'])->whereNumber('id');
     });
+    // مطابقة بنك السير مع الشاغر ودعوة أصحابها للتقديم (ملاحظة 46)
+    Route::get('/jobs/{id}/cv-matches', [JobController::class, 'cvMatches'])->whereNumber('id')->middleware('perm:candidates,view');
+    Route::post('/jobs/{id}/cv-matches/{candidateId}/invite', [JobController::class, 'invite'])->whereNumber('id')->whereNumber('candidateId')->middleware(['perm:candidates,edit', 'throttle:60,1']);
     // الاختبار الأولي للشاغر: الإعداد، كتابة الأسئلة وتعديلها واعتمادها
     Route::middleware('perm:jobs,edit')->group(function () {
         Route::put('/jobs/{id}/test', [JobTestController::class, 'update'])->whereNumber('id');

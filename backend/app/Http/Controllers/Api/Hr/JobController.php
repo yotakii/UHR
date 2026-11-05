@@ -42,6 +42,7 @@ class JobController extends Controller
             'departments' => Department::where('active', true)->orderBy('sort')->orderBy('id')->get()->map(fn ($d) => ['id' => $d->id, 'ar' => $d->name_ar, 'en' => $d->name_en]),
             'locations' => Location::where('active', true)->orderBy('id')->get()->map(fn ($l) => ['id' => $l->id, 'ar' => $l->name_ar, 'en' => $l->name_en]),
             'types' => collect(JobOpening::TYPES)->map(fn ($t, $k) => ['code' => $k] + $t)->values(),
+            'workplaces' => collect(JobOpening::WORKPLACES)->map(fn ($t, $k) => ['code' => $k] + $t)->values(),
             'degrees' => MatchScore::DEGREES,
         ]);
     }
@@ -62,20 +63,35 @@ class JobController extends Controller
         return response()->json(['data' => $this->present($svc->setStatus(JobOpening::findOrFail($id), $data['status'])->load(['department', 'location']), true)]);
     }
 
+    /** سير القاعدة المطابقة للشاغر (ملاحظة 46) */
+    public function cvMatches(int $id, \App\Services\Recruitment\CvBankMatch $m): JsonResponse
+    {
+        $job = JobOpening::findOrFail($id);
+        return response()->json(['data' => $m->forJob($job), 'job' => ['id' => $job->id, 'code' => $job->code, 'title' => ['ar' => $job->title_ar, 'en' => $job->title_en], 'accepting' => $job->acceptingApplications()],
+            'min' => (int) \App\Support\Settings::rule('review_min')]);
+    }
+
+    public function invite(Request $request, int $id, int $candidateId, \App\Services\Recruitment\CvBankMatch $m): JsonResponse
+    {
+        $m->invite(JobOpening::findOrFail($id), \App\Models\Candidate::findOrFail($candidateId), $request->user());
+        return $this->cvMatches($id, $m);
+    }
+
     private function present(JobOpening $j, bool $full = false): array
     {
         $out = [
             'id' => $j->id, 'code' => $j->code, 'title' => ['ar' => $j->title_ar, 'en' => $j->title_en],
             'dept' => ['id' => $j->department_id, 'ar' => $j->department->name_ar, 'en' => $j->department->name_en],
             'city' => ['id' => $j->location_id, 'ar' => $j->location->name_ar, 'en' => $j->location->name_en],
-            'type' => JobOpening::TYPES[$j->employment_type] ?? null, 'openings' => $j->openings, 'min_years' => $j->min_years, 'degree' => $j->degree,
+            'type' => JobOpening::TYPES[$j->employment_type] ?? null, 'workplace' => JobOpening::WORKPLACES[$j->workplace ?? 'onsite'] ?? null, 'openings' => $j->openings, 'min_years' => $j->min_years, 'degree' => $j->degree,
             'salary_min' => $j->salary_min, 'salary_max' => $j->salary_max, 'currency' => $j->currency,
             'status' => $j->status, 'visibility' => $j->visibility, 'portal_status' => $j->portal_status, 'portal_note' => $j->portal_note,
             'posted_at' => $j->posted_at?->toDateString(), 'closes_at' => $j->closes_at?->toDateString(),
             'hard_to_fill' => $j->hard_to_fill, 'requires_photo' => $j->requires_photo, 'accepting' => $j->acceptingApplications(), 'test_enabled' => $j->test_enabled,
         ];
         if ($full) $out += ['title_ar' => $j->title_ar, 'title_en' => $j->title_en, 'summary_ar' => $j->summary_ar, 'summary_en' => $j->summary_en,
-            'requirements' => $j->requirements, 'match_weights' => $j->match_weights, 'department_id' => $j->department_id, 'location_id' => $j->location_id, 'employment_type' => $j->employment_type];
+            'requirements' => $j->requirements, 'match_weights' => $j->match_weights, 'department_id' => $j->department_id, 'location_id' => $j->location_id, 'employment_type' => $j->employment_type,
+            'workplace_code' => $j->workplace ?? 'onsite', 'interview' => $j->interview ?? ['questions' => [], 'skills' => []]];
         return $out;
     }
 }

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Check, Upload, FileText, ArrowRight, ArrowLeft, Image as ImageIcon, UserCheck, AlertTriangle } from 'lucide-react'
-import { useL, useLang, bi } from '../../lib/store'
+import { useL, useLang, bi, money } from '../../lib/store'
 import { api, ApiError } from '../../lib/api'
 import { go } from '../../lib/router'
 import { useJob } from '../../lib/public'
@@ -110,7 +110,7 @@ export function Apply({ slug, code, refCode }: { slug: string; code: string; ref
           <span className={`size-6 rounded-full grid place-items-center text-[12px] font-semibold ${i < step ? 'bg-brand text-on-brand' : i === step ? 'border-2 border-brand text-brand' : 'border border-line text-ink-3'}`}>{i < step ? <Check size={13} /> : i + 1}</span>
           <span className={`text-[14px] ${i === step ? 'font-semibold' : 'text-ink-2'}`}>{s}</span></li>)}
       </ol>
-      <p className="text-[12px] text-ink-3 px-1">{L('نموذج طلب التوظيف', 'Employment application form')} <span className="ltr">HR-01-F-28</span></p>
+      <p className="text-[12px] text-ink-3 px-1">{L('تستغرق التعبئة نحو 10 دقائق، ويمكنك الرجوع إلى أي خطوة قبل الإرسال.', 'Takes about 10 minutes; you can go back to any step before sending.')}</p>
     </aside>
 
     <section className="bg-surface border border-line rounded-2xl min-w-0">
@@ -162,7 +162,9 @@ export function Apply({ slug, code, refCode }: { slug: string; code: string; ref
         </div>}
 
         {step === 2 && <div className="space-y-6">
-          <div><h4 className="font-semibold mb-2">{L('مرجع مهني (من غير الأقارب)', 'Professional reference (not a relative)')}</h4>
+          <p className="text-[13px] text-ink-2 bg-canvas rounded-md px-3 py-2">{L('أكمل هنا ما يساعد فريق التوظيف على تقييم طلبك: مرجع مهني يمكن التواصل معه، أسئلة الأهلية، الراتب الذي تتوقعه وموعد جاهزيتك، ثم أرفق سيرتك الذاتية. الحقول المعلّمة بـ * إلزامية.', 'Complete what helps the recruitment team assess you: a professional reference, eligibility questions, your expected salary and start date, then attach your CV. Fields marked * are required.')}</p>
+          <div><h4 className="font-semibold mb-1">{L('مرجع مهني (من غير الأقارب)', 'Professional reference (not a relative)')}</h4>
+            <p className="text-[12px] text-ink-3 mb-2">{L('مدير أو زميل سابق يمكنه الحديث عن عملك. اختياري، ويقوّي الطلب.', 'A former manager or colleague who can speak about your work. Optional, but it strengthens the application.')}</p>
             <div className="grid sm:grid-cols-3 gap-3"><Field label={L('الاسم', 'Name')}>{input('ref_name')}</Field><Field label={L('العمل', 'Occupation')}>{input('ref_job')}</Field><Field label={L('الهاتف', 'Phone')}>{input('ref_phone', { className: 'ltr text-start', type: 'tel' })}</Field></div></div>
           <div><h4 className="font-semibold mb-1">{L('أسئلة الأهلية', 'Eligibility questions')}</h4>
             <YN k="shifts" label={L('هل تمانع العمل بنظام الورديات؟', 'Do you mind shift work?')} />
@@ -171,13 +173,14 @@ export function Apply({ slug, code, refCode }: { slug: string; code: string; ref
             <YN k="conviction" label={L('هل صدر بحقك حكم قضائي؟', 'Have you ever been convicted?')} />
           </div>
           <div className="grid sm:grid-cols-3 gap-4">
-            <Field label={L('الراتب الشهري المتوقع (دولار)', 'Expected monthly salary (USD)')} req error={errs.salary}>{input('salary', { type: 'number', min: 1, className: 'num' })}</Field>
+            <Field label={job.currency === 'SYP' ? L('الراتب الشهري المتوقع (ليرة سورية)', 'Expected monthly salary (SYP)') : L('الراتب الشهري المتوقع (دولار)', 'Expected monthly salary (USD)')} req error={errs.salary} hint={L('الإجمالي الشهري الذي تتوقعه بعملة الشاغر.', 'The monthly total you expect, in the job’s currency.')}>{input('salary', { type: 'number', min: 1, className: 'num' })}</Field>
             <Field label={L('تاريخ الجاهزية للمباشرة', 'Available from')} error={errs.availability}>{input('availability', { type: 'date' })}</Field>
             <Field label={L('كيف عرفت بالوظيفة؟', 'How did you hear?')} error={errs.source}><select className="field" value={f.source} onChange={e => set('source', e.target.value)}><option value="website">{L('موقع الشركة', 'Company website')}</option><option value="linkedin">LinkedIn</option><option value="facebook">Facebook</option><option value="whatsapp">WhatsApp</option><option value="telegram">Telegram</option><option value="referral">{L('ترشيح من موظف', 'Employee referral')}</option><option value="other">{L('أخرى', 'Other')}</option></select></Field>
             {f.source === 'referral' && <Field label={L('رمز الإحالة', 'Referral code')} hint={L('من رابط الموظف الذي رشّحك، مثل UHR1007-J1', 'From the referring employee’s link, e.g. UHR1007-J1')} error={errs.ref_code}>{input('ref_code', { className: 'ltr text-start uppercase' })}</Field>}
           </div>
           <div>
             <span className="block text-[13px] font-medium text-ink-2 mb-1">{L('السيرة الذاتية والشهادات', 'CV & certificates')}</span>
+            <p className="text-[12px] text-ink-3 mb-1.5">{L('ملف واحد يضم سيرتك الذاتية وشهاداتك إن أمكن. الطلب المرفق بسيرة ذاتية يُقيَّم أسرع وأدق.', 'One file with your CV (and certificates if possible). Applications with a CV are assessed faster and more accurately.')}</p>
             <label className="flex items-center gap-3 border border-dashed border-ink-3 rounded-md p-4 cursor-pointer hover:bg-sub"
               onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); onFile(e.dataTransfer.files[0]) }}>
               {f.cv ? <FileText className="text-brand shrink-0" /> : <Upload className="text-ink-3 shrink-0" />}
@@ -201,7 +204,7 @@ export function Apply({ slug, code, refCode }: { slug: string; code: string; ref
         {step === 3 && <div className="space-y-5">
           {dup.note && <div className="text-[13px] bg-warn-soft text-warn rounded px-3 py-2">{dup.note}</div>}
           <dl className="grid sm:grid-cols-2 gap-x-6 text-[14px]">
-            {([[L('الاسم', 'Name'), f.name], [L('الرقم الوطني', 'National ID'), f.national_id], [L('البريد', 'Email'), <span className="ltr">{f.email}</span>], [L('الجوال', 'Mobile'), <span className="ltr">{f.mobile}</span>], [L('المؤهل', 'Qualification'), `${DEGREES[Number(f.degree)][lang]} — ${f.major}`], [L('الخبرة', 'Experience'), `${f.years_exp} ${L('سنوات', 'years')}`], [L('الراتب المتوقع', 'Expected salary'), `$${f.salary}`], [L('السيرة الذاتية', 'CV'), f.cv?.name ?? L('لم تُرفق', 'Not attached')]] as [string, ReactNode][]).map(([k, v]) =>
+            {([[L('الاسم', 'Name'), f.name], [L('الرقم الوطني', 'National ID'), f.national_id], [L('البريد', 'Email'), <span className="ltr">{f.email}</span>], [L('الجوال', 'Mobile'), <span className="ltr">{f.mobile}</span>], [L('المؤهل', 'Qualification'), `${DEGREES[Number(f.degree)][lang]} — ${f.major}`], [L('الخبرة', 'Experience'), `${f.years_exp} ${L('سنوات', 'years')}`], [L('الراتب المتوقع', 'Expected salary'), money(Number(f.salary) || 0, job.currency, lang)], [L('السيرة الذاتية', 'CV'), f.cv?.name ?? L('لم تُرفق', 'Not attached')]] as [string, ReactNode][]).map(([k, v]) =>
               <div key={k} className="flex justify-between gap-3 py-2 border-b border-line-2 min-w-0"><dt className="text-ink-3 shrink-0">{k}</dt><dd className="font-medium text-end truncate">{v}</dd></div>)}
           </dl>
           {dup.account === 'signed_in'
@@ -210,12 +213,21 @@ export function Apply({ slug, code, refCode }: { slug: string; code: string; ref
             ? <div className="grid sm:grid-cols-2 gap-4"><Field label={L('كلمة مرور حسابك الحالي', 'Your current account password')} req error={errs.password} hint={<a className="underline" href="/forgot">{L('نسيت كلمة المرور؟', 'Forgot your password?')}</a>}><input type="password" className="field ltr text-start" value={f.password} aria-invalid={!!errs.password} onChange={e => set('password', e.target.value)} autoComplete="current-password" /></Field></div>
             : <div className="grid sm:grid-cols-2 gap-4 items-start"><PasswordFields label={L('أنشئ كلمة مرور لمتابعة طلباتك', 'Create a password to track your applications')} v={f} set={(k, x) => set(k, x)} errs={{ password: errs.password, password_confirmation: errs.password_confirmation }} /></div>}
           <div className="bg-canvas rounded-md p-4 space-y-3 text-[14px]">
-            <label className="flex gap-3"><input type="checkbox" className="mt-1 accent-[var(--primary)]" checked={f.agree_info} onChange={e => set('agree_info', e.target.checked)} /><span>{L('أقر بأن جميع المعلومات الواردة صحيحة، وأن أي معلومة غير صحيحة أو ناقصة تكون سبباً لإنهاء التعيين في حال تمّ.', 'I confirm that all information is true. Any false or missing information is grounds for termination if hired.')}</span></label>
-            <label className="flex gap-3"><input type="checkbox" className="mt-1 accent-[var(--primary)]" checked={f.agree_medical} onChange={e => set('agree_medical', e.target.checked)} /><span>{L('أوافق على سياسة الفحص الطبي وأنظمة الشركة الداخلية.', 'I accept the medical examination policy and company regulations.')}</span></label>
+            <label className="flex gap-3"><input type="checkbox" className="mt-1 accent-[var(--primary)]" checked={f.agree_info} onChange={e => set('agree_info', e.target.checked)} /><span>{L('أقرّ بأن جميع المعلومات الواردة في هذا الطلب صحيحة وكاملة، وأعلم أن أي معلومة غير صحيحة أو ناقصة تكون سبباً لرفض الطلب، أو لإنهاء التعيين إن تمّ تعييني.', 'I confirm that all information in this application is true and complete, and I understand that any false or missing information is grounds for rejecting the application, or for termination if I am hired.')}</span></label>
+            <label className="flex gap-3"><input type="checkbox" className="mt-1 accent-[var(--primary)]" checked={f.agree_medical} onChange={e => set('agree_medical', e.target.checked)} /><span>{L('أوافق على إجراء الفحص الطبي عند طلبه، وعلى الالتزام بأنظمة الشركة الداخلية في حال تعييني.', 'I agree to a medical examination when requested and to follow the company’s internal regulations if I am hired.')}</span></label>
             {errs.agree_medical && <div className="text-[12px] text-danger">{errs.agree_medical}</div>}
             <label className="flex gap-3"><input type="checkbox" className="mt-1 accent-[var(--primary)]" checked={f.agree_data} onChange={e => set('agree_data', e.target.checked)} /><span>{L(`أوافق على معالجة بياناتي من ${job.company.name.ar} لغرض التوظيف فقط، ولا تُشارك مع أي جهة أخرى دون موافقتي.`, `I agree that ${job.company.name.en} processes my data for recruitment only, and it is not shared with anyone else without my consent.`)}</span></label>
             {errs.agree_data && <div className="text-[12px] text-danger">{errs.agree_data}</div>}
             <label className="flex gap-3 text-ink-2"><input type="checkbox" className="mt-1 accent-[var(--primary)]" checked={f.keep_cv} onChange={e => set('keep_cv', e.target.checked)} /><span>{L('احتفظوا بسيرتي لفرص قادمة تناسبني (اختياري).', 'Keep my CV for future openings that suit me (optional).')}</span></label>
+          </div>
+          <div className="rounded-md border border-line p-4 text-[13px]">
+            <div className="font-semibold mb-2">{L('ماذا يحدث بعد الإرسال؟', 'What happens after you send?')}</div>
+            <ol className="list-decimal ps-5 space-y-1 text-ink-2">
+              <li>{L('يصلك بريد تأكيد برقم متابعة طلبك.', 'You receive a confirmation email with your reference number.')}</li>
+              <li>{L('تتابع حالة الطلب في أي وقت من حسابك بالبريد وكلمة المرور.', 'You follow the application any time from your account with your email and password.')}</li>
+              <li>{L('قد يصلك رابط اختبار أولي قصير إن كانت الوظيفة تتطلبه.', 'You may receive a short preliminary test link if the position requires one.')}</li>
+              <li>{L('يتواصل معك فريق التوظيف بالبريد والجوال عند الانتقال إلى المقابلة.', 'The recruitment team contacts you by email and phone when you move to the interview.')}</li>
+            </ol>
           </div>
         </div>}
       </div>

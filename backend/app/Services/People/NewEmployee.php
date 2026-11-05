@@ -86,9 +86,21 @@ class NewEmployee
         }
         $v['manager_id'] ??= $v['manager_code'] ? null : $dept?->head_id;
 
-        $sal = str_replace([',', ' '], '', $txt('salary'));
-        $v['salary'] = is_numeric($sal) ? round((float) $sal, 2) : null;
-        if ($v['salary'] === null || $v['salary'] < 0) $err['salary'] = L::t('الراتب رقم مطلوب', 'Salary must be a number');
+        // تفاصيل الراتب كما في عرض العمل (ملاحظة الاختبار 59): الأساسي والبدلات ← الراتب الشامل = مجموعها؛ وإلا راتب إجمالي واحد
+        $num = function (string $k) use ($txt) { $x = str_replace([',', ' '], '', $txt($k)); return $x === '' ? null : (is_numeric($x) ? round((float) $x, 2) : false); };
+        $parts = ['basic' => $num('basic'), 'housing' => $num('housing'), 'transport' => $num('transport'), 'fuel' => $num('fuel')];
+        foreach ($parts as $k => $x) if ($x === false || ($x !== null && $x < 0)) $err[$k === 'basic' ? 'basic' : $k] = L::t('أدخل مبلغاً صحيحاً', 'Enter a valid amount');
+        $v['pay'] = null;
+        if ($parts['basic'] !== null && $parts['basic'] !== false) {
+            $v['pay'] = array_map(fn ($x) => is_float($x) ? $x : 0.0, $parts);
+            $v['salary'] = round(array_sum($v['pay']), 2);
+        } else {
+            $sal = str_replace([',', ' '], '', $txt('salary'));
+            $v['salary'] = is_numeric($sal) ? round((float) $sal, 2) : null;
+            if ($v['salary'] === null || $v['salary'] < 0) $err['salary'] = L::t('الراتب رقم مطلوب', 'Salary must be a number');
+        }
+        $v['contract'] = $txt('contract') ?: null;
+        if ($v['contract'] && ! in_array($v['contract'], ['fixed', 'open', 'project'], true)) $err['contract'] = L::t('نوع العقد: fixed أو open أو project', 'Contract: fixed, open or project');
         $v['currency'] = strtoupper($txt('currency') ?: 'USD');
         if (! in_array($v['currency'], self::CURRENCIES, true)) $err['currency'] = L::t('العملة: USD أو SYP أو EUR', 'Currency: USD, SYP or EUR');
 
@@ -139,7 +151,7 @@ class NewEmployee
         return Employee::create([
             'code' => $code, 'name' => $v['name'], 'name_en' => $v['name_en'], 'gender' => $v['gender'], 'title_ar' => $v['title_ar'], 'title_en' => $v['title_en'],
             'department_id' => $v['department_id'], 'location_id' => $v['location_id'], 'email' => $v['email'], 'phone' => $v['phone'], 'hire_date' => $v['hire_date'],
-            'dob' => $v['dob'], 'national_id' => $v['national_id'], 'salary' => $v['salary'], 'currency' => $v['currency'], 'status' => $status, 'nfc_uid' => $nfc, 'manager_id' => $v['manager_id'],
+            'dob' => $v['dob'], 'national_id' => $v['national_id'], 'salary' => $v['salary'], 'currency' => $v['currency'], 'contract' => $v['contract'] ?? null, 'pay' => $v['pay'] ?? null, 'status' => $status, 'nfc_uid' => $nfc, 'manager_id' => $v['manager_id'],
         ]);
     }
 

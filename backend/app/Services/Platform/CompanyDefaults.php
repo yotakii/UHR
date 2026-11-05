@@ -58,6 +58,8 @@ class CompanyDefaults
         ApprovalChain::firstOrCreate(['type' => 'penalty'], ['levels' => [['role_ar' => 'المدير العام', 'role_en' => 'General manager', 'role_key' => 'ceo']]]);
         // إذن الاطلاع على رواتب الآخرين (المهمة 10b) ← المدير العام
         ApprovalChain::firstOrCreate(['type' => 'salary_access'], ['levels' => [$gm]]);
+        // عرض عمل يتجاوز ميزانية الشاغر (ملاحظتا 56 و70) ← المدير العام
+        ApprovalChain::firstOrCreate(['type' => 'offer_budget'], ['levels' => [$gm]]);
         \App\Support\ViolationCatalog::seed();
         ApprovalChain::firstOrCreate(['type' => 'appointment'], ['levels' => [
             $hr + ['user_id' => null],

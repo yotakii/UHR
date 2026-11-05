@@ -93,7 +93,7 @@ class AppointmentFlow
             'code' => Counters::employeeCode(), 'name' => $c->name, 'name_en' => $c->name_en ?: $c->name, 'gender' => $c->gender,
             'title_ar' => $o?->title ?: $job->title_ar, 'title_en' => $job->title_en, 'department_id' => $job->department_id, 'location_id' => $job->location_id,
             'email' => $c->email, 'phone' => $c->mobile, 'hire_date' => $o?->start_date ?? now()->toDateString(), 'dob' => $c->dob, 'national_id' => $c->national_id,
-            'salary' => $o?->total() ?? 0, 'currency' => $o?->currency ?? 'USD', 'status' => 'onboarding', 'nfc_uid' => Employee::newNfcUid(), 'manager_id' => $mgr, 'candidate_id' => $c->id,
+            'salary' => $o?->total() ?? 0, 'currency' => $o?->currency ?? 'USD', 'contract' => $o?->contract, 'pay' => $o ? ['basic' => $o->basic, 'housing' => $o->housing, 'transport' => $o->transport, 'fuel' => $o->fuel] : null, 'status' => 'onboarding', 'nfc_uid' => Employee::newNfcUid(), 'manager_id' => $mgr, 'candidate_id' => $c->id,
         ]);
         foreach ($c->logs()->orderBy('at')->get() as $l) $emp->log($l->text_ar, $l->text_en, $l->kind, $l->form, $l->at);
         $emp->log("صدور قرار التعيين {$ap->decision_no} ومنح الرقم الوظيفي {$emp->code}", "Decision {$ap->decision_no} issued, employee ID {$emp->code}", 'ok', 'F-31');
@@ -127,7 +127,7 @@ class AppointmentFlow
         $mgr = Employee::where('department_id', $job->department_id)->where('id', '!=', $emp->id)->whereHas('user.roles', fn ($r) => $r->where('key', 'manager'))->value('id');
         $before = ['title' => $emp->title_ar, 'dept' => $emp->department_id];
         $emp->update(['title_ar' => $o?->title ?: $job->title_ar, 'title_en' => $job->title_en, 'department_id' => $job->department_id, 'location_id' => $job->location_id ?? $emp->location_id,
-            'salary' => $o?->total() ?: $emp->salary, 'currency' => $o?->currency ?? $emp->currency, 'manager_id' => $job->department_id === $before['dept'] ? $emp->manager_id : ($mgr ?? $emp->manager_id)]);
+            'salary' => $o?->total() ?: $emp->salary, 'currency' => $o?->currency ?? $emp->currency, 'contract' => $o?->contract ?? $emp->contract, 'pay' => $o ? ['basic' => $o->basic, 'housing' => $o->housing, 'transport' => $o->transport, 'fuel' => $o->fuel] : $emp->pay, 'manager_id' => $job->department_id === $before['dept'] ? $emp->manager_id : ($mgr ?? $emp->manager_id)]);
         $emp->log("نقل/ترقية داخلية بقرار {$ap->decision_no}: {$before['title']} ← {$emp->title_ar}", "Internal move by decision {$ap->decision_no}: now {$emp->title_en}", 'ok', 'F-27');
         $ap->update(['employee_id' => $emp->id]);
         $c->update(['stage' => 'hired', 'stage_at' => now()->toDateString()]);

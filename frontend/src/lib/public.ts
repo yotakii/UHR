@@ -5,20 +5,20 @@ import type { CompanyCard } from './session'
 
 /** بوابة فرص العمل العامة (SRS §10.15): البوابة، صفحة الشركة، صفحة الشاغر — بلا تسجيل دخول */
 export interface PublicJob {
-  code: string; company: CompanyCard; title: Bi; summary: Bi; dept: Bi & { code: string }; city: Bi & { code: string }; type: Bi; type_code: string
+  code: string; company: CompanyCard; title: Bi; summary: Bi; dept: Bi & { code: string }; city: Bi & { code: string }; type: Bi; type_code: string; workplace?: Bi & { code: string }
   min_years: number; hard_to_fill: boolean; posted_at: string; closes_at: string | null
 }
 export interface PublicJobFull extends PublicJob {
-  requirements: Bi[]; openings: number; degree: number; degree_label: Bi | null; requires_photo: boolean; min_age?: number; company_about: Bi
+  requirements: Bi[]; openings: number; degree: number; degree_label: Bi | null; requires_photo: boolean; min_age?: number; currency: 'USD' | 'SYP'; company_about: Bi
   referral?: { valid: boolean; code: string; by?: Bi }
 }
 export interface Portal {
   brand_latin: string; hero: { title: Bi; text: Bi }; stats: { jobs: number; companies: number; cities: number }
   companies: (CompanyCard & { jobs: number })[]
-  filters: { cities: (Bi & { code: string })[]; types: (Bi & { code: string })[] }
+  filters: { cities: (Bi & { code: string })[]; types: (Bi & { code: string })[]; workplaces?: (Bi & { code: string })[]; salary?: Record<'USD' | 'SYP', number[]>; currencies?: ('USD' | 'SYP')[] }
 }
 export interface CompanyPage extends CompanyCard { about: Bi; website: string | null; jobs: PublicJob[] }
-export type JobFilters = { company?: string; city?: string; type?: string; exp?: string; q?: string }
+export type JobFilters = { company?: string; city?: string; type?: string; workplace?: string; exp?: string; salary?: string; currency?: string; q?: string }
 
 export const jobUrl = (j: { company: { slug: string }; code: string }) => `/jobs/${j.company.slug}/${encodeURIComponent(j.code)}`
 export const applyUrl = (j: { company: { slug: string }; code: string }, ref?: string) => `/apply/${j.company.slug}/${encodeURIComponent(j.code)}${ref ? `?ref=${encodeURIComponent(ref)}` : ''}`

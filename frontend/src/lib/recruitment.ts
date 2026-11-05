@@ -20,7 +20,7 @@ export const DEGREES: Bi[] = [
 export const ENGLISH: Record<string, Bi> = { excellent: { ar: 'ممتاز', en: 'Excellent' }, good: { ar: 'جيد', en: 'Good' }, fair: { ar: 'مقبول', en: 'Fair' }, weak: { ar: 'ضعيف', en: 'Weak' } }
 
 /* ---------- بوابة المتقدم (M05) ---------- */
-export type OfferStatus = 'sent' | 'accepted' | 'declined' | 'negotiation'
+export type OfferStatus = 'sent' | 'accepted' | 'declined' | 'negotiation' | 'pending_approval' | 'returned'
 export interface MyOffer {
   title: string; contract: 'fixed' | 'open' | 'project'; currency: 'USD' | 'SYP'
   basic: number; housing: number; transport: number; fuel: number; total: number; leave_days: number; start_date: string

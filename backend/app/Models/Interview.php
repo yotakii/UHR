@@ -6,6 +6,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Interview extends Model
 {
-    protected function casts(): array { return ['ratings' => 'array', 'date' => 'date']; }
+    protected function casts(): array { return ['ratings' => 'array', 'answers' => 'array', 'date' => 'date']; }
     public function candidate(): BelongsTo { return $this->belongsTo(Candidate::class); }
 }

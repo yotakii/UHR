@@ -15,15 +15,22 @@ class JobOpening extends Model
     use Concerns\BelongsToCompany;
 
     public const VISIBILITY = ['internal', 'company', 'public'];
+    /** نوع الدوام (ملاحظة الاختبار 07 — على غرار LinkedIn) */
     public const TYPES = [
         'full_time' => ['ar' => 'دوام كامل', 'en' => 'Full-time'], 'part_time' => ['ar' => 'دوام جزئي', 'en' => 'Part-time'],
-        'shifts' => ['ar' => 'ورديات', 'en' => 'Shifts'], 'contract' => ['ar' => 'عقد مؤقت', 'en' => 'Contract'], 'remote' => ['ar' => 'عن بُعد', 'en' => 'Remote'],
+        'contract' => ['ar' => 'عقد', 'en' => 'Contract'], 'temporary' => ['ar' => 'مؤقت', 'en' => 'Temporary'],
+        'internship' => ['ar' => 'تدريب', 'en' => 'Internship'], 'freelance' => ['ar' => 'عمل حر (فريلانسر)', 'en' => 'Freelance'],
+        'shifts' => ['ar' => 'ورديات', 'en' => 'Shifts'],
     ];
+    /** مكان العمل */
+    public const WORKPLACES = ['onsite' => ['ar' => 'حضوري', 'en' => 'On-site'], 'remote' => ['ar' => 'عن بُعد', 'en' => 'Remote'], 'hybrid' => ['ar' => 'هجين', 'en' => 'Hybrid']];
+    /** شرائح الخبرة في البوابة (ملاحظة 08): الحد الأدنى المطلوب للشاغر ضمن الشريحة */
+    public const EXP_BANDS = ['0-1' => [0, 1], '1-3' => [1, 3], '3-5' => [3, 5], '5+' => [5, 99], '10+' => [10, 99]];
 
     protected function casts(): array
     {
         return ['requirements' => 'array', 'posted_at' => 'date', 'closes_at' => 'date', 'portal_reviewed_at' => 'datetime',
-            'salary_min' => 'float', 'salary_max' => 'float', 'hard_to_fill' => 'boolean', 'requires_photo' => 'boolean', 'match_weights' => 'array', 'test_enabled' => 'boolean'];
+            'salary_min' => 'float', 'salary_max' => 'float', 'hard_to_fill' => 'boolean', 'requires_photo' => 'boolean', 'match_weights' => 'array', 'test_enabled' => 'boolean', 'interview' => 'array'];
     }
 
     public function department(): BelongsTo { return $this->belongsTo(Department::class); }

@@ -49,7 +49,8 @@ class HrCandidate
             'job' => self::card($c)['job'] + ['dept' => ['ar' => $job->department->name_ar, 'en' => $job->department->name_en], 'city' => ['ar' => $job->location->name_ar, 'en' => $job->location->name_en],
                 'min_years' => $job->min_years, 'degree' => $job->degree, 'salary_min' => (float) $job->salary_min, 'salary_max' => (float) $job->salary_max, 'currency' => $job->currency, 'openings' => $job->openings],
             'match_parts' => $m['parts'],
-            'interview' => $c->interview ? ['ratings' => $c->interview->ratings, 'notes' => $c->interview->notes, 'recommendation' => $c->interview->recommendation,
+            'interview_plan' => self::interviewPlan($job),
+            'interview' => $c->interview ? ['ratings' => $c->interview->ratings, 'notes' => $c->interview->notes, 'recommendation' => $c->interview->recommendation, 'answers' => $c->interview->answers,
                 'interviewer' => $c->interview->interviewer, 'date' => $c->interview->date?->toDateString(), 'pct' => $c->interview->pct] : null,
             'offer' => $o ? ['title' => $o->title, 'contract' => $o->contract, 'currency' => $o->currency, 'basic' => $pay ? $o->basic : null, 'housing' => $pay ? $o->housing : null, 'transport' => $pay ? $o->transport : null, 'fuel' => $pay ? $o->fuel : null,
                 'masked' => ! $pay, 'total' => $pay ? $o->total() : null, 'leave_days' => $o->leave_days, 'start_date' => $o->start_date?->toDateString(), 'issued_at' => $o->issued_at?->toIso8601String(), 'status' => $o->status,
@@ -92,5 +93,14 @@ class HrCandidate
             'headcount' => ['approved' => (int) $job->department->headcount, 'current' => Employee::where('department_id', $job->department_id)->where('status', '!=', 'terminated')->count()],
             'degree_ok' => $c->degree_level >= $job->degree,
         ];
+    }
+
+    /** أسئلة المقابلة ومهاراتها لهذا الشاغر — وإلا بنك الشركة، مع البنك كاملاً لتبديل السؤال */
+    public static function interviewPlan(\App\Models\JobOpening $job): array
+    {
+        $bank = \App\Support\Settings::merged('interview_bank');
+        $own = $job->interview ?? [];
+        return ['questions' => ! empty($own['questions']) ? $own['questions'] : $bank['questions'], 'skills' => ! empty($own['skills']) ? $own['skills'] : $bank['skills'],
+            'from_job' => ! empty($own['questions']) || ! empty($own['skills']), 'bank' => $bank['questions']];
     }
 }

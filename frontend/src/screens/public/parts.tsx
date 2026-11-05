@@ -18,7 +18,7 @@ export function JobMeta({ j }: { j: PublicJob }) {
   return <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-[12px] text-ink-3">
     <span className="flex items-center gap-1"><Briefcase size={13} />{bi(j.dept, lang)}</span>
     <span className="flex items-center gap-1"><MapPin size={13} />{bi(j.city, lang)}</span>
-    <span>{bi(j.type, lang)}</span>
+    <span>{bi(j.type, lang)}{j.workplace && j.workplace.code !== 'onsite' ? ` · ${bi(j.workplace, lang)}` : ''}</span>
     <span>{L('نُشرت', 'Posted')} {fmtDate(j.posted_at, lang)}</span>
     {j.closes_at && <span className="flex items-center gap-1"><CalendarClock size={13} />{L('آخر موعد', 'Apply by')} {fmtDate(j.closes_at, lang)}</span>}
   </div>

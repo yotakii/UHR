@@ -14,15 +14,17 @@ export interface HrJob {
   posted_at: string | null; closes_at: string | null; hard_to_fill: boolean; requires_photo: boolean; accepting: boolean; test_enabled: boolean
   pipeline?: Record<Stage, number>
 }
-export interface HrJobFull extends HrJob { title_ar: string; title_en: string; summary_ar: string; summary_en: string; requirements: Bi[]; department_id: number; location_id: number; employment_type: string; match_weights: MatchWeights | null }
+export interface HrJobFull extends HrJob { title_ar: string; title_en: string; summary_ar: string; summary_en: string; requirements: Bi[]; department_id: number; location_id: number; employment_type: string; match_weights: MatchWeights | null; workplace_code: Workplace; interview: JobInterview }
+export type Workplace = 'onsite' | 'remote' | 'hybrid'
+export type JobInterview = { questions: Bi[]; skills: Bi[] }
 export type MatchWeights = Record<'exp' | 'deg' | 'sal' | 'eng' | 'file', number>
 export interface JobInput {
-  title_ar: string; title_en: string; department_id: number | ''; location_id: number | ''; employment_type: string; openings: number; min_years: number; degree: number
+  title_ar: string; title_en: string; department_id: number | ''; location_id: number | ''; employment_type: string; workplace: Workplace; openings: number; min_years: number; degree: number
   salary_min: number | ''; salary_max: number | ''; currency: 'USD' | 'SYP'; summary_ar: string; summary_en: string; requirements: Bi[]
   visibility: Visibility; closes_at: string; hard_to_fill: boolean; requires_photo: boolean; status: 'draft' | 'open' | 'closed'
-  match_weights: MatchWeights | null
+  match_weights: MatchWeights | null; interview: JobInterview
 }
-export interface Lookups { departments: (Bi & { id: number })[]; locations: (Bi & { id: number })[]; types: (Bi & { code: string })[]; degrees: Bi[] }
+export interface Lookups { departments: (Bi & { id: number })[]; locations: (Bi & { id: number })[]; types: (Bi & { code: string })[]; workplaces: (Bi & { code: Workplace })[]; degrees: Bi[] }
 export type HrCompany = CompanyCard & { portal_enabled: boolean; portal_review: boolean }
 
 export const useHrJobs = () => useQuery({ queryKey: ['hr', 'jobs'], queryFn: () => api<{ company: HrCompany; data: HrJob[] }>('/hr/jobs') })
@@ -47,6 +49,7 @@ export function hrLink(link: string): string {
   if (k === 'cand') return `/hr/candidates/${id}`
   if (k === 'emp') return `/hr/employees/${id}`
   if (k === 'job') return '/hr/jobs'
+  if (k === 'job-matches') return `/hr/jobs?matches=${id}`
   if (k === 'recruitment') return '/hr/candidates'
   if (k === 'onboard') return `/hr/onboarding${id ? '/' + id : ''}`
   if (k === 'docs') return '/hr/my-documents'
@@ -66,3 +69,10 @@ export function hrLink(link: string): string {
   if (k === 'space-moderation') return '/hr/space/moderation'
   return `/hr/${k}`
 }
+
+/** مطابقة بنك السير مع شاغر ودعوة أصحابها للتقديم (ملاحظة الاختبار 46) */
+export interface CvMatch { id: number; ref: string; name: Bi; score: number; years: number; degree: number; major: string | null; last_job: Bi; applied_at: string; stage: string; invited: boolean }
+export type CvMatches = { data: CvMatch[]; job: { id: number; code: string; title: Bi; accepting: boolean }; min: number }
+export const useCvMatches = (id: number | null) => useQuery({ queryKey: ['hr', 'cv-matches', id], enabled: !!id, queryFn: () => api<CvMatches>(`/hr/jobs/${id}/cv-matches`) })
+export const useInviteCv = (id: number) => useMutation({ mutationFn: (cid: number) => api<CvMatches>(`/hr/jobs/${id}/cv-matches/${cid}/invite`, { method: 'POST', json: {} }),
+  onSuccess: d => queryClient.setQueryData(['hr', 'cv-matches', id], d) })

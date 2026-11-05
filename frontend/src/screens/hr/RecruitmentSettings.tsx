@@ -1,11 +1,11 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { Loader2, Save, RotateCcw, Eye, Scale, SlidersHorizontal, Timer, Trophy, Settings2, ArrowLeft, ArrowRight } from 'lucide-react'
+import { Loader2, Save, RotateCcw, Eye, Scale, SlidersHorizontal, Timer, Trophy, Settings2, ArrowLeft, ArrowRight, Plus, Trash2 } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { can, useMe } from '../../lib/session'
 import { ApiError } from '../../lib/api'
-import { usePreviewMatch, useRules, useSaveRules, type MatchConfig, type Rules } from '../../lib/candidates'
+import { usePreviewMatch, useRules, useSaveRules, type InterviewBank, type MatchConfig, type Rules } from '../../lib/candidates'
 import { STAGES, type Stage } from '../../lib/recruitment'
-import { Badge, Btn, PageHead, Panel, Progress, toast } from '../../ui/kit'
+import { Badge, Btn, PageHead, Panel, Progress, Seg, toast } from '../../ui/kit'
 
 const SLA_STAGES: Stage[] = ['new', 'screening', 'interview', 'technical', 'offer']
 type W = keyof MatchConfig['weights']
@@ -24,11 +24,12 @@ export function RecruitmentSettings() {
   const [r, setR] = useState<Rules | null>(null)
   const [sla, setSla] = useState<Record<string, number>>({})
   const [m, setM] = useState<MatchConfig | null>(null)
-  useEffect(() => { if (data) { setR(data.rules); setSla(data.stage_sla); setM(data.match) } }, [data])
-  if (!data || !r || !m) return <div className="grid place-items-center py-24"><Loader2 className="animate-spin text-brand" /></div>
+  const [bank, setBank] = useState<InterviewBank | null>(null)
+  useEffect(() => { if (data) { setR(data.rules); setSla(data.stage_sla); setM(data.match); setBank(data.interview_bank) } }, [data])
+  if (!data || !r || !m || !bank) return <div className="grid place-items-center py-24"><Loader2 className="animate-spin text-brand" /></div>
 
   const sum = Object.values(m.weights).reduce((a, b) => a + (Number(b) || 0), 0)
-  const dirty = JSON.stringify({ r, sla, m }) !== JSON.stringify({ r: data.rules, sla: data.stage_sla, m: data.match })
+  const dirty = JSON.stringify({ r, sla, m, bank }) !== JSON.stringify({ r: data.rules, sla: data.stage_sla, m: data.match, bank: data.interview_bank })
   const err = save.error instanceof ApiError ? save.error : preview.error instanceof ApiError ? preview.error : null
   const setW = (k: W, v: number) => setM({ ...m, weights: { ...m.weights, [k]: v } })
   const setG = <G extends Exclude<keyof MatchConfig, 'weights' | 'file'>>(g: G, k: keyof MatchConfig[G], v: number) => setM({ ...m, [g]: { ...m[g], [k]: v } })
@@ -45,14 +46,14 @@ export function RecruitmentSettings() {
     <span className={`w-11 h-6 shrink-0 rounded-full p-0.5 transition-colors ${r[k] ? 'bg-brand' : 'bg-sub border border-line'}`}><span className={`block size-5 rounded-full bg-white transition-transform ${r[k] ? 'translate-x-5 rtl:-translate-x-5' : ''}`} /></span></button>
   const card = (title: ReactNode, children: ReactNode, hint?: ReactNode) => <div className="rounded-xl border border-line p-4 min-w-0"><div className="font-semibold text-[14px] mb-1">{title}</div>{hint && <div className="text-[12px] text-ink-3 mb-2">{hint}</div>}{children}</div>
 
-  const submit = () => save.mutate({ rules: r, stage_sla: sla, match: m }, {
+  const submit = () => save.mutate({ rules: r, stage_sla: sla, match: m, interview_bank: { questions: bank.questions.filter(q => q.ar.trim()), skills: bank.skills.filter(q => q.ar.trim()) } }, {
     onSuccess: d => toast(L(`حُفظت القواعد — أُعيد حساب ${d.recomputed} طلباً مفتوحاً`, `Rules saved — ${d.recomputed} open applications re-scored`)), onError: x => toast((x as ApiError).message) })
   const W_LABEL: Record<W, string> = { exp: L('سنوات الخبرة', 'Experience'), deg: L('المؤهل العلمي', 'Qualification'), sal: L('الراتب المتوقع', 'Salary expectation'), eng: L('اللغة الإنكليزية', 'English'), file: L('اكتمال الملف', 'File completeness') }
 
   return <div className="max-w-[1200px] mx-auto space-y-5">
     <PageHead title={L('قواعد التوظيف والمطابقة', 'Recruitment & matching rules')} sub={L('كل رقم تعتمد عليه المطابقة والأتمتة تحدده شركتك. الحفظ يعيد حساب نسب الطلبات المفتوحة ولا ينقل أحداً بين المراحل.', 'Every number behind matching and automation is set by your company. Saving re-scores open applications without moving anyone between stages.')}
       actions={editable && <>
-        <Btn icon={<RotateCcw size={16} />} onClick={() => { setR(data.defaults.rules); setSla(data.defaults.stage_sla); setM(data.defaults.match) }}>{L('القيم الافتراضية', 'Defaults')}</Btn>
+        <Btn icon={<RotateCcw size={16} />} onClick={() => { setR(data.defaults.rules); setSla(data.defaults.stage_sla); setM(data.defaults.match); setBank(data.defaults.interview_bank) }}>{L('القيم الافتراضية', 'Defaults')}</Btn>
         <Btn icon={preview.isPending ? <Loader2 size={16} className="animate-spin" /> : <Eye size={16} />} disabled={preview.isPending || sum !== 100} onClick={() => preview.mutate(m, { onError: x => toast((x as ApiError).message) })}>{L('معاينة', 'Preview')}</Btn>
         <Btn kind="primary" icon={save.isPending ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} disabled={!dirty || save.isPending || sum !== 100} onClick={submit}>{L('حفظ', 'Save')}</Btn></>} />
     {!editable && <Badge>{L('عرض فقط — التعديل لمدير الإعدادات', 'Read only — settings managers can edit')}</Badge>}
@@ -128,6 +129,15 @@ export function RecruitmentSettings() {
           {num(r.probation_at, v => setR({ ...r, probation_at: v }), L('بنود F-19 المنجزة لبدء فترة التجربة', 'F-19 items done to start probation'), { max: 28, suffix: L('بند', 'items') })}
           {num(r.min_age ?? 18, v => setR({ ...r, min_age: v }), L('الحد الأدنى لعمر المتقدم أو الموظف', 'Minimum age of applicants and employees'), { max: 30, suffix: L('سنة', 'y') })}
         </Panel>
+        <Panel title={L('عرض العمل والميزانية', 'Job offer & budget')}>
+          <div className="text-[13.5px] mb-1.5">{L('عرض يتجاوز الحد الأعلى لراتب الشاغر', 'An offer above the job’s maximum pay')}</div>
+          <Seg value={r.offer_budget ?? 'approval'} onChange={x => editable && setR({ ...r, offer_budget: x })} options={[{ v: 'approval', label: L('يحتاج موافقة', 'Needs approval') }, { v: 'block', label: L('يُمنع', 'Blocked') }, { v: 'off', label: L('بلا رقابة', 'Not checked') }]} />
+          <p className="text-[12px] text-ink-3 mt-1.5 mb-2">{L('«يحتاج موافقة»: لا يُرسل العرض للمتقدم حتى يوافق عليه معتمِدو سلسلة «تجاوز ميزانية العرض».', '“Needs approval”: the offer is not sent until the “offer over budget” chain approves it.')}</p>
+          <button type="button" disabled={!editable} onClick={() => setR({ ...r, offer_needs_interview: !(r.offer_needs_interview ?? true) })} aria-pressed={r.offer_needs_interview ?? true}
+            className="w-full flex items-center justify-between gap-4 py-2 text-start disabled:cursor-default">
+            <span><span className="block text-[14px] font-semibold">{L('لا عرض دون مقابلة موصى بها', 'No offer without a recommended interview')}</span><span className="block text-[12px] text-ink-3">{L('يمنع إصدار العرض إذا لم يُعتمد تقييم المقابلة F-25 أو كانت توصيته «غير موصى به»', 'Blocks the offer when F-25 is missing or “not recommended”')}</span></span>
+            <span className={`w-11 h-6 shrink-0 rounded-full p-0.5 transition-colors ${(r.offer_needs_interview ?? true) ? 'bg-brand' : 'bg-sub border border-line'}`}><span className={`block size-5 rounded-full bg-white transition-transform ${(r.offer_needs_interview ?? true) ? 'translate-x-5 rtl:-translate-x-5' : ''}`} /></span></button>
+        </Panel>
         <Panel title={L('الترشيح الداخلي (F-27)', 'Internal applications (F-27)')}>
           {num(r.internal_min_months, v => setR({ ...r, internal_min_months: v }), L('أقل مدة خدمة للترشيح', 'Minimum service to apply'), { max: 120, suffix: L('شهر', 'mo') })}
           {num(r.internal_clean_months, v => setR({ ...r, internal_clean_months: v }), L('بلا جزاء خلال (0 = لا شرط)', 'No penalty within (0 = off)'), { max: 60, suffix: L('شهر', 'mo') })}
@@ -135,5 +145,23 @@ export function RecruitmentSettings() {
         </Panel>
       </div>
     </div>
+    <BankEditor bank={bank} set={setBank} editable={editable} />
   </div>
+}
+
+/** بنك أسئلة المقابلة والمهارات (ملاحظتا الاختبار 30 و58): الافتراضي لكل شاغر لم تُخصَّص أسئلته، ومصدر «تبديل السؤال» أثناء المقابلة */
+function BankEditor({ bank, set, editable }: { bank: InterviewBank; set: (b: InterviewBank) => void; editable: boolean }) {
+  const L = useL()
+  const list = (k: 'questions' | 'skills', title: string, max: number) => <div className="min-w-0">
+    <div className="flex items-center justify-between mb-2"><span className="font-semibold text-[14px]">{title} <span className="text-ink-3 font-normal num">({bank[k].length})</span></span>
+      {editable && bank[k].length < max && <Btn size="sm" kind="ghost" icon={<Plus size={14} />} onClick={() => set({ ...bank, [k]: [...bank[k], { ar: '', en: '' }] })}>{L('إضافة', 'Add')}</Btn>}</div>
+    <div className="space-y-2">{bank[k].map((q, i) => <div key={i} className="grid grid-cols-[1fr_auto] gap-2">
+      <div className="grid sm:grid-cols-2 gap-2"><input className="field" disabled={!editable} value={q.ar} onChange={e => set({ ...bank, [k]: bank[k].map((x, j) => j === i ? { ...x, ar: e.target.value } : x) })} aria-label={title} />
+        <input className="field ltr text-start" disabled={!editable} placeholder="English" value={q.en} onChange={e => set({ ...bank, [k]: bank[k].map((x, j) => j === i ? { ...x, en: e.target.value } : x) })} aria-label={title + ' (EN)'} /></div>
+      {editable && <button type="button" className="px-2 text-ink-3 hover:text-danger" onClick={() => set({ ...bank, [k]: bank[k].filter((_, j) => j !== i) })} aria-label={L('حذف', 'Remove')}><Trash2 size={16} /></button>}
+    </div>)}</div>
+  </div>
+  return <Panel title={L('بنك أسئلة المقابلة والمهارات', 'Interview question & skills bank')} sub={L('يُستخدم لكل شاغر لم تُحدَّد له أسئلة خاصة، ومنه يختار المقابِل سؤالاً بديلاً أثناء المقابلة.', 'Used for every job without its own questions; the interviewer swaps questions from it during the interview.')}>
+    <div className="grid lg:grid-cols-[1.4fr_1fr] gap-6">{list('questions', L('الأسئلة', 'Questions'), 40)}{list('skills', L('المهارات', 'Skills'), 30)}</div>
+  </Panel>
 }

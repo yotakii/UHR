@@ -37,6 +37,10 @@ class Settings
             'probation_at' => 14,
             // ملاحظة الاختبار 55: الحد الأدنى لعمر المتقدم والموظف الجديد
             'min_age' => 18,
+            // ميزانية العرض (ملاحظتا 56 و70): إجمالي العرض فوق الحد الأعلى لراتب الشاغر → approval موافقة المعتمِد قبل الإرسال | block منع | off بلا رقابة
+            'offer_budget' => 'approval',
+            // لا يُصدر عرض لمن تقييم مقابلته F-25 «غير موصى به» أو بلا تقييم
+            'offer_needs_interview' => true,
             // الاستقطاب الداخلي (D-22، SRS §10.14): أدنى مدة خدمة بالأشهر، خارج فترة التجربة، وبلا إنذار أو جزاء خلال أشهر
             'internal_min_months' => 12, 'internal_no_probation' => true, 'internal_clean_months' => 6],
         // الإعلانات (D-06): اعتماد قبل النشر (لا افتراضياً — HR ينشر مباشرة)، وأقصى حجم للصورة/المرفق
@@ -85,6 +89,20 @@ class Settings
         'backup' => ['keep' => 5, 'include_files' => true],
         // الحسابات (11e): صلاحية رابط تفعيل الحساب أو تعيين كلمة المرور بالساعات
         'accounts' => ['invite_hours' => 72, 'pw_min' => 8, 'pw_upper' => false, 'pw_symbol' => false, 'max_attempts' => 5, 'lock_minutes' => 5],
+        // بنك أسئلة المقابلة الأولية والمهارات (ملاحظتا 30 و58): يُنسخ لكل شاغر ويُعدَّل فيه، ويمكن تبديل السؤال أثناء المقابلة
+        'interview_bank' => ['questions' => [
+            ['ar' => 'حدّثنا عن خبرتك الأخيرة وأهم إنجاز حققته فيها.', 'en' => 'Tell us about your latest role and your main achievement there.'],
+            ['ar' => 'لماذا ترغب بالانضمام إلى الشركة وإلى هذه الوظيفة تحديداً؟', 'en' => 'Why do you want to join the company and this role in particular?'],
+            ['ar' => 'صف موقفاً صعباً واجهته في العمل وكيف تعاملت معه.', 'en' => 'Describe a difficult situation at work and how you handled it.'],
+            ['ar' => 'كيف ترتّب أولوياتك عند تزاحم المهام والمواعيد؟', 'en' => 'How do you prioritise when tasks and deadlines pile up?'],
+            ['ar' => 'ما أبرز نقاط قوتك، وما الذي تعمل على تطويره؟', 'en' => 'What are your main strengths, and what are you working to improve?'],
+            ['ar' => 'كيف تتعامل مع ملاحظة أو نقد من مديرك؟', 'en' => 'How do you respond to feedback or criticism from your manager?'],
+            ['ar' => 'أين ترى نفسك مهنياً بعد ثلاث سنوات؟', 'en' => 'Where do you see yourself professionally in three years?'],
+            ['ar' => 'متى يمكنك المباشرة، وهل لديك التزامات تؤثر على الدوام؟', 'en' => 'When can you start, and do you have commitments that affect working hours?'],
+        ], 'skills' => [
+            ['ar' => 'التواصل والعرض', 'en' => 'Communication'], ['ar' => 'حل المشكلات', 'en' => 'Problem solving'], ['ar' => 'العمل ضمن فريق', 'en' => 'Teamwork'],
+            ['ar' => 'المعرفة التقنية بالمجال', 'en' => 'Technical knowledge'], ['ar' => 'التنظيم وإدارة الوقت', 'en' => 'Organisation and time management'],
+        ]],
         'stage_sla' => ['new' => 2, 'screening' => 3, 'interview' => 5, 'technical' => 5, 'offer' => 4],
         // الخروج M11 (HR.01-03، SRS §10.8): أسباب الاستقالة، أسباب انتهاء الخدمة (م37) والفصل (F-03)، أسئلة الاستبيان ومقابلة الخروج،
         // وجهات تسليم العهدة F-07 وبنودها (auto = يُحسب من النظام: handover من F-05، assets من سجل العهد، leave من الرصيد)

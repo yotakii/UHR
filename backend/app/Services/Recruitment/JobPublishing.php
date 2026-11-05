@@ -15,7 +15,7 @@ use App\Support\Tenant;
 class JobPublishing
 {
     /** حقول تغيّر محتوى الإعلان — تعديلها يعيد المراجعة */
-    private const CONTENT = ['title_ar', 'title_en', 'summary_ar', 'summary_en', 'requirements', 'salary_min', 'salary_max', 'employment_type', 'location_id', 'visibility'];
+    private const CONTENT = ['title_ar', 'title_en', 'summary_ar', 'summary_en', 'requirements', 'salary_min', 'salary_max', 'employment_type', 'workplace', 'location_id', 'visibility'];
 
     public function save(array $data, ?JobOpening $job = null): JobOpening
     {
@@ -33,18 +33,22 @@ class JobPublishing
             $job->portal_note = null;
         }
         $reweighted = $job->exists && $job->isDirty(['match_weights', 'min_years', 'degree', 'salary_min', 'salary_max']);
+        $opened = $job->status === 'open' && (! $job->exists || $job->isDirty('status'));
         if (array_key_exists('match_weights', $data) && is_array($data['match_weights'])) $job->match_weights = array_map('intval', array_intersect_key($data['match_weights'], array_flip(MatchScore::KEYS)));
         $job->save();
         if ($reweighted) MatchScore::recompute($job);
+        if ($opened) app(CvBankMatch::class)->announce($job);   // ملاحظة 46: سير القاعدة المطابقة للشاغر الجديد
         return $job;
     }
 
     public function setStatus(JobOpening $job, string $status): JobOpening
     {
+        $opened = $status === 'open' && $job->status !== 'open';
         $job->status = $status;
         if ($status === 'open' && ! $job->posted_at) $job->posted_at = now()->toDateString();
         if ($status === 'open' && $job->closes_at?->isPast() && ! $job->closes_at->isToday()) $job->closes_at = null;
         $job->save();
+        if ($opened) app(CvBankMatch::class)->announce($job);
         return $job;
     }
 }

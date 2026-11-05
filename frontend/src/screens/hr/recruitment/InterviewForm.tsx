@@ -6,6 +6,7 @@ import { F25, f25Label, f25Score, useInterview, type CandFile } from '../../../l
 import type { ApiError } from '../../../lib/api'
 import { Btn, Field, toast } from '../../../ui/kit'
 import { Paper } from '../../../ui/docs'
+import { InterviewPlan, initialAnswers } from './InterviewPlan'
 
 /** تقييم المقابلة الأولية F-25 (InterviewForm في الديمو) — المعاينة فورية والنتيجة المعتمدة من الخادم */
 export function InterviewForm({ c, readOnly }: { c: CandFile; readOnly: boolean }) {
@@ -17,8 +18,9 @@ export function InterviewForm({ c, readOnly }: { c: CandFile; readOnly: boolean 
   const [r, setR] = useState<Record<string, number>>(() => c.interview?.ratings ?? Object.fromEntries(F25.flatMap(g => g.items.map(i => [i.id, 3]))))
   const [notes, setNotes] = useState(c.interview?.notes ?? '')
   const [rec, setRec] = useState<'recommended' | 'reserve' | 'rejected'>(c.interview?.recommendation ?? 'recommended')
+  const [ans, setAns] = useState(() => initialAnswers(c, lang))
   const sc = f25Score(r)
-  const submit = () => save.mutate({ ratings: r, notes, recommendation: rec }, {
+  const submit = () => save.mutate({ ratings: r, notes, recommendation: rec, answers: { questions: ans.questions.filter(x => x.q.trim()), skills: ans.skills } }, {
     onSuccess: d => toast(d.stage === 'technical' && c.stage !== 'technical' ? L('حُفظ التقييم ونُقل للتقييم الفني', 'Saved — moved to technical review') : L('حُفظ التقييم', 'Evaluation saved')),
     onError: e => toast((e as ApiError).message),
   })
@@ -36,6 +38,7 @@ export function InterviewForm({ c, readOnly }: { c: CandFile; readOnly: boolean 
         </div>)}</div>
       </div>)}
     </div>
+    <InterviewPlan c={c} a={ans} set={setAns} locked={locked} />
     <div className="grid lg:grid-cols-[1fr_280px] gap-5 mt-5">
       <div className="space-y-3">
         <Field label={L('انطباعات اللجنة وملاحظات التوصية', 'Panel notes')}><textarea className="field" disabled={locked} value={notes} onChange={e => setNotes(e.target.value)} maxLength={2000} /></Field>

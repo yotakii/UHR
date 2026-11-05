@@ -25,6 +25,12 @@ class EngagementTest extends TestCase
 {
     use RefreshDatabase;
 
+    /** ضوابط العرض (15b) تُختبر في RecruitmentNotesTest — هنا تُعطَّل لأن الاختبار يخص مساراً آخر */
+    private function offerRulesOff(): void
+    {
+        \App\Support\Tenant::run(\App\Models\Company::where('slug', 'alfarada')->value('id'), fn () => \App\Support\Settings::put('rules', ['offer_budget' => 'off', 'offer_needs_interview' => false] + (\App\Support\Settings::get('rules') ?? [])));
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -129,6 +135,7 @@ class EngagementTest extends TestCase
 
         // العرض يرد عليه الموظف من بوابته، ثم F-31 ← النقل يحدّث ملفه (لا موظف جديد)
         $this->login('hr@alfarada.sy');
+        $this->offerRulesOff();
         $this->postJson("/api/hr/candidates/{$c->id}/move", ['stage' => 'technical'])->assertOk();
         $offer = ['title' => 'محاسب أول', 'contract' => 'fixed', 'currency' => 'USD', 'basic' => 1200, 'housing' => 100, 'transport' => 40, 'fuel' => 30, 'leave_days' => 21, 'start_date' => '2026-11-01'];
         $this->unlockSalaries(false);

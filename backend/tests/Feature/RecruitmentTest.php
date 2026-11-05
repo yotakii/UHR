@@ -21,6 +21,12 @@ class RecruitmentTest extends TestCase
 {
     use RefreshDatabase;
 
+    /** ضوابط العرض (15b) تُختبر في RecruitmentNotesTest — هنا تُعطَّل لأن الاختبار يخص مساراً آخر */
+    private function offerRulesOff(): void
+    {
+        \App\Support\Tenant::run(\App\Models\Company::where('slug', 'alfarada')->value('id'), fn () => \App\Support\Settings::put('rules', ['offer_budget' => 'off', 'offer_needs_interview' => false] + (\App\Support\Settings::get('rules') ?? [])));
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -110,6 +116,7 @@ class RecruitmentTest extends TestCase
     public function test_offer_is_issued_to_the_applicant_and_locked_after_acceptance(): void
     {
         Notification::fake();
+        $this->offerRulesOff();
         $this->login('hr@alfarada.sy');
         $c = Candidate::where('stage', 'technical')->whereNotNull('user_id')->firstOrFail();
         $offer = ['title' => 'مهندس برمجيات', 'contract' => 'fixed', 'currency' => 'USD', 'basic' => 900, 'housing' => 100, 'transport' => 40, 'fuel' => 30, 'leave_days' => 14, 'start_date' => '2026-11-01'];

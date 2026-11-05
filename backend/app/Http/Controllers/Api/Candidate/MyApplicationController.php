@@ -27,7 +27,7 @@ class MyApplicationController extends Controller
             'id' => $c->id, 'ref' => $c->ref, 'stage' => $c->stage, 'created_at' => $c->created_at?->toIso8601String(), 'updated_at' => $c->updated_at?->toIso8601String(),
             'company' => $c->jobOpening->company->card(),
             'job' => ['code' => $c->jobOpening->code, 'title' => ['ar' => $c->jobOpening->title_ar, 'en' => $c->jobOpening->title_en]],
-            'offer' => $c->offer?->status, 'appointment' => $c->appointment ? ['complete' => $c->appointment->isComplete()] : null,
+            'offer' => in_array($c->offer?->status, ['pending_approval', 'returned'], true) ? null : $c->offer?->status, 'appointment' => $c->appointment ? ['complete' => $c->appointment->isComplete()] : null,
         ])]);
     }
 

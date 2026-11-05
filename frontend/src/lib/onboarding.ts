@@ -45,6 +45,7 @@ export interface Lookups {
 export interface NewEmployeeInput {
   name: string; name_en: string; gender: 'M' | 'F'; national_id: string; dob: string; phone: string; email: string
   department_id: number | ''; title_ar: string; title_en: string; location_id: number | ''; manager_id: number | ''; salary: number | ''; currency: string; hire_date: string
+  contract: 'fixed' | 'open' | 'project'; basic: number | ''; housing: number | ''; transport: number | ''; fuel: number | ''
 }
 export const useLookups = (enabled = true) => useQuery({ queryKey: ['hr', 'employee-lookups'], queryFn: () => api<Lookups>('/hr/employees/lookups'), enabled })
 export const useCreateEmployee = () => useMutation({

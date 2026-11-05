@@ -66,6 +66,20 @@ class RequestRow
             'created_at' => $x->created_at?->toIso8601String(), 'steps' => Workflow::steps($x), 'step_id' => $cur?->id, 'can_act' => $viewer && $cur ? Workflow::canAct($viewer, $cur, $x) : false, 'can_cancel' => false];
     }
 
+    /** عرض عمل يتجاوز ميزانية الشاغر (ملاحظتا 56 و70) — المبالغ بعد التحقق من الهوية فقط */
+    public static function offerBudget(\App\Models\OfferApproval $x, ?User $viewer = null): array
+    {
+        $cur = Workflow::current($x);
+        $c = $x->candidate; $j = $c?->jobOpening;
+        $pay = $viewer && \App\Services\Security\SalaryVault::open($viewer);
+        return ['kind' => 'offer_budget', 'id' => $x->id, 'type' => 'offer_budget', 'type_name' => ['ar' => $x->workflowLabel('ar'), 'en' => $x->workflowLabel('en')],
+            'employee' => null, 'from' => $x->created_at?->toDateString(), 'to' => $x->created_at?->toDateString(), 'status' => $x->status, 'reason' => $x->reason,
+            'candidate' => $c ? ['id' => $c->id, 'ref' => $c->ref, 'name' => ['ar' => $c->name, 'en' => $c->name_en ?: $c->name], 'job' => $j ? ['ar' => $j->title_ar, 'en' => $j->title_en] : null] : null,
+            'budget' => ['total' => $pay ? $x->total : null, 'max' => $pay ? $x->budget : null, 'currency' => $x->currency, 'job_currency' => $x->job_currency, 'masked' => ! $pay],
+            'warnings' => [], 'requested_by' => $x->requester ? ['ar' => $x->requester->displayName('ar'), 'en' => $x->requester->displayName('en')] : null,
+            'created_at' => $x->created_at?->toIso8601String(), 'steps' => Workflow::steps($x), 'step_id' => $cur?->id, 'can_act' => $viewer && $cur ? Workflow::canAct($viewer, $cur, $x) : false, 'can_cancel' => false];
+    }
+
     /** طلب استقالة / إنهاء عقد (M11) في صندوق الاعتماد */
     public static function exit(Resignation $x, ?User $viewer = null): array
     {

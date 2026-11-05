@@ -28,7 +28,7 @@ export interface EmpFile extends EmpRow {
   leave: { entitlement: number; used: number; remaining: number; sick: number }
   onboarding: boolean; resigned: boolean
   attendance: DayRow[]; leaves: LeaveRow[]; services: ServiceRow[]; assets: AssetRow[]; documents: EmpDoc[]; logs: LogRow[]
-  salary: { amount: number; currency: 'USD' | 'SYP' } | null
+  salary: { amount: number; currency: 'USD' | 'SYP'; pay?: { basic: number; housing: number; transport: number; fuel: number } | null; contract?: string | null } | null
   can: { salary: boolean; edit: boolean; sensitive: boolean; onboarding: boolean }
 }
 export interface ProfileInput {
