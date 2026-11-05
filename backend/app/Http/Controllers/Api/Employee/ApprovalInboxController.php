@@ -56,6 +56,7 @@ class ApprovalInboxController extends Controller
             'delegate' => $me?->delegate ? ['id' => $me->delegate->id, 'ar' => $me->delegate->name, 'en' => $me->delegate->name_en] : null,
             'delegates' => $me ? Employee::current()->where('department_id', $me->department_id)->where('id', '!=', $me->id)->orderBy('name')->get()->map(fn ($e) => ['id' => $e->id, 'ar' => $e->name, 'en' => $e->name_en])->values() : [],
             'overtime_max' => (int) \App\Support\Settings::policy('overtime')['daily_max'],
+            'team_leave_types' => collect(\App\Support\Settings::policy('leave_types'))->where('notice', false)->where('unit', 'day')->map(fn ($t) => ['key' => $t['key'], 'ar' => $t['ar'], 'en' => $t['en']])->values(),
             'assigned' => $me ? OvertimeRequest::with(['employee', 'requester.employee', 'steps.actor.employee', 'steps.user.employee', 'steps.delegator.employee'])->where('requested_by', $u->id)->latest('id')->limit(30)->get()->map(fn ($o) => RequestRow::overtime($o, $u)) : []]);
     }
 
@@ -76,6 +77,16 @@ class ApprovalInboxController extends Controller
         elseif ($x instanceof \App\Models\SalaryGrant) app(\App\Services\Security\SalaryGrants::class)->decide($x, $u, $ok, $d['note'] ?? null);
         else abort(404);
         return $this->index($request);
+    }
+
+    /** إجازة طارئة يقدّمها المدير باسم موظف من فريقه (ملاحظة الاختبار 60) */
+    public function teamLeave(Request $request): JsonResponse
+    {
+        $d = $request->validate(['employee_id' => ['required', 'integer'], 'type' => ['required', 'string', 'max:20'], 'from' => ['required', 'date_format:Y-m-d'], 'to' => ['nullable', 'date_format:Y-m-d'],
+            'hours' => ['nullable', 'integer'], 'reason' => ['required', 'string', 'min:5', 'max:1000'], 'substitute_id' => ['nullable', 'integer'], 'file' => ['nullable', 'file']]);
+        $e = Employee::current()->findOrFail($d['employee_id']);
+        $l = $this->leaves->submitForTeam($e, $d, $request->user(), $request->file('file'));
+        return response()->json(['data' => RequestRow::leave($l->load(RequestRow::WITH), $request->user())], 201);
     }
 
     /** نائب المدير من إدارته — يستلم طلبات فريقه أثناء إجازته */

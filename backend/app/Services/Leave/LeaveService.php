@@ -61,7 +61,7 @@ class LeaveService
         $n = 0;
         for ($d = Carbon::parse($from.' 12:00:00'); $d->toDateString() <= $to; $d->addDay()) {
             $x = $d->toDateString();
-            if ($t['calendar'] || (! DayCalc::weekend($x, $e->department_id) && ! DayCalc::holiday($x))) $n++;
+            if ($t['calendar'] || (! DayCalc::weekend($x, $e) && ! DayCalc::holiday($x))) $n++;
         }
         return (float) $n;
     }
@@ -135,17 +135,37 @@ class LeaveService
         return $levels;
     }
 
-    public function submit(Employee $e, array $d, User $by, ?UploadedFile $doc = null): LeaveRequest
+    /**
+     * ملاحظة الاختبار 60: المدير المباشر يقدّم إجازة لموظف من فريقه في الحالات الطارئة — فقط الأنواع التي لا تحتاج إشعاراً مسبقاً
+     * (طارئة، مرضية، وفاة…). تقديم المدير يُعد موافقة مستواه، فيبدأ المسار من المستوى التالي، ويُبلَّغ الموظف.
+     */
+    public function submitForTeam(Employee $e, array $d, User $mgr, ?UploadedFile $doc = null): LeaveRequest
+    {
+        $me = $mgr->employee_id ? Employee::find($mgr->employee_id) : null;
+        if (! $me || $e->manager_id !== $me->id) throw new \App\Exceptions\ApiException(L::t('يقدّم المدير الإجازة لموظفي فريقه المباشر فقط.', 'Managers can request leave only for their direct team.'), 'not_your_team', 403);
+        $t = self::type($d['type'] ?? '');
+        if (! $t || $t['notice']) throw \App\Exceptions\ApiException::field('type', L::t('من حساب المدير تُطلب الإجازات الطارئة فقط (الأنواع التي لا تحتاج إشعاراً مسبقاً).', 'From a manager account only emergency-type leave (no advance notice) can be requested.'), 'team_leave_type');
+        $l = $this->submit($e, $d, $mgr, $doc, true);
+        Notify::user(User::where('employee_id', $e->id)->value('id'), "قدّم مديرك {$me->name} طلب {$t['ar']} باسمك ({$l->from->toDateString()})", "Your manager {$me->name_en} requested {$t['en']} for you ({$l->from->toDateString()})", 'requests');
+        return $l;
+    }
+
+    public function submit(Employee $e, array $d, User $by, ?UploadedFile $doc = null, bool $byManager = false): LeaveRequest
     {
         $c = $this->check($e, $d, $by);
         if ($c['errors']) throw \Illuminate\Validation\ValidationException::withMessages(array_map(fn ($m) => [$m], $c['errors']));
         $t = self::type($d['type']);
-        return DB::transaction(function () use ($e, $d, $by, $doc, $c, $t) {
+        return DB::transaction(function () use ($e, $d, $by, $doc, $c, $t, $byManager) {
             $l = LeaveRequest::create(['employee_id' => $e->id, 'type' => $t['key'], 'from' => $c['from'], 'to' => $c['to'], 'hours' => $t['unit'] === 'hour' ? (int) $d['hours'] : null,
                 'reason' => trim((string) ($d['reason'] ?? '')) ?: $t['ar'], 'substitute_id' => $d['substitute_id'] ?? null, 'days' => $c['days'], 'warnings' => $c['warnings'] ?: null,
                 'doc_file_id' => $doc ? $this->store($doc)->id : null, 'requested_by' => $by->id, 'status' => 'pending_manager', 'chain' => null]);
             $e->log("تقديم طلب {$t['ar']}: ".$c['from'].($c['to'] !== $c['from'] ? " — {$c['to']}" : '')." ({$c['days']})", "{$t['en']} requested: ".$c['from'].($c['to'] !== $c['from'] ? " — {$c['to']}" : '')." ({$c['days']})", 'info', 'F-03');
-            $this->flow->start($l, $e, $this->levels($e, $t, $c['days'], $by), $by);
+            $levels = $this->levels($e, $t, $c['days'], $by);
+            if ($byManager) {
+                $levels = array_values(array_filter($levels, fn ($lv) => $lv['role_key'] !== 'manager')) ?: [Workflow::level('hr_director')];
+                $e->log("قدّمه المدير المباشر ({$by->displayName('ar')}) — يُعد موافقة المدير", "Submitted by the direct manager ({$by->displayName('en')}) — counts as manager approval", 'info');
+            }
+            $this->flow->start($l, $e, $levels, $by);
             return $l->refresh();
         });
     }

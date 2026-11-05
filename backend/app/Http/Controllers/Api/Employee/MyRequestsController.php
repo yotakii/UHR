@@ -64,7 +64,28 @@ class MyRequestsController extends Controller
     public function attendance(Request $request): JsonResponse
     {
         $e = $this->me($request);
-        return response()->json(['days' => RecentDays::rows($e), 'issues' => $this->leaves->issues($e), 'justify_hours' => (int) LeaveService::rules()['justify_hours']]);
+        $m = $request->validate(['month' => ['nullable', 'date_format:Y-m']])['month'] ?? null;
+        $out = ['days' => RecentDays::rows($e), 'issues' => $this->leaves->issues($e), 'justify_hours' => (int) LeaveService::rules()['justify_hours']];
+        // ملاحظة الاختبار 6: سجل أي شهر سابق منذ المباشرة، مع ملخصه
+        $first = $e->hire_date?->format('Y-m') ?? now()->format('Y-m');
+        $months = [];
+        for ($d = now()->startOfMonth(); $d->format('Y-m') >= $first && count($months) < 24; $d->subMonth()) $months[] = $d->format('Y-m');
+        $out['months'] = $months;
+        if ($m) {
+            if ($m > now()->format('Y-m') || $m < $first) throw \App\Exceptions\ApiException::field('month', L::t('الشهر خارج فترة خدمتك.', 'The month is outside your service.'), 'month_range');
+            $from = $m.'-01'; $to = min(\Illuminate\Support\Carbon::parse($from)->endOfMonth()->toDateString(), now()->toDateString());
+            $days = \App\Models\AttendanceDay::where('employee_id', $e->id)->whereBetween('date', [$from, $to])->get()->keyBy(fn ($d) => $d->date->toDateString());
+            $leave = \App\Services\Attendance\Attendance::onLeave(collect([$e->id]), $from, $to)[$e->id] ?? [];
+            $rows = [];
+            for ($d = \Illuminate\Support\Carbon::parse($from.' 12:00:00'); $d->toDateString() <= $to; $d->addDay()) {
+                $date = $d->toDateString();
+                $rows[] = \App\Services\Attendance\Attendance::row($e, $date, $days->get($date), isset($leave[$date]));
+            }
+            $c = collect($rows);
+            $out['month'] = ['month' => $m, 'rows' => array_reverse($rows), 'summary' => ['present' => $c->whereNotNull('in')->count(), 'absent' => $c->where('status', 'absent')->count(),
+                'late_days' => $c->where('status', 'late')->count(), 'late' => $c->where('status', 'late')->sum('late'), 'leave' => $c->where('status', 'leave')->count(), 'incomplete' => $c->where('status', 'incomplete')->count(), 'ot' => $c->sum('ot')]];
+        }
+        return response()->json($out);
     }
 
     public function justify(Request $request): JsonResponse

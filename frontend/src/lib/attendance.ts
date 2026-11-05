@@ -7,17 +7,41 @@ import type { Bi } from './types'
 export type AttStatus = 'before_start' | 'leave' | 'holiday' | 'weekend' | 'not_in' | 'absent' | 'incomplete' | 'justified' | 'late' | 'present'
 export interface Person { id: number; code: string; name: Bi; title: Bi; dept: (Bi & { id: number }) | null }
 export interface AttRow { date: string; in: string | null; out: string | null; on_shift: boolean; worked: number; late: number; early: number; ot: number; ot_rate: number; deduct: number; status: AttStatus; source: string | null; corrected: boolean; note: string | null }
-export interface Meta { depts: (Bi & { id: number })[]; can: { edit: boolean; export: boolean; devices: boolean; policies: boolean } }
+export interface Meta { depts: (Bi & { id: number })[]; branches?: (Bi & { id: number })[]; can: { edit: boolean; export: boolean; devices: boolean; policies: boolean } }
 export interface Tap { id: number; employee: { id: number; code: string; name: Bi }; type: 'in' | 'out'; time: string; device: Bi; via: string }
 export interface Daily extends Meta { date: string; latest: Tap[]; rows: (AttRow & { employee: Person })[]; counts: { present: number; late: number; absent: number; leave: number; incomplete: number } }
 export interface PeriodRow { employee: Person; present: number; absent: number; late: number; late_days: number; deduct: number; ot: number; incomplete: number; leave: number }
-export interface Period extends Meta { from: string; to: string; rows: PeriodRow[] }
+export interface Period extends Meta { from: string; to: string; rows: PeriodRow[]
+  totals?: { employees: number; present: number; absent: number; incomplete: number; leave: number; late_days: number; late: number; deduct: number; ot: number; rate: number | null }
+  payroll?: { month: string | null; sheet: { id: number; status: string } | null; can: boolean } }
 
 const qs = (o: Record<string, string | number | undefined>) => new URLSearchParams(Object.entries(o).filter(([, v]) => v !== undefined && v !== '') as [string, string][]).toString()
 /** سجل اليوم: يتحدث تلقائياً كل 10 ثوانٍ لليوم الحالي حتى تظهر حركات الأجهزة فوراً */
-export const useDaily = (date: string, dept: string, live = false) => useQuery({ queryKey: ['hr', 'attendance', 'day', date, dept], queryFn: () => api<Daily>(`/hr/attendance?${qs({ date, dept })}`), placeholderData: p => p, refetchInterval: live ? 10_000 : false })
-export const usePeriod = (from: string, to: string, dept: string, enabled = true) => useQuery({ queryKey: ['hr', 'attendance', 'period', from, to, dept], queryFn: () => api<Period>(`/hr/attendance/period?${qs({ from, to, dept })}`), enabled, placeholderData: p => p })
-export const periodExportUrl = (from: string, to: string, dept: string) => `/api/hr/attendance/export?${qs({ from, to, dept })}`
+export const useDaily = (date: string, dept: string, live = false, branch = '') => useQuery({ queryKey: ['hr', 'attendance', 'day', date, dept, branch], queryFn: () => api<Daily>(`/hr/attendance?${qs({ date, dept, branch })}`), placeholderData: p => p, refetchInterval: live ? 10_000 : false })
+export const usePeriod = (from: string, to: string, dept: string, enabled = true, branch = '') => useQuery({ queryKey: ['hr', 'attendance', 'period', from, to, dept, branch], queryFn: () => api<Period>(`/hr/attendance/period?${qs({ from, to, dept, branch })}`), enabled, placeholderData: p => p })
+export const periodExportUrl = (from: string, to: string, dept: string, branch = '') => `/api/hr/attendance/export?${qs({ from, to, dept, branch })}`
+/** اتجاه الحضور الأسبوعي (ملاحظة 31) */
+export interface TrendWeek { from: string; to: string; expected: number; present: number; late: number; absent: number; rate: number | null }
+export const useTrend = (dept: string, branch: string, enabled = true) => useQuery({ queryKey: ['hr', 'attendance', 'trend', dept, branch], enabled, queryFn: () => api<{ data: TrendWeek[] }>(`/hr/attendance/trend?${qs({ weeks: 8, dept, branch })}`).then(r => r.data) })
+
+/** جداول الدوام والورديات والمناوبات والفروع (ملاحظات 24، 76، 80) */
+export interface ShiftDef { key: string; ar: string; en: string; start: number; end: number; grace?: number }
+export interface WorkSchedule { id: number; name_ar: string; name_en: string | null; kind: 'fixed' | 'shifts'; shifts: ShiftDef[]; work_days: number[]; season_from: string | null; season_to: string | null; color: string; active: boolean; employees?: number }
+export interface Assignment { id: number; employee: { id: number; code: string; ar: string; en: string }; schedule: Bi & { id: number }; shift: ShiftDef | null; from: string; to: string | null; note: string | null }
+export interface SchedulesData { data: WorkSchedule[]; assignments: Assignment[]; employees: { id: number; code: string; ar: string; en: string; department_id: number; work_schedule_id: number | null }[]; departments: (Bi & { id: number })[]; can: { edit: boolean } }
+export const useSchedules = () => useQuery({ queryKey: ['hr', 'schedules'], queryFn: () => api<SchedulesData>('/hr/schedules') })
+const refreshSchedules = () => { for (const k of ['schedules', 'roster', 'attendance']) queryClient.invalidateQueries({ queryKey: ['hr', k] }) }
+export const useSaveSchedule = () => useMutation({ mutationFn: (v: Omit<WorkSchedule, 'id' | 'employees'> & { id?: number }) => api(v.id ? `/hr/schedules/${v.id}` : '/hr/schedules', { method: v.id ? 'PUT' : 'POST', json: v }), onSuccess: refreshSchedules })
+export const useDeleteSchedule = () => useMutation({ mutationFn: (id: number) => api(`/hr/schedules/${id}`, { method: 'DELETE' }), onSuccess: refreshSchedules })
+export const useAssignSchedule = () => useMutation({ mutationFn: (v: { employee_ids: number[]; work_schedule_id: number | null; mode: 'permanent' | 'period'; shift_key?: string; from?: string; to?: string; note?: string }) => api<{ count: number }>('/hr/schedules/assign', { json: v }), onSuccess: refreshSchedules })
+export const useUnassign = () => useMutation({ mutationFn: (id: number) => api(`/hr/schedules/assignments/${id}`, { method: 'DELETE' }), onSuccess: refreshSchedules })
+export interface RosterDay { date: string; off: 'holiday' | 'weekend' | null; start: number; end: number; source: 'assignment' | 'employee' | 'policy'; schedule: { id: number; ar: string; color: string } | null; shift: string | null; tz: string }
+export const useRoster = (from: string, dept: string, enabled = true) => useQuery({ queryKey: ['hr', 'roster', from, dept], enabled, placeholderData: p => p, queryFn: () => api<{ days: string[]; data: { id: number; code: string; ar: string; en: string; days: RosterDay[] }[] }>(`/hr/schedules/roster?${qs({ from, dept, days: 7 })}`) })
+export interface Branch { id: number; code: string; ar: string; en: string; timezone: string; active: boolean; own: boolean; employees: number }
+export const useBranches = () => useQuery({ queryKey: ['hr', 'branches'], queryFn: () => api<{ data: Branch[]; timezones: string[]; can: { edit: boolean } }>('/hr/branches') })
+export const useSaveBranch = () => useMutation({ mutationFn: (v: { id?: number; code?: string; name_ar: string; name_en: string; timezone: string; active?: boolean }) => api<{ data: Branch[] }>(v.id ? `/hr/branches/${v.id}` : '/hr/branches', { method: v.id ? 'PUT' : 'POST', json: v }), onSuccess: d => queryClient.setQueryData(['hr', 'branches'], (o: object | undefined) => ({ ...(o ?? {}), ...d })) })
+/** «HH:MM» ↔ دقائق */
+export const hm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 export const useCorrect = () => useMutation({
   mutationFn: (v: { employee: number; date: string; in: string; out: string; note: string }) => api<{ data: AttRow }>(`/hr/attendance/${v.employee}`, { method: 'PUT', json: { date: v.date, in: v.in || null, out: v.out || null, note: v.note } }),
   onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['hr', 'attendance'] }); queryClient.invalidateQueries({ queryKey: ['hr', 'employee'] }) },

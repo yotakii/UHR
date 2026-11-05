@@ -68,7 +68,7 @@ class MonthCalc
         for ($d = Carbon::parse($start.' 12:00:00'); $d->toDateString() <= $end; $d->addDay()) {
             $date = $d->toDateString();
             $r = $days->get($date);
-            $c = DayCalc::day($date, $r?->in_at, $r?->out_at, $e->department_id);
+            $c = DayCalc::day($date, $r?->in_at, $r?->out_at, $e);
             $st = Attendance::status($r, $c, $date, $e, isset($paid[$date]));
             if (! $c['rest']) $t['work_days']++;
             if ($st === 'leave' && ! $c['rest']) { $t['leave']++; $t['leave_unpaid'] += (100 - ($paid[$date] ?? 100)) / 100; }

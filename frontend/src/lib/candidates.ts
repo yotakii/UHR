@@ -65,9 +65,9 @@ export type InterviewBank = { questions: Bi[]; skills: Bi[] }
 export interface RulesData { rules: Rules; stage_sla: Record<string, number>; match: MatchConfig; interview_bank: InterviewBank; defaults: { rules: Rules; stage_sla: Record<string, number>; match: MatchConfig; interview_bank: InterviewBank } }
 export interface MyApprovalItem { candidate: CandCard & { name_ar: string; gender: 'M' | 'F' }; job: { title: Bi; dept: Bi }; offer: (OfferInput & { total: number | null; masked?: boolean }) | null; appointment: HrAppointment }
 
-export const useBoard = (job?: number, q?: string) => useQuery({
-  queryKey: ['hr', 'candidates', job ?? 0, q ?? ''],
-  queryFn: () => api<{ data: CandCard[]; jobs: { id: number; code: string; title: Bi; status: string }[]; sla: Record<string, number> }>(`/hr/candidates?${new URLSearchParams({ ...(job ? { job: String(job) } : {}), ...(q ? { q } : {}) })}`),
+export const useBoard = (job?: number, q?: string, branch?: number) => useQuery({
+  queryKey: ['hr', 'candidates', job ?? 0, q ?? '', branch ?? 0],
+  queryFn: () => api<{ data: CandCard[]; jobs: { id: number; code: string; title: Bi; status: string }[]; sla: Record<string, number>; branches?: (Bi & { id: number })[] }>(`/hr/candidates?${new URLSearchParams({ ...(job ? { job: String(job) } : {}), ...(q ? { q } : {}), ...(branch ? { branch: String(branch) } : {}) })}`),
   placeholderData: prev => prev,
 })
 export const useCandidate = (id: number) => useQuery({ queryKey: ['hr', 'candidate', id], queryFn: () => api<{ data: CandFile }>(`/hr/candidates/${id}`).then(r => r.data),

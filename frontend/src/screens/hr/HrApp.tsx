@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react'
-import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed, Megaphone, Gift, ClipboardCheck, SlidersHorizontal, Sprout, KeyRound, Building, UserCog, GitBranch, BellRing, Library, History, DatabaseBackup, ScanText, MessagesSquare, ArrowRight, ArrowLeft, X, CalendarDays } from 'lucide-react'
+import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed, Megaphone, Gift, ClipboardCheck, SlidersHorizontal, Sprout, KeyRound, Building, UserCog, GitBranch, BellRing, Library, History, DatabaseBackup, ScanText, MessagesSquare, ArrowRight, ArrowLeft, X, CalendarDays, CalendarClock, MapPin } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { navigate, useRoute } from '../../lib/router'
 import { can, type SessionUser } from '../../lib/session'
@@ -9,6 +9,7 @@ import { hrLink } from '../../lib/hr'
 import { Empty, PageHead } from '../../ui/kit'
 import { Shell, type NavItem } from '../console/Shell'
 import { Dashboard } from './Dashboard'
+import { Branches, Schedules } from './attendance/Schedules'
 import { MyHolidays } from '../employee/MyHolidays'
 import { Jobs } from './Jobs'
 import { Permissions } from './Permissions'
@@ -134,6 +135,8 @@ export function HrApp({ user }: { user: SessionUser }) {
     { item: { to: '/hr/settings/channels', icon: <BellRing size={18} />, label: L('قنوات الإشعار والقوالب', 'Notification channels'), group: g4, hidden: true }, section: 'system', module: 'settings', view: () => <Channels /> },
     { item: { to: '/hr/settings/policies', icon: <Settings2 size={18} />, label: L('سياسات الدوام والإجازات', 'Work & leave policies'), group: g4, hidden: true }, section: 'rules', module: 'policies', view: () => <PolicySettings /> },
     { item: { to: '/hr/settings/performance', icon: <SlidersHorizontal size={17} />, label: L('إعدادات الأداء والتقييم', 'Performance settings'), group: g4, hidden: true }, section: 'rules', module: u => can(u, 'settings', 'edit') && can(u, 'performance'), view: () => <PerformanceSettings /> },
+    { item: { to: '/hr/settings/schedules', icon: <CalendarClock size={18} />, label: L('جداول الدوام والورديات', 'Work schedules & shifts'), group: g4, hidden: true }, section: 'rules', module: 'attendance', view: () => <Schedules /> },
+    { item: { to: '/hr/settings/branches', icon: <MapPin size={18} />, label: L('الفروع والمناطق الزمنية', 'Branches & time zones'), group: g4, hidden: true }, section: 'org', module: 'attendance', view: () => <Branches /> },
     { item: { to: '/hr/settings/devices', icon: <Nfc size={18} />, label: L('أجهزة الحضور', 'Attendance devices'), group: g4, hidden: true }, section: 'system', module: u => can(u, 'attendance', 'edit'), view: () => <Devices /> },
     { item: { to: '/hr/settings/space', icon: <MessagesSquare size={18} />, label: L('إعدادات الساحة', 'Space settings'), group: g4, hidden: true }, section: 'system', module: u => can(u, 'settings', 'edit'), view: () => <SpaceSettings /> },
     { item: { to: '/hr/settings/recruitment', icon: <Scale size={18} />, label: L('قواعد التوظيف والمطابقة', 'Recruitment & matching rules'), group: g4, hidden: true }, section: 'rules', module: u => can(u, 'settings') || can(u, 'candidates'), view: () => <RecruitmentSettings /> },

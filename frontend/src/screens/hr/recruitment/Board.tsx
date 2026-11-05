@@ -22,10 +22,11 @@ export function Board() {
   const L = useL(); const lang = useLang(); const P = lang === 'ar' ? '٪' : '%'
   const route = useRoute(); const me = useMe().data
   const job = Number(route.query.job) || undefined
+  const branch = Number(route.query.branch) || undefined
   const [q, setQ] = useState(route.query.q ?? '')
   const [search, setSearch] = useState(q)
   useEffect(() => { const t = setTimeout(() => { setSearch(q); setQuery({ q: q || undefined }) }, 250); return () => clearTimeout(t) }, [q])
-  const { data, isLoading } = useBoard(job, search)
+  const { data, isLoading } = useBoard(job, search, branch)
   const move = useMove()
   const [drag, setDrag] = useState<number | null>(null); const [over, setOver] = useState<Stage | null>(null)
   const [reject, setReject] = useState<CandCard | null>(null);
@@ -57,6 +58,8 @@ export function Board() {
         <input className="field sm:!w-56" placeholder={L('بحث بالاسم أو رقم الطلب', 'Search name or reference')} value={q} onChange={e => setQ(e.target.value)} aria-label={L('بحث', 'Search')} />
         <select className="field sm:!w-60" value={job ?? ''} onChange={e => setQuery({ job: e.target.value || undefined })} aria-label={L('الوظيفة', 'Position')}>
           <option value="">{L('كل الوظائف', 'All positions')}</option>{data?.jobs.map(j => <option key={j.id} value={j.id}>{bi(j.title, lang)} — {j.code}</option>)}</select>
+        {(data?.branches?.length ?? 0) > 1 && <select className="field sm:!w-44" value={branch ?? ''} onChange={e => setQuery({ branch: e.target.value || undefined })} aria-label={L('الفرع', 'Branch')}>
+          <option value="">{L('كل الفروع', 'All branches')}</option>{data?.branches?.map(b => <option key={b.id} value={b.id}>{bi(b, lang)}</option>)}</select>}
       </>} />
     {isLoading ? <div className="grid place-items-center py-24"><Loader2 className="animate-spin text-brand" /></div>
       : <div className="grid gap-3 items-start [grid-template-columns:repeat(auto-fill,minmax(232px,1fr))]">

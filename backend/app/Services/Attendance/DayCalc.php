@@ -2,6 +2,7 @@
 
 namespace App\Services\Attendance;
 
+use App\Models\Employee;
 use App\Models\Holiday;
 use App\Support\Settings;
 use App\Support\Tenant;
@@ -15,16 +16,18 @@ use Illuminate\Support\Facades\Cache;
 class DayCalc
 {
     /** @return array{status: string, late: int, early: int, worked: int, ot: int, ot_rate: float, deduct: float, holiday: bool, rest: bool} */
-    public static function day(string $date, Carbon|string|null $in = null, Carbon|string|null $out = null, ?int $deptId = null): array
+    public static function day(string $date, Carbon|string|null $in = null, Carbon|string|null $out = null, Employee|int|null $who = null): array
     {
-        $shift = Settings::schedule('shift', $date, $deptId);
+        // جدول الموظف (إسناد بفترة ← جدوله ← الإدارة ← الشركة) ومنطقة فرعه الزمنية — ملاحظات الاختبار 24 و76 و80
+        if ($who instanceof Employee) { $r = WorkSchedules::resolve($who, $date); $shift = $r['shift']; $days = $r['work_days']; $tz = $r['tz']; }
+        else { $shift = Settings::schedule('shift', $date, $who); $days = Settings::schedule('work_days', $date, $who); $tz = null; }
         $rates = Settings::policy('overtime_rates', $date);
         $holiday = self::holiday($date);
-        $rest = $holiday || self::weekend($date, $deptId);
+        $rest = $holiday || ! in_array(Carbon::parse($date.' 12:00:00')->dayOfWeek, $days, true);
         $base = ['holiday' => $holiday, 'rest' => $rest, 'deduct' => 0.0];
         if (! $in) return ['status' => $rest ? ($holiday ? 'holiday' : 'weekend') : 'absent', 'late' => 0, 'early' => 0, 'worked' => 0, 'ot' => 0, 'ot_rate' => 0.0] + $base;
-        $i = self::mins($in);
-        $o = $out ? self::mins($out) : null;
+        $i = self::mins($in, $tz);
+        $o = $out ? self::mins($out, $tz) : null;
         $late = ! $rest && $i > $shift['start'] + $shift['grace'] ? $i - $shift['start'] : 0;
         $early = ! $rest && $o !== null && $o < $shift['end'] ? $shift['end'] - $o : 0;
         $worked = $o !== null ? $o - $i : 0;
@@ -58,9 +61,10 @@ class DayCalc
         return $late > Settings::policy('late_deduction', $date)['absent_after'];
     }
 
-    public static function weekend(string $date, ?int $deptId = null): bool
+    public static function weekend(string $date, Employee|int|null $who = null): bool
     {
-        return ! in_array(Carbon::parse($date.' 12:00:00')->dayOfWeek, Settings::schedule('work_days', $date, $deptId), true);
+        $days = $who instanceof Employee ? WorkSchedules::resolve($who, $date)['work_days'] : Settings::schedule('work_days', $date, $who);
+        return ! in_array(Carbon::parse($date.' 12:00:00')->dayOfWeek, $days, true);
     }
 
     public static function holiday(string $date): bool
@@ -81,9 +85,9 @@ class DayCalc
     }
 
     /** وقت الطابع بدقائق اليوم بتوقيت الشركة */
-    public static function mins(Carbon|string $t): int
+    public static function mins(Carbon|string $t, ?string $tz = null): int
     {
-        $c = $t instanceof Carbon ? $t->copy()->setTimezone(config('app.timezone')) : Carbon::parse($t);
+        $c = $t instanceof Carbon ? $t->copy()->setTimezone($tz ?? config('app.timezone')) : Carbon::parse($t);
         return $c->hour * 60 + $c->minute;
     }
 }

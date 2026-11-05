@@ -22,9 +22,11 @@ class CandidateController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $f = $request->validate(['job' => ['nullable', 'integer'], 'q' => ['nullable', 'string', 'max:80']]);
+        $f = $request->validate(['job' => ['nullable', 'integer'], 'q' => ['nullable', 'string', 'max:80'], 'branch' => ['nullable', 'integer']]);
         $q = Candidate::with(HrCandidate::WITH)->latest('created_at')->latest('id');
         if ($f['job'] ?? null) $q->where('job_opening_id', $f['job']);
+        // ملاحظة 31: القائمة المختصرة حسب الفرع (مدينة الشاغر) لمن يتابع أكثر من فرع
+        if ($f['branch'] ?? null) $q->whereHas('jobOpening', fn ($j) => $j->where('location_id', $f['branch']));
         if ($t = trim((string) ($f['q'] ?? ''))) {
             $like = '%'.mb_strtolower($t).'%';
             $q->where(fn ($w) => $w->whereRaw('lower(name) like ?', [$like])->orWhereRaw('lower(name_en) like ?', [$like])->orWhereRaw('lower(ref) like ?', [$like]));
@@ -33,6 +35,7 @@ class CandidateController extends Controller
             'data' => $q->limit(500)->get()->map(fn ($c) => HrCandidate::card($c)),
             'jobs' => JobOpening::orderByDesc('id')->get(['id', 'code', 'title_ar', 'title_en', 'status'])->map(fn ($j) => ['id' => $j->id, 'code' => $j->code, 'title' => ['ar' => $j->title_ar, 'en' => $j->title_en], 'status' => $j->status]),
             'sla' => \App\Support\Settings::get('stage_sla'),
+            'branches' => \App\Models\Location::whereIn('id', JobOpening::select('location_id'))->orderBy('id')->get()->map(fn ($l) => ['id' => $l->id, 'ar' => $l->name_ar, 'en' => $l->name_en]),
         ]);
     }
 

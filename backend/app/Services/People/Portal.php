@@ -83,12 +83,12 @@ class Portal
         $cool = (int) Settings::policy('terminal')['cooldown'];
         $last = Scan::where('employee_id', $e->id)->latest('ts')->first();
         if ($last && $last->ts->diffInSeconds(now(), true) < $cool) throw new ApiException(L::t('سُجّلت حركتك للتو.', 'Your tap was just recorded.'), 'dup', 409);
-        $at = now()->setTimezone(config('app.timezone'));
+        $at = now()->setTimezone(\App\Services\Attendance\WorkSchedules::tz($e));
         return DB::transaction(function () use ($e, $at, $today, $lat, $lng) {
             $d = AttendanceDay::where('employee_id', $e->id)->where('date', $today)->lockForUpdate()->first() ?? new AttendanceDay(['employee_id' => $e->id, 'date' => $today]);
             $type = $d->in_at ? 'out' : 'in';
             if ($type === 'in') { $d->in_at = $at; $d->source = 'portal'; } else $d->out_at = $at;
-            $c = DayCalc::day($today, $d->in_at, $d->out_at, $e->department_id);
+            $c = DayCalc::day($today, $d->in_at, $d->out_at, $e);
             $d->status = $c['late'] ? 'late' : ($c['rest'] ? 'weekend' : 'present');
             $d->save();
             Scan::create(['employee_id' => $e->id, 'ts' => $at, 'device_id' => null, 'device_ar' => 'بوابة الموظف — الجوال', 'device_en' => 'Portal — mobile', 'type' => $type,

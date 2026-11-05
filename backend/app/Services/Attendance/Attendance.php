@@ -44,8 +44,8 @@ class Attendance
         if ($r?->justified && ! $c['rest'] && (! $r->in_at || ! $r->out_at)) return 'justified';   // غياب أو يوم ناقص مبرر
         if (! $r?->in_at) return $c['rest'] ? ($c['holiday'] ? 'holiday' : 'weekend') : ($date === $today ? 'not_in' : ($date > $today ? 'not_in' : 'absent'));
         if (! $r->out_at) {
-            $shift = Settings::schedule('shift', $date, $e->department_id);
-            $limit = Carbon::parse($date, config('app.timezone'))->startOfDay()->addMinutes($shift['end'] + (int) Settings::policy('terminal', $date)['incomplete_after']);
+            $sch = WorkSchedules::resolve($e, $date);
+            $limit = Carbon::parse($date, $sch['tz'])->startOfDay()->addMinutes($sch['shift']['end'] + (int) Settings::policy('terminal', $date)['incomplete_after']);
             if ($date < $today || $now->greaterThan($limit)) return 'incomplete';
         }
         if ($c['late'] > 0 && ! $r->justified && DayCalc::lateAbsent($c['late'], $date)) return 'absent';
@@ -56,7 +56,7 @@ class Attendance
     /** صف يوم واحد لموظف (السجل اليومي، الملف، الجهاز) */
     public static function row(Employee $e, string $date, ?AttendanceDay $r, bool $onLeave): array
     {
-        $c = DayCalc::day($date, $r?->in_at, $r?->out_at, $e->department_id);
+        $c = DayCalc::day($date, $r?->in_at, $r?->out_at, $e);
         return ['date' => $date, 'in' => self::hm($r?->in_at), 'out' => self::hm($r?->out_at), 'on_shift' => $r?->in_at && ! $r->out_at && $date === now()->toDateString(),
             'worked' => $c['worked'], 'late' => $c['late'], 'early' => $c['early'], 'ot' => $c['ot'], 'ot_rate' => $c['ot_rate'], 'deduct' => $c['deduct'],
             'status' => self::status($r, $c, $date, $e, $onLeave), 'source' => $r?->source, 'corrected' => (bool) $r?->corrected_at, 'note' => $r?->correction_note];
@@ -117,7 +117,7 @@ class Attendance
             $d = AttendanceDay::firstOrNew(['employee_id' => $e->id, 'date' => $date]);
             $before = ['in' => self::hm($d->in_at), 'out' => self::hm($d->out_at)];
             $d->fill(['in_at' => $i, 'out_at' => $o, 'source' => 'manual', 'corrected_by' => $by->id, 'corrected_at' => now(), 'correction_note' => $note]);
-            $c = DayCalc::day($date, $i, $o, $e->department_id);
+            $c = DayCalc::day($date, $i, $o, $e);
             $d->status = ! $i ? ($c['rest'] ? 'weekend' : 'absent') : ($c['late'] ? 'late' : 'present');
             $d->save();
             $after = ['in' => self::hm($i), 'out' => self::hm($o)];
@@ -143,6 +143,7 @@ class Attendance
         self::rememberRead($device, $uid ?? CardUid::norm($raw), (bool) $e);
         if (! $e) return ['kind' => 'unknown', 'uid' => $uid ?? CardUid::norm($raw)];
         if (in_array($e->status, ['terminated'], true)) return ['kind' => 'inactive', 'employee' => self::person($e), 'uid' => $uid];
+        $at = $at->copy()->setTimezone(WorkSchedules::tz($e));   // تاريخ اليوم ووقته بتوقيت فرع الموظف (ملاحظة 80)
         $cool = (int) Settings::policy('terminal')['cooldown'];
         $last = Scan::where('employee_id', $e->id)->latest('ts')->first();
         if ($last && $last->ts->diffInSeconds($at, true) < $cool) return ['kind' => 'dup', 'employee' => self::person($e), 'uid' => $uid];
@@ -152,7 +153,7 @@ class Attendance
             $d = AttendanceDay::where('employee_id', $e->id)->where('date', $date)->lockForUpdate()->first() ?? new AttendanceDay(['employee_id' => $e->id, 'date' => $date]);
             $type = $d->in_at ? 'out' : 'in';
             if ($type === 'in') { $d->in_at = $at; $d->source = 'device'; } else $d->out_at = $at;
-            $c = DayCalc::day($date, $d->in_at, $d->out_at, $e->department_id);
+            $c = DayCalc::day($date, $d->in_at, $d->out_at, $e);
             $d->status = $c['late'] ? 'late' : ($c['rest'] ? 'weekend' : 'present');
             $d->save();
             Scan::create(['employee_id' => $e->id, 'ts' => $at, 'device_id' => $device->id, 'device_ar' => $device->name_ar, 'device_en' => $device->name_en, 'type' => $type, 'raw_uid' => mb_substr($raw, 0, 40), 'via' => $via]);

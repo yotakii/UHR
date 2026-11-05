@@ -3,7 +3,9 @@ import { useState } from 'react'
 import { Printer } from 'lucide-react'
 import { useL, useLang, bi, fmtDateTime, todayISO, addDays, money } from '../../lib/store'
 import { ApiError } from '../../lib/api'
-import { useAssignOvertime, useInbox, useSetDelegate, type ReqRow } from '../../lib/requests'
+import { useAssignOvertime, useInbox, useSetDelegate, useTeamLeave, type ReqRow } from '../../lib/requests'
+import { ConfirmSend } from '../../ui/decision'
+import type { Bi } from '../../lib/types'
 import { Btn, Empty, Field, PageHead, Panel, toast } from '../../ui/kit'
 import { DecideButtons, DocLink, LeaveStatus, Period, StepsPath, Warnings } from './parts'
 
@@ -75,9 +77,38 @@ export function TeamApprovals({ head = true }: { head?: boolean }) {
             <Btn kind="primary" className="w-full" disabled={assign.isPending || !f.employee_id} onClick={submit}>{L('إرسال التكليف', 'Send assignment')}</Btn>
           </div>
         </Panel>
+        {(d.team_leave_types?.length ?? 0) > 0 && <TeamLeave team={d.team} types={d.team_leave_types!} />}
       </div>
       <Panel title={L('تكليفاتي بالإضافي', 'My overtime assignments')} pad={false}>
         <RequestTable rows={d.assigned} rejectMin={d.reject_min} empty={L('لا توجد تكليفات', 'No assignments')} /></Panel>
     </div>}
   </div>
+}
+
+/**
+ * إجازة طارئة باسم موظف من فريقك (ملاحظة الاختبار 60): للحالات التي لا يستطيع فيها الموظف تقديم الطلب بنفسه.
+ * الأنواع التي لا تحتاج إشعاراً مسبقاً فقط؛ تقديمك يُعد موافقة مستواك ويذهب الطلب للمستوى التالي، ويُبلَّغ الموظف.
+ */
+function TeamLeave({ team, types }: { team: { id: number; code: string; ar: string; en: string }[]; types: (Bi & { key: string })[] }) {
+  const L = useL(); const lang = useLang()
+  const m = useTeamLeave()
+  const [f, setF] = useState({ employee_id: 0, type: types[0]?.key ?? '', from: todayISO(), to: todayISO(), reason: '', substitute_id: '' as number | '' })
+  const [err, setErr] = useState<Record<string, string>>({})
+  const send = () => { setErr({}); m.mutateAsync(f).then(() => { toast(L('أُرسل الطلب باسم الموظف وأُبلغ به', 'Request sent on the employee’s behalf; they were notified')); setF(x => ({ ...x, reason: '' })) })
+    .catch(e => e instanceof ApiError && setErr(Object.keys(e.errors).length ? Object.fromEntries(Object.entries(e.errors).map(([k, v]) => [k, v[0]])) : { reason: e.message })) }
+  return <Panel title={L('إجازة طارئة لموظف من فريقك', 'Emergency leave for a team member')} sub={L('عندما لا يستطيع الموظف تقديمها بنفسه. تقديمك يُعد موافقتك.', 'When the employee cannot request it. Your request counts as your approval.')}>
+    <div className="space-y-3">
+      <Field label={L('الموظف', 'Employee')} req error={err.employee_id}><select className="field" value={f.employee_id || ''} onChange={x => setF({ ...f, employee_id: Number(x.target.value) })}>
+        <option value="">{L('— اختر —', '— choose —')}</option>{team.map(x => <option key={x.id} value={x.id}>{bi(x, lang)}</option>)}</select></Field>
+      <Field label={L('النوع', 'Type')} req error={err.type}><select className="field" value={f.type} onChange={x => setF({ ...f, type: x.target.value })}>{types.map(t => <option key={t.key} value={t.key}>{bi(t, lang)}</option>)}</select></Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label={L('من', 'From')} req error={err.from}><input type="date" className="field" value={f.from} onChange={x => setF({ ...f, from: x.target.value, to: x.target.value > f.to ? x.target.value : f.to })} /></Field>
+        <Field label={L('إلى', 'To')} error={err.to}><input type="date" className="field" min={f.from} value={f.to} onChange={x => setF({ ...f, to: x.target.value })} /></Field></div>
+      <Field label={L('الموظف البديل', 'Substitute')} error={err.substitute_id}><select className="field" value={f.substitute_id} onChange={x => setF({ ...f, substitute_id: x.target.value ? Number(x.target.value) : '' })}>
+        <option value="">{L('— اختر —', '— choose —')}</option>{team.filter(x => x.id !== f.employee_id).map(x => <option key={x.id} value={x.id}>{bi(x, lang)}</option>)}</select></Field>
+      <Field label={L('السبب', 'Reason')} req error={err.reason}><textarea className="field" value={f.reason} maxLength={1000} onChange={x => setF({ ...f, reason: x.target.value })} /></Field>
+      <ConfirmSend block label={L('تقديم الطلب باسم الموظف', 'Request on their behalf')} busy={m.isPending} disabled={!f.employee_id || f.reason.trim().length < 5} onConfirm={send}
+        summary={`${bi(team.find(x => x.id === f.employee_id) ?? { ar: '', en: '' }, lang)} · ${bi(types.find(t => t.key === f.type) ?? { ar: '', en: '' }, lang)} · ${f.from}${f.to !== f.from ? ' → ' + f.to : ''}`} />
+    </div>
+  </Panel>
 }

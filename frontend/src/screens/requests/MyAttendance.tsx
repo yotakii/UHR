@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { setQuery, useRoute } from '../../lib/router'
 import { Paperclip } from 'lucide-react'
 import { useL, useLang, fmtDate, fmtDateTime } from '../../lib/store'
 import { ApiError } from '../../lib/api'
@@ -11,7 +12,8 @@ import { LeaveStatus } from './parts'
 /** «حضوري» (MyAttendance في الديمو): آخر أسبوعين، والتأخير/الغياب/اليوم الناقص بحاجة لتبرير خلال المهلة (D-18) */
 export function MyAttendance() {
   const L = useL(); const lang = useLang()
-  const q = useMyAttendance(); const d = q.data
+  const route = useRoute(); const month = route.query.month ?? ''
+  const q = useMyAttendance(month); const d = q.data
   const justify = useJustify()
   const [open, setOpen] = useState<Issue | null>(null)
   const [reason, setReason] = useState(''); const [file, setFile] = useState<File | null>(null); const [err, setErr] = useState('')
@@ -32,7 +34,14 @@ export function MyAttendance() {
             : i.status === 'justified' ? <Badge tone="brand">{L('مبرر', 'Justified')}</Badge> : <Badge>{L('انتهت المهلة', 'Window closed')}</Badge>}
         </li>)}</ul>}
     </Panel>
-    <Panel title={L('آخر أسبوعين', 'Last two weeks')} pad={false}>{d ? <AttendanceTable rows={d.days} /> : <Empty title="…" />}</Panel>
+    <Panel pad={false} title={month ? L(`سجل شهر ${month}`, `${month} record`) : L('آخر أسبوعين', 'Last two weeks')}
+      action={d && d.months.length > 0 && <select className="field !h-9 !w-auto text-[13px]" value={month} onChange={e => setQuery({ month: e.target.value || undefined })} aria-label={L('الشهر', 'Month')}>
+        <option value="">{L('آخر أسبوعين', 'Last two weeks')}</option>{d.months.map(m => <option key={m} value={m}>{new Date(m + '-15').toLocaleDateString(lang === 'ar' ? 'ar-SY-u-nu-latn' : 'en-GB', { month: 'long', year: 'numeric' })}</option>)}</select>}>
+      {month && d?.month && <div className="grid gap-px bg-line border-b border-line [grid-template-columns:repeat(auto-fill,minmax(120px,1fr))]">
+        {([[L('أيام الحضور', 'Present'), d.month.summary.present], [L('الغياب', 'Absent'), d.month.summary.absent], [L('أيام التأخير', 'Late days'), d.month.summary.late_days],
+          [L('مجموع التأخير', 'Total late'), minsLabel(d.month.summary.late, lang)], [L('الإجازات', 'Leave'), d.month.summary.leave], [L('الإضافي', 'Overtime'), minsLabel(d.month.summary.ot, lang)]] as const).map(([k, v]) =>
+          <div key={k} className="bg-surface px-4 py-2.5"><div className="text-[12px] text-ink-3">{k}</div><div className="text-[18px] font-bold num">{v}</div></div>)}</div>}
+      {d ? <AttendanceTable rows={month && d.month ? d.month.rows : d.days} /> : <Empty title="…" />}</Panel>
     <Modal open={!!open} onClose={() => setOpen(null)} title={L('تبرير', 'Justification')}
       footer={<><Btn onClick={() => setOpen(null)}>{L('إلغاء', 'Cancel')}</Btn><Btn kind="primary" disabled={justify.isPending} onClick={send}>{L('إرسال', 'Send')}</Btn></>}>
       {open && <p className="text-[14px] mb-3">{fmtDate(open.date, lang)} — {what(open)}</p>}

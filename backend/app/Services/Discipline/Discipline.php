@@ -242,7 +242,7 @@ class Discipline
             for ($d = Carbon::parse(max($start, $e->hire_date?->toDateString() ?? $start).' 12:00:00'); $d->toDateString() <= $to; $d->addDay()) {
                 $date = $d->toDateString();
                 $r = $rows->get($date);
-                $c = DayCalc::day($date, $r?->in_at, $r?->out_at, $e->department_id);
+                $c = DayCalc::day($date, $r?->in_at, $r?->out_at, $e);
                 $st = Attendance::status($r, $c, $date, $e, isset($leave[$e->id][$date]));
                 if ($st === 'absent') $absent[] = $date;
                 if ($st === 'late') $late[] = [$date, $c['late']];

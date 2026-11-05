@@ -43,7 +43,7 @@ class MyPortalController extends Controller
         unset($g);
         $years = \App\Models\Holiday::selectRaw('distinct extract(year from date)::int as y')->pluck('y')->push(now()->year)->unique()->sort()->values();
         return response()->json(['year' => $year, 'years' => $years, 'data' => $groups, 'total' => array_sum(array_column($groups, 'days')),
-            'work_days' => \App\Support\Settings::schedule('work_days', $today, $request->user()->employee?->department_id)]);
+            'work_days' => ($emp = $request->user()->employee) ? \App\Services\Attendance\WorkSchedules::resolve($emp, $today)['work_days'] : \App\Support\Settings::schedule('work_days', $today)]);
     }
 
     public function profile(Request $request): JsonResponse { return response()->json($this->portal->profile($this->me($request))); }

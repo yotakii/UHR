@@ -32,7 +32,7 @@ export interface Check { errors: Record<string, string>; warnings: ReqRow['warni
 export interface Issue extends DayRow { deadline: string; open: boolean; justification: { id: number; status: ReqStatus } | null }
 export interface Inbox {
   data: ReqRow[]; reject_min: number; team: { id: number; code: string; ar: string; en: string }[]
-  delegate: (Bi & { id: number }) | null; delegates: (Bi & { id: number })[]; overtime_max: number; assigned: ReqRow[]
+  delegate: (Bi & { id: number }) | null; delegates: (Bi & { id: number })[]; overtime_max: number; assigned: ReqRow[]; team_leave_types?: (Bi & { key: string })[]
 }
 
 const refresh = () => { for (const k of [['me', 'leave'], ['me', 'attendance'], ['me', 'approvals'], ['me', 'services'], ['hr', 'leaves'], ['hr', 'dashboard'], ['hr', 'attendance'], ['hr', 'employee']]) queryClient.invalidateQueries({ queryKey: k }) }
@@ -51,7 +51,10 @@ export const useCancelLeave = () => useMutation({ mutationFn: (id: number) => ap
 export const useAttachDoc = () => useMutation({
   mutationFn: (v: { id: number; file: File }) => { const fd = new FormData(); fd.append('file', v.file); return api(`/me/leave/${v.id}/document`, { method: 'POST', body: fd }) }, onSuccess: refresh,
 })
-export const useMyAttendance = () => useQuery({ queryKey: ['me', 'attendance'], queryFn: () => api<{ days: DayRow[]; issues: Issue[]; justify_hours: number }>('/me/attendance') })
+export interface MonthSummary { present: number; absent: number; late_days: number; late: number; leave: number; incomplete: number; ot: number }
+export const useMyAttendance = (month = '') => useQuery({ queryKey: ['me', 'attendance', month], placeholderData: p => p, queryFn: () => api<{ days: DayRow[]; issues: Issue[]; justify_hours: number; months: string[]; month?: { month: string; rows: DayRow[]; summary: MonthSummary } }>(`/me/attendance${month ? `?month=${month}` : ''}`) })
+/** إجازة طارئة يقدّمها المدير باسم موظف من فريقه (ملاحظة الاختبار 60) */
+export const useTeamLeave = () => useMutation({ mutationFn: (v: { employee_id: number; type: string; from: string; to: string; reason: string; substitute_id?: number | '' }) => api('/me/team/leave', { json: { ...v, substitute_id: v.substitute_id || null } }), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['me'] }) } })
 export const useJustify = () => useMutation({
   mutationFn: (v: { date: string; reason: string; file?: File | null }) => { const fd = new FormData(); fd.append('date', v.date); fd.append('reason', v.reason); if (v.file) fd.append('file', v.file); return api('/me/justifications', { method: 'POST', body: fd }) },
   onSuccess: refresh,

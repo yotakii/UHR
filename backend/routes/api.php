@@ -122,6 +122,7 @@ Route::middleware(['auth', 'fresh'])->prefix('me')->group(function () {
     Route::post('/approvals/{stepId}', [ApprovalInboxController::class, 'decide'])->whereNumber('stepId');
     Route::put('/delegate', [ApprovalInboxController::class, 'delegate']);
     Route::post('/overtime', [ApprovalInboxController::class, 'assignOvertime'])->middleware('throttle:30,1');
+    Route::post('/team/leave', [ApprovalInboxController::class, 'teamLeave'])->middleware('throttle:20,1');   // ملاحظة 60
     // خدماتي (D-16) وكشفي الشهري (D-01)
     Route::get('/services', [MyServicesController::class, 'index']);
     Route::post('/services', [MyServicesController::class, 'store'])->middleware('throttle:20,1');
@@ -275,6 +276,7 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
     // M08 — الحضور والدوام (بنطاق own/team/all لوحدة attendance) + الأجهزة المسجّلة
     Route::middleware('perm:attendance,view')->group(function () {
         Route::get('/attendance', [AttendanceController::class, 'daily']);
+        Route::get('/attendance/trend', [AttendanceController::class, 'trend']);
         Route::get('/attendance/period', [AttendanceController::class, 'period']);
     });
     Route::get('/attendance/export', [AttendanceController::class, 'export'])->middleware('perm:attendance,export');
@@ -411,6 +413,25 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
         Route::get('/payroll/{id}/export', [PayrollController::class, 'export'])->whereNumber('id')->middleware('perm:payroll,export');
     });
 
+    // جداول الدوام والورديات والمناوبات (ملاحظات 24 و76) والفروع ومناطقها الزمنية (80)
+    Route::middleware('perm:attendance,view')->group(function () {
+        Route::get('/schedules', [\App\Http\Controllers\Api\Hr\ScheduleController::class, 'index']);
+        Route::get('/schedules/roster', [\App\Http\Controllers\Api\Hr\ScheduleController::class, 'roster']);
+        Route::get('/branches', [\App\Http\Controllers\Api\Hr\ScheduleController::class, 'branches']);
+    });
+    Route::middleware('perm:policies,edit')->group(function () {
+        Route::post('/schedules', [\App\Http\Controllers\Api\Hr\ScheduleController::class, 'store']);
+        Route::put('/schedules/{id}', [\App\Http\Controllers\Api\Hr\ScheduleController::class, 'update'])->whereNumber('id');
+        Route::delete('/schedules/{id}', [\App\Http\Controllers\Api\Hr\ScheduleController::class, 'destroy'])->whereNumber('id');
+    });
+    Route::middleware('perm:attendance,edit')->group(function () {
+        Route::post('/schedules/assign', [\App\Http\Controllers\Api\Hr\ScheduleController::class, 'assign']);
+        Route::delete('/schedules/assignments/{id}', [\App\Http\Controllers\Api\Hr\ScheduleController::class, 'unassign'])->whereNumber('id');
+    });
+    Route::middleware('perm:settings,edit')->group(function () {
+        Route::post('/branches', [\App\Http\Controllers\Api\Hr\ScheduleController::class, 'saveBranch']);
+        Route::put('/branches/{id}', [\App\Http\Controllers\Api\Hr\ScheduleController::class, 'saveBranch'])->whereNumber('id');
+    });
     // M16 — سياسات الدوام بتاريخ نفاذ والعطل الرسمية
     Route::middleware('perm:policies,view')->group(function () {
         Route::get('/policies', [PolicyController::class, 'index']);

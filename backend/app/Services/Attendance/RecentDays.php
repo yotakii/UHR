@@ -23,7 +23,7 @@ class RecentDays
         for ($i = 0; count($out) < $n && $i < 40; $i++, $d->subDay()) {
             $date = $d->toDateString();
             $r = $days->get($date);
-            if (! $r && DayCalc::weekend($date, $e->department_id)) continue;
+            if (! $r && DayCalc::weekend($date, $e)) continue;
             $out[] = Attendance::row($e, $date, $r, isset($leave[$date]));
         }
         return $out;
