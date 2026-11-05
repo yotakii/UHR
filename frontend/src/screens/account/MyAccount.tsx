@@ -60,6 +60,9 @@ export function MyAccount({ servicesBase }: { servicesBase: string }) {
         <div className="space-y-4">
           <Field label={L('اللغة', 'Language')} div><Seg value={lang} onChange={v => pref({ locale: v })} options={[{ v: 'ar', label: 'العربية' }, { v: 'en', label: 'English' }]} /></Field>
           <Field label={L('المظهر', 'Theme')} div><Seg value={theme} onChange={v => pref({ theme: v })} options={[{ v: 'slate', label: L('داكن أزرق', 'Slate') }, { v: 'dark', label: L('داكن', 'Dark') }, { v: 'light', label: L('فاتح', 'Light') }]} /></Field>
+          {e?.has_dob && <Field label={L('عيد ميلادي في الساحة', 'My birthday in the Space')} hint={L('يُعرض اليوم والشهر فقط، دون السنة.', 'Only the day and month are shown, never the year.')} div>
+            <Seg value={e.hide_birthday ? 'hide' : 'show'} onChange={v => save.mutate({ hide_birthday: v === 'hide' }, { onSuccess: () => toast(L('حُفظ', 'Saved')), onError: fail })}
+              options={[{ v: 'show', label: L('يظهر للزملاء', 'Shown to colleagues') }, { v: 'hide', label: L('مخفي', 'Hidden') }]} /></Field>}
         </div>
       </Panel>
 

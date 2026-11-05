@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
-import { Archive, Building2, Compass, Hash, ImagePlus, Loader2, Lock, LogOut, MessagesSquare, Plus, Settings2, ShieldAlert, Trash2, UserPlus, Users, X } from 'lucide-react'
+import { Archive, Award, Building2, Compass, Hash, ImagePlus, Loader2, Lock, LogOut, MessagesSquare, Plus, Settings2, ShieldAlert, Trash2, UserPlus, Users, X } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
-import { navigate, useRoute } from '../../lib/router'
+import { navigate, setQuery, useRoute } from '../../lib/router'
 import { ApiError } from '../../lib/api'
 import { ago, useArchiveCommunity, useCreatePost, useDecideReport, useFeed, useJoin, useMembers, usePeople, usePost, useReports, useSaveCommunity, useSetMember,
   type CommunityRow, type FeedFilter, type FeedPage, type Reaction } from '../../lib/space'
@@ -9,6 +9,7 @@ import { Badge, Btn, Empty, Field, Modal, PageHead, Panel, Seg, toast } from '..
 import { DecisionDialog } from '../../ui/decision'
 import { Body, Initials, MentionBox, dot } from './parts'
 import { PostCard } from './PostCard'
+import { PraiseBoard, PraiseModal } from './Praise'
 
 const err = (e: unknown) => toast(e instanceof ApiError ? e.message : String(e))
 
@@ -28,27 +29,34 @@ function Feed({ base, community }: { base: string; community: number | null }) {
   const first = q.data?.pages[0]
   const posts = useMemo(() => q.data?.pages.flatMap(p => p.data) ?? [], [q.data])
   const [newC, setNewC] = useState(false)
+  const route = useRoute()
+  const praiseOpen = route.query.praise === '1'
+  const openPraise = (on: boolean) => setQuery({ praise: on ? '1' : undefined })
   if (q.isError) return <Empty title={L('لا يمكنك رؤية هذا المجتمع', 'You cannot see this community')} action={<Btn onClick={() => navigate(base)}>{L('الساحة', 'Space')}</Btn>} />
   if (!first) return <div className="grid place-items-center py-24"><Loader2 className="animate-spin text-brand" /></div>
   const c = first.community
   const filters: { v: FeedFilter; label: string }[] = [{ v: 'all', label: L('الكل', 'All') }, ...(first.settings.questions ? [{ v: 'questions' as FeedFilter, label: L('أسئلة', 'Questions') }, { v: 'unanswered' as FeedFilter, label: L('بلا إجابة', 'Unanswered') }] : []),
-    ...(first.settings.polls ? [{ v: 'polls' as FeedFilter, label: L('استطلاعات', 'Polls') }] : []), { v: 'mentions', label: L('إشارات إليّ', 'Mentions') }, { v: 'mine', label: L('منشوراتي', 'Mine') }]
+    ...(first.settings.polls ? [{ v: 'polls' as FeedFilter, label: L('استطلاعات', 'Polls') }] : []), { v: 'praise', label: L('شكر', 'Praise') }, { v: 'celebrations', label: L('احتفالات', 'Celebrations') }, { v: 'mentions', label: L('إشارات إليّ', 'Mentions') }, { v: 'mine', label: L('منشوراتي', 'Mine') }]
+  const canPraise = first.praise.enabled && first.can.post
   return <div className="max-w-[1180px] mx-auto">
     <div className="grid gap-5 lg:[grid-template-columns:270px_minmax(0,1fr)]">
       <Communities d={first} base={base} current={community} onNew={() => setNewC(true)} />
       <main className="space-y-4 min-w-0">
-        {c ? <CommunityHeader c={c} base={base} /> : <PageHead title={L('الساحة', 'Space')} sub={L('تواصل مع زملائك: شارك الأخبار، اسأل، واستطلع الآراء.', 'Connect with colleagues: share news, ask and run polls.')} />}
+        {c ? <CommunityHeader c={c} base={base} /> : <PageHead title={L('الساحة', 'Space')} sub={L('تواصل مع زملائك: شارك الأخبار، اسأل، اشكر زميلاً، واستطلع الآراء.', 'Connect with colleagues: share news, ask, praise and run polls.')}
+          actions={canPraise ? <Btn kind="primary" icon={<Award size={15} />} onClick={() => openPraise(true)}>{L('شكر زميل', 'Praise a colleague')}</Btn> : undefined} />}
         {!first.settings.enabled ? <Empty title={L('الساحة غير مفعّلة في شركتك', 'The Space is turned off for your company')} />
           : <>
             {first.can.post && (c ? c.can.post : true) && <Composer d={first} community={c ?? null} />}
             {c && !c.can.post && c.can.join && <JoinBanner c={c} />}
             <div className="flex flex-wrap gap-1.5">{filters.map(f => <button key={f.v} onClick={() => setFilter(f.v)} className={`h-8 px-3 rounded-full border text-[13px] ${filter === f.v ? 'border-brand bg-brand-soft text-brand font-semibold' : 'border-line text-ink-2 hover:bg-sub'}`}>{f.label}</button>)}</div>
+            {!c && first.praise_top && <div className="lg:hidden"><PraiseBoard top={first.praise_top} info={first.praise} /></div>}
             {posts.length === 0 ? <Empty title={L('لا منشورات بعد', 'No posts yet')}>{L('كن أول من يكتب هنا.', 'Be the first to write here.')}</Empty>
               : posts.map(p => <PostCard key={p.id} p={p} base={base} reactions={first.settings.reactions} />)}
             {q.hasNextPage && <div className="text-center"><Btn onClick={() => q.fetchNextPage()} disabled={q.isFetchingNextPage}>{q.isFetchingNextPage ? <Loader2 size={15} className="animate-spin" /> : L('عرض المزيد', 'Show more')}</Btn></div>}
           </>}
       </main>
     </div>
+    {praiseOpen && canPraise && <PraiseModal info={first.praise} onClose={() => openPraise(false)} />}
     {newC && <CommunityForm onClose={() => setNewC(false)} onSaved={id => navigate(`${base}/c/${id}`)} />}
   </div>
 }
@@ -83,6 +91,7 @@ function Communities({ d, base, current, onNew }: { d: FeedPage; base: string; c
       </div></Panel>
       {d.can.create_community && <Btn className="w-full" icon={<Plus size={15} />} onClick={onNew}>{L('مجتمع جديد', 'New community')}</Btn>}
       {d.can.moderate && <Btn className="w-full" icon={<ShieldAlert size={15} />} onClick={() => navigate(`${base}/moderation`)}>{L('الإشراف والبلاغات', 'Moderation & reports')}</Btn>}
+      {d.praise_top && d.praise.enabled && <PraiseBoard top={d.praise_top} info={d.praise} onGive={d.can.post ? () => setQuery({ praise: '1' }) : undefined} />}
     </div>
   </aside>
 }
@@ -204,12 +213,12 @@ function MembersModal({ c, onClose }: { c: CommunityRow; onClose: () => void }) 
   return <Modal open onClose={onClose} title={<>{L('أعضاء', 'Members of')} {bi(c.name, lang)}</>} footer={<Btn kind="primary" onClick={onClose}>{L('تم', 'Done')}</Btn>}>
     {c.can.admin && <div className="mb-4"><input className="field" value={q} onChange={e => setQ(e.target.value)} placeholder={L('أضف زميلاً بالاسم…', 'Add a colleague by name…')} />
       {people.filter(p => !ids.has(p.id)).length > 0 && <ul className="mt-2 rounded-xl border border-line divide-y divide-line-2">{people.filter(p => !ids.has(p.id)).map(p => <li key={p.id} className="flex items-center gap-2 px-3 py-2">
-        <Initials p={p} size={28} /><span className="flex-1 text-[13.5px]">{bi(p.name, lang)}</span><Btn size="sm" onClick={() => set.mutate({ id: c.id, user_id: p.id, role: 'member' }, { onSuccess: () => setQ(''), onError: err })}>{L('إضافة', 'Add')}</Btn></li>)}</ul>}</div>}
+        <Initials p={p} size={28} /><span className="flex-1 text-[13.5px]">{bi(p.name, lang)}</span><Btn size="sm" onClick={() => set.mutate({ id: c.id, user_id: p.id!, role: 'member' }, { onSuccess: () => setQ(''), onError: err })}>{L('إضافة', 'Add')}</Btn></li>)}</ul>}</div>}
     {!m.data ? <Loader2 className="animate-spin text-brand mx-auto" /> : <ul className="divide-y divide-line-2">{m.data.map(x => <li key={x.user.id} className="flex flex-wrap items-center gap-2 py-2">
       <Initials p={x.user} size={30} /><span className="flex-1 min-w-[140px]"><span className="block text-[13.5px] font-semibold">{bi(x.user.name, lang)}</span>{x.user.title && <span className="block text-[12px] text-ink-3">{bi(x.user.title, lang)}</span>}</span>
       {x.role === 'admin' && <Badge tone="brand">{L('مشرف', 'Admin')}</Badge>}
-      {c.can.admin && <><Btn size="sm" kind="ghost" onClick={() => set.mutate({ id: c.id, user_id: x.user.id, role: x.role === 'admin' ? 'member' : 'admin' }, { onError: err })}>{x.role === 'admin' ? L('إلغاء الإشراف', 'Remove admin') : L('تعيين مشرفاً', 'Make admin')}</Btn>
-        <Btn size="sm" kind="ghost" icon={<Trash2 size={14} />} onClick={() => set.mutate({ id: c.id, user_id: x.user.id, role: null }, { onError: err })} aria-label={L('إزالة', 'Remove')} /></>}
+      {c.can.admin && <><Btn size="sm" kind="ghost" onClick={() => set.mutate({ id: c.id, user_id: x.user.id!, role: x.role === 'admin' ? 'member' : 'admin' }, { onError: err })}>{x.role === 'admin' ? L('إلغاء الإشراف', 'Remove admin') : L('تعيين مشرفاً', 'Make admin')}</Btn>
+        <Btn size="sm" kind="ghost" icon={<Trash2 size={14} />} onClick={() => set.mutate({ id: c.id, user_id: x.user.id!, role: null }, { onError: err })} aria-label={L('إزالة', 'Remove')} /></>}
     </li>)}</ul>}
   </Modal>
 }

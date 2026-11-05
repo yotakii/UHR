@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useL, useLang, bi } from '../../lib/store'
 import { parseBody, usePeople, type Person } from '../../lib/space'
+import type { Bi } from '../../lib/types'
 
 /** النص مع الإشارات والروابط */
 export function Body({ text, className = '' }: { text: string; className?: string }) {
@@ -10,7 +11,7 @@ export function Body({ text, className = '' }: { text: string; className?: strin
 }
 
 /** صورة رمزية بحروف الاسم (لون ثابت لكل شخص) */
-export function Initials({ p, size = 40 }: { p: Person; size?: number }) {
+export function Initials({ p, size = 40 }: { p: { id?: number | null; name: Bi }; size?: number }) {
   const lang = useLang()
   const name = bi(p.name, lang)
   const letters = name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('')

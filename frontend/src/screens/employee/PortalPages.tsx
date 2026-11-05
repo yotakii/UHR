@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { Smartphone, Plane, Hourglass, FileText, Banknote, Link2, Wallet, FileSignature, ChevronLeft, ChevronRight, Check, MapPin } from 'lucide-react'
+import { Award, Smartphone, Plane, Hourglass, FileText, Banknote, Link2, Wallet, FileSignature, ChevronLeft, ChevronRight, Check, MapPin } from 'lucide-react'
 import { useL, useLang, bi, fmtDate } from '../../lib/store'
 import { navigate } from '../../lib/router'
 import { ApiError } from '../../lib/api'
@@ -40,6 +40,7 @@ export function PortalHome({ toSign, todos }: { toSign: number; todos: ReactNode
     { icon: <Banknote size={20} />, t: L('سلفة', 'Advance'), to: '/me/services?new=advance' },
     { icon: <Link2 size={20} />, t: L('رشّح صديقاً', 'Refer a friend'), to: '/me/rewards' },
     { icon: <Wallet size={20} />, t: L('كشف الراتب', 'Payslip'), to: '/me/payslip' },
+    { icon: <Award size={20} />, t: L('شكر زميل', 'Praise a colleague'), to: '/me/space?praise=1' },
   ]
   const years = (me.tenure_days / 365).toFixed(1)
   return <div className="space-y-5">
@@ -64,7 +65,7 @@ export function PortalHome({ toSign, todos }: { toSign: number; todos: ReactNode
     {toSign > 0 && <a href="/me/documents" className="w-full flex items-center gap-3 rounded-2xl border border-brass/40 bg-brass-soft px-5 py-3 text-start fadeup"><FileSignature size={18} className="text-brass" />
       <span className="flex-1 font-semibold">{L(`لديك ${toSign} وثائق بانتظار توقيعك`, `${toSign} documents are waiting for your signature`)}</span><Next size={18} /></a>}
 
-    <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">{quick.map((x, i) => <a key={i} href={x.to} className="hoverlift rounded-2xl border border-line bg-surface p-4 flex flex-col items-center gap-2 text-center fadeup min-w-0" style={{ animationDelay: `${i * 50}ms` }}>
+    <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-3">{quick.map((x, i) => <a key={i} href={x.to} className="hoverlift rounded-2xl border border-line bg-surface p-4 flex flex-col items-center gap-2 text-center fadeup min-w-0" style={{ animationDelay: `${i * 50}ms` }}>
       <span className="size-11 rounded-xl grid place-items-center bg-brand-soft text-brand">{x.icon}</span><span className="text-[12.5px] font-semibold leading-tight">{x.t}</span></a>)}</div>
 
     {todos}

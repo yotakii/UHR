@@ -37,7 +37,7 @@ export interface EmpFile extends EmpRow {
 }
 export interface ProfileInput {
   name: string; name_en: string; gender: 'M' | 'F'; title_ar: string; title_en: string; department_id: number; location_id: number; manager_id: number | null
-  email: string; phone: string; national_id: string; dob: string; bank_name: string; bank_account: string
+  email: string; phone: string; national_id: string; dob: string; bank_name: string; bank_account: string; announce_promotion?: boolean
 }
 export interface DocHistory { action: 'upload' | 'view' | 'download' | 'archive' | 'restore' | 'update'; by: Bi | null; at: string }
 export interface DocSettings { types: { key: string; ar: string; en: string }[]; extensions: string[]; max_mb: number; alert_days: number; sensitive_roles: string[] }

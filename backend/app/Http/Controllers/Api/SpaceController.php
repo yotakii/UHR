@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Community;
 use App\Models\SpacePost;
+use App\Services\Space\Celebrations;
+use App\Services\Space\Praise;
 use App\Services\Space\Space;
 use App\Support\Audit;
 use App\Support\L;
@@ -24,13 +26,15 @@ class SpaceController extends Controller
         return ['settings' => ['enabled' => (bool) $cfg['enabled'], 'reactions' => $cfg['reactions'], 'polls' => (bool) $cfg['polls'], 'questions' => (bool) $cfg['questions'],
             'max_images' => (int) $cfg['max_images'], 'max_mb' => (int) $cfg['max_mb'], 'create_communities' => $cfg['create_communities']],
             'me' => $this->space->person($u->loadMissing('employee')),
-            'can' => ['moderate' => Space::moderator($u), 'post' => Perm::can($u, 'space', 'create'), 'create_community' => $cfg['enabled'] && ($cfg['create_communities'] === 'everyone' || Space::moderator($u)), 'settings' => Perm::can($u, 'settings', 'edit')]];
+            'can' => ['moderate' => Space::moderator($u), 'post' => Perm::can($u, 'space', 'create'), 'create_community' => $cfg['enabled'] && ($cfg['create_communities'] === 'everyone' || Space::moderator($u)), 'settings' => Perm::can($u, 'settings', 'edit')],
+            'praise' => Praise::client($u)];
     }
 
     public function index(Request $r): JsonResponse
     {
-        $f = $r->validate(['community' => ['nullable', 'integer'], 'before' => ['nullable', 'integer'], 'filter' => ['nullable', 'in:all,questions,polls,mine,mentions,unanswered']]);
+        $f = $r->validate(['community' => ['nullable', 'integer'], 'before' => ['nullable', 'integer'], 'filter' => ['nullable', 'in:all,questions,polls,mine,mentions,unanswered,praise,celebrations']]);
         $out = $this->space->feed($r->user(), $f) + ['communities' => $this->space->communities($r->user())->values()] + $this->meta($r);
+        if (empty($f['community']) && empty($f['before'])) $out['praise_top'] = Praise::top();
         if (! empty($f['community'])) $out['community'] = collect($out['communities'])->firstWhere('id', (int) $f['community']);
         return response()->json($out);
     }
@@ -93,6 +97,24 @@ class SpaceController extends Controller
         return response()->json(['message' => L::t('وصل بلاغك إلى فريق الإشراف. شكراً لك.', 'Your report reached the moderators. Thank you.')]);
     }
 
+    /** «شكر زميل» (12b) */
+    public function praise(Request $r, Praise $praise): JsonResponse
+    {
+        $p = $praise->give($r->user(), $r->all());
+        return response()->json(['data' => $this->space->show($r->user(), $p), 'praise' => Praise::client($r->user())], 201);
+    }
+
+    /** زملاء للشكر: موظفون حاليون (ليس أنت) */
+    public function colleagues(Request $r): JsonResponse
+    {
+        $q = trim((string) $r->query('q', '')); $me = $r->user()->employee_id;
+        $rows = \App\Models\Employee::current()->with('department')->when($me, fn ($w) => $w->whereKeyNot($me))
+            ->when($q !== '', fn ($w) => $w->where(fn ($x) => $x->where('name', 'ilike', "%$q%")->orWhere('name_en', 'ilike', "%$q%")->orWhere('code', 'ilike', "%$q%")->orWhere('title_ar', 'ilike', "%$q%")))
+            ->orderBy('name')->limit(10)->get();
+        return response()->json(['data' => $rows->map(fn ($e) => ['id' => $e->id, 'name' => ['ar' => $e->name, 'en' => $e->name_en ?: $e->name], 'title' => ['ar' => $e->title_ar, 'en' => $e->title_en],
+            'dept' => ['ar' => $e->department?->name_ar, 'en' => $e->department?->name_en], 'gender' => $e->gender])]);
+    }
+
     public function people(Request $r): JsonResponse { return response()->json(['data' => $this->space->people((string) $r->query('q', ''))]); }
 
     // المجتمعات
@@ -118,7 +140,32 @@ class SpaceController extends Controller
         return response()->json(['data' => $this->space->reports($r->user())]);
     }
 
-    public function settings(): JsonResponse { return response()->json(['data' => Space::config(), 'defaults' => Settings::DEFAULTS['space'], 'reactions' => Space::REACTIONS]); }
+    public function settings(): JsonResponse
+    {
+        return response()->json(['data' => Space::config(), 'defaults' => Settings::DEFAULTS['space'], 'reactions' => Space::REACTIONS,
+            'praise' => Praise::config(), 'celebrations' => Celebrations::config(), 'praise_defaults' => Settings::DEFAULTS['praise'], 'celebrations_defaults' => Settings::DEFAULTS['celebrations']]);
+    }
+
+    /** إعدادات الشكر والاحتفالات (12b) */
+    public function savePraiseSettings(Request $r): JsonResponse
+    {
+        $d = $r->validate(['praise.enabled' => ['required', 'boolean'], 'praise.points' => ['required', 'integer', 'between:0,100'], 'praise.monthly_limit' => ['required', 'integer', 'between:1,100'],
+            'praise.min_message' => ['required', 'integer', 'between:0,200'], 'praise.max_recipients' => ['required', 'integer', 'between:1,20'],
+            'praise.values' => ['required', 'array', 'min:1', 'max:12'], 'praise.values.*.key' => ['required', 'string', 'regex:/^[a-z][a-z0-9_]{1,29}$/'],
+            'praise.values.*.ar' => ['required', 'string', 'min:2', 'max:40'], 'praise.values.*.en' => ['nullable', 'string', 'max:40'], 'praise.values.*.color' => ['required', 'in:'.implode(',', Space::COLORS)],
+            'celebrations.enabled' => ['required', 'boolean'], 'celebrations.birthdays' => ['required', 'boolean'], 'celebrations.anniversaries' => ['required', 'boolean'],
+            'celebrations.new_joiners' => ['required', 'boolean'], 'celebrations.promotions' => ['required', 'boolean']],
+            ['praise.values.*.key.regex' => L::t('رمز القيمة بأحرف إنكليزية صغيرة (مثل teamwork).', 'Value code in lowercase English (e.g. teamwork).')],
+            ['praise.values' => L::t('قيم الشركة', 'Company values'), 'praise.values.*.ar' => L::t('اسم القيمة', 'Value name')]);
+        $keys = array_column($d['praise']['values'], 'key');
+        if (count($keys) !== count(array_unique($keys))) throw \App\Exceptions\ApiException::field('praise.values', L::t('رمز القيمة مكرر.', 'Duplicate value code.'), 'duplicate');
+        $before = ['praise' => Praise::config(), 'celebrations' => Celebrations::config()];
+        $d['praise']['values'] = array_map(fn ($v) => ['key' => $v['key'], 'ar' => trim($v['ar']), 'en' => trim((string) ($v['en'] ?? '')) ?: trim($v['ar']), 'color' => $v['color']], $d['praise']['values']);
+        Settings::put('praise', $d['praise']);
+        Settings::put('celebrations', $d['celebrations']);
+        Audit::record('settings.praise', null, $before, ['praise' => Praise::config(), 'celebrations' => Celebrations::config()]);
+        return $this->settings();
+    }
     public function saveSettings(Request $r): JsonResponse
     {
         $d = $r->validate(['enabled' => ['required', 'boolean'], 'create_communities' => ['required', 'in:everyone,moderators'], 'max_images' => ['required', 'integer', 'between:0,10'],

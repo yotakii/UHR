@@ -48,6 +48,17 @@ class Settings
         // «الساحة» (12a): من ينشئ مجتمعات الاهتمام (everyone | moderators)، الصور، مهلة تعديل المنشور، التفاعلات المتاحة، الاستطلاعات والأسئلة، والإخفاء التلقائي بعد عدد بلاغات
         'space' => ['enabled' => true, 'create_communities' => 'everyone', 'max_images' => 4, 'max_mb' => 8, 'edit_minutes' => 60,
             'reactions' => ['like', 'love', 'celebrate', 'insightful', 'support'], 'polls' => true, 'questions' => true, 'auto_hide_reports' => 3],
+        // 12b «شكر زميل»: قيم الشركة (شارات)، نقاط لكل مستلم (0 = بلا نقاط)، حد شهري لكل مرسل، أقل طول للرسالة، وأقصى عدد للمستلمين
+        'praise' => ['enabled' => true, 'values' => [
+            ['key' => 'teamwork', 'ar' => 'روح الفريق', 'en' => 'Teamwork', 'color' => 'brand'],
+            ['key' => 'excellence', 'ar' => 'الإتقان', 'en' => 'Excellence', 'color' => 'brass'],
+            ['key' => 'initiative', 'ar' => 'المبادرة', 'en' => 'Initiative', 'color' => 'info'],
+            ['key' => 'integrity', 'ar' => 'الأمانة', 'en' => 'Integrity', 'color' => 'ink-3'],
+            ['key' => 'customer', 'ar' => 'خدمة العملاء', 'en' => 'Customer care', 'color' => 'brand'],
+            ['key' => 'learning', 'ar' => 'التعلّم والمشاركة', 'en' => 'Learning & sharing', 'color' => 'info']],
+            'points' => 5, 'monthly_limit' => 10, 'min_message' => 10, 'max_recipients' => 5],
+        // 12b الاحتفالات التلقائية في مجتمع الشركة: أعياد الميلاد (بلا السنة، ولمن لم يخفها)، سنويات الخدمة، المنضمون الجدد، الترقيات
+        'celebrations' => ['enabled' => true, 'birthdays' => true, 'anniversaries' => true, 'new_joiners' => true, 'promotions' => true],
         // M13 تقييم 360 (SRS M13): أوزان الأدوار (مجموعها 100)، السلّم، عدد الزملاء، حدود مستوى الأداء على 9-Box،
         // وجدول المكافآت حسب النتيجة (D-28 — من المالية/HR، فارغ افتراضياً: كل نتيجة تُحوَّل للمراجعة)
         // التعاقب وخطط التطوير (D-23، D-24 — SRS §10.14): مقياس الجاهزية، دورة مراجعة الخطة (ربعية)، ومراجعة خطط التعاقب

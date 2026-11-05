@@ -9,6 +9,7 @@ import { REACTIONS, ago, useBest, useComment, useDecideReport, useDeleteComment,
 import { Btn, Modal, toast } from '../../ui/kit'
 import { DecisionDialog } from '../../ui/decision'
 import { Body, Initials, MentionBox, Pill, dot } from './parts'
+import { CelebrationBlock, CelebrationIcon, PraiseBlock } from './Praise'
 
 const err = (e: unknown) => toast(e instanceof ApiError ? e.message : String(e))
 
@@ -26,12 +27,14 @@ export function PostCard({ p, base, reactions, open: startOpen = false }: { p: P
   const anyMenu = p.can.edit || p.can.pin || p.can.delete || p.can.report || p.can.moderate
   return <article className={`bg-surface border rounded-2xl ${p.pinned ? 'border-brand/50' : 'border-line'} ${p.hidden ? 'opacity-70' : ''}`}>
     <header className="flex items-start gap-3 px-4 pt-4">
-      <Initials p={p.author} />
+      {p.kind === 'celebration' ? <CelebrationIcon p={p} /> : <Initials p={p.author} />}
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5"><span className="font-semibold">{bi(p.author.name, lang)}</span>
           {p.pinned && <Pill tone="brand"><Pin size={11} />{L('مثبّت', 'Pinned')}</Pill>}
           {p.kind === 'question' && <Pill tone={p.best ? 'brand' : 'info'}>{p.best ? <CheckCircle2 size={11} /> : <HelpCircle size={11} />}{p.best ? L('تمت الإجابة', 'Answered') : L('سؤال', 'Question')}</Pill>}
           {p.kind === 'poll' && <Pill tone="brass">{L('استطلاع', 'Poll')}</Pill>}
+          {p.kind === 'praise' && <Pill tone="brass">{L('شكر زميل', 'Praise')}</Pill>}
+          {p.kind === 'celebration' && <Pill tone="brand">{L('احتفال', 'Celebration')}</Pill>}
           {p.hidden && <Pill tone="danger"><EyeOff size={11} />{L('مخفي', 'Hidden')}</Pill>}</div>
         <div className="text-[12px] text-ink-3 flex flex-wrap items-center gap-x-1.5">
           {p.author.title && <span>{bi(p.author.title, lang)}</span>}
@@ -53,7 +56,9 @@ export function PostCard({ p, base, reactions, open: startOpen = false }: { p: P
           </ul></>}
       </div>}
     </header>
-    <div className="px-4 pt-3"><Body text={p.body} className={p.kind === 'question' ? 'text-[15.5px] font-semibold' : 'text-[14.5px]'} /></div>
+    {p.kind === 'celebration' ? <CelebrationBlock p={p} /> : <>
+      {p.kind === 'praise' && <PraiseBlock p={p} />}
+      <div className="px-4 pt-3"><Body text={p.body} className={p.kind === 'question' ? 'text-[15.5px] font-semibold' : 'text-[14.5px]'} /></div></>}
     {p.images.length > 0 && <div className={`px-4 pt-3 grid gap-1.5 ${p.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
       {p.images.map((im, i) => <button key={im.id} onClick={() => setImg(im.id)} className={`overflow-hidden rounded-xl bg-sub ${p.images.length === 3 && i === 0 ? 'row-span-2' : ''}`}>
         <img src={fileUrl(im.id, true)} alt="" loading="lazy" className={`w-full object-cover ${p.images.length === 1 ? 'max-h-[420px]' : 'h-44'}`} /></button>)}</div>}

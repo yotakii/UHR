@@ -48,8 +48,10 @@ class EmployeeProfile
             throw ApiException::field('national_id', L::t('الرقم الوطني مسجّل لموظف آخر', 'National ID belongs to another employee'), 'national_id_taken');
         }
 
-        return DB::transaction(function () use ($e, $d, $by) {
+        $announce = filter_var($input['announce_promotion'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $e = DB::transaction(function () use ($e, $d, $by, &$oldTitle) {
             $old = ['dept' => $e->department_id, 'mgr' => $e->manager_id, 'title' => $e->title_ar];
+            $oldTitle = $old['title'];
             $e->fill($d)->save();
             $e->user?->email !== $d['email'] && $e->user?->update(['email' => $d['email']]);   // البريد = اسم الدخول
             $e->load(['department', 'manager']);
@@ -59,6 +61,9 @@ class EmployeeProfile
             if ($old['title'] !== $e->title_ar) $e->log("تغيير المسمى الوظيفي: {$e->title_ar} — {$who('ar')}", "Job title changed: {$e->title_en} — {$who('en')}");
             return $e;
         });
+        // 12b: إعلان المسمى الجديد في الساحة عند اختياره
+        if ($announce && $oldTitle !== $e->title_ar) app(\App\Services\Space\Celebrations::class)->promotion($e, (string) $oldTitle);
+        return $e;
     }
 
     /** ربط/تغيير بطاقة NFC — الرقم يُقرأ من القارئ (لوحة مفاتيح USB، عشري أو ست عشري) أو يُكتب، وفريد على مستوى المنصة بكل صيغه */

@@ -9,7 +9,7 @@ export const REACTIONS: Record<Reaction, { emoji: string; ar: string; en: string
   like: { emoji: '👍', ar: 'إعجاب', en: 'Like' }, love: { emoji: '❤️', ar: 'حب', en: 'Love' }, celebrate: { emoji: '🎉', ar: 'احتفاء', en: 'Celebrate' },
   insightful: { emoji: '💡', ar: 'مفيد', en: 'Insightful' }, support: { emoji: '🤝', ar: 'دعم', en: 'Support' }, funny: { emoji: '😄', ar: 'طريف', en: 'Funny' },
 }
-export interface Person { id: number; name: Bi; title: Bi | null; gender: string | null; employee_id: number | null }
+export interface Person { id: number | null; name: Bi; title: Bi | null; gender: string | null; employee_id: number | null; system?: boolean }
 export interface CommunityRow {
   id: number; kind: 'company' | 'department' | 'interest'; name: Bi; about: string | null; visibility: 'public' | 'private'; color: string; archived: boolean
   member: boolean; role: 'member' | 'admin' | null; members: number | null; posts: number; last_at: string | null
@@ -17,7 +17,7 @@ export interface CommunityRow {
 }
 export interface CommentRow { id: number; parent_id: number | null; body: string; author: Person; at: string; edited: boolean; reactions: number; liked: boolean; hidden: boolean; best?: boolean; can?: { edit: boolean; delete: boolean; report: boolean } }
 export interface PostRow {
-  id: number; kind: 'post' | 'poll' | 'question'; body: string; at: string; edited: boolean
+  id: number; kind: 'post' | 'poll' | 'question' | 'praise' | 'celebration'; body: string; at: string; edited: boolean; meta: PostMeta | null
   community: { id: number; kind: string; name: Bi; color: string }; author: Person; images: { id: number }[]
   poll: { multi: boolean; closes_at: string | null; closed: boolean; voters: number; options: { id: string; text: string; votes: number; mine: boolean }[] } | null
   reactions: { counts: Partial<Record<Reaction, number>>; mine: Reaction | null; total: number }
@@ -25,12 +25,22 @@ export interface PostRow {
   can: { edit: boolean; delete: boolean; pin: boolean; best: boolean; report: boolean; moderate: boolean; comment: boolean }
   comments?: CommentRow[]
 }
+/** 12b: شكر زميل والاحتفالات */
+export interface PraiseValue { key: string; ar: string; en: string; color: string }
+export interface MetaPerson { employee_id: number; user_id: number | null; name: Bi; title: Bi | null; gender: string | null; years?: number | null }
+export interface PostMeta { value?: PraiseValue; recipients?: MetaPerson[]; points?: number; type?: 'birthday' | 'anniversary' | 'joiner' | 'promotion'; people?: MetaPerson[]; from?: string }
+export interface PraiseInfo { enabled: boolean; values: PraiseValue[]; points: number; max_recipients: number; min_message: number; limit: number; left: number }
+export interface PraiseTop { employee_id: number; name: Bi; title: Bi; gender: string | null; count: number }
+export interface Colleague { id: number; name: Bi; title: Bi; dept: Bi; gender: string | null }
+export interface PraiseSettings { enabled: boolean; values: PraiseValue[]; points: number; monthly_limit: number; min_message: number; max_recipients: number }
+export interface CelebrationSettings { enabled: boolean; birthdays: boolean; anniversaries: boolean; new_joiners: boolean; promotions: boolean }
 export interface SpaceMeta {
   settings: { enabled: boolean; reactions: Reaction[]; polls: boolean; questions: boolean; max_images: number; max_mb: number; create_communities: 'everyone' | 'moderators' }
   me: Person; can: { moderate: boolean; post: boolean; create_community: boolean; settings: boolean }
+  praise: PraiseInfo
 }
-export type FeedPage = SpaceMeta & { data: PostRow[]; more: boolean; next: number | null; communities: CommunityRow[]; community?: CommunityRow }
-export type FeedFilter = 'all' | 'questions' | 'polls' | 'mine' | 'mentions' | 'unanswered'
+export type FeedPage = SpaceMeta & { data: PostRow[]; more: boolean; next: number | null; communities: CommunityRow[]; community?: CommunityRow; praise_top?: PraiseTop[] }
+export type FeedFilter = 'all' | 'questions' | 'polls' | 'mine' | 'mentions' | 'unanswered' | 'praise' | 'celebrations'
 
 const qs = (o: Record<string, string | number | undefined | null>) => new URLSearchParams(Object.entries(o).filter(([, v]) => v !== undefined && v !== null && v !== '').map(([k, v]) => [k, String(v)])).toString()
 export const useFeed = (community: number | null, filter: FeedFilter) => useInfiniteQuery({
@@ -44,7 +54,7 @@ export const useMembers = (id: number | null) => useQuery({ queryKey: ['space', 
 export const useReports = () => useQuery({ queryKey: ['space', 'moderation'], queryFn: () => api<{ data: ReportRow[] }>('/space/moderation').then(r => r.data) })
 export interface ReportRow { target: 'post' | 'comment'; id: number; post_id: number; body: string; author: Person; community: string | null; hidden: boolean; at: string; reports: { reason: string; note: string | null; by: string; by_en: string; at: string }[] }
 export interface SpaceSettingsData { enabled: boolean; create_communities: 'everyone' | 'moderators'; max_images: number; max_mb: number; edit_minutes: number; reactions: Reaction[]; polls: boolean; questions: boolean; auto_hide_reports: number }
-export const useSpaceSettings = () => useQuery({ queryKey: ['space', 'settings'], queryFn: () => api<{ data: SpaceSettingsData; defaults: SpaceSettingsData; reactions: Reaction[] }>('/space/settings') })
+export const useSpaceSettings = () => useQuery({ queryKey: ['space', 'settings'], queryFn: () => api<{ data: SpaceSettingsData; defaults: SpaceSettingsData; reactions: Reaction[]; praise: PraiseSettings; celebrations: CelebrationSettings; praise_defaults: PraiseSettings; celebrations_defaults: CelebrationSettings }>('/space/settings') })
 
 const refresh = () => queryClient.invalidateQueries({ queryKey: ['space'] })
 const m = <V,>(fn: (v: V) => Promise<unknown>) => () => useMutation({ mutationFn: fn, onSuccess: refresh })
@@ -66,6 +76,9 @@ export const useArchiveCommunity = m((v: { id: number; restore?: boolean }) => a
 export const useSetMember = m((v: { id: number; user_id: number; role: 'member' | 'admin' | null }) => api(`/space/communities/${v.id}/members`, { json: { user_id: v.user_id, role: v.role } }))
 export const useDecideReport = m((v: { target: 'post' | 'comment'; id: number; action: 'keep' | 'remove'; note?: string }) => api(`/space/moderation/${v.target}/${v.id}`, { json: { action: v.action, note: v.note } }))
 export const useSaveSpaceSettings = m((v: SpaceSettingsData) => api('/space/settings', { method: 'PUT', json: v }))
+export const useColleagues = (q: string) => useQuery({ queryKey: ['space', 'colleagues', q], queryFn: () => api<{ data: Colleague[] }>(`/space/colleagues?${qs({ q })}`).then(r => r.data), staleTime: 60_000 })
+export const useGivePraise = m((v: { recipients: number[]; value: string; message: string }) => api<{ data: PostRow; praise: PraiseInfo }>('/space/praise', { json: v }))
+export const useSavePraiseSettings = m((v: { praise: PraiseSettings; celebrations: CelebrationSettings }) => api('/space/praise-settings', { method: 'PUT', json: v }))
 
 /** النص مع الإشارات: @[الاسم](رقم) */
 export type Chunk = { t: 'text'; v: string } | { t: 'mention'; name: string; id: number } | { t: 'link'; v: string }

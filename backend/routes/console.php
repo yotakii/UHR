@@ -111,3 +111,11 @@ Schedule::command('cv:review-backlog')->everyTenMinutes()->withoutOverlapping();
 
 // سجل البريد الصادر (11e): حذف ما مضى عليه log_days من إعداد المنصة
 Schedule::command('model:prune', ['--model' => [\App\Models\MailLog::class]])->dailyAt('04:10');
+
+// 12b الاحتفالات التلقائية في الساحة: أعياد الميلاد، سنويات الخدمة، المنضمون الجدد — صباح كل يوم
+Artisan::command('space:celebrate', function () {
+    $n = 0;
+    foreach (\App\Models\Company::where('status', 'active')->pluck('id') as $id) \App\Support\Tenant::run($id, function () use (&$n) { $n += app(\App\Services\Space\Celebrations::class)->run(); });
+    $this->info("Celebration posts: {$n}.");
+})->purpose('Post today\'s birthdays, work anniversaries and new joiners in the Space');
+Schedule::command('space:celebrate')->dailyAt('07:45');

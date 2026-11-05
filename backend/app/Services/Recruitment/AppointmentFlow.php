@@ -99,6 +99,7 @@ class AppointmentFlow
         $emp->log("صدور قرار التعيين {$ap->decision_no} ومنح الرقم الوظيفي {$emp->code}", "Decision {$ap->decision_no} issued, employee ID {$emp->code}", 'ok', 'F-31');
         Onboarding::create(['employee_id' => $emp->id, 'checklist' => F19::blank(0, 8)]);
         $ap->update(['employee_id' => $emp->id]);
+        if ($before['title'] !== $emp->title_ar) app(\App\Services\Space\Celebrations::class)->promotion($emp, $before['title']);   // 12b
         $c->update(['stage' => 'hired', 'stage_at' => now()->toDateString()]);
         $c->log("تم التعيين — الرقم الوظيفي {$emp->code}", "Hired — employee ID {$emp->code}", 'ok');
 

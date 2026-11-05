@@ -29,7 +29,7 @@ class MyAccountController extends Controller
             'roles' => $u->roles->map(fn ($r) => ['key' => $r->key, 'ar' => $r->name_ar, 'en' => $r->name_en])->values(),
             'employee' => $e ? ['code' => $e->code, 'title' => ['ar' => $e->title_ar, 'en' => $e->title_en], 'dept' => ['ar' => $e->department?->name_ar, 'en' => $e->department?->name_en],
                 'manager' => $e->manager ? ['ar' => $e->manager->name, 'en' => $e->manager->name_en] : null, 'location' => $e->location ? ['ar' => $e->location->name_ar, 'en' => $e->location->name_en] : null,
-                'phone' => $e->phone, 'hire_date' => $e->hire_date?->toDateString()] : null,
+                'phone' => $e->phone, 'hire_date' => $e->hire_date?->toDateString(), 'has_dob' => (bool) $e->dob, 'hide_birthday' => (bool) $e->hide_birthday] : null,
             'password_policy' => \App\Support\PasswordPolicy::client($u->company_id),
         ]]);
     }
@@ -38,7 +38,9 @@ class MyAccountController extends Controller
     {
         $u = $request->user();
         $d = $request->validate(['locale' => ['sometimes', Rule::in(['ar', 'en'])], 'theme' => ['sometimes', Rule::in(['slate', 'dark', 'light'])],
-            'name' => ['sometimes', 'nullable', 'string', 'max:120'], 'name_en' => ['sometimes', 'nullable', 'string', 'max:120']]);
+            'name' => ['sometimes', 'nullable', 'string', 'max:120'], 'name_en' => ['sometimes', 'nullable', 'string', 'max:120'], 'hide_birthday' => ['sometimes', 'boolean']]);
+        // 12b: إخفاء تاريخ الميلاد من احتفالات الساحة — في ملف الموظف
+        if (array_key_exists('hide_birthday', $d)) { if ($u->employee_id) \App\Models\Employee::whereKey($u->employee_id)->update(['hide_birthday' => $d['hide_birthday']]); unset($d['hide_birthday']); }
         // الاسم لحسابات بلا ملف موظف فقط — اسم الموظف من ملفه الوظيفي
         if ($u->employee_id) unset($d['name'], $d['name_en']);
         elseif (array_key_exists('name', $d) && ! trim((string) $d['name'])) throw ApiException::field('name', L::t('الاسم مطلوب.', 'The name is required.'), 'required');

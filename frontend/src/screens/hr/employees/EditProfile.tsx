@@ -42,6 +42,9 @@ export function EditProfile({ e, onClose }: { e: EmpFile; onClose: () => void })
         {lk.locations.map(o => <option key={o.id} value={o.id}>{o[lang]}</option>)}</select></Field>
       <Field label={L('المسمى الوظيفي', 'Job title')} req error={x('title_ar')}><input className="field" value={d.title_ar} onChange={v => set('title_ar', v.target.value)} /></Field>
       <Field label={L('المسمى بالإنكليزية', 'Job title (EN)')} req error={x('title_en')}><input className="field ltr text-start" value={d.title_en} onChange={v => set('title_en', v.target.value)} /></Field>
+      {d.title_ar.trim() !== e.title_ar && <label className="sm:col-span-2 flex items-center gap-2 text-[13px] rounded-lg bg-sub px-3 py-2">
+        <input type="checkbox" className="accent-[var(--brand)]" checked={!!d.announce_promotion} onChange={v => set('announce_promotion', v.target.checked)} />
+        {L('إعلان المسمى الجديد (ترقية) للزملاء في الساحة', 'Announce the new title (promotion) to colleagues in the Space')}</label>}
       <Field label={L('المدير المباشر', 'Manager')} error={x('manager_id')} className="sm:col-span-2"><select className="field" value={d.manager_id ?? ''} onChange={v => set('manager_id', v.target.value ? Number(v.target.value) : null)}>
         <option value="">{L('بلا مدير (رأس الهيكل)', 'No manager (top of the chart)')}</option>
         {lk.managers.filter(m => m.id !== e.id).map(m => <option key={m.id} value={m.id}>{m[lang]} — {m.code}</option>)}</select></Field>

@@ -633,6 +633,8 @@ Route::middleware(['auth', 'fresh', 'perm:space,view'])->prefix('space')->group(
     $C = \App\Http\Controllers\Api\SpaceController::class;
     Route::get('/', [$C, 'index']);
     Route::get('/people', [$C, 'people']);
+    Route::get('/colleagues', [$C, 'colleagues']);
+    Route::post('/praise', [$C, 'praise'])->middleware(['perm:space,create', 'throttle:20,1,space-praise']);
     Route::get('/posts/{id}', [$C, 'post'])->whereNumber('id');
     Route::post('/posts', [$C, 'store'])->middleware(['perm:space,create', 'throttle:30,1,space-post']);
     Route::put('/posts/{id}', [$C, 'update'])->whereNumber('id');
@@ -656,4 +658,5 @@ Route::middleware(['auth', 'fresh', 'perm:space,view'])->prefix('space')->group(
     Route::post('/moderation/{target}/{id}', [$C, 'decide'])->where('target', 'post|comment')->whereNumber('id')->middleware('perm:space,decide');
     Route::get('/settings', [$C, 'settings']);
     Route::put('/settings', [$C, 'saveSettings'])->middleware('perm:settings,edit');
+    Route::put('/praise-settings', [$C, 'savePraiseSettings'])->middleware('perm:settings,edit');
 });

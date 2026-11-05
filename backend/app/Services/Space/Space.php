@@ -209,7 +209,7 @@ class Space
         if (! $mod) $q->where(fn ($w) => $w->whereNull('hidden_at')->orWhere('user_id', $u->id));
         match ($f['filter'] ?? 'all') {
             'questions' => $q->where('kind', 'question'), 'polls' => $q->where('kind', 'poll'), 'mine' => $q->where('user_id', $u->id),
-            'mentions' => $q->whereJsonContains('mentions', $u->id), 'unanswered' => $q->where('kind', 'question')->whereNull('best_comment_id'), default => null,
+            'mentions' => $q->whereJsonContains('mentions', $u->id), 'praise' => $q->where('kind', 'praise'), 'celebrations' => $q->where('kind', 'celebration'), 'unanswered' => $q->where('kind', 'question')->whereNull('best_comment_id'), default => null,
         };
         $pinned = collect();
         if ($community && empty($f['before'])) {
@@ -257,14 +257,21 @@ class Space
             return [
                 'id' => $p->id, 'kind' => $p->kind, 'body' => $p->body, 'at' => $p->created_at?->toIso8601String(), 'edited' => (bool) $p->edited_at,
                 'community' => ['id' => $p->community->id, 'kind' => $p->community->kind, 'name' => ['ar' => $p->community->name_ar, 'en' => $p->community->name_en ?: $p->community->name_ar], 'color' => $p->community->color],
-                'author' => $this->person($p->user), 'images' => array_map(fn ($id) => ['id' => (int) $id], $p->images ?? []), 'poll' => $poll,
+                'author' => $p->user_id ? $this->person($p->user) : $this->system(), 'meta' => $p->meta, 'images' => array_map(fn ($id) => ['id' => (int) $id], $p->images ?? []), 'poll' => $poll,
                 'reactions' => ['counts' => ($react[$p->id] ?? collect())->pluck('n', 'type')->map(fn ($n) => (int) $n), 'mine' => $mineR[$p->id] ?? null, 'total' => (int) $p->reactions_count],
                 'comments_count' => (int) $p->comments_count, 'best' => $p->best_comment_id && isset($best[$p->best_comment_id]) ? $this->commentRow($best[$p->best_comment_id], $u, collect(), collect()) : null,
                 'pinned' => (bool) $p->pinned_at, 'hidden' => (bool) $p->hidden_at, 'hidden_reason' => $p->hidden_at ? $p->hidden_reason : null,
                 'can' => ['edit' => $mine && ! $p->poll && $p->created_at?->gt(now()->subMinutes((int) $cfg['edit_minutes'])), 'delete' => $mine || $cAdmin, 'pin' => $cAdmin, 'best' => $p->kind === 'question' && ($mine || $cAdmin),
-                    'report' => ! $mine, 'moderate' => $mod, 'comment' => ! $p->hidden_at && $this->canSee($u, $p->community)],
+                    'report' => ! $mine && (bool) $p->user_id, 'moderate' => $mod, 'comment' => ! $p->hidden_at && $this->canSee($u, $p->community)],
             ];
         })->values()->all();
+    }
+
+    /** كاتب منشورات النظام (الاحتفالات): اسم الشركة */
+    private function system(): array
+    {
+        $co = Tenant::company();
+        return ['id' => null, 'name' => ['ar' => $co?->short_ar ?: ($co?->name_ar ?? 'الشركة'), 'en' => $co?->short_en ?: ($co?->name_en ?? 'Company')], 'title' => null, 'gender' => null, 'employee_id' => null, 'system' => true];
     }
 
     public function person(?User $usr): array
@@ -435,7 +442,7 @@ class Space
             return $c;
         });
         $link = 'space:'.$p->id; $told = [$u->id];
-        if ($p->user_id !== $u->id) { Notify::user($p->user_id, $u->displayName('ar').($p->kind === 'question' ? ' أجاب عن سؤالك في الساحة' : ' علّق على منشورك في الساحة'), $u->displayName('en').($p->kind === 'question' ? ' answered your question' : ' commented on your post'), $link); $told[] = $p->user_id; }
+        if ($p->user_id && $p->user_id !== $u->id) { Notify::user($p->user_id, $u->displayName('ar').($p->kind === 'question' ? ' أجاب عن سؤالك في الساحة' : ' علّق على منشورك في الساحة'), $u->displayName('en').($p->kind === 'question' ? ' answered your question' : ' commented on your post'), $link); $told[] = $p->user_id; }
         if ($parent && ! in_array($parent->user_id, $told, true)) { Notify::user($parent->user_id, $u->displayName('ar').' ردّ على تعليقك في الساحة', $u->displayName('en').' replied to your comment', $link); $told[] = $parent->user_id; }
         $this->notifyMentions($mentions, $told, $u, 'أشار إليك في تعليق في الساحة', 'mentioned you in a comment', $link);
         return $c;
@@ -515,7 +522,7 @@ class Space
         $m = $target === 'post' ? SpacePost::findOrFail($id) : self::findComment($id);
         if ($action === 'remove') {
             $m->update(['hidden_at' => now(), 'hidden_by' => $u->id] + ($target === 'post' ? ['hidden_reason' => $note ? mb_substr($note, 0, 300) : 'moderation'] : []));
-            Notify::user($m->user_id, 'أُخفي محتوى نشرته في الساحة بعد مراجعة الإشراف'.($note ? ": {$note}" : ''), 'Content you posted in the Space was hidden after review'.($note ? ": {$note}" : ''), 'space:'.($target === 'post' ? $m->id : $m->post_id));
+            if ($m->user_id) Notify::user($m->user_id, 'أُخفي محتوى نشرته في الساحة بعد مراجعة الإشراف'.($note ? ": {$note}" : ''), 'Content you posted in the Space was hidden after review'.($note ? ": {$note}" : ''), 'space:'.($target === 'post' ? $m->id : $m->post_id));
         } elseif ($action === 'keep') {
             $m->update(['hidden_at' => null, 'hidden_by' => null] + ($target === 'post' ? ['hidden_reason' => null] : []));
         } else abort(422);

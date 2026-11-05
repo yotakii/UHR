@@ -25,14 +25,15 @@ class Points
     }
 
     /** يضيف النقاط مرة واحدة فقط لكل مصدر — يعيد عدد النقاط المضافة (0 إن سبق أو كانت صفراً) */
-    public static function award(Employee $e, int $points, string $source, int $sourceId, string $ar, string $en, ?int $by = null): int
+    public static function award(Employee $e, int $points, string $source, int $sourceId, string $ar, string $en, ?int $by = null, bool $performance = true, bool $notify = true): int
     {
-        if ($points <= 0 || ! self::config()['enabled']) return 0;
+        // $performance = false: مصدر بإعداده الخاص (شكر زميل) لا يتبع مفتاح «النقاط من الأداء»
+        if ($points <= 0 || ($performance && ! self::config()['enabled'])) return 0;
         if (PointLog::where('source', $source)->where('source_id', $sourceId)->where('employee_id', $e->id)->exists()) return 0;
         PointLog::create(['employee_id' => $e->id, 'points' => $points, 'reason_ar' => $ar, 'reason_en' => $en, 'by_user_id' => $by, 'at' => now(), 'source' => $source, 'source_id' => $sourceId]);
         // الرصيد في ملف الموظف (يُصرف منه في متجر المكافآت) + الرصيد التراكمي للوحة المتصدرين
         Employee::whereKey($e->id)->update(['points' => \DB::raw('points + '.$points), 'lifetime_points' => \DB::raw('lifetime_points + '.$points)]);
-        if ($uid = User::where('employee_id', $e->id)->value('id')) Notify::user($uid, "أُضيفت {$points} نقطة إلى رصيدك: {$ar}", "{$points} points added: {$en}", 'rewards');
+        if ($notify && $uid = User::where('employee_id', $e->id)->value('id')) Notify::user($uid, "أُضيفت {$points} نقطة إلى رصيدك: {$ar}", "{$points} points added: {$en}", 'rewards');
         return $points;
     }
 
