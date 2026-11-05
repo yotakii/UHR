@@ -115,7 +115,8 @@ class TenantIsolationTest extends TestCase
         $d = $this->getJson("/api/platform/companies/{$fa->id}/detail")->assertOk();
         $this->assertGreaterThan(0, $d->json('data.usage.users.total'));
         $this->assertContains('https://hr.alfarada.sy', $d->json('data.portal_urls'));
-        $this->assertStringNotContainsString('password', strtolower(json_encode(collect($d->json('data.accounts'))->map(fn ($a) => array_keys($a))->flatten()->all())));
+        $keys = collect($d->json('data.accounts'))->map(fn ($a) => array_keys($a))->flatten()->unique()->all();
+        $this->assertEmpty(array_intersect($keys, ['password', 'remember_token', 'invite_hash', 'totp_secret', 'link']));
         $this->assertStringNotContainsString('$2y$', $d->getContent());
         $samer = collect($d->json('data.accounts'))->firstWhere('email', 'samer.halabi@alfarada.sy');
         $this->postJson("/api/platform/companies/{$fa->id}/users/{$samer['id']}/deactivate")->assertOk()->assertJsonPath('data.state', 'inactive');
