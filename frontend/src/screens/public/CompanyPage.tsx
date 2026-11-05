@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Globe, Link2 } from 'lucide-react'
+import { Globe, Link2, LogIn } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { useCompanyPage } from '../../lib/public'
 import { setMeta } from '../../lib/seo'
@@ -30,7 +30,9 @@ export function CompanyPage({ slug }: { slug: string }) {
               {c.website && <a href={c.website} target="_blank" rel="noopener" className="inline-flex items-center gap-1 hover:text-brand ltr"><Globe size={14} />{c.website.replace(/^https?:\/\//, '')}</a>}
             </div>
           </div>
-          <Btn size="sm" icon={<Link2 size={14} />} onClick={copy}>{L('نسخ الرابط', 'Copy link')}</Btn>
+          <div className="flex flex-wrap gap-2">
+            <a href={`/c/${slug}/login`} className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-[13px] font-semibold text-on-brand" style={{ background: c.brand_color || 'var(--primary)' }}><LogIn size={14} />{L('دخول موظفي الشركة', 'Staff sign-in')}</a>
+            <Btn size="sm" icon={<Link2 size={14} />} onClick={copy}>{L('نسخ الرابط', 'Copy link')}</Btn></div>
         </div>
       </section>
       <h2 className="text-[18px] font-bold">{L('الوظائف الشاغرة', 'Open positions')}</h2>

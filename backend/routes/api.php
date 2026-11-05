@@ -71,6 +71,7 @@ Route::prefix('public')->group(function () {
     Route::get('/og', [PublicController::class, 'og']);
     Route::get('/og-image.png', [PublicController::class, 'ogImage']);
     Route::get('/og-image/{slug}.png', [PublicController::class, 'ogImage']);
+    Route::get('/context', [PublicController::class, 'context']);
     Route::get('/companies/{slug}', [PublicController::class, 'company']);
     Route::get('/companies/{slug}/logo', [PublicController::class, 'logo']);
     Route::get('/jobs/{slug}/{code}', [PublicController::class, 'job']);
@@ -500,10 +501,15 @@ Route::middleware(['auth', 'fresh', 'portal:platform'])->prefix('platform')->gro
     Route::post('/companies', [PlatformController::class, 'storeCompany']);
     Route::post('/companies/{id}', [PlatformController::class, 'updateCompany'])->whereNumber('id');   // multipart مع الشعار
     Route::post('/companies/{id}/status', [PlatformController::class, 'companyStatus'])->whereNumber('id');
+    // تفاصيل الشركة واستخدامها وحساباتها (47/48) — بلا كلمات مرور
+    Route::get('/companies/{id}/detail', [\App\Http\Controllers\Api\Platform\CompanyDetailController::class, 'show'])->whereNumber('id');
+    Route::post('/companies/{id}/users/{userId}/{action}', [\App\Http\Controllers\Api\Platform\CompanyDetailController::class, 'userAction'])->whereNumber(['id', 'userId'])
+        ->whereIn('action', ['reset-password', 'unlock', 'deactivate', 'activate'])->middleware('throttle:30,1');
     Route::get('/reviews', [PlatformController::class, 'reviews']);
     Route::post('/reviews/{id}', [PlatformController::class, 'review'])->whereNumber('id');
     Route::get('/portal', [PlatformController::class, 'portal']);
     Route::put('/portal', [PlatformController::class, 'updatePortal']);
+    Route::put('/portal/hosts', [PlatformController::class, 'updateHosts']);
     // قراءة السير بالنموذج المحلي: الحالة، والتشغيل والحد الشهري لكل شركة
     Route::get('/cv-reading', [\App\Http\Controllers\Api\Platform\CvReadingController::class, 'show']);
     Route::put('/cv-reading', [\App\Http\Controllers\Api\Platform\CvReadingController::class, 'update']);

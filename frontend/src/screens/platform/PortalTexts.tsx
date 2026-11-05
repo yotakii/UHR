@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useL } from '../../lib/store'
 import { ApiError } from '../../lib/api'
-import { usePortalTexts, useSavePortal, type PortalTexts as T } from '../../lib/platform'
+import { usePortalHosts, usePortalTexts, useSaveHosts, useSavePortal, type PortalTexts as T } from '../../lib/platform'
 import { Btn, Field, PageHead, Panel, toast } from '../../ui/kit'
 
 /** نصوص الواجهة البارزة لبوابة فرص العمل — باللغتين */
@@ -29,5 +29,24 @@ export function PortalTexts() {
           <Btn kind="primary" disabled={save.isPending} onClick={() => save.mutate(v, { onSuccess: () => toast(L('حُفظت نصوص البوابة', 'Portal texts saved')) })}>{L('حفظ', 'Save')}</Btn></div>
       </div>
     </Panel>
+    <HostsPanel />
   </div>
+}
+
+/** بوابة لكل شركة (86): النطاق الأساسي ← {slug}.النطاق */
+function HostsPanel() {
+  const L = useL()
+  const { data } = usePortalHosts()
+  const save = useSaveHosts()
+  const [v, setV] = useState<string | null>(null)
+  const val = v ?? data?.base_domain ?? ''
+  const e = save.error instanceof ApiError ? save.error : null
+  return <Panel title={L('عناوين بوابات الشركات', 'Company portal addresses')} sub={L('لكل شركة بوابة دخول وفرص عمل بهويتها: /c/اسم-الشركة دائماً، و«اسم-الشركة.النطاق» عند ضبط النطاق هنا، أو نطاقها الخاص من بطاقة الشركة.', 'Each company has a sign-in and jobs portal with its identity: /c/company always, "company.domain" when a base domain is set here, or its own domain from the company card.')}>
+    <div className="flex flex-wrap items-end gap-3">
+      <div className="flex-1 min-w-[240px]"><Field label={L('النطاق الأساسي', 'Base domain')} error={e?.field('base_domain')} hint={L('يحتاج سجل DNS عاماً (*.النطاق) يشير إلى الخادم وشهادة له.', 'Needs a wildcard DNS record (*.domain) pointing to the server and a certificate.')}>
+        <input className="field ltr text-start" value={val} placeholder="uhr.atmata-group.com" onChange={x => { setV(x.target.value.toLowerCase().trim()); save.reset() }} /></Field></div>
+      <Btn kind="primary" disabled={save.isPending || v === null} onClick={() => save.mutate({ base_domain: val }, { onSuccess: () => { setV(null); toast(L('حُفظ', 'Saved')) } })}>{L('حفظ', 'Save')}</Btn>
+    </div>
+    {val && <p className="text-[12.5px] text-ink-3 mt-2">{L('مثال:', 'Example:')} <span className="ltr inline-block">https://alfarada.{val}</span></p>}
+  </Panel>
 }

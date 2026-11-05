@@ -9,6 +9,7 @@ import { DecisionDialog } from '../../ui/decision'
 import { CompanyLogo } from '../public/parts'
 import { Shell, type NavItem } from '../console/Shell'
 import { Companies } from './Companies'
+import { CompanyDetailPage } from './CompanyDetail'
 import { PortalTexts } from './PortalTexts'
 import { PlatformBackups } from '../hr/admin/Backups'
 import { CvReading } from './CvReading'
@@ -30,7 +31,7 @@ export function PlatformApp({ user }: { user: SessionUser }) {
   ]
   const sub = route.parts[1]
   return <Shell items={items} user={user} org="Atmata · UHR" sub={L('إدارة منصة UHR وبوابة فرص العمل', 'UHR platform & jobs portal administration')}>
-    {sub === 'companies' ? <Companies /> : sub === 'reviews' ? <Reviews /> : sub === 'portal' ? <PortalTexts /> : sub === 'backups' ? <PlatformBackups /> : sub === 'cv-reading' ? <CvReading /> : sub === 'mail' ? <MailSettings /> : <OverviewPage />}
+    {sub === 'companies' && route.parts[2] && /^\d+$/.test(route.parts[2]) ? <CompanyDetailPage id={Number(route.parts[2])} /> : sub === 'companies' ? <Companies /> : sub === 'reviews' ? <Reviews /> : sub === 'portal' ? <PortalTexts /> : sub === 'backups' ? <PlatformBackups /> : sub === 'cv-reading' ? <CvReading /> : sub === 'mail' ? <MailSettings /> : <OverviewPage />}
   </Shell>
 }
 

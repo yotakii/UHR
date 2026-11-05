@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, ExternalLink, KeyRound, Copy } from 'lucide-react'
+import { Plus, ExternalLink, KeyRound, Copy, Info } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { ApiError } from '../../lib/api'
 import { useCompanies, useCompanyStatus, useSaveCompany, type PlatformCompany } from '../../lib/platform'
@@ -29,6 +29,7 @@ export function Companies() {
           <td className="hidden md:table-cell">{c.portal_enabled ? <div className="flex flex-col items-start gap-1"><Badge tone="brand">{L('مفعّل', 'Enabled')}</Badge><span className="text-[11px] text-ink-3">{c.portal_review ? L('بمراجعة المنصة', 'with review') : L('نشر مباشر', 'direct')}</span></div> : <Badge>{L('غير مفعّل', 'Off')}</Badge>}</td>
           <td className="num hidden lg:table-cell">{c.counts.jobs_open}</td><td className={`num hidden lg:table-cell ${c.counts.jobs_pending ? 'font-semibold text-brass' : 'text-ink-3'}`}>{c.counts.jobs_pending || '·'}</td><td className="num hidden lg:table-cell">{c.counts.applications}</td><td className="num hidden lg:table-cell">{c.counts.employees}</td>
           <td onClick={e => e.stopPropagation()}><div className="flex gap-1 justify-end">
+            <a href={`/platform/companies/${c.id}`} className="h-8 px-2 grid place-items-center rounded-lg hover:bg-sub text-brand" title={L('التفاصيل والحسابات', 'Details & accounts')} aria-label={L('التفاصيل والحسابات', 'Details & accounts')}><Info size={15} /></a>
             <a href={`/c/${c.slug}`} target="_blank" rel="noopener" className="h-8 px-2 grid place-items-center rounded-lg hover:bg-sub text-ink-3" title={L('صفحة الشركة', 'Company page')} aria-label={L('صفحة الشركة', 'Company page')}><ExternalLink size={15} /></a>
             {!c.is_platform && (c.status === 'active'
               ? <Btn size="sm" kind="danger" onClick={() => setSuspend(c)}>{L('تعليق', 'Suspend')}</Btn>
@@ -44,8 +45,8 @@ export function Companies() {
   </div>
 }
 
-type Form = { slug: string; name_ar: string; name_en: string; short_ar: string; short_en: string; brand_latin: string; about_ar: string; about_en: string; website: string; portal_enabled: boolean; portal_review: boolean; admin_email: string }
-const EMPTY: Form = { slug: '', name_ar: '', name_en: '', short_ar: '', short_en: '', brand_latin: '', about_ar: '', about_en: '', website: '', portal_enabled: true, portal_review: true, admin_email: '' }
+type Form = { slug: string; name_ar: string; name_en: string; short_ar: string; short_en: string; brand_latin: string; about_ar: string; about_en: string; website: string; domain: string; brand_color: string; portal_enabled: boolean; portal_review: boolean; admin_email: string }
+const EMPTY: Form = { slug: '', name_ar: '', name_en: '', short_ar: '', short_en: '', brand_latin: '', about_ar: '', about_en: '', website: '', domain: '', brand_color: '', portal_enabled: true, portal_review: true, admin_email: '' }
 
 function CompanyForm({ open, c, onClose }: { open: boolean; c: PlatformCompany | null; onClose: () => void }) {
   const L = useL()
@@ -56,7 +57,7 @@ function CompanyForm({ open, c, onClose }: { open: boolean; c: PlatformCompany |
   useEffect(() => {
     if (!open) return
     save.reset(); setLogo(null); setCreated(null)
-    setV(c ? { slug: c.slug, name_ar: c.name_ar, name_en: c.name_en, short_ar: c.short_ar ?? '', short_en: c.short_en ?? '', brand_latin: c.brand_latin ?? '', about_ar: c.about_ar ?? '', about_en: c.about_en ?? '', website: c.website ?? '', portal_enabled: c.portal_enabled, portal_review: c.portal_review, admin_email: '' } : EMPTY)
+    setV(c ? { slug: c.slug, name_ar: c.name_ar, name_en: c.name_en, short_ar: c.short_ar ?? '', short_en: c.short_en ?? '', brand_latin: c.brand_latin ?? '', about_ar: c.about_ar ?? '', about_en: c.about_en ?? '', website: c.website ?? '', domain: c.domain ?? '', brand_color: c.brand_color ?? '', portal_enabled: c.portal_enabled, portal_review: c.portal_review, admin_email: '' } : EMPTY)
   }, [open, c])
   const e = save.error instanceof ApiError ? save.error : null
   const set = <K extends keyof Form>(k: K, x: Form[K]) => { setV(s => ({ ...s, [k]: x })); if (save.error) save.reset() }
@@ -87,6 +88,12 @@ function CompanyForm({ open, c, onClose }: { open: boolean; c: PlatformCompany |
       <Field label={L('نبذة (إنكليزي)', 'About (English)')}><textarea className="field ltr text-start" value={v.about_en} onChange={x => set('about_en', x.target.value)} /></Field>
       <Field label={L('الموقع الإلكتروني', 'Website')} error={e?.field('website')}><input className="field ltr text-start" placeholder="https://" value={v.website} onChange={x => set('website', x.target.value)} /></Field>
       <Field label={L('الشعار', 'Logo')} hint="PNG / JPG / WEBP — 1MB" error={e?.field('logo')}><input type="file" accept=".png,.jpg,.jpeg,.webp" className="field !py-1.5" onChange={x => setLogo(x.target.files?.[0] ?? null)} /></Field>
+      <Field label={L('نطاق بوابة الشركة (اختياري)', 'Company portal domain (optional)')} error={e?.field('domain')} hint={L('مثل hr.company.com — يُوجَّه إلى خادم المنصة بسجل DNS', 'e.g. hr.company.com — pointed to the platform server by a DNS record')}>
+        <input className="field ltr text-start" value={v.domain} onChange={x => set('domain', x.target.value.toLowerCase().trim())} placeholder="hr.company.com" /></Field>
+      <Field label={L('لون الهوية', 'Brand colour')} error={e?.field('brand_color')} hint={L('يظهر في صفحة دخول الشركة', 'Shown on the company sign-in page')}>
+        <div className="flex items-center gap-2"><input type="color" className="h-10 w-14 rounded border border-line bg-transparent" value={v.brand_color || '#0f766e'} onChange={x => set('brand_color', x.target.value)} />
+          <input className="field ltr text-start" value={v.brand_color} onChange={x => set('brand_color', x.target.value)} placeholder="#0f766e" />
+          {v.brand_color && <button type="button" className="text-[12px] text-ink-3" onClick={() => set('brand_color', '')}>{L('بلا لون', 'None')}</button>}</div></Field>
       {!c && <Field label={L('بريد مدير الشركة', 'Company admin email')} req error={e?.field('admin_email')} hint={L('يصله رابط تفعيل حساب «مدير النظام»', 'Gets an activation link for the system-admin account')} className="sm:col-span-2"><input className="field ltr text-start" type="email" value={v.admin_email} onChange={x => set('admin_email', x.target.value)} /></Field>}
       <div className="sm:col-span-2 rounded-xl border border-line p-4 space-y-3 bg-canvas/40">
         <label className="flex gap-3 text-[14px]"><input type="checkbox" className="mt-1 accent-[var(--primary)]" checked={v.portal_enabled} onChange={x => set('portal_enabled', x.target.checked)} /><span>{L('السماح بالنشر على بوابة فرص العمل العامة', 'Allow publishing on the public jobs portal')}</span></label>

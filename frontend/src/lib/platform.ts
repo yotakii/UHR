@@ -9,7 +9,27 @@ export interface PlatformCompany extends CompanyCard {
   id: number; status: 'active' | 'suspended'; portal_enabled: boolean; portal_review: boolean; is_platform: boolean
   name_ar: string; name_en: string; short_ar: string | null; short_en: string | null; about_ar: string | null; about_en: string | null; website: string | null; about: Bi
   counts: { jobs_open: number; jobs_portal: number; jobs_pending: number; applications: number; employees: number }; created_at: string
+  domain: string | null; portal_urls: string[]
 }
+/** تفاصيل الشركة واستخدامها وحساباتها (47/48) — بلا كلمات مرور */
+export type AccountState = 'active' | 'pending' | 'expired' | 'locked' | 'inactive'
+export interface CompanyAccount { id: number; email: string; name: Bi; code: string | null; roles: (Bi & { key: string })[]; state: AccountState; temp_password: boolean; mfa: boolean; passkeys: number; failed_logins: number; last_login_at: string | null; created_at: string | null }
+export interface CompanyDetail {
+  id: number; slug: string; name: Bi; status: 'active' | 'suspended'; is_platform: boolean; website: string | null; domain: string | null; portal_urls: string[]; created_at: string | null
+  usage: {
+    users: { total: number; active: number; inactive: number; locked: number; pending: number; signed_in_30d: number; last_login_at: string | null }
+    employees: Record<string, number>; departments: number; jobs: { total: number; open: number }; applications: { total: number; month: number }
+    attendance_30d: number; requests_30d: number; files: { count: number; bytes: number }; mail_month: { sent: number; failed: number }; cv_readings_month: number; audit_30d: number; last_activity_at: string | null
+  }
+  accounts: CompanyAccount[]
+}
+export const useCompanyDetail = (id: number, q: string) => useQuery({ queryKey: ['platform', 'company', id, q], placeholderData: p => p, queryFn: () => api<{ data: CompanyDetail }>(`/platform/companies/${id}/detail?q=${encodeURIComponent(q)}`).then(r => r.data) })
+export const useAccountAction = (id: number) => useMutation({
+  mutationFn: (v: { user: number; action: 'reset-password' | 'unlock' | 'deactivate' | 'activate' }) => api<{ data: CompanyAccount; sent: boolean }>(`/platform/companies/${id}/users/${v.user}/${v.action}`, { json: {} }),
+  onSuccess: () => queryClient.invalidateQueries({ queryKey: ['platform', 'company', id] }),
+})
+export const usePortalHosts = () => useQuery({ queryKey: ['platform', 'portal-hosts'], queryFn: () => api<{ hosts: { base_domain: string } }>('/platform/portal').then(r => r.hosts) })
+export const useSaveHosts = () => useMutation({ mutationFn: (v: { base_domain: string }) => api('/platform/portal/hosts', { method: 'PUT', json: v }), onSuccess: refresh })
 export interface Overview {
   companies: number; active: number; portal_jobs: number; pending: number; applications: number; applications_30d: number
   by_company: (CompanyCard & { applications: number; applications_30d: number; jobs: number })[]

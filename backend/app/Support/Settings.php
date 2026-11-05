@@ -165,6 +165,8 @@ class Settings
         // النسخة الكاملة للخادم (D-27): يومياً في الوقت المحدد، والاحتفاظ بآخر keep نسخة
         'backup' => ['enabled' => true, 'time' => '02:30', 'keep' => 14],
         // البريد الصادر (11e): خادم SMTP للمنصة كلها — host فارغ = إعداد الخادم (MAIL_* في البيئة). password مشفّر. log_days = مدة حفظ سجل البريد
+        // بوابة لكل شركة (86): base_domain فارغ = لا عناوين فرعية؛ وإلا {slug}.base_domain يفتح بوابة الشركة
+        'portal_hosts' => ['base_domain' => ''],
         'mail' => ['host' => '', 'port' => 587, 'encryption' => 'tls', 'username' => '', 'password' => '', 'from_address' => '', 'from_name' => 'UHR', 'log_days' => 90],
         'portal' => [
             'brand_latin' => 'UHR · ATMATA GROUP',

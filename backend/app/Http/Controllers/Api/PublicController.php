@@ -73,6 +73,13 @@ class PublicController extends Controller
     }
 
     /** صفحة الشركة: هويتها ونبذة وشواغرها */
+    /** بوابة الشركة من عنوان الطلب (86): الشركة وهويتها، أو null للبوابة العامة متعددة الشركات */
+    public function context(Request $request): JsonResponse
+    {
+        $c = \App\Support\HostCompany::resolve($request->getHost());
+        return response()->json(['company' => $c ? $c->card() + ['about' => ['ar' => $c->about_ar, 'en' => $c->about_en]] : null]);
+    }
+
     public function company(string $slug): JsonResponse
     {
         $c = $this->activeCompany($slug);

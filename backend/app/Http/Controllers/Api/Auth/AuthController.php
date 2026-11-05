@@ -32,7 +32,7 @@ class AuthController extends Controller
 
     public function login(Request $request): JsonResponse
     {
-        $data = $request->validate(['email' => ['required', 'email'], 'password' => ['required', 'string']], [
+        $data = $request->validate(['email' => ['required', 'email'], 'password' => ['required', 'string'], 'company' => ['nullable', 'string', 'max:40']], [
             'email.required' => L::t('أدخل البريد الإلكتروني.', 'Enter your email.'), 'email.email' => L::t('صيغة البريد غير صحيحة.', 'Invalid email format.'), 'password.required' => L::t('أدخل كلمة المرور.', 'Enter your password.'),
         ]);
         $email = strtolower(trim($data['email']));
@@ -58,6 +58,13 @@ class AuthController extends Controller
             Audit::record('auth.failed', $user, null, ['attempt' => $fails]);
             if (! $user->activated_at && $user->invite_hash) return response()->json(['message' => L::t('لم يُفعَّل هذا الحساب بعد. افتح رابط التفعيل المرسل إلى بريدك لتختار كلمة المرور، أو اطلب رابطاً جديداً من «نسيت كلمة المرور؟».', 'This account is not activated yet. Open the activation link sent to your email to choose your password, or request a new link with "Forgot password?".'), 'code' => 'not_activated'], 422);
             return $invalid(['remaining' => $pol['max_attempts'] - $fails]);
+        }
+
+        // بوابة الشركة (86): من بوابة شركة لا يدخل إلا موظفوها (والمتقدمون بحسابهم العام) — نفس رسالة الخطأ دون كشف وجود الحساب
+        $ctx = ! empty($data['company']) ? \App\Models\Company::where('slug', $data['company'])->first() : \App\Support\HostCompany::resolve($request->getHost());
+        if ($ctx && $user->company_id && $user->company_id !== $ctx->id) {
+            Audit::record('auth.wrong_portal', $user, null, ['portal' => $ctx->slug]);
+            return $invalid();
         }
 
         if ($user->blocked()) {

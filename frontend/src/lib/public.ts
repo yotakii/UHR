@@ -30,6 +30,8 @@ export function useJobs(f: JobFilters = {}) {
   return useQuery({ queryKey: ['public', 'jobs', qs], queryFn: () => api<{ data: PublicJob[] }>(`/public/jobs${qs ? '?' + qs : ''}`).then(r => r.data), placeholderData: keepPreviousData })
 }
 
+/** بوابة الشركة من عنوان الصفحة (86): شركة العنوان أو null للبوابة العامة */
+export const usePortalContext = () => useQuery({ queryKey: ['public', 'context'], staleTime: Infinity, retry: false, queryFn: () => api<{ company: (CompanyCard & { about: Bi }) | null }>('/public/context').then(r => r.company) })
 export const useCompanyPage = (slug: string) => useQuery({ queryKey: ['public', 'company', slug], queryFn: () => api<{ data: CompanyPage }>(`/public/companies/${encodeURIComponent(slug)}`).then(r => r.data), retry: false })
 
 export const useJob = (slug: string, code: string, ref?: string) => useQuery({

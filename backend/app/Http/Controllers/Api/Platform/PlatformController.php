@@ -103,7 +103,18 @@ class PlatformController extends Controller
 
     public function portal(): JsonResponse
     {
-        return response()->json(['data' => Settings::platform('portal')]);
+        return response()->json(['data' => Settings::platform('portal'), 'hosts' => Settings::platformMerged('portal_hosts')]);
+    }
+
+    /** النطاق الأساسي لبوابات الشركات (86): {slug}.النطاق — يحتاج سجل DNS عاماً (*.النطاق) وشهادة له */
+    public function updateHosts(Request $request): JsonResponse
+    {
+        $d = $request->validate(['base_domain' => ['nullable', 'string', 'max:150', 'regex:/^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/']],
+            ['base_domain.regex' => L::t('نطاق غير صالح (مثال: uhr.atmata-group.com).', 'Invalid domain (e.g. uhr.atmata-group.com).')]);
+        $before = Settings::platformMerged('portal_hosts');
+        Settings::putPlatform('portal_hosts', ['base_domain' => strtolower(trim((string) ($d['base_domain'] ?? '')))]);
+        Audit::record('platform.portal_hosts', null, $before, Settings::platformMerged('portal_hosts'));
+        return response()->json(['hosts' => Settings::platformMerged('portal_hosts')]);
     }
 
     public function updatePortal(Request $request): JsonResponse
@@ -125,6 +136,9 @@ class PlatformController extends Controller
             'short_ar' => ['nullable', 'string', 'max:80'], 'short_en' => ['nullable', 'string', 'max:80'], 'brand_latin' => ['nullable', 'string', 'max:60'],
             'about_ar' => ['nullable', 'string', 'max:1000'], 'about_en' => ['nullable', 'string', 'max:1000'], 'website' => ['nullable', 'url', 'max:200'],
             'portal_enabled' => ['boolean'], 'portal_review' => ['boolean'],
+            // بوابة الشركة (86): نطاق خاص اختياري ولون الهوية
+            'domain' => ['nullable', 'string', 'max:190', 'regex:/^(?=.{4,190}$)([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/', Rule::unique('companies', 'domain')->ignore($c?->id)],
+            'brand_color' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'logo' => ['nullable', 'file', 'mimes:png,jpg,jpeg,webp', 'max:1024'],
         ], [
             'required' => L::t('هذا الحقل مطلوب', 'This field is required'),
@@ -148,6 +162,7 @@ class PlatformController extends Controller
             'id' => $c->id, 'status' => $c->status, 'portal_enabled' => $c->portal_enabled, 'portal_review' => $c->portal_review, 'is_platform' => $c->is_platform,
             'about' => ['ar' => $c->about_ar, 'en' => $c->about_en], 'website' => $c->website, 'name_ar' => $c->name_ar, 'name_en' => $c->name_en,
             'short_ar' => $c->short_ar, 'short_en' => $c->short_en, 'about_ar' => $c->about_ar, 'about_en' => $c->about_en,
+            'domain' => $c->domain, 'portal_urls' => \App\Support\HostCompany::urls($c),
             'counts' => [
                 'jobs_open' => JobOpening::allCompanies()->where('company_id', $c->id)->where('status', 'open')->count(),
                 'jobs_portal' => JobOpening::allCompanies()->where('company_id', $c->id)->onPortal()->count(),

@@ -10,7 +10,9 @@ import { PortalHome } from './Portal'
 import { JobsBoard } from './JobsBoard'
 import { CompanyPage } from './CompanyPage'
 import { JobPage } from './JobPage'
-import { Activate, Forgot, Login, Reset } from './Auth'
+import { Activate, CompanyLogin, Forgot, Login, Reset } from './Auth'
+import { usePortalContext } from '../../lib/public'
+import { CompanyLogo } from './parts'
 
 /** صفحات الزائر: البوابة، فرص العمل، صفحة الشركة، صفحة الشاغر، التقديم، الدخول */
 export const PUBLIC_PAGES = ['', 'jobs', 'c', 'apply', 'applied', 'login', 'forgot', 'reset', 'activate', 'test']
@@ -18,11 +20,14 @@ export const PUBLIC_PAGES = ['', 'jobs', 'c', 'apply', 'applied', 'login', 'forg
 export function Public() {
   const route = useRoute(); const { page, parts, query } = route
   const [slug, code] = [parts[1], parts.slice(2).join('/')]
+  // بوابة الشركة (86): على عنوانها تصبح الصفحة الرئيسية صفحتها، والدخول بهويتها
+  const ctx = usePortalContext().data
   return <div className="min-h-full flex flex-col app-glow">
     <PublicHeader />
     <main className="flex-1">
       {page === 'jobs' && slug && code ? <JobPage slug={slug} code={code} refCode={query.ref} />
         : page === 'jobs' ? <JobsBoard full />
+        : page === 'c' && slug && parts[2] === 'login' ? <CompanyLogin slug={slug} />
         : page === 'c' && slug ? <CompanyPage slug={slug} />
         : page === 'apply' && slug && code ? <Apply slug={slug} code={code} refCode={query.ref} />
         : page === 'applied' ? <Applied />
@@ -32,6 +37,7 @@ export function Public() {
         : page === 'test' && parts[1] ? <TakeTest token={parts[1]} />
         : page === 'reset' ? <Reset token={query.token ?? ''} email={query.email ?? ''} />
         : page === 'activate' ? <Activate token={route.parts[1] ?? ''} />
+        : ctx ? <CompanyPage slug={ctx.slug} />
         : <PortalHome />}
     </main>
     <footer className="border-t border-line text-[12px] text-ink-3 px-5 md:px-8 py-4 flex flex-wrap justify-between gap-2">
@@ -43,10 +49,11 @@ export function Public() {
 function PublicHeader() {
   const L = useL(); const lang = useLang()
   const user = useMe().data
+  const ctx = usePortalContext().data
   const link = 'inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-[13px] font-semibold'
   return <header className="h-[68px] border-b border-line bg-canvas/70 backdrop-blur flex items-center justify-between gap-3 px-5 md:px-8 sticky top-0 z-20">
     <div className="flex items-center gap-4 min-w-0">
-      <a href="/" aria-label="UHR"><Logo h={30} /></a>
+      {ctx ? <a href="/" className="flex items-center gap-2 min-w-0"><CompanyLogo c={ctx} size={34} /><span className="font-bold truncate hidden sm:inline">{bi(ctx.short, lang)}</span></a> : <a href="/" aria-label="UHR"><Logo h={30} /></a>}
       <a href="/jobs" className={`${link} hidden sm:inline-flex text-ink-2 hover:text-ink hover:bg-sub`}>{L('فرص العمل', 'Jobs')}</a>
     </div>
     <div className="flex items-center gap-2">

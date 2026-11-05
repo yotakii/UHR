@@ -12,19 +12,21 @@ import { AuthCard } from './parts'
 /** جهاز حضور مسجّل على هذا المتصفح (يُسجَّل من M16 — أجهزة الحضور) */
 const isAttendanceDevice = () => { try { return !!localStorage.getItem('uhr-device') } catch { return false } }
 
-/** بطاقة الدخول: للموظفين وموارد الشركات والمتقدمين ومدير المنصة — كلٌّ لواجهته */
-export function LoginCard({ sticky = true, after }: { sticky?: boolean; after?: string }) {
+/** بطاقة الدخول: للموظفين وموارد الشركات والمتقدمين ومدير المنصة — كلٌّ لواجهته */import { useCompanyPage, usePortalContext } from '../../lib/public'
+import { CompanyLogo } from './parts'
+
+export function LoginCard({ sticky = true, after, company, sub }: { sticky?: boolean; after?: string; company?: string; sub?: string }) {
   const L = useL()
   const [email, setEmail] = useState(''); const [pw, setPw] = useState(''); const [show, setShow] = useState(false)
   const login = useLogin()
   const err = login.error instanceof ApiError ? (login.error.field('email') ?? login.error.field('password') ?? login.error.message) : login.error ? L('تعذّر الاتصال بالخادم. تحقق من الشبكة وحاول مجدداً.', 'Could not reach the server. Check your connection and try again.') : ''
   const locked = login.error instanceof ApiError && login.error.code === 'locked'
-  const submit = (e: FormEvent) => { e.preventDefault(); if (!login.isPending) login.mutate({ email: email.trim(), password: pw }, { onSuccess: () => after ? navigate(after) : go('') }) }
+  const submit = (e: FormEvent) => { e.preventDefault(); if (!login.isPending) login.mutate({ email: email.trim(), password: pw, company }, { onSuccess: () => after ? navigate(after) : go('') }) }
   const edit = (f: (v: string) => void) => (e: React.ChangeEvent<HTMLInputElement>) => { f(e.target.value); if (login.error && !locked) login.reset() }
   return <section className={`bg-surface border border-line rounded-2xl ${sticky ? 'lg:sticky lg:top-24' : ''}`}>
     <div className="p-6 border-b border-line-2">
       <h2 className="text-[20px] font-bold">{L('تسجيل الدخول', 'Sign in')}</h2>
-      <p className="text-ink-2 text-[13px] mt-1">{L('للمتقدمين لمتابعة طلباتهم، وللموظفين وفرق الموارد البشرية في الشركات.', 'For applicants following their applications, and for company staff and HR teams.')}</p>
+      <p className="text-ink-2 text-[13px] mt-1">{sub ?? L('للمتقدمين لمتابعة طلباتهم، وللموظفين وفرق الموارد البشرية في الشركات.', 'For applicants following their applications, and for company staff and HR teams.')}</p>
     </div>
     <form onSubmit={submit} className="p-6 space-y-4" noValidate>
       <Field label={L('البريد الإلكتروني', 'Email')} req><input className="field ltr text-start" type="email" value={email} onChange={edit(setEmail)} autoComplete="username" required /></Field>
@@ -41,7 +43,27 @@ export function LoginCard({ sticky = true, after }: { sticky?: boolean; after?: 
 }
 
 export function Login({ after }: { after?: string }) {
+  const ctx = usePortalContext().data
+  if (ctx) return <CompanyLogin slug={ctx.slug} />
   return <div className="max-w-md mx-auto px-5 py-10"><LoginCard sticky={false} after={after} /></div>
+}
+
+/** دخول بوابة الشركة (ملاحظة 86): بهوية الشركة، ولا يدخل منها إلا موظفوها (والمتقدمون بحسابهم) */
+export function CompanyLogin({ slug }: { slug: string }) {
+  const L = useL(); const lang = useLang()
+  const { data: c, error } = useCompanyPage(slug)
+  if (error) return <div className="max-w-md mx-auto px-5 py-10"><LoginCard sticky={false} /></div>
+  const color = c?.brand_color || undefined
+  return <div className="max-w-md mx-auto px-5 py-10 space-y-4">
+    <div className="rounded-2xl border border-line bg-surface overflow-hidden">
+      <div className="h-1.5" style={{ background: color ?? 'var(--primary)' }} />
+      <div className="p-5 flex items-center gap-4">{c ? <><CompanyLogo c={c} size={56} /><div className="min-w-0">
+        {c.brand_latin && <div className="text-[11px] font-bold tracking-[.25em] ltr text-start" style={{ color: color ?? 'var(--primary)' }}>{c.brand_latin}</div>}
+        <div className="font-bold text-[18px] leading-tight">{bi(c.name, lang)}</div><div className="text-[12.5px] text-ink-3">{L('بوابة الموظفين وفرص العمل', 'Staff and careers portal')}</div></div></> : <div className="h-14 w-full animate-pulse rounded-xl bg-sub" />}</div>
+    </div>
+    <LoginCard sticky={false} company={slug} sub={c ? L(`لموظفي ${bi(c.name, 'ar')} ولمتابعة طلبات التوظيف.`, `For ${bi(c.name, 'en')} staff and for following job applications.`) : undefined} />
+    <a href={`/c/${slug}`} className="block text-center text-[13px] text-brand font-semibold">{L('فرص العمل في الشركة', 'Jobs at this company')}</a>
+  </div>
 }
 
 export function Forgot() {

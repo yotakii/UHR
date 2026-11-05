@@ -202,8 +202,8 @@ class EmployeeDirectoryTest extends TestCase
 
         // المسح اليومي: تنبيه مرة واحدة قبل الانتهاء، ثم «منتهي»
         Tenant::set($e->company);
-        $this->assertSame(['expired' => 0, 'alerted' => 1], app(EmployeeDocs::class)->sweep());
-        $this->assertSame(['expired' => 0, 'alerted' => 0], app(EmployeeDocs::class)->sweep());
+        $this->assertSame(['expired' => 0, 'alerted' => 1, 'sign_alerted' => 0], app(EmployeeDocs::class)->sweep());
+        $this->assertSame(['expired' => 0, 'alerted' => 0, 'sign_alerted' => 0], app(EmployeeDocs::class)->sweep());
         $this->assertTrue(Notice::where('link', "emp:{$e->id}?tab=docs")->exists());
         Carbon::setTestNow(Carbon::parse('2026-11-05 09:00:00', 'Asia/Damascus'));
         $this->assertSame(1, app(EmployeeDocs::class)->sweep()['expired']);

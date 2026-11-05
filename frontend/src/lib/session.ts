@@ -5,7 +5,7 @@ import type { Bi } from './types'
 import { onPrefsChange, setLang, setTheme } from './store'
 
 export type Portal = 'platform' | 'hr' | 'employee' | 'candidate'
-export interface CompanyCard { slug: string; name: Bi; short: Bi; brand_latin: string | null; logo: string | null }
+export interface CompanyCard { slug: string; name: Bi; short: Bi; brand_latin: string | null; logo: string | null; brand_color?: string | null }
 export interface SessionUser {
   id: number; email: string; name: Bi; roles: string[]; portal: Portal; must_change_password: boolean; password_policy?: { min: number; upper: boolean; symbol: boolean }
   avatar?: number | null; prefs?: { locale: 'ar' | 'en'; theme: 'slate' | 'dark' | 'light' }
@@ -35,7 +35,7 @@ onPrefsChange(p => {
   api('/me/account', { method: 'PUT', json: { locale: p.lang, theme: p.theme } }).catch(() => { /* يكفي المحلي */ })
 })
 export function useLogin() {
-  return useMutation({ mutationFn: (v: { email: string; password: string }) => api<{ user: SessionUser }>('/auth/login', { json: v }), onSuccess: r => { setMe(r); applyPrefs(r.user) } })
+  return useMutation({ mutationFn: (v: { email: string; password: string; company?: string }) => api<{ user: SessionUser }>('/auth/login', { json: v }), onSuccess: r => { setMe(r); applyPrefs(r.user) } })
 }
 /** رابط تفعيل الحساب / تعيين كلمة المرور (11e): يختار كلمة المرور ثم يدخل مباشرة */
 export function useActivate(token: string) {

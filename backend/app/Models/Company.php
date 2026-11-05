@@ -20,7 +20,7 @@ class Company extends Model
         return [
             'slug' => $this->slug, 'name' => ['ar' => $this->name_ar, 'en' => $this->name_en],
             'short' => ['ar' => $this->short_ar ?: $this->name_ar, 'en' => $this->short_en ?: $this->name_en],
-            'brand_latin' => $this->brand_latin, 'logo' => $this->logo_path ? '/api/public/companies/'.$this->slug.'/logo?v='.$this->updated_at?->timestamp : null,
+            'brand_latin' => $this->brand_latin, 'brand_color' => $this->brand_color, 'logo' => $this->logo_path ? '/api/public/companies/'.$this->slug.'/logo?v='.$this->updated_at?->timestamp : null,
         ];
     }
 }
