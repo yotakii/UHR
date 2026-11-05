@@ -170,6 +170,25 @@ Route::middleware(['auth', 'fresh'])->prefix('me')->group(function () {
     Route::post('/exit/{id}/clearance/{section}/{item}', [MyExitController::class, 'markItem'])->whereNumber('id')->where(['section' => '[a-z0-9_]+', 'item' => '[a-z0-9_]+']);
 });
 
+// المهام ومؤشرات الأداء (ملاحظات 61/62): من البوابتين؛ مهامي ومؤشراتي لكل موظف، والنطاق والدور يُفحصان في الخدمات
+Route::middleware(['auth', 'fresh'])->prefix('work')->group(function () {
+    $W = \App\Http\Controllers\Api\WorkController::class;
+    Route::get('/tasks', [$W, 'tasks']);
+    Route::post('/tasks', [$W, 'storeTask'])->middleware('throttle:60,1');
+    Route::get('/tasks/{id}', [$W, 'task'])->whereNumber('id');
+    Route::put('/tasks/{id}', [$W, 'updateTask'])->whereNumber('id');
+    Route::post('/tasks/{id}/progress', [$W, 'progress'])->whereNumber('id');
+    Route::post('/tasks/{id}/decide', [$W, 'decide'])->whereNumber('id');
+    Route::post('/tasks/{id}/cancel', [$W, 'cancel'])->whereNumber('id');
+    Route::post('/tasks/{id}/comments', [$W, 'comment'])->whereNumber('id')->middleware('throttle:60,1');
+    Route::get('/kpis', [$W, 'kpis']);
+    Route::post('/kpis', [$W, 'storeKpi']);
+    Route::put('/kpis/{id}', [$W, 'updateKpi'])->whereNumber('id');
+    Route::post('/kpis/{id}/entries', [$W, 'record'])->whereNumber('id');
+    Route::get('/points', [$W, 'pointsSettings']);
+    Route::put('/points', [$W, 'savePoints'])->middleware('perm:settings,edit');
+});
+
 // التعاقب وخطط التطوير (D-23، D-24): من البوابتين؛ النطاق والدور يُفحصان في الخدمات
 Route::middleware(['auth', 'fresh', 'perm:succession,view'])->prefix('development')->group(function () {
     Route::get('/', [DevelopmentController::class, 'index']);

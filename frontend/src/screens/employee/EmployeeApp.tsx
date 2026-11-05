@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Home, FileSignature, ChevronLeft, ChevronRight, CalendarCheck, Clock, Stamp, ClipboardList, Wallet, ShieldAlert, DoorOpen, Trophy, Megaphone, ClipboardCheck, Sprout, Users, UserRound, Library, MessagesSquare, CalendarDays } from 'lucide-react'
+import { ListChecks, Home, FileSignature, ChevronLeft, ChevronRight, CalendarCheck, Clock, Stamp, ClipboardList, Wallet, ShieldAlert, DoorOpen, Trophy, Megaphone, ClipboardCheck, Sprout, Users, UserRound, Library, MessagesSquare, CalendarDays } from 'lucide-react'
 import { useL, useLang } from '../../lib/store'
 import { useRoute } from '../../lib/router'
 import type { SessionUser } from '../../lib/session'
@@ -28,9 +28,10 @@ import { SpaceApp } from '../space/Space'
 import { PolicyLibrary } from '../policies/PolicyLibrary'
 import { MyHolidays } from './MyHolidays'
 import { MyAccount } from '../account/MyAccount'
+import { Work } from '../work/Work'
 
 /** روابط إشعارات الموظف ← مسارات بوابته */
-export const employeeLink = (link: string) => link.startsWith('policy:') ? `/me/policies?doc=${link.slice(7)}` : link.startsWith('space:') ? `/me/space/p/${link.slice(6)}` : ({ space: '/me/space',  docs: '/me/documents', requests: '/me/requests', approvals: '/me/approvals', attendance: '/me/attendance', payslip: '/me/payslip', services: '/me/services', discipline: '/me/discipline', complaints: '/me/discipline', resignation: '/me/resignation', handover: '/me/resignation', profile: '/me/profile', rewards: '/me/rewards', internal: '/me/rewards', announcements: '/me/news', holidays: '/me/holidays', reviews: '/me/reviews', development: '/me/development' } as Record<string, string>)[link] ?? null
+export const employeeLink = (link: string) => link.startsWith('policy:') ? `/me/policies?doc=${link.slice(7)}` : link.startsWith('space:') ? `/me/space/p/${link.slice(6)}` : ({ space: '/me/space',  docs: '/me/documents', requests: '/me/requests', approvals: '/me/approvals', attendance: '/me/attendance', payslip: '/me/payslip', services: '/me/services', discipline: '/me/discipline', complaints: '/me/discipline', resignation: '/me/resignation', handover: '/me/resignation', profile: '/me/profile', rewards: '/me/rewards', internal: '/me/rewards', announcements: '/me/news', holidays: '/me/holidays', reviews: '/me/reviews', development: '/me/development', tasks: '/me/tasks', kpis: '/me/tasks?tab=kpis' } as Record<string, string>)[link] ?? null
 
 /**
  * بوابة الموظف M14 (PortalShell في الديمو): تبويبات علوية على الحاسب وشريط سفلي بخمسة أزرار على الجوال،
@@ -60,6 +61,7 @@ export function EmployeeApp({ user }: { user: SessionUser }) {
     { to: '/me/space', icon: <MessagesSquare size={17} />, label: L('الساحة', 'Space') }]
   const more: PortalTab[] = [{ to: '/me/services', icon: <ClipboardList size={17} />, label: L('خدماتي', 'My services') },
     { to: '/me/reviews', icon: <ClipboardCheck size={17} />, label: L('تقييماتي', 'My reviews'), badge: reviews.length || undefined },
+    { to: '/me/tasks', icon: <ListChecks size={17} />, label: L('مهامي ومؤشراتي', 'My tasks & KPIs') },
     { to: '/me/development', icon: <Sprout size={17} />, label: L('خطة تطويري', 'My development') },
     { to: '/me/news', icon: <Megaphone size={17} />, label: L('إعلانات الشركة', 'Company news') },
     { to: '/me/holidays', icon: <CalendarDays size={17} />, label: L('العطل الرسمية', 'Public holidays') },
@@ -89,6 +91,7 @@ export function EmployeeApp({ user }: { user: SessionUser }) {
       case 'discipline': return <MyDiscipline />
       case 'rewards': return <MyRewards />
       case 'reviews': return <MyReviews />
+      case 'tasks': return <Work />
       case 'development': return <Development title={L('خطة تطويري', 'My development')} />
       case 'news': return <MyAnnouncements />
       case 'holidays': return <MyHolidays />

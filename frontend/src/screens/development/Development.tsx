@@ -65,9 +65,13 @@ function Plans({ d, onEdit }: { d: DevPage; onEdit: (p: Plan) => void }) {
   const L = useL(); const lang = useLang(); const n = useNames()
   const act = usePlanAction()
   const [rev, setRev] = useState<Plan | null>(null); const [upd, setUpd] = useState<Activity | null>(null)
-  const mine = d.plans.filter(p => p.employee.id === d.me), team = d.plans.filter(p => p.employee.id !== d.me)
+  // ملاحظة 69: خطط الإدارات والشركة في قسم مستقل
+  const org = d.plans.filter(p => p.scope && p.scope !== 'employee')
+  const mine = d.plans.filter(p => p.employee && p.employee.id === d.me), team = d.plans.filter(p => p.employee && p.employee.id !== d.me)
   const card = (p: Plan) => <Panel key={p.id} title={<span className="flex flex-wrap items-center gap-2">{p.title}<PlanBadge s={p.status} />{p.source === 'succession' && <Badge tone="info">{L('من التعاقب', 'Succession')}</Badge>}{p.review_due && <Badge tone="warn">{L('مراجعة مستحقة', 'Review due')}</Badge>}</span>}
-    sub={p.employee.id !== d.me ? <span className="flex items-center gap-2"><Avatar name={p.employee.name.ar} size={22} />{bi(p.employee.name, lang)} · {bi(p.employee.title, lang)}</span> : undefined}
+    sub={p.scope === 'company' ? <span className="flex items-center gap-2"><Badge tone="brand">{L('خطة الشركة', 'Company plan')}</Badge></span>
+      : p.scope === 'department' ? <span className="flex items-center gap-2"><Badge tone="info">{L('خطة إدارة', 'Department plan')}</Badge>{p.department ? bi(p.department, lang) : ''}</span>
+      : p.employee && p.employee.id !== d.me ? <span className="flex items-center gap-2"><Avatar name={p.employee.name.ar} size={22} />{bi(p.employee.name, lang)} · {bi(p.employee.title, lang)}</span> : undefined}
     action={p.can.edit && p.status !== 'done' ? <div className="flex flex-wrap gap-1.5"><Btn size="sm" icon={<Pencil size={14} />} onClick={() => onEdit(p)}>{L('تعديل', 'Edit')}</Btn>
       {p.status === 'draft' && <Btn size="sm" kind="primary" icon={<Play size={14} />} disabled={act.isPending} onClick={() => act.mutate({ id: p.id, action: 'activate' }, { onSuccess: () => toast(L('فُعّلت الخطة', 'Plan activated')), onError: e => err(e, L('تعذّر التفعيل', 'Could not activate')) })}>{L('تفعيل', 'Activate')}</Btn>}
       {p.status === 'active' && <Btn size="sm" kind="primary" icon={<ClipboardCheck size={14} />} onClick={() => setRev(p)}>{L('مراجعة', 'Review')}</Btn>}</div> : undefined}>
@@ -95,7 +99,9 @@ function Plans({ d, onEdit }: { d: DevPage; onEdit: (p: Plan) => void }) {
       <span className="flex-1 min-w-[160px]"><b>{a.title}</b> · {bi(a.employee, lang)}</span><span className="num text-ink-3">{fmtDate(a.due_on, lang)}</span>{a.overdue ? <Badge tone="danger">{L('متأخر', 'Overdue')}</Badge> : <Badge tone="info">{n.act[a.status]}</Badge>}
       <Btn size="sm" onClick={() => setUpd({ ...a, owner: null, note: null, can_update: true })}>{L('تحديث', 'Update')}</Btn></li>)}</ul></Panel>}
     {d.plans.length === 0 && <div className="bg-surface border border-line rounded-2xl"><Empty title={L('لا خطط تطوير بعد', 'No development plans yet')}>{d.can.create ? L('ابدأ بخطة لأحد أعضاء فريقك: الفجوات، الأهداف، والأنشطة بمسؤول وموعد.', 'Start a plan for a team member: gaps, goals and activities with an owner and a date.') : L('يضع مديرك أو الموارد البشرية خطة تطويرك، وتظهر هنا لتتابع أنشطتها.', 'Your manager or HR sets up your plan; it appears here so you can follow its activities.')}</Empty></div>}
-    {mine.length > 0 && team.length > 0 && <h2 className="text-[15px] font-bold">{L('خطتي', 'My plan')}</h2>}
+    {org.length > 0 && <h2 className="text-[15px] font-bold">{L('خطط الإدارات والشركة', 'Department & company plans')}</h2>}
+    {org.map(card)}
+    {(mine.length > 0 && (team.length > 0 || org.length > 0)) && <h2 className="text-[15px] font-bold">{L('خطتي', 'My plan')}</h2>}
     {mine.map(card)}
     {team.length > 0 && mine.length > 0 && <h2 className="text-[15px] font-bold pt-2">{L('خطط فريقي', 'My team’s plans')}</h2>}
     {team.map(card)}
@@ -133,15 +139,19 @@ function ReviewModal({ p, onClose }: { p: Plan; onClose: () => void }) {
 function PlanForm({ d, plan, onClose }: { d: DevPage; plan: Plan | null; onClose: () => void }) {
   const L = useL(); const lang = useLang(); const n = useNames()
   const save = useSavePlan(plan?.id ?? null)
-  const [v, setV] = useState<PlanInput>(plan ? { employee_id: plan.employee.id, title: plan.title, gaps: plan.gaps ?? '', goals: plan.goals, activities: plan.activities.filter(a => a.status !== 'cancelled').map(a => ({ id: a.id, title: a.title, kind: a.kind, owner_employee_id: a.owner?.id ?? '', due_on: a.due_on })) }
-    : { employee_id: '', title: '', gaps: '', goals: [{ text: '' }], activities: [] })
+  const canDept = (d.plan_departments?.length ?? 0) > 0
+  const [v, setV] = useState<PlanInput>(plan ? { scope: plan.scope ?? 'employee', employee_id: plan.employee?.id ?? '', title: plan.title, gaps: plan.gaps ?? '', goals: plan.goals, activities: plan.activities.filter(a => a.status !== 'cancelled').map(a => ({ id: a.id, title: a.title, kind: a.kind, owner_employee_id: a.owner?.id ?? '', due_on: a.due_on })) }
+    : { scope: 'employee', department_id: '', employee_id: '', title: '', gaps: '', goals: [{ text: '' }], activities: [] })
   const e = save.error instanceof ApiError ? save.error : null
   const setAct = (i: number, p: Partial<PlanInput['activities'][number]>) => setV({ ...v, activities: v.activities.map((a, j) => j === i ? { ...a, ...p } : a) })
-  return <Modal open onClose={onClose} width={760} title={plan ? L('تعديل خطة التطوير', 'Edit development plan') : L('خطة تطوير فردية', 'Individual development plan')}
+  return <Modal open onClose={onClose} width={760} title={plan ? L('تعديل خطة التطوير', 'Edit development plan') : L('خطة تطوير جديدة', 'New development plan')}
     footer={<><Btn onClick={onClose}>{L('إلغاء', 'Cancel')}</Btn><Btn kind="primary" disabled={save.isPending} onClick={() => save.mutate({ ...v, goals: v.goals.filter(g => g.text.trim()), activities: v.activities.filter(a => a.title.trim() || a.due_on) }, { onSuccess: () => { toast(L('حُفظت الخطة', 'Plan saved')); onClose() } })}>{L('حفظ', 'Save')}</Btn></>}>
     <div className="grid sm:grid-cols-2 gap-3">
-      {!plan && <Field req label={L('الموظف', 'Employee')} error={e?.field('employee_id')}><select className="field" value={v.employee_id} onChange={x => setV({ ...v, employee_id: x.target.value ? Number(x.target.value) : '' })}><option value="">—</option>{d.employees.map(x => <option key={x.id} value={x.id}>{lang === 'ar' ? x.ar : x.en} · {x.code}</option>)}</select></Field>}
-      <Field req label={L('عنوان الخطة', 'Plan title')} error={e?.field('title')} className={plan ? 'sm:col-span-2' : ''}><input className="field" value={v.title} onChange={x => setV({ ...v, title: x.target.value })} /></Field>
+      {!plan && (canDept || d.can.manage) && <Field label={L('الخطة لـ', 'Plan for')} div className="sm:col-span-2"><Seg value={v.scope ?? 'employee'} onChange={s => setV({ ...v, scope: s })}
+        options={[{ v: 'employee', label: L('موظف', 'An employee') }, ...(canDept ? [{ v: 'department' as const, label: L('إدارة', 'A department') }] : []), ...(d.can.manage ? [{ v: 'company' as const, label: L('الشركة كلها', 'The whole company') }] : [])]} /></Field>}
+      {!plan && v.scope === 'department' && <Field req label={L('الإدارة', 'Department')} error={e?.field('department_id')}><select className="field" value={v.department_id ?? ''} onChange={x => setV({ ...v, department_id: x.target.value ? Number(x.target.value) : '' })}><option value="">—</option>{d.plan_departments?.map(x => <option key={x.id} value={x.id}>{bi(x, lang)}</option>)}</select></Field>}
+      {!plan && (v.scope ?? 'employee') === 'employee' && <Field req label={L('الموظف', 'Employee')} error={e?.field('employee_id')}><select className="field" value={v.employee_id} onChange={x => setV({ ...v, employee_id: x.target.value ? Number(x.target.value) : '' })}><option value="">—</option>{d.employees.map(x => <option key={x.id} value={x.id}>{lang === 'ar' ? x.ar : x.en} · {x.code}</option>)}</select></Field>}
+      <Field req label={L('عنوان الخطة', 'Plan title')} error={e?.field('title')} className={plan || v.scope === 'company' ? 'sm:col-span-2' : ''}><input className="field" value={v.title} onChange={x => setV({ ...v, title: x.target.value })} /></Field>
       <Field label={L('الفجوات', 'Gaps')} className="sm:col-span-2"><textarea className="field" value={v.gaps} onChange={x => setV({ ...v, gaps: x.target.value })} /></Field>
     </div>
     <Field div req label={L('الأهداف', 'Goals')} className="mt-3" error={e?.field('goals') ?? e?.field('goals.0.text')}><div className="space-y-2">{v.goals.map((g, i) => <div key={i} className="flex gap-2"><input className="field flex-1 min-w-0" value={g.text} onChange={x => setV({ ...v, goals: v.goals.map((y, j) => j === i ? { ...y, text: x.target.value } : y) })} />

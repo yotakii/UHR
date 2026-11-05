@@ -27,7 +27,7 @@ use Illuminate\Validation\ValidationException;
  */
 class DevelopmentController extends Controller
 {
-    private const PLAN_WITH = ['employee', 'activities.owner'];
+    private const PLAN_WITH = ['employee', 'department', 'activities.owner'];
 
     public function __construct(private DevelopmentPlans $plans, private Succession $succession) {}
 
@@ -35,21 +35,29 @@ class DevelopmentController extends Controller
     {
         $u = $request->user();
         $scope = Directory::scoped($u, 'succession');
-        $plans = DevelopmentPlan::with(self::PLAN_WITH)->whereIn('employee_id', (clone $scope)->select('id'))->orderByRaw("case status when 'active' then 0 when 'draft' then 1 else 2 end")->latest('id')->limit(300)->get();
+        // ملاحظة 69: خطط الإدارات (إدارتي، والإدارات التي أرأسها، وكلها للموارد البشرية) وخطط الشركة تظهر مع الخطط الفردية
+        $myDept = $u->employee_id ? Employee::whereKey($u->employee_id)->value('department_id') : null;
+        $heads = $u->employee_id ? Department::where('head_id', $u->employee_id)->pluck('id')->all() : [];
+        $all = Succession::manages($u);
+        $plans = DevelopmentPlan::with(self::PLAN_WITH)->where(fn ($w) => $w->where(fn ($x) => $x->where('scope', 'employee')->whereIn('employee_id', (clone $scope)->select('id')))
+            ->orWhere(fn ($x) => $x->where('scope', 'company')->when(! $all, fn ($y) => $y->where('status', '!=', 'draft')))
+            ->orWhere(fn ($x) => $x->where('scope', 'department')->when(! $all, fn ($y) => $y->where(fn ($z) => $z->whereIn('department_id', $heads ?: [0])->orWhere(fn ($q) => $q->where('department_id', $myDept ?? 0)->where('status', '!=', 'draft'))))))
+            ->orderByRaw("case status when 'active' then 0 when 'draft' then 1 else 2 end")->latest('id')->limit(300)->get();
         // أنشطة أنا مسؤول عنها في خطط غيري
-        $owned = $u->employee_id ? DevelopmentActivity::with(['plan.employee'])->where('owner_employee_id', $u->employee_id)->whereHas('plan', fn ($q) => $q->where('status', 'active')->where('employee_id', '!=', $u->employee_id))->get() : collect();
+        $owned = $u->employee_id ? DevelopmentActivity::with(['plan.employee', 'plan.department'])->where('owner_employee_id', $u->employee_id)->whereHas('plan', fn ($q) => $q->where('status', 'active')->where(fn ($w) => $w->whereNull('employee_id')->orWhere('employee_id', '!=', $u->employee_id)))->get() : collect();
         $manage = Succession::manages($u);
         $team = $manage || Perm::scope($u, 'succession') === 'team';
         $sp = $team ? SuccessionPlan::with(['department', 'incumbent', 'candidates.employee', 'candidates.developmentPlan', 'candidates.nominator.employee'])
             ->when(! $manage, fn ($q) => $q->whereIn('status', ['active', 'reviewed']))->orderByRaw("case status when 'active' then 0 when 'reviewed' then 1 else 2 end")->orderBy('title_ar')->get() : collect();
         return response()->json(['plans' => $plans->map(fn ($p) => DevelopmentPlans::row($p, $u)),
             'owned' => $owned->map(fn ($a) => ['id' => $a->id, 'title' => $a->title, 'kind' => $a->kind, 'due_on' => $a->due_on->toDateString(), 'status' => $a->status, 'progress' => $a->progress,
-                'overdue' => in_array($a->status, ['planned', 'in_progress'], true) && $a->due_on->isPast(), 'employee' => ['ar' => $a->plan->employee->name, 'en' => $a->plan->employee->name_en], 'plan' => $a->plan->title])->values(),
+                'overdue' => in_array($a->status, ['planned', 'in_progress'], true) && $a->due_on->isPast(), 'employee' => $a->plan->employee ? ['ar' => $a->plan->employee->name, 'en' => $a->plan->employee->name_en] : ['ar' => DevelopmentPlans::subject($a->plan)[0], 'en' => DevelopmentPlans::subject($a->plan)[1]], 'plan' => $a->plan->title])->values(),
             'succession' => $sp->map(fn ($p) => Succession::row($p, $u)),
             'employees' => (Perm::can($u, 'succession', 'create') ? (clone $scope)->current()->where('id', '!=', $u->employee_id ?? 0)->orderBy('code')->get() : collect())
                 ->map(fn ($e) => ['id' => $e->id, 'code' => $e->code, 'ar' => $e->name, 'en' => $e->name_en, 'dept' => $e->department_id])->values(),
             'owners' => Employee::current()->orderBy('code')->get(['id', 'code', 'name', 'name_en'])->map(fn ($e) => ['id' => $e->id, 'code' => $e->code, 'ar' => $e->name, 'en' => $e->name_en]),
             'competencies' => Competency::where('active', true)->orderBy('sort')->get()->map(fn ($c) => ['id' => $c->id, 'ar' => $c->name_ar, 'en' => $c->name_en]),
+            'plan_departments' => Department::where('active', true)->when(! $manage, fn ($q) => $q->whereIn('id', $heads ?: [0]))->orderBy('sort')->get()->map(fn ($d) => ['id' => $d->id, 'ar' => $d->name_ar, 'en' => $d->name_en]),
             'departments' => $manage ? Department::orderBy('id')->get()->map(fn ($d) => ['id' => $d->id, 'ar' => $d->name_ar, 'en' => $d->name_en]) : [],
             'settings' => Settings::development(), 'kinds' => DevelopmentPlans::KINDS, 'me' => $u->employee_id,
             'can' => ['create' => Perm::can($u, 'succession', 'create'), 'edit' => Perm::can($u, 'succession', 'edit'), 'manage' => $manage, 'team' => $team, 'settings' => Perm::can($u, 'settings', 'edit')]]);
@@ -155,7 +163,7 @@ class DevelopmentController extends Controller
 
     private function editable(Request $request, int $id): DevelopmentPlan
     {
-        $p = DevelopmentPlan::with('employee')->findOrFail($id);
+        $p = DevelopmentPlan::with(['employee', 'department'])->findOrFail($id);
         if (! $this->plans->canEdit($request->user(), $p)) abort(response()->json(['message' => L::t('لا تملك تعديل هذه الخطة.', 'You cannot edit this plan.'), 'code' => 'forbidden'], 403));
         return $p;
     }

@@ -76,6 +76,14 @@ Artisan::command('development:sweep', function () {
 })->purpose('Alert overdue development activities, due reviews and succession gaps');
 Schedule::command('development:sweep')->dailyAt('08:00');
 
+// المهام (ملاحظتا 61/62): مهمة تجاوزت موعدها ← تنبيه المكلَّف والمكلِّف مرة واحدة — يومياً
+Artisan::command('tasks:sweep', function () {
+    $n = 0;
+    foreach (\App\Models\Company::pluck('id') as $id) \App\Support\Tenant::run($id, function () use (&$n) { $n += app(\App\Services\Work\Tasks::class)->sweep(); });
+    $this->info("Overdue tasks alerted: {$n}.");
+})->purpose('Alert overdue work tasks');
+Schedule::command('tasks:sweep')->dailyAt('08:15');
+
 // النسخ الاحتياطي (D-27): نسخة الخادم الكاملة يومياً في وقت إعداد المنصة — يُفحص كل 15 دقيقة
 Artisan::command('backup:run {--auto : only when due} {--company= : slug — نسخة بيانات شركة}', function () {
     $svc = app(\App\Services\Admin\Backups::class);

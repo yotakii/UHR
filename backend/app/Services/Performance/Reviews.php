@@ -217,6 +217,7 @@ class Reviews
                 $out['approved']++;
                 $a = $this->award($r, $cfg);
                 $out[$a->status === 'review' ? 'review' : 'awards']++;
+                \App\Services\Work\Points::review($r);   // ملاحظة 61: نقاط من نتيجة التقييم
                 if ($uid = User::where('employee_id', $r->employee_id)->value('id')) Notify::user($uid, "صدرت نتيجة تقييمك في {$c->name_ar}", "Your result in {$c->name_en} is out", 'reviews');
             }
             PerformanceForm::whereHas('review', fn ($q) => $q->where('performance_cycle_id', $c->id))->where('status', 'pending')->delete();

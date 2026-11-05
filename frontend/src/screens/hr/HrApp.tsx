@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react'
-import { LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed, Megaphone, Gift, ClipboardCheck, SlidersHorizontal, Sprout, KeyRound, Building, UserCog, GitBranch, BellRing, Library, History, DatabaseBackup, ScanText, MessagesSquare, ArrowRight, ArrowLeft, X, CalendarDays, CalendarClock, MapPin , UserRound } from 'lucide-react'
+import { ListChecks, LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed, Megaphone, Gift, ClipboardCheck, SlidersHorizontal, Sprout, KeyRound, Building, UserCog, GitBranch, BellRing, Library, History, DatabaseBackup, ScanText, MessagesSquare, ArrowRight, ArrowLeft, X, CalendarDays, CalendarClock, MapPin , UserRound } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { navigate, useRoute } from '../../lib/router'
 import { can, type SessionUser } from '../../lib/session'
@@ -68,6 +68,7 @@ import { Backups } from './admin/Backups'
 import { OrgPrint } from './employees/OrgPrint'
 import { PolicyLibrary } from '../policies/PolicyLibrary'
 import { MyAccount } from '../account/MyAccount'
+import { Work } from '../work/Work'
 
 type Page = { item: NavItem; module: string | ((u: SessionUser) => boolean); view?: () => ReactNode; task?: string; section?: 'org' | 'rules' | 'system' }
 
@@ -127,6 +128,7 @@ export function HrApp({ user }: { user: SessionUser }) {
     { item: { to: '/hr/my-documents', icon: <FileSignature size={17} />, label: L('وثائقي للتوقيع', 'My documents'), group: g2 }, module: u => !!u.employee, view: () => <MyDocuments /> },
     { item: { to: '/hr/performance', icon: <Target size={17} />, label: L('الأداء وتقييم 360', 'Performance & 360'), group: g3 }, module: 'performance', view: () => <Performance /> },
     { item: { to: '/hr/development', icon: <Sprout size={17} />, label: L('التعاقب وخطط التطوير', 'Succession & development'), group: g3 }, module: 'succession', view: () => <Development /> },
+    { item: { to: '/hr/tasks', icon: <ListChecks size={17} />, label: L('المهام ومؤشرات الأداء', 'Tasks & KPIs'), group: g3 }, module: 'tasks', view: () => <Work /> },
     { item: { to: '/hr/analytics', icon: <BarChart3 size={17} />, label: L('التحليلات', 'Analytics'), group: g3 }, module: u => can(u, 'employees', 'export'), view: () => <Analytics /> },
     { item: { to: '/hr/settings', icon: <Settings2 size={18} />, label: L('الإعدادات', 'Settings'), group: g4 }, module: u => settingsPages(u).length > 0, view: () => <SettingsHub pages={settingsPages(user)} /> },
     { item: { to: '/hr/account', icon: <UserRound size={18} />, label: L('حسابي', 'My account'), group: g2, hidden: true }, module: () => true, view: () => <MyAccount servicesBase="/hr/my-services" /> },

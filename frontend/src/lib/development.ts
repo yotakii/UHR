@@ -10,7 +10,7 @@ export type ActStatus = 'planned' | 'in_progress' | 'done' | 'cancelled'
 export interface Activity { id: number; title: string; kind: ActKind; due_on: string; status: ActStatus; progress: number; note: string | null; overdue: boolean; owner: { id: number; name: Bi } | null; can_update: boolean }
 export interface Plan {
   id: number; title: string; gaps: string | null; goals: { text: string; done: boolean }[]; status: 'draft' | 'active' | 'done'; source: string
-  employee: { id: number; code: string; name: Bi; title: Bi }; next_review: string | null; review_due: boolean; reviews: { at: string; by: string; by_en: string; note: string; rating: number }[]
+  employee: { id: number; code: string; name: Bi; title: Bi } | null; scope?: 'employee' | 'department' | 'company'; department?: (Bi & { id: number }) | null; next_review: string | null; review_due: boolean; reviews: { at: string; by: string; by_en: string; note: string; rating: number }[]
   progress: number; activities: Activity[]; can: { edit: boolean }
 }
 export interface Candidate { id: number; readiness: Readiness; note: string | null; gaps: string | null; employee: { id: number; code: string; name: Bi; title: Bi }; plan: { id: number; status: string; title: string } | null; nominated_by: string | null; mine: boolean }
@@ -23,10 +23,10 @@ export interface DevSettings { readiness: (Bi & { key: Readiness })[]; review_mo
 export interface DevPage {
   plans: Plan[]; owned: { id: number; title: string; kind: ActKind; due_on: string; status: ActStatus; progress: number; overdue: boolean; employee: Bi; plan: string }[]
   succession: SPlan[]; employees: { id: number; code: string; ar: string; en: string; dept: number | null }[]; owners: { id: number; code: string; ar: string; en: string }[]
-  competencies: (Bi & { id: number })[]; departments: (Bi & { id: number })[]; settings: DevSettings; kinds: ActKind[]; me: number | null
+  competencies: (Bi & { id: number })[]; departments: (Bi & { id: number })[]; plan_departments?: (Bi & { id: number })[]; settings: DevSettings; kinds: ActKind[]; me: number | null
   can: { create: boolean; edit: boolean; manage: boolean; team: boolean; settings: boolean }
 }
-export interface PlanInput { employee_id: number | ''; title: string; gaps: string; goals: { text: string; done?: boolean }[]; activities: { id?: number; title: string; kind: ActKind; owner_employee_id: number | ''; due_on: string }[] }
+export interface PlanInput { scope?: 'employee' | 'department' | 'company'; department_id?: number | ''; employee_id: number | ''; title: string; gaps: string; goals: { text: string; done?: boolean }[]; activities: { id?: number; title: string; kind: ActKind; owner_employee_id: number | ''; due_on: string }[] }
 export interface SPlanInput { title_ar: string; title_en: string; department_id: number | ''; incumbent_id: number | ''; risk: SPlan['risk']; reason: string; competencies: number[] }
 
 const refresh = () => queryClient.invalidateQueries({ queryKey: ['development'] })

@@ -76,6 +76,10 @@ class Settings
         // diff_alert_pct تنبيه الفروقات عن الشهر السابق (ملاحظة 72)
         // مذكرة الترحيب F-32 (ملاحظة 53): نص الشركة بمتغيرات (فارغ = النص الافتراضي)، والتعميم على الشركة كلها أو على إدارة الموظف فقط
         'welcome_memo' => ['ar' => '', 'en' => '', 'audience' => 'all'],
+        // النقاط من الأداء (ملاحظة 61) — تُضاف لرصيد متجر المكافآت: إنجاز مهمة حسب أولويتها (late_factor عند التأخر)،
+        // تحقيق مؤشر أداء فردي (kpi_met عند 100% وkpi_exceed عند exceed_pct فأكثر)، ونتيجة التقييم المعتمد حسب المستوى
+        'points' => ['enabled' => true, 'task' => ['low' => 2, 'normal' => 5, 'high' => 10, 'urgent' => 15], 'late_factor' => 0.5,
+            'kpi_met' => 20, 'kpi_exceed' => 30, 'exceed_pct' => 110, 'review' => ['high' => 50, 'mid' => 25, 'low' => 0]],
         'payroll_sheet' => ['currency' => '', 'pay_day' => 0, 'diff_alert_pct' => 10],
         'docs' => [
             'types' => [
