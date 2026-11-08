@@ -127,7 +127,7 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 | 15g test notes — tasks (assign → submit → approve), KPIs for employee/department/company with periodic entries, points from performance (tasks, KPIs, approved reviews) into the rewards balance, department/company development plans | 📦 delivered |
 | 12b praise (company-value badges + points into the rewards balance) + automatic celebrations (birthdays, work anniversaries, new joiners, promotions) in the Space | 📦 delivered |
 | 13 «المساعد»: instant answers from the user's own data, policy library + user guide search with sources and a streamed local summary, actions (leave/justify/certificate/praise) via editable preview + two-step confirm, settings | 📦 delivered |
-| 14 final verification | |
+| 14 final verification: acceptance journey test, isolation of newer modules, full UI sweep (every page of every account × AR/EN × 1440/390), fixes, acceptance checklist in the test guide | 📦 delivered |
 
 **Task 03 delivered:**
 - Landing page: hero texts from settings, 3 cards, login card with show-password.
@@ -504,6 +504,14 @@ reference/           demo v26 + its source + extracted bundle (see §8) — read
 - Infra: dev api `PHP_CLI_SERVER_WORKERS=4` (a streamed answer no longer blocks other requests); `OLLAMA_NUM_PARALLEL=2` in both compose files (a question does not wait for a CV reading); `deploy/nginx.conf` `location = /api/assistant/ask` with `fastcgi_buffering off`.
 - Frontend: `lib/assistant.ts` (`ask()` stream reader, hooks, `openAssistant(draft?)` store), `screens/assistant/Assistant.tsx` (`AssistantButton` in both headers, `AssistantPanel` drawer 500px / full width on mobile: welcome + suggestions, user/assistant bubbles, stats/list/link cards, numbered sources with excerpt + «فتح الفقرة», live «الخلاصة» with [n] badges, editable action cards with debounced preview, «إرسال الطلب» → «تأكيد», Enter sends / Shift+Enter newline, clear, daily counter), `screens/hr/AssistantSettings.tsx` (`/hr/settings/assistant`).
 - Tests: `tests/Feature/AssistantTest.php` (4), `frontend/src/lib/__tests__/assistant.test.ts` (2).
+
+**Task 14 delivered (Nov 8) — final verification (SRS §9.4):**
+- `tests/Feature/AcceptanceTest.php`: (1) one journey through the API — public application (incomplete refused under the fields) → board → interview → F-25 → F-29 (blocked before salary verification) → applicant signs → four F-31 levels from their own accounts → the new employee signs in with the same password, signs custody/F-22/F-20/conduct, checks in from the portal, gets an emergency leave approved through every level with notices, asks the assistant → audit rows; (2) the public portal lists every company's jobs for guests **and signed-in users**.
+- **Fixed:** `/api/public/jobs` returned 500 for a signed-in company user — the tenant scope hid other companies' departments/locations. `JobOpening::department()/location()` now load `withoutGlobalScopes()` (a job's department is always its own company's).
+- **Fixed:** audit log page overflowed at 390 px (time `sm:whitespace-nowrap`, action code `break-all`).
+- `TenantIsolationTest::test_newer_modules_are_isolated_too`: Space post (read/comment/react/delete), work task, KPI entry, assistant action card, colleague search and development plans of another company → 403/404, lists clean, nothing changed.
+- UI sweep script (session scratchpad `e2e/sweep.mjs`): discovers every link of each account's menus + the settings hub + detail tabs, visits each page in AR/EN at 1440/390 and records page errors, console errors, API 5xx, visible NaN/undefined/null/[object Object]/Invalid Date and horizontal overflow — 205 pages × 4 ≈ 820 views, 3 findings, all fixed.
+- `docs/UHR-Test-Guide.pdf`: section 7 «ما بقي خارج هذا الإصدار» (ZERP, SMS/WhatsApp provider, D-15) and section 8 «قائمة القبول النهائية» (each §9.4 item → automatic/manual + the test that proves it; manual checks on the trial server: real NFC card, two devices live sync, salary verification methods, assistant summary speed).
 
 **Lessons from the test-notes file (Nov 5) — apply them to every new screen:** two-step confirmation for anything that sends a request (84); no money amount anywhere before identity verification, including print and chat (82); every value policy-driven with a settings screen and defaults (25, 64, 70); per-branch time zone for «today» (80); search real records, not page names (51); say where things appear and link to them (26, 27); Enter/Esc behave as expected and every panel/settings page has a close button (43, 45); careful formal Arabic wording and spelling (02, 42); company data isolation tested (77).
 

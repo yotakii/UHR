@@ -58,9 +58,9 @@ export function AuditLog() {
       {d.data.length === 0 ? <Empty title={L('لا توجد عمليات تطابق التصفية', 'No entries match the filters')} /> : <table className="tbl">
         <thead><tr><th>{L('الوقت', 'Time')}</th><th>{L('المستخدم', 'User')}</th><th>{L('العملية', 'Operation')}</th><th className="hidden lg:table-cell">{L('العنصر', 'Item')}</th><th className="hidden md:table-cell">{L('العنوان', 'IP')}</th></tr></thead>
         <tbody>{d.data.map(r => <tr key={r.id} className="cursor-pointer hover:bg-sub" onClick={() => setOpen(r)}>
-          <td className="num whitespace-nowrap text-[12.5px]">{fmtDateTime(r.at, lang)}</td>
+          <td className="num sm:whitespace-nowrap text-[12.5px]">{fmtDateTime(r.at, lang)}</td>
           <td>{r.user ? <><div className="font-medium">{bi(r.user, lang)}</div><div className="text-[12px] text-ink-3 ltr text-start hidden sm:block">{r.user.email}</div></> : <span className="text-ink-3">{L('النظام', 'System')}</span>}</td>
-          <td><div>{bi(r.label, lang)}</div><div className="text-[11.5px] text-ink-3 ltr text-start">{r.action}</div><div className="lg:hidden text-[12px] text-ink-3">{r.subject && <>{bi(r.subject, lang)} <span className="num">#{r.subject.id}</span></>}</div></td>
+          <td><div>{bi(r.label, lang)}</div><div className="text-[11.5px] text-ink-3 ltr text-start break-all">{r.action}</div><div className="lg:hidden text-[12px] text-ink-3">{r.subject && <>{bi(r.subject, lang)} <span className="num">#{r.subject.id}</span></>}</div></td>
           <td className="hidden lg:table-cell">{r.subject ? <>{bi(r.subject, lang)} <span className="text-ink-3 num">#{r.subject.id}</span></> : <span className="text-ink-3">—</span>}</td>
           <td className="hidden md:table-cell ltr text-start text-[12.5px] text-ink-3">{r.ip ?? '—'}</td>
         </tr>)}</tbody></table>}
