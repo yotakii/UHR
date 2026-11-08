@@ -6,7 +6,7 @@ use App\Models\Company;
 
 /**
  * بوابة الشركة (ملاحظة 86): يحدد الشركة من عنوان الطلب —
- * نطاقها الخاص (companies.domain، مثل hr.alfarada.sy) أو {slug}.{base_domain} من إعداد المنصة portal_hosts.
+ * نطاقها الخاص (companies.domain، مثل hr.uniqueness.sy) أو {slug}.{base_domain} من إعداد المنصة portal_hosts.
  * لا شيء يتغير في العزل: البيانات معزولة بـ company_id دائماً، والبوابة هوية ودخول فقط.
  */
 class HostCompany

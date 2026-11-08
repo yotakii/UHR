@@ -34,7 +34,7 @@ return new class extends Migration
     {
         Schema::create('companies', function (Blueprint $t) {
             $t->id();
-            $t->string('slug', 40)->unique();               // atmata, alfarada → {slug}.النطاق و /c/{slug}
+            $t->string('slug', 40)->unique();               // atmata, uniqueness → {slug}.النطاق و /c/{slug}
             $t->string('name_ar');
             $t->string('name_en');
             $t->string('short_ar')->nullable();

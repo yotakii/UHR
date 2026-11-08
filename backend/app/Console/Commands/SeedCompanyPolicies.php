@@ -10,7 +10,7 @@ use Illuminate\Console\Command;
 
 /**
  * مكتبة السياسات (D-26): يبذر وثائق الشركة الحالية (نظام العاملين، HR.01-01، HR.01-03، جدول المخالفات، ميثاق السلوك) منشورةً.
- *   php artisan policies:seed-company alfarada --by=hr@alfarada.sy [--notify]
+ *   php artisan policies:seed-company uniqueness --by=hr@uniqueness.sy [--notify]
  */
 class SeedCompanyPolicies extends Command
 {

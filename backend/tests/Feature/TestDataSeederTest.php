@@ -29,7 +29,7 @@ class TestDataSeederTest extends TestCase
         parent::setUp();
         Carbon::setTestNow(Carbon::parse('2026-10-12 10:30:00', 'Asia/Damascus'));
         $this->seed(TestDataSeeder::class);
-        $this->useCompany('alfarada');   // بيانات الديمو داخل شركة الفرادة
+        $this->useCompany('uniqueness');   // بيانات الديمو داخل شركة الفرادة
     }
 
     protected function tearDown(): void
@@ -40,7 +40,7 @@ class TestDataSeederTest extends TestCase
 
     public function test_two_companies_and_isolation(): void
     {
-        $this->assertSame(['atmata', 'alfarada'], \App\Models\Company::orderBy('id')->pluck('slug')->all());
+        $this->assertSame(['atmata', 'uniqueness'], \App\Models\Company::orderBy('id')->pluck('slug')->all());
         $this->assertSame(6, JobOpening::count());
         $this->useCompany('atmata');
         $this->assertSame(3, JobOpening::count());
@@ -66,9 +66,9 @@ class TestDataSeederTest extends TestCase
     public function test_random_values_match_demo_seed_exactly(): void
     {
         $expect = [
-            'UHR-1001' => ['+963 937 172 599', '2017-08-12', '1998-02-12', '09488338822', '04:10:A7:F4:6C', 2, 0, 'hani.samman@alfarada.sy'],
-            'UHR-1007' => ['+963 932 289 493', '2023-09-12', '1978-08-12', '04232655206', '04:16:A7:E6:6C', 1, 0, 'samer.halabi@alfarada.sy'],
-            'UHR-1032' => ['+963 948 709 753', '2023-10-12', '1994-08-12', '09229242673', '04:2F:A7:73:6C', 0, 0, 'ziad.kassem@alfarada.sy'],
+            'UHR-1001' => ['+963 937 172 599', '2017-08-12', '1998-02-12', '09488338822', '04:10:A7:F4:6C', 2, 0, 'hani.samman@uniqueness.sy'],
+            'UHR-1007' => ['+963 932 289 493', '2023-09-12', '1978-08-12', '04232655206', '04:16:A7:E6:6C', 1, 0, 'samer.halabi@uniqueness.sy'],
+            'UHR-1032' => ['+963 948 709 753', '2023-10-12', '1994-08-12', '09229242673', '04:2F:A7:73:6C', 0, 0, 'ziad.kassem@uniqueness.sy'],
         ];
         foreach ($expect as $code => [$phone, $hire, $dob, $nid, $nfc, $leave, $sick, $email]) {
             $e = Employee::where('code', $code)->firstOrFail();
@@ -109,15 +109,15 @@ class TestDataSeederTest extends TestCase
         $this->assertSame(0, AttendanceDay::where('employee_id', $samer->id)->whereDate('date', '2026-10-12')->count());
         $this->assertSame(1, $samer->logs()->count());
 
-        $this->assertSame('hr', User::where('email', 'admin@alfarada.sy')->first()->portal());
-        $hr = User::where('email', 'hr@alfarada.sy')->first();
+        $this->assertSame('hr', User::where('email', 'admin@uniqueness.sy')->first()->portal());
+        $hr = User::where('email', 'hr@uniqueness.sy')->first();
         $this->assertTrue($hr->hasRole('hr_director'));
         $this->assertSame('UHR-1003', $hr->employee->code);
-        $this->assertSame('employee', User::where('email', 'samer.halabi@alfarada.sy')->first()->portal());
+        $this->assertSame('employee', User::where('email', 'samer.halabi@uniqueness.sy')->first()->portal());
         $leen = User::where('email', 'leen.ali@mail.sy')->first();
         $this->assertSame(['candidate', null], [$leen->portal(), $leen->company_id]);
         $this->assertSame(['UNQ-2026-APP-48506'], $leen->candidates->pluck('ref')->all());
-        $this->assertSame('alfarada', User::where('email', 'hr@alfarada.sy')->first()->company->slug);
+        $this->assertSame('uniqueness', User::where('email', 'hr@uniqueness.sy')->first()->company->slug);
         $this->assertSame('platform', User::where('email', 'platform@atmata.sy')->first()->portal());
 
         $this->assertSame('UHR-1033', Counters::employeeCode());
@@ -128,7 +128,7 @@ class TestDataSeederTest extends TestCase
     public function test_reseeding_is_safe(): void
     {
         $this->seed(TestDataSeeder::class);
-        $this->useCompany('alfarada');
+        $this->useCompany('uniqueness');
         $this->assertSame(2, \App\Models\Company::count());
         $this->assertSame(32, Employee::count());
         $this->assertSame(10, Candidate::count());

@@ -70,13 +70,13 @@ class AcceptanceTest extends TestCase
             'shifts' => 0, 'travel' => 1, 'public_sector' => 0, 'conviction' => 0, 'salary' => 750, 'availability' => '2026-11-01', 'source' => 'website',
             'cv' => UploadedFile::fake()->create('Rana_CV.pdf', 200, 'application/pdf'),
             'password' => 'Rana2026pw', 'password_confirmation' => 'Rana2026pw', 'agree_info' => 1, 'agree_medical' => 1, 'agree_data' => 1, 'keep_cv' => 1];
-        $this->withHeaders(['Accept' => 'application/json'])->post('/api/public/jobs/alfarada/REQ-2026-034/apply', ['email' => 'x'] + array_diff_key($form, ['cv' => 1, 'name' => 1]))
+        $this->withHeaders(['Accept' => 'application/json'])->post('/api/public/jobs/uniqueness/REQ-2026-034/apply', ['email' => 'x'] + array_diff_key($form, ['cv' => 1, 'name' => 1]))
             ->assertUnprocessable()->assertJsonValidationErrors(['name', 'email']);
-        $ref = $this->withHeaders(['Accept' => 'application/json'])->post('/api/public/jobs/alfarada/REQ-2026-034/apply', $form)->assertCreated()->json('data.ref');
+        $ref = $this->withHeaders(['Accept' => 'application/json'])->post('/api/public/jobs/uniqueness/REQ-2026-034/apply', $form)->assertCreated()->json('data.ref');
         $cand = Candidate::allCompanies()->where('ref', $ref)->firstOrFail();
 
         // 2) يظهر فوراً في لوحة المتقدمين، ويُنقل للمقابلة ثم تُعبّأ F-25 فيصبح «فني»
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->assertContains($cand->id, collect($this->getJson('/api/hr/candidates')->assertOk()->json('data'))->pluck('id')->all());
         $this->postJson("/api/hr/candidates/{$cand->id}/move", ['stage' => 'interview'])->assertOk();
         $ratings = array_fill_keys(\App\Services\Recruitment\F25::keys(), 4);
@@ -96,7 +96,7 @@ class AcceptanceTest extends TestCase
         // 5) F-31: أربعة مستويات بالترتيب، كلٌّ من حسابه
         $steps = $cand->refresh()->appointment()->with('approvals')->firstOrFail()->approvals->pluck('id')->all();
         $this->assertCount(4, $steps);
-        foreach (['hr@alfarada.sy', $this->staff('UHR-1004'), $this->staff('UHR-1002'), $this->staff('UHR-1001')] as $i => $who) {
+        foreach (['hr@uniqueness.sy', $this->staff('UHR-1004'), $this->staff('UHR-1002'), $this->staff('UHR-1001')] as $i => $who) {
             $this->login($who);
             $r = $this->postJson("/api/hr/approvals/{$steps[$i]}", ['decision' => 'approved', 'reason' => 'مطابق للملاك المعتمد'])->assertOk();
         }
@@ -128,7 +128,7 @@ class AcceptanceTest extends TestCase
         $before = Notice::allCompanies()->where('user_id', $me)->count();
         for ($i = 0; $i < 6 && LeaveRequest::find($l['id'])->status !== 'approved'; $i++) {
             $step = \App\Models\RequestStep::where('subject_id', $l['id'])->where('status', 'pending')->firstOrFail();
-            $owner = $step->user_id ? User::find($step->user_id)->email : 'hr@alfarada.sy';
+            $owner = $step->user_id ? User::find($step->user_id)->email : 'hr@uniqueness.sy';
             $this->login($owner);
             $this->postJson("/api/me/approvals/{$step->id}", ['decision' => 'approve', 'note' => 'موافق'])->assertOk();
         }
@@ -153,11 +153,11 @@ class AcceptanceTest extends TestCase
         $slugs = fn () => collect($this->getJson('/api/public/jobs')->assertOk()->json('data'))->pluck('company.slug')->unique()->sort()->values()->all();
         $guest = $slugs();
         $this->assertContains('atmata', $guest);
-        $this->assertContains('alfarada', $guest);
-        $this->login('hr@alfarada.sy');
+        $this->assertContains('uniqueness', $guest);
+        $this->login('hr@uniqueness.sy');
         $this->assertSame($guest, $slugs());
         $this->getJson('/api/public/portal')->assertOk();
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->assertSame($guest, $slugs());
     }
 }

@@ -51,24 +51,24 @@ class ApplicationTest extends TestCase
         ], $over);
     }
 
-    private function submit(array $over = [], string $lang = 'ar', string $job = 'alfarada/REQ-2026-034')
+    private function submit(array $over = [], string $lang = 'ar', string $job = 'uniqueness/REQ-2026-034')
     {
         return $this->withHeaders(['Accept' => 'application/json', 'Accept-Language' => $lang])->post("/api/public/jobs/{$job}/apply", $this->form($over));
     }
 
-    private function check(array $body, string $job = 'alfarada/REQ-2026-034')
+    private function check(array $body, string $job = 'uniqueness/REQ-2026-034')
     {
         return $this->withHeader('Accept-Language', 'ar')->postJson("/api/public/jobs/{$job}/check", $body);
     }
 
     public function test_complete_application_creates_file_account_and_notifies(): void
     {
-        $res = $this->submit()->assertCreated()->assertJsonPath('data.email', 'sara.ahmad@mail.sy')->assertJsonPath('data.job.title.en', 'Accountant')->assertJsonPath('data.company.slug', 'alfarada');
+        $res = $this->submit()->assertCreated()->assertJsonPath('data.email', 'sara.ahmad@mail.sy')->assertJsonPath('data.job.title.en', 'Accountant')->assertJsonPath('data.company.slug', 'uniqueness');
         $ref = $res->json('data.ref');
         $this->assertMatchesRegularExpression('/^UNQ-2026-APP-\d{5}$/', $ref);
 
         $c = Candidate::with(['cv', 'logs', 'company'])->where('ref', $ref)->firstOrFail();
-        $this->assertSame('alfarada', $c->company->slug);
+        $this->assertSame('uniqueness', $c->company->slug);
         $this->assertNotNull($c->consent_at);
         $this->assertTrue($c->keep_cv);
         $this->assertSame($c->company_id, $c->cv->company_id);
@@ -112,7 +112,7 @@ class ApplicationTest extends TestCase
 
     public function test_closed_expired_internal_or_unknown_job_is_refused(): void
     {
-        $this->submit([], 'ar', 'alfarada/REQ-2026-999')->assertNotFound();
+        $this->submit([], 'ar', 'uniqueness/REQ-2026-999')->assertNotFound();
         $this->submit([], 'ar', 'atmata/REQ-2026-034')->assertNotFound();   // الرمز لشركة أخرى
         JobOpening::where('code', 'REQ-2026-034')->update(['closes_at' => '2026-10-11']);
         $this->submit()->assertNotFound()->assertJsonPath('message', 'هذه الوظيفة غير متاحة للتقديم حالياً — ربما أُغلقت أو انتهى موعدها.');
@@ -149,7 +149,7 @@ class ApplicationTest extends TestCase
         Notification::assertSentTo(User::where('email', 'weak@mail.sy')->first(), \App\Notifications\ApplicationClosed::class);
 
         // الرفض التلقائي قابل للتعطيل ← يصير للمراجعة
-        \App\Support\Tenant::run(\App\Models\Company::where('slug', 'alfarada')->first(), fn () => \App\Support\Settings::put('rules', [...\App\Support\Settings::get('rules'), 'auto_reject' => false]));
+        \App\Support\Tenant::run(\App\Models\Company::where('slug', 'uniqueness')->first(), fn () => \App\Support\Settings::put('rules', [...\App\Support\Settings::get('rules'), 'auto_reject' => false]));
         $w2 = $this->submit(['email' => 'weak2@mail.sy', 'national_id' => '09998', 'years_exp' => 0, 'degree' => 0, 'salary' => 2000, 'english' => 'weak', 'linkedin' => '', 'ref_name' => '', 'experience' => [], 'cv' => null])->json('data.ref');
         $this->assertSame(['new', 'review'], [Candidate::where('ref', $w2)->value('stage'), Candidate::where('ref', $w2)->value('match_band')]);
     }
@@ -194,7 +194,7 @@ class ApplicationTest extends TestCase
         $this->submit(['password' => 'Sara2026pw', 'password_confirmation' => null], 'ar', 'atmata/ATM-2026-002')->assertCreated()->assertJsonPath('data.company.slug', 'atmata')->assertJsonPath('data.merged', false);
         $user = User::where('email', 'sara.ahmad@mail.sy')->first();
         $this->assertSame(1, User::where('email', 'sara.ahmad@mail.sy')->count());
-        $this->assertSame(['alfarada', 'atmata'], $user->candidates()->with('company')->orderBy('id')->get()->pluck('company.slug')->all());
+        $this->assertSame(['uniqueness', 'atmata'], $user->candidates()->with('company')->orderBy('id')->get()->pluck('company.slug')->all());
 
         // المسجّل دخوله يقدّم بلا كلمة مرور، وببريد حسابه
         $this->postJson('/api/auth/login', ['email' => 'sara.ahmad@mail.sy', 'password' => 'Sara2026pw'])->assertOk();
@@ -212,10 +212,10 @@ class ApplicationTest extends TestCase
 
     public function test_staff_emails_cannot_apply_publicly(): void
     {
-        $this->check(['email' => 'samer.halabi@alfarada.sy'])->assertJsonPath('code', 'staff_email')->assertJsonPath('field', 'email')->assertJsonPath('message', 'هذا البريد مرتبط بحساب موظف في هذه الشركة. قدّم طلباً داخلياً من بوابة الموظف.');
-        $this->submit(['email' => 'samer.halabi@alfarada.sy'])->assertStatus(422)->assertJsonPath('code', 'staff_email');
-        $this->check(['email' => 'samer.halabi@alfarada.sy'], 'atmata/ATM-2026-001')->assertJsonPath('message', 'هذا البريد مرتبط بحساب عمل على المنصة. استخدم بريدك الشخصي للتقديم.');
-        $this->assertSame(0, Candidate::allCompanies()->where('email', 'samer.halabi@alfarada.sy')->count());
+        $this->check(['email' => 'samer.halabi@uniqueness.sy'])->assertJsonPath('code', 'staff_email')->assertJsonPath('field', 'email')->assertJsonPath('message', 'هذا البريد مرتبط بحساب موظف في هذه الشركة. قدّم طلباً داخلياً من بوابة الموظف.');
+        $this->submit(['email' => 'samer.halabi@uniqueness.sy'])->assertStatus(422)->assertJsonPath('code', 'staff_email');
+        $this->check(['email' => 'samer.halabi@uniqueness.sy'], 'atmata/ATM-2026-001')->assertJsonPath('message', 'هذا البريد مرتبط بحساب عمل على المنصة. استخدم بريدك الشخصي للتقديم.');
+        $this->assertSame(0, Candidate::allCompanies()->where('email', 'samer.halabi@uniqueness.sy')->count());
     }
 
     public function test_existing_candidate_creates_no_referral(): void
@@ -229,8 +229,8 @@ class ApplicationTest extends TestCase
 
     public function test_referral_link_is_validated_on_the_job_page(): void
     {
-        $this->getJson('/api/public/jobs/alfarada/REQ-2026-038?ref=uhr1025-j4')->assertOk()->assertJsonPath('data.referral.valid', true)->assertJsonPath('data.referral.code', 'UHR1025-J4');
-        $this->getJson('/api/public/jobs/alfarada/REQ-2026-038?ref=NOPE-1')->assertOk()->assertJsonPath('data.referral.valid', false);
+        $this->getJson('/api/public/jobs/uniqueness/REQ-2026-038?ref=uhr1025-j4')->assertOk()->assertJsonPath('data.referral.valid', true)->assertJsonPath('data.referral.code', 'UHR1025-J4');
+        $this->getJson('/api/public/jobs/uniqueness/REQ-2026-038?ref=NOPE-1')->assertOk()->assertJsonPath('data.referral.valid', false);
     }
 
     public function test_referral_code_links_referrer_and_notifies_them(): void
@@ -249,7 +249,7 @@ class ApplicationTest extends TestCase
     public function test_public_portal_is_rate_limited(): void
     {
         $this->withMiddleware(ThrottleRequests::class);
-        for ($i = 0; $i < 5; $i++) $this->postJson('/api/public/jobs/alfarada/REQ-2026-034/apply', [])->assertStatus(422);
-        $this->postJson('/api/public/jobs/alfarada/REQ-2026-034/apply', [])->assertStatus(429)->assertJsonPath('code', 'throttled');
+        for ($i = 0; $i < 5; $i++) $this->postJson('/api/public/jobs/uniqueness/REQ-2026-034/apply', [])->assertStatus(422);
+        $this->postJson('/api/public/jobs/uniqueness/REQ-2026-034/apply', [])->assertStatus(429)->assertJsonPath('code', 'throttled');
     }
 }

@@ -47,6 +47,6 @@ function HostsPanel() {
         <input className="field ltr text-start" value={val} placeholder="uhr.atmata-group.com" onChange={x => { setV(x.target.value.toLowerCase().trim()); save.reset() }} /></Field></div>
       <Btn kind="primary" disabled={save.isPending || v === null} onClick={() => save.mutate({ base_domain: val }, { onSuccess: () => { setV(null); toast(L('حُفظ', 'Saved')) } })}>{L('حفظ', 'Save')}</Btn>
     </div>
-    {val && <p className="text-[12.5px] text-ink-3 mt-2">{L('مثال:', 'Example:')} <span className="ltr inline-block">https://alfarada.{val}</span></p>}
+    {val && <p className="text-[12.5px] text-ink-3 mt-2">{L('مثال:', 'Example:')} <span className="ltr inline-block">https://uniqueness.{val}</span></p>}
   </Panel>
 }

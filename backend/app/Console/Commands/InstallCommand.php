@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
 /**
  * تثبيت المنصة: القيم الأساسية + حساب مدير المنصة، واختيارياً أول شركة بمديرها.
  *   php artisan uhr:install --email=platform@atmata.sy
- *   php artisan uhr:install --email=platform@atmata.sy --company=alfarada --company-name-ar="الفرادة" --company-name-en="Uniqueness" --company-admin=admin@alfarada.sy
+ *   php artisan uhr:install --email=platform@atmata.sy --company=uniqueness --company-name-ar="الفرادة" --company-name-en="Uniqueness" --company-admin=admin@uniqueness.sy
  * بدون --password تُولَّد كلمة مرور مؤقتة ويُلزم صاحبها بتغييرها عند أول دخول.
  */
 class InstallCommand extends Command

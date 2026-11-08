@@ -17,7 +17,7 @@ class Settings
         'company' => [
             'name_ar' => 'شركة الفرادة للتطوير والاستثمار', 'name_en' => 'Uniqueness Development & Investment Co.',
             'short_ar' => 'مجموعة الفرادة', 'short_en' => 'Uniqueness Group', 'brand_latin' => 'UNIQUENESS GROUP',
-            'domain' => 'alfarada.sy', 'careers_url' => 'https://careers.alfarada.sy', 'form_prefix' => 'Uniqueness-HR-01',
+            'domain' => 'uniqueness.sy', 'careers_url' => 'https://careers.uniqueness.sy', 'form_prefix' => 'Uniqueness-HR-01',
             'hr_dept_ar' => 'إدارة الموارد البشرية', 'hr_dept_en' => 'Human Resources Department',
         ],
         // نصوص الواجهة العامة (M01) — قابلة للتعديل من الإعدادات

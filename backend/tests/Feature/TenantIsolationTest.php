@@ -46,11 +46,11 @@ class TenantIsolationTest extends TestCase
 
     public function test_one_company_cannot_reach_another_companys_records(): void
     {
-        $fa = Company::where('slug', 'alfarada')->firstOrFail();
+        $fa = Company::where('slug', 'uniqueness')->firstOrFail();
         // معرّفات من «الفرادة»
         [$emp, $cand, $job, $asset, $leave, $dept, $file, $sheet] = Tenant::run($fa->id, function () {
-            $e = Employee::where('email', 'samer.halabi@alfarada.sy')->firstOrFail();
-            $hr = User::where('email', 'hr@alfarada.sy')->firstOrFail();
+            $e = Employee::where('email', 'samer.halabi@uniqueness.sy')->firstOrFail();
+            $hr = User::where('email', 'hr@uniqueness.sy')->firstOrFail();
             $doc = app(\App\Services\People\EmployeeDocs::class)->upload($e, UploadedFile::fake()->create('id.pdf', 10, 'application/pdf'), ['type' => 'id'], $hr);
             $sheet = app(\App\Services\Payroll\Payroll::class)->open('2026-09', $hr);
             return [$e, Candidate::first(), JobOpening::first(), Asset::first(), LeaveRequest::first(), Department::first(), $doc->file_id, $sheet];
@@ -95,14 +95,14 @@ class TenantIsolationTest extends TestCase
     /** 14 — الوحدات الأحدث: الساحة، الشكر، المهام والمؤشرات، خطط التطوير، المساعد */
     public function test_newer_modules_are_isolated_too(): void
     {
-        $fa = Company::where('slug', 'alfarada')->firstOrFail();
+        $fa = Company::where('slug', 'uniqueness')->firstOrFail();
         [$post, $task, $kpi, $msg] = Tenant::run($fa->id, function () {
-            $u = User::where('email', 'samer.halabi@alfarada.sy')->firstOrFail();
+            $u = User::where('email', 'samer.halabi@uniqueness.sy')->firstOrFail();
             $space = app(\App\Services\Space\Space::class);
             $space->ensureDefaults();
             $c = \App\Models\Community::where('kind', 'company')->firstOrFail();
             $post = $space->create($u, ['community_id' => $c->id, 'kind' => 'post', 'body' => 'منشور داخلي للفرادة'], []);
-            $hr = User::where('email', 'hr@alfarada.sy')->firstOrFail();
+            $hr = User::where('email', 'hr@uniqueness.sy')->firstOrFail();
             $task = app(\App\Services\Work\Tasks::class)->save(null, ['title' => 'مهمة سرية', 'employee_id' => $u->employee_id, 'priority' => 'normal'], $hr);
             $kpi = app(\App\Services\Work\Kpis::class)->save(null, ['scope' => 'company', 'name_ar' => 'مؤشر الفرادة', 'unit' => 'count', 'target' => 10, 'direction' => 'higher', 'period' => 'month'], $hr);
             $msg = \App\Models\AssistantMessage::create(['user_id' => $u->id, 'role' => 'assistant', 'text' => 'رد', 'data' => ['action' => ['kind' => 'leave', 'status' => 'pending', 'fields' => [], 'errors' => [], 'warnings' => [], 'info' => [], 'digest' => 'x', 'expires_at' => now()->addHour()->toIso8601String(), 'result' => null]]]);
@@ -129,36 +129,36 @@ class TenantIsolationTest extends TestCase
     public function test_company_portal_login_and_platform_company_details(): void
     {
         // من بوابة «أتمتة» لا يدخل موظف «الفرادة» — نفس رسالة الخطأ
-        $this->login('samer.halabi@alfarada.sy', ['company' => 'atmata'])->assertUnprocessable()->assertJsonPath('code', 'invalid');
-        $this->login('samer.halabi@alfarada.sy', ['company' => 'alfarada'])->assertOk();
+        $this->login('samer.halabi@uniqueness.sy', ['company' => 'atmata'])->assertUnprocessable()->assertJsonPath('code', 'invalid');
+        $this->login('samer.halabi@uniqueness.sy', ['company' => 'uniqueness'])->assertOk();
         $this->login('leen.ali@mail.sy', ['company' => 'atmata'])->assertOk();   // المتقدم بحسابه العام
 
         // نطاق الشركة الخاص والعناوين الفرعية
-        Company::where('slug', 'alfarada')->update(['domain' => 'hr.alfarada.sy', 'brand_color' => '#0f766e']);
+        Company::where('slug', 'uniqueness')->update(['domain' => 'hr.uniqueness.sy', 'brand_color' => '#0f766e']);
         $this->postJson('/api/auth/logout');
-        $this->getJson('http://hr.alfarada.sy/api/public/context')->assertOk()->assertJsonPath('company.slug', 'alfarada')->assertJsonPath('company.brand_color', '#0f766e');
+        $this->getJson('http://hr.uniqueness.sy/api/public/context')->assertOk()->assertJsonPath('company.slug', 'uniqueness')->assertJsonPath('company.brand_color', '#0f766e');
         $this->getJson('http://localhost/api/public/context')->assertOk()->assertJsonPath('company', null);
         Settings::putPlatform('portal_hosts', ['base_domain' => 'uhr.example.com']);
         $this->getJson('http://atmata.uhr.example.com/api/public/context')->assertJsonPath('company.slug', 'atmata');
         $this->getJson('http://www.uhr.example.com/api/public/context')->assertJsonPath('company', null);
-        $this->postJson('http://hr.alfarada.sy/api/auth/login', ['email' => 'hr@atmata.sy', 'password' => '123456'])->assertUnprocessable();
+        $this->postJson('http://hr.uniqueness.sy/api/auth/login', ['email' => 'hr@atmata.sy', 'password' => '123456'])->assertUnprocessable();
 
         // لوحة المنصة: الاستخدام والحسابات بلا كلمات مرور، وإجراءات آمنة
         $this->login('platform@atmata.sy')->assertOk();
-        $fa = Company::where('slug', 'alfarada')->firstOrFail();
+        $fa = Company::where('slug', 'uniqueness')->firstOrFail();
         $d = $this->getJson("/api/platform/companies/{$fa->id}/detail")->assertOk();
         $this->assertGreaterThan(0, $d->json('data.usage.users.total'));
-        $this->assertContains('https://hr.alfarada.sy', $d->json('data.portal_urls'));
+        $this->assertContains('https://hr.uniqueness.sy', $d->json('data.portal_urls'));
         $keys = collect($d->json('data.accounts'))->map(fn ($a) => array_keys($a))->flatten()->unique()->all();
         $this->assertEmpty(array_intersect($keys, ['password', 'remember_token', 'invite_hash', 'totp_secret', 'link']));
         $this->assertStringNotContainsString('$2y$', $d->getContent());
-        $samer = collect($d->json('data.accounts'))->firstWhere('email', 'samer.halabi@alfarada.sy');
+        $samer = collect($d->json('data.accounts'))->firstWhere('email', 'samer.halabi@uniqueness.sy');
         $this->postJson("/api/platform/companies/{$fa->id}/users/{$samer['id']}/deactivate")->assertOk()->assertJsonPath('data.state', 'inactive');
         $this->postJson("/api/platform/companies/{$fa->id}/users/{$samer['id']}/activate")->assertOk()->assertJsonPath('data.state', 'active');
         $this->postJson("/api/platform/companies/{$fa->id}/users/{$samer['id']}/reset-password")->assertOk()->assertJsonPath('sent', true)->assertJsonMissingPath('link');
         $other = Company::where('slug', 'atmata')->value('id');
         $this->postJson("/api/platform/companies/{$other}/users/{$samer['id']}/unlock")->assertNotFound();   // حساب ليس من هذه الشركة
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->getJson("/api/platform/companies/{$fa->id}/detail")->assertForbidden();
     }
 }

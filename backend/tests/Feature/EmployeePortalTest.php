@@ -46,7 +46,7 @@ class EmployeePortalTest extends TestCase
     {
         $samer = Employee::allCompanies()->where('code', 'UHR-1007')->firstOrFail();
         AttendanceDay::allCompanies()->where('employee_id', $samer->id)->where('date', '2026-10-12')->delete();
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $h = $this->getJson('/api/me/home')->assertOk()->json();
         $this->assertNull($h['today']['in']);
         $this->assertTrue($h['today']['checkin']);
@@ -71,7 +71,7 @@ class EmployeePortalTest extends TestCase
         $samer = Employee::allCompanies()->where('code', 'UHR-1007')->firstOrFail();
         AttendanceDay::allCompanies()->where('employee_id', $samer->id)->where('date', '2026-10-12')->delete();
         $this->terminal($samer, ['portal_checkin' => false]);
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->assertFalse($this->getJson('/api/me/home')->json('today.checkin'));
         $this->postJson('/api/me/checkin')->assertForbidden()->assertJsonPath('code', 'portal_checkin_off');
 
@@ -85,7 +85,7 @@ class EmployeePortalTest extends TestCase
 
     public function test_team_and_profile(): void
     {
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $t = $this->getJson('/api/me/team')->assertOk()->json();
         $this->assertTrue(collect($t['rows'])->contains('me', true));
         $this->assertTrue(collect($t['rows'])->every(fn ($r) => $r['phone'] === null || mb_strlen($r['phone']) <= 7));

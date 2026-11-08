@@ -64,9 +64,9 @@ class DisciplineTest extends TestCase
         $late = $this->type('التأخر حتى 15 دقيقة');
         $this->assertEquals([['kind' => 'warning'], ['kind' => 'deduct', 'days' => 0.25], ['kind' => 'deduct', 'days' => 0.5], ['kind' => 'deduct', 'days' => 1]], $late->penalties);
 
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->getJson('/api/hr/discipline')->assertForbidden();
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $cat = $this->getJson('/api/hr/discipline/catalog')->assertOk()->json();
         $this->assertCount(41, $cat['data']);
         $row = ['group' => 'work', 'title_ar' => 'استخدام الهاتف أثناء الاجتماعات', 'title_en' => 'Phone use in meetings', 'penalties' => [['kind' => 'deduct', 'days' => 1], ['kind' => 'warning']]];
@@ -80,7 +80,7 @@ class DisciplineTest extends TestCase
     {
         $t = $this->type('التأخر حتى 15 دقيقة');
         $samer = $this->emp('UHR-1007');
-        $this->login('alaa.sheikhani@alfarada.sy');   // مدير سامر
+        $this->login('alaa.sheikhani@uniqueness.sy');   // مدير سامر
         $mine = $this->getJson('/api/me/discipline')->assertOk()->json();
         $this->assertNotEmpty($mine['team']);
         $this->postJson('/api/me/discipline', ['employee_id' => $this->emp('UHR-1003')->id, 'violation_type_id' => $t->id, 'occurred_on' => '2026-10-11', 'description' => 'تأخر صباحي'])->assertNotFound();   // ليس من فريقه
@@ -93,14 +93,14 @@ class DisciplineTest extends TestCase
         $this->assertStringStartsWith('DSC-2026-', $c->ref_no);
         $this->assertTrue(Notice::allCompanies()->where('link', 'discipline:'.$c->id)->exists());   // HR يُبلَّغ بحالة فتحها المدير
 
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $d = $this->getJson('/api/me/discipline')->assertOk()->json();
         $this->assertSame($c->ref_no, $d['data'][0]['ref_no']);
         $this->assertSame([], $d['team']);
         $this->postJson("/api/me/discipline/{$c->id}/defense", ['defense' => 'كان هناك ازدحام على الطريق'])->assertOk();
         $this->postJson("/api/me/discipline/{$c->id}/acknowledge", ['signature' => self::signature()])->assertConflict()->assertJsonPath('code', 'not_decided');
 
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->postJson("/api/hr/discipline/{$c->id}/decide", ['kind' => 'warning'])->assertConflict()->assertJsonPath('code', 'investigation_required');
         $full = $this->getJson("/api/hr/discipline/{$c->id}")->assertOk()->json('data');
         $this->assertSame('كان هناك ازدحام على الطريق', $full['defense']);
@@ -112,14 +112,14 @@ class DisciplineTest extends TestCase
         $this->assertSame('إنذار كتابي', $r['penalty']['label']['ar']);
         $this->getJson("/api/hr/discipline/{$c->id}/warning")->assertOk()->assertJsonPath('data.ref_no', $c->ref_no);
 
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->postJson("/api/me/discipline/{$c->id}/defense", ['defense' => 'إضافة'])->assertConflict();
         $this->postJson("/api/me/discipline/{$c->id}/acknowledge", ['signature' => self::signature()])->assertOk();
         $this->assertNotNull($c->fresh()->acknowledged_at);
         $this->assertNull($this->getJson('/api/me/discipline')->json('data.0.investigation.statement'));   // المحضر للموارد البشرية
 
         // تكرار خلال 6 أشهر ← الدرجة الثانية
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $id = $this->investigated('UHR-1007', $t);
         $this->assertSame(2, DisciplineCase::find($id)->occurrence);
         $this->assertEquals(['kind' => 'deduct', 'days' => 0.25], DisciplineCase::find($id)->suggested);
@@ -127,7 +127,7 @@ class DisciplineTest extends TestCase
 
     public function test_heavier_penalty_goes_to_the_general_manager_and_the_monthly_cap_applies(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $heavy = $this->type('استعمال مكان العمل');   // أول مرة حسم 5 أيام > صلاحية HR (3)
         $id = $this->investigated('UHR-1007', $heavy);
         $r = $this->postJson("/api/hr/discipline/{$id}/decide", ['kind' => 'deduct', 'days' => 5])->assertOk()->json('data');
@@ -135,7 +135,7 @@ class DisciplineTest extends TestCase
         $this->assertSame('المدير العام', $r['approval']['steps'][0]['role']['ar']);
         $this->postJson("/api/hr/discipline/{$id}/decide", ['kind' => 'warning', 'reason' => 'تخفيف بعد المراجعة'])->assertConflict()->assertJsonPath('code', 'pending_gm');
 
-        $this->login('hani.samman@alfarada.sy');   // الرئيس التنفيذي
+        $this->login('hani.samman@uniqueness.sy');   // الرئيس التنفيذي
         $inbox = $this->getJson('/api/me/approvals')->assertOk()->json('data');
         $row = collect($inbox)->firstWhere('kind', 'penalty');
         $this->assertNotNull($row);
@@ -147,7 +147,7 @@ class DisciplineTest extends TestCase
         $this->assertSame('2026-10', $c->month);
 
         // سقف 5 أيام بالشهر: الحسم التالي يصبح صفراً
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $fight = $this->type('التشاجر مع الزملاء');
         $id2 = $this->investigated('UHR-1007', $fight);
         $r2 = $this->postJson("/api/hr/discipline/{$id2}/decide", ['kind' => 'deduct', 'days' => 1])->assertOk()->json('data');
@@ -164,7 +164,7 @@ class DisciplineTest extends TestCase
         $id3 = $this->investigated('UHR-1002', $heavy);
         $this->postJson("/api/hr/discipline/{$id3}/decide", ['kind' => 'dismissal'])->assertUnprocessable()->assertJsonPath('code', 'over_grade');
         $this->postJson("/api/hr/discipline/{$id3}/decide", ['kind' => 'deduct', 'days' => 5])->assertOk();
-        $this->login('hani.samman@alfarada.sy');
+        $this->login('hani.samman@uniqueness.sy');
         $row = collect($this->getJson('/api/me/approvals')->json('data'))->firstWhere('kind', 'penalty');
         $this->postJson("/api/me/approvals/{$row['step_id']}", ['decision' => 'reject', 'note' => 'يكفي إنذار لأول مرة'])->assertOk();
         $this->assertSame('investigated', DisciplineCase::find($id3)->status);
@@ -172,7 +172,7 @@ class DisciplineTest extends TestCase
 
     public function test_deadline_expiry_dismissal_and_attendance_suggestions(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $t = $this->type('ترك العمل أو الانصراف');
         $id = $this->investigated('UHR-1009', $t);
         $this->postJson("/api/hr/discipline/{$id}/dismiss", ['reason' => 'قصير'])->assertUnprocessable();
@@ -199,7 +199,7 @@ class DisciplineTest extends TestCase
 
     public function test_complaints_are_confidential_to_hr(): void
     {
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->postJson('/api/me/complaints', ['subject' => 'ضغط عمل', 'body' => 'قصير'])->assertUnprocessable();
         $this->postJson('/api/me/complaints', ['subject' => 'توزيع المهام', 'body' => 'توزيع المهام في القسم غير عادل منذ شهرين', 'against' => 'رئيس القسم'])->assertOk()
             ->assertJsonPath('complaints.0.status', 'received');
@@ -207,16 +207,16 @@ class DisciplineTest extends TestCase
         $n = Notice::allCompanies()->where('link', 'complaint:'.$id)->firstOrFail();
         $this->assertStringNotContainsString('سامر', $n->text_ar);
 
-        $this->login('alaa.sheikhani@alfarada.sy');   // المدير لا يراها
+        $this->login('alaa.sheikhani@uniqueness.sy');   // المدير لا يراها
         $this->getJson('/api/hr/discipline/complaints')->assertForbidden();
 
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->assertSame('توزيع المهام', $this->getJson('/api/hr/discipline/complaints')->assertOk()->json('data.0.subject'));
         $this->postJson("/api/hr/discipline/complaints/{$id}", ['action' => 'review'])->assertOk()->assertJsonPath('data.status', 'reviewing');
         $this->postJson("/api/hr/discipline/complaints/{$id}", ['action' => 'close'])->assertUnprocessable()->assertJsonPath('code', 'response_required');
         $this->postJson("/api/hr/discipline/complaints/{$id}", ['action' => 'close', 'response' => 'تمت مراجعة التوزيع مع مدير القسم وتعديله'])->assertOk()->assertJsonPath('data.status', 'closed');
 
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->assertSame('تمت مراجعة التوزيع مع مدير القسم وتعديله', $this->getJson('/api/me/discipline')->json('complaints.0.response'));
     }
 }

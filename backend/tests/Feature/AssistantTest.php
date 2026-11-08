@@ -70,7 +70,7 @@ class AssistantTest extends TestCase
         $this->assertSame(['2026-11-20'], Dates::parse('20 تشرين الثاني', $sun)['dates']);
         $this->assertSame(2, Dates::parse('مغادرة ساعية بكرا ساعتين', $sun)['hours']);
 
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $idx = $this->getJson('/api/assistant')->assertOk()->assertJsonPath('enabled', true)->assertJsonPath('summaries', false)->json();
         $this->assertNotEmpty($idx['suggestions']);
 
@@ -79,7 +79,7 @@ class AssistantTest extends TestCase
         $this->assertSame('stats', $b['cards'][0]['type']);
         $this->assertStringContainsString('رصيدك السنوي', $b['text']);
 
-        $samer = Employee::allCompanies()->where('email', 'samer.halabi@alfarada.sy')->first();
+        $samer = Employee::allCompanies()->where('email', 'samer.halabi@uniqueness.sy')->first();
         $s = $this->ask('كم راتبي هذا الشهر؟')['final'];
         $this->assertSame('salary', $s['intent']);
         $this->assertStringNotContainsString((string) (int) $samer->salary, json_encode($s, JSON_UNESCAPED_UNICODE));   // ملاحظة 82: لا مبالغ في المحادثة
@@ -88,9 +88,9 @@ class AssistantTest extends TestCase
         $this->assertSame('requests', $this->ask('ما حالة طلباتي؟')['final']['intent']);
         $this->assertSame('attendance', $this->ask('حضوري هذا الشهر')['final']['intent']);
         $this->assertSame('attendance', $this->ask('من الغائبون اليوم؟')['final']['intent']);   // الموظف لا يرى حضور غيره
-        $this->assertSame(2 * 6, AssistantMessage::allCompanies()->where('user_id', User::where('email', 'samer.halabi@alfarada.sy')->value('id'))->count());
+        $this->assertSame(2 * 6, AssistantMessage::allCompanies()->where('user_id', User::where('email', 'samer.halabi@uniqueness.sy')->value('id'))->count());
 
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $h = $this->ask('من الغائبون اليوم؟')['final'];
         $this->assertSame('hr_today', $h['intent']);
         $this->assertSame('/hr/attendance', collect($h['cards'])->firstWhere('type', 'link')['to']);
@@ -99,7 +99,7 @@ class AssistantTest extends TestCase
 
     public function test_leave_action_needs_preview_and_two_step_confirmation(): void
     {
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $m = $this->ask('أريد إجازة سنوية من 2026-11-15 لمدة يومين بسبب سفر عائلي إلى حلب')['final'];
         $this->assertSame('leave', $m['intent']);
         $a = $m['action'];
@@ -125,7 +125,7 @@ class AssistantTest extends TestCase
         $this->postJson("/api/assistant/messages/{$id}/action", ['decision' => 'cancel'])->assertOk()->assertJsonPath('message.action.status', 'cancelled');
 
         // لا يتصرف أحد آخر بالبطاقة
-        $this->login('dana.shami@alfarada.sy');
+        $this->login('dana.shami@uniqueness.sy');
         $this->postJson("/api/assistant/messages/{$m['id']}/action", ['decision' => 'cancel'])->assertNotFound();
         $this->login('hr@atmata.sy');
         $this->postJson("/api/assistant/messages/{$m['id']}/action", ['decision' => 'cancel'])->assertNotFound();
@@ -133,8 +133,8 @@ class AssistantTest extends TestCase
 
     public function test_policy_answers_stream_a_summary_and_fall_back(): void
     {
-        $this->login('samer.halabi@alfarada.sy');
-        $hits = app(Knowledge::class)->search(User::where('email', 'samer.halabi@alfarada.sy')->first(), 'ما سياسة الإجازة المرضية؟');
+        $this->login('samer.halabi@uniqueness.sy');
+        $hits = app(Knowledge::class)->search(User::where('email', 'samer.halabi@uniqueness.sy')->first(), 'ما سياسة الإجازة المرضية؟');
         $this->assertNotEmpty($hits);
 
         $r = $this->ask('ما سياسة الإجازة المرضية؟')['final'];
@@ -162,10 +162,10 @@ class AssistantTest extends TestCase
 
     public function test_settings_limit_disable_and_actions_toggle(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $cfg = $this->getJson('/api/assistant/settings')->assertOk()->json('data');
         $this->putJson('/api/assistant/settings', ['daily_limit' => 2, 'actions' => ['leave' => false] + $cfg['actions']] + $cfg)->assertOk()->assertJsonPath('data.daily_limit', 2);
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $l = $this->ask('أريد إجازة سنوية من 2026-11-15')['final'];
         $this->assertNull($l['action']);
         $this->assertStringContainsString('غير متاح', $l['text']);
@@ -175,7 +175,7 @@ class AssistantTest extends TestCase
         $this->deleteJson('/api/assistant')->assertOk();
         $this->assertSame([], $this->getJson('/api/assistant')->json('history'));
 
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->putJson('/api/assistant/settings', ['enabled' => false] + $cfg)->assertOk();
         $this->postJson('/api/assistant/ask', ['text' => 'مرحبا'])->assertStatus(409)->assertJsonPath('code', 'assistant_off');
     }

@@ -38,7 +38,7 @@ abstract class TestCase extends BaseTestCase
     }
 
     /** الشركة الحالية = شركة بيانات الاختبار (الفرادة) */
-    protected function useCompany(string $slug = 'alfarada'): Company
+    protected function useCompany(string $slug = 'uniqueness'): Company
     {
         $c = Company::where('slug', $slug)->firstOrFail();
         Tenant::set($c);

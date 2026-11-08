@@ -24,7 +24,7 @@ class RecruitmentTest extends TestCase
     /** ضوابط العرض (15b) تُختبر في RecruitmentNotesTest — هنا تُعطَّل لأن الاختبار يخص مساراً آخر */
     private function offerRulesOff(): void
     {
-        \App\Support\Tenant::run(\App\Models\Company::where('slug', 'alfarada')->value('id'), fn () => \App\Support\Settings::put('rules', ['offer_budget' => 'off', 'offer_needs_interview' => false] + (\App\Support\Settings::get('rules') ?? [])));
+        \App\Support\Tenant::run(\App\Models\Company::where('slug', 'uniqueness')->value('id'), fn () => \App\Support\Settings::put('rules', ['offer_budget' => 'off', 'offer_needs_interview' => false] + (\App\Support\Settings::get('rules') ?? [])));
     }
 
     protected function setUp(): void
@@ -63,7 +63,7 @@ class RecruitmentTest extends TestCase
 
     public function test_board_lists_company_candidates_by_permission(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $r = $this->getJson('/api/hr/candidates')->assertOk();
         $this->assertCount(10, $r->json('data'));
         $leen = collect($r->json('data'))->firstWhere('ref', $this->cand('leen.ali@mail.sy')->ref);
@@ -75,14 +75,14 @@ class RecruitmentTest extends TestCase
         $this->assertCount(0, $this->getJson('/api/hr/candidates')->json('data'));
         $this->getJson('/api/hr/candidates/'.$this->cand('leen.ali@mail.sy')->id)->assertNotFound();
 
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->getJson('/api/hr/candidates')->assertForbidden();
     }
 
     public function test_stage_rules_reject_reason_and_interview_invite(): void
     {
         Notification::fake();
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $c = Candidate::where('stage', 'new')->whereNotNull('user_id')->firstOrFail();
         $move = fn (string $to, ?string $reason = null) => $this->postJson("/api/hr/candidates/{$c->id}/move", ['stage' => $to, 'reason' => $reason]);
 
@@ -104,7 +104,7 @@ class RecruitmentTest extends TestCase
 
     public function test_f25_interview_scores_and_moves_to_technical(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $c = Candidate::where('stage', 'interview')->firstOrFail();
         $ratings = array_fill_keys(F25::keys(), 4);
         $this->putJson("/api/hr/candidates/{$c->id}/interview", ['ratings' => array_slice($ratings, 0, 20), 'recommendation' => 'recommended'])->assertStatus(422);
@@ -117,7 +117,7 @@ class RecruitmentTest extends TestCase
     {
         Notification::fake();
         $this->offerRulesOff();
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $c = Candidate::where('stage', 'technical')->whereNotNull('user_id')->firstOrFail();
         $offer = ['title' => 'مهندس برمجيات', 'contract' => 'fixed', 'currency' => 'USD', 'basic' => 900, 'housing' => 100, 'transport' => 40, 'fuel' => 30, 'leave_days' => 14, 'start_date' => '2026-11-01'];
         // ملاحظة الاختبار 82: مبالغ العرض لا تُكتب ولا تظهر قبل التحقق
@@ -147,10 +147,10 @@ class RecruitmentTest extends TestCase
         $this->login($this->staff('UHR-1004'));          // المالية قبل الموارد البشرية
         $this->assertCount(0, $this->getJson('/api/hr/approvals')->json('data'));
         $this->postJson("/api/hr/approvals/{$steps[1]}", ['decision' => 'approved'])->assertStatus(409)->assertJsonPath('code', 'not_current_level');
-        $this->login('admin@alfarada.sy');               // مدير النظام لا يعتمد بدل أصحاب المستويات
+        $this->login('admin@uniqueness.sy');               // مدير النظام لا يعتمد بدل أصحاب المستويات
         $this->postJson("/api/hr/approvals/{$steps[0]}", ['decision' => 'approved'])->assertForbidden();
 
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->assertCount(1, $this->getJson('/api/hr/approvals')->json('data'));
         $this->assertContains('approvals', collect($this->getJson('/api/hr/dashboard')->json('data.tasks'))->pluck('link')->all());
         $this->postJson("/api/hr/approvals/{$steps[0]}", ['decision' => 'approved'])->assertOk()->assertJsonPath('data.current.role.en', 'Finance');
@@ -182,7 +182,7 @@ class RecruitmentTest extends TestCase
         $leen->offer->update(['status' => 'accepted']);
         $ap = \App\Support\Tenant::run($leen->company_id, fn () => app(\App\Services\Recruitment\OfferResponse::class)->openAppointment($leen));
         $first = $ap->approvals()->orderBy('level')->first();
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->postJson("/api/hr/approvals/{$first->id}", ['decision' => 'rejected', 'reason' => 'لا'])->assertStatus(422)->assertJsonPath('code', 'reason_required');
         $this->postJson("/api/hr/approvals/{$first->id}", ['decision' => 'rejected', 'reason' => 'الملاك العددي للإدارة مكتمل'])->assertOk()->assertJsonPath('data.rejected', true);
         $this->assertSame(['rejected', 'الملاك العددي للإدارة مكتمل'], [$leen->refresh()->stage, $leen->reject_reason]);
@@ -190,7 +190,7 @@ class RecruitmentTest extends TestCase
 
     public function test_recruitment_rules_are_validated_and_audited(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $cur = $this->getJson('/api/hr/recruitment-rules')->assertOk()->json();
         $bad = $cur; $bad['rules']['review_min'] = 30;
         $this->putJson('/api/hr/recruitment-rules', $bad)->assertStatus(422)->assertJsonPath('code', 'bands_order');
@@ -204,7 +204,7 @@ class RecruitmentTest extends TestCase
 
     public function test_company_calibrates_matching_with_preview_and_open_applications_are_rescored(): void
     {
-        $this->login('admin@alfarada.sy');
+        $this->login('admin@uniqueness.sy');
         $cur = $this->getJson('/api/hr/recruitment-rules')->assertOk()->json();
         $this->assertSame(30, $cur['match']['weights']['exp']);
         $m = $cur['match'];
@@ -223,7 +223,7 @@ class RecruitmentTest extends TestCase
         $this->assertSame(0, collect($this->getJson("/api/hr/candidates/{$open->id}")->json('data.match_parts'))->where('key', 'sal')->count());
 
         // أوزان خاصة بشاغر (من يملك تعديل الشواغر)
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $job = $this->getJson('/api/hr/jobs/'.$open->job_opening_id)->json('data');
         $body = array_intersect_key($job, array_flip(['title_ar', 'title_en', 'department_id', 'location_id', 'employment_type', 'openings', 'min_years', 'degree', 'salary_min', 'salary_max', 'currency', 'summary_ar', 'summary_en', 'requirements', 'visibility', 'hard_to_fill', 'requires_photo', 'status']));
         $this->putJson('/api/hr/jobs/'.$open->job_opening_id, $body + ['match_weights' => ['exp' => 10, 'deg' => 10, 'sal' => 10, 'eng' => 10, 'file' => 10]])->assertStatus(422)->assertJsonValidationErrors('match_weights');

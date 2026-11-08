@@ -49,7 +49,7 @@ class ExitTest extends TestCase
 
     private function resign(array $over = []): array
     {
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         return $this->postJson('/api/me/exit', array_merge(['last_day' => '2026-11-12', 'reasons' => ['offer'], 'text' => 'أتقدم بطلب قبول استقالتي لفرصة عمل أخرى.', 'survey' => ['why' => 'فرصة أفضل']], $over))->assertOk()->json('data');
     }
 
@@ -66,11 +66,11 @@ class ExitTest extends TestCase
     private function approvedResignation(array $over = []): int
     {
         $r = $this->resign($over);
-        $this->decide('alaa.sheikhani@alfarada.sy')->assertOk();
-        $this->login('hr@alfarada.sy');
+        $this->decide('alaa.sheikhani@uniqueness.sy')->assertOk();
+        $this->login('hr@uniqueness.sy');
         $this->postJson("/api/hr/offboarding/{$r['id']}/interview", ['reasons' => ['offer'], 'notes' => 'تأكدت الأسباب في المقابلة', 'recommendation' => 'accept'])->assertOk();
-        $this->decide('hr@alfarada.sy')->assertOk();
-        $this->decide('hani.samman@alfarada.sy')->assertOk();
+        $this->decide('hr@uniqueness.sy')->assertOk();
+        $this->decide('hani.samman@uniqueness.sy')->assertOk();
         $this->assertSame('clearance', Resignation::find($r['id'])->status);
         return $r['id'];
     }
@@ -85,45 +85,45 @@ class ExitTest extends TestCase
         $this->postJson('/api/me/exit', ['last_day' => '2026-12-30', 'reasons' => ['offer'], 'text' => 'طلب ثانٍ للاستقالة.'])->assertConflict()->assertJsonPath('code', 'exit_open');
         $this->postJson('/api/me/exit', ['last_day' => '2026-10-01', 'reasons' => ['nope'], 'text' => 'x'])->assertUnprocessable()->assertJsonValidationErrors(['last_day', 'reasons.0', 'text']);
 
-        $this->decide('alaa.sheikhani@alfarada.sy')->assertOk();
+        $this->decide('alaa.sheikhani@uniqueness.sy')->assertOk();
         $this->assertSame('pending_hr', Resignation::find($r['id'])->status);
-        $this->decide('hr@alfarada.sy')->assertConflict()->assertJsonPath('code', 'interview_required');
+        $this->decide('hr@uniqueness.sy')->assertConflict()->assertJsonPath('code', 'interview_required');
         $this->postJson("/api/hr/offboarding/{$r['id']}/interview", ['reasons' => ['offer', 'conditions'], 'notes' => 'المقابلة أكدت السبب', 'recommendation' => 'accept'])->assertOk();
-        $this->decide('hr@alfarada.sy')->assertOk();
+        $this->decide('hr@uniqueness.sy')->assertOk();
         $this->assertSame('pending_exec', Resignation::find($r['id'])->status);
-        $this->decide('hani.samman@alfarada.sy')->assertOk();
+        $this->decide('hani.samman@uniqueness.sy')->assertOk();
         $x = Resignation::find($r['id']);
         $this->assertSame('clearance', $x->status);
         $this->assertTrue(Notice::allCompanies()->where('link', 'offboarding:'.$x->id)->where('audience', 'user')->exists());   // تقانة المعلومات (admin)
 
         // المدير لا يرى الاستبيان ولا مقابلة HR، والموظف لا يرى مقابلة HR
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $mine = $this->getJson('/api/me/exit')->json('data');
         $this->assertNull($mine['hr_interview']);
         $this->assertSame('فرصة أفضل', $mine['survey']['why']);
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->assertSame('accept', $this->getJson("/api/hr/offboarding/{$x->id}")->json('data.hr_interview.recommendation'));
     }
 
     public function test_rejection_and_withdrawal_restore_the_employee(): void
     {
         $r = $this->resign();
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->postJson("/api/me/exit/{$r['id']}/withdraw", ['text' => 'تراجعت عن قراري بعد النقاش'])->assertOk();
         $this->assertSame('cancelled', Resignation::find($r['id'])->status);
         $this->assertSame('active', $this->emp('UHR-1007')->status);
 
         $r2 = $this->resign();
-        $this->decide('alaa.sheikhani@alfarada.sy')->assertOk();
-        $this->login('samer.halabi@alfarada.sy');
+        $this->decide('alaa.sheikhani@uniqueness.sy')->assertOk();
+        $this->login('samer.halabi@uniqueness.sy');
         $this->postJson("/api/me/exit/{$r2['id']}/withdraw", ['text' => 'أرغب بالرجوع عن الاستقالة'])->assertOk()->assertJsonPath('data.withdrawal.status', 'pending');
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->postJson("/api/hr/offboarding/{$r2['id']}/withdrawal", ['accept' => true, 'note' => 'قصير'])->assertUnprocessable();
         $this->postJson("/api/hr/offboarding/{$r2['id']}/withdrawal", ['accept' => true, 'note' => 'تم الاتفاق مع المدير، دون تغيير في العقد'])->assertOk()->assertJsonPath('data.status', 'cancelled');
         $this->assertSame('active', $this->emp('UHR-1007')->status);
 
         $r3 = $this->resign();
-        $this->decide('alaa.sheikhani@alfarada.sy', 'reject', 'نحتاجه في المشروع الحالي')->assertOk();
+        $this->decide('alaa.sheikhani@uniqueness.sy', 'reject', 'نحتاجه في المشروع الحالي')->assertOk();
         $this->assertSame('rejected', Resignation::find($r3['id'])->status);
         $this->assertSame('active', $this->emp('UHR-1007')->status);
     }
@@ -132,33 +132,33 @@ class ExitTest extends TestCase
     {
         $id = $this->approvedResignation();
         $samer = $this->emp('UHR-1007'); $lama = $this->emp('UHR-1009');
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->postJson("/api/hr/offboarding/{$id}/close")->assertConflict()->assertJsonPath('code', 'before_last_day');
 
         // F-05: المسلِّم ← المستلم ← المدير ← HR
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $tasks = [['task' => 'صيانة نظام الحضور', 'status' => 'in_progress', 'type' => 'electronic', 'location' => 'git/uhr'], ['task' => 'توثيق الواجهات', 'status' => 'done']];
         $this->putJson("/api/me/exit/{$id}/handover", ['receiver_id' => $samer->id, 'tasks' => $tasks])->assertUnprocessable();
         $this->putJson("/api/me/exit/{$id}/handover", ['receiver_id' => $lama->id, 'tasks' => $tasks])->assertOk();
         $this->postJson("/api/me/exit/{$id}/handover/sign", ['as' => 'receiver'])->assertConflict()->assertJsonPath('code', 'out_of_order');
         $this->postJson("/api/me/exit/{$id}/handover/sign", ['as' => 'employee'])->assertOk();
         $this->postJson("/api/me/exit/{$id}/handover/sign", ['as' => 'receiver'])->assertForbidden();   // ليس المستلم
-        $this->login('lama.azmeh@alfarada.sy');
+        $this->login('lama.azmeh@uniqueness.sy');
         $this->assertCount(1, $this->getJson('/api/me/exit')->json('receiving'));
         $this->postJson("/api/me/exit/{$id}/handover/sign", ['as' => 'receiver'])->assertOk();
-        $this->login('alaa.sheikhani@alfarada.sy');
+        $this->login('alaa.sheikhani@uniqueness.sy');
         $this->assertCount(1, $this->getJson('/api/me/exit')->json('team'));
         $this->postJson("/api/me/exit/{$id}/handover/sign", ['as' => 'manager'])->assertOk();
         $this->postJson("/api/me/exit/{$id}/clearance/manager/stamps", ['state' => 'none'])->assertOk();
         $this->postJson("/api/me/exit/{$id}/clearance/finance/loans", ['state' => 'none'])->assertForbidden();   // ليست جهته
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->postJson("/api/hr/offboarding/{$id}/clearance/manager/sign")->assertConflict()->assertJsonPath('code', 'section_incomplete');   // F-05 لم تُصادق من HR
         $this->postJson("/api/hr/offboarding/{$id}/handover/sign", ['as' => 'hr'])->assertOk()->assertJsonPath('data.handover.done', true);
-        $this->login('alaa.sheikhani@alfarada.sy');
+        $this->login('alaa.sheikhani@uniqueness.sy');
         $this->postJson("/api/me/exit/{$id}/clearance/manager/sign")->assertOk();
 
         // F-07: الأصول تكتمل باسترجاعها من سجل العهد
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $full = $this->getJson("/api/hr/offboarding/{$id}")->json('data');
         $assets = collect($full['clearance'])->firstWhere('key', 'admin')['items'][0];
         $this->assertSame('assets', $assets['auto']);
@@ -170,7 +170,7 @@ class ExitTest extends TestCase
         $this->postJson("/api/hr/offboarding/{$id}/clearance/admin/sign")->assertConflict()->assertJsonPath('code', 'section_incomplete');
         foreach ($assets['pending'] as $a) $this->postJson("/api/hr/custody/{$a['id']}/return", ['condition' => 'good'])->assertOk();
         foreach (['it', 'legal', 'admin', 'hr'] as $sec) $this->postJson("/api/hr/offboarding/{$id}/clearance/{$sec}/sign")->assertOk();
-        $this->login('basel.atassi@alfarada.sy');   // المالية
+        $this->login('basel.atassi@uniqueness.sy');   // المالية
         $this->postJson("/api/hr/offboarding/{$id}/clearance/finance/work_advances", ['state' => 'none'])->assertOk();
         $this->postJson("/api/hr/offboarding/{$id}/clearance/finance/personal_advances", ['state' => 'none'])->assertOk();
         $this->postJson("/api/hr/offboarding/{$id}/clearance/finance/loans", ['state' => 'done', 'value' => 150])->assertOk();
@@ -179,7 +179,7 @@ class ExitTest extends TestCase
         $this->assertMatchesRegularExpression('#^HR-\d+/2026$#', $f['clearance_no']);   // براءة الذمة F-04
 
         // الإغلاق: في آخر يوم (بعد الإعفاء من الإخطار) وبعد مقابلة الخروج
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->postJson("/api/hr/offboarding/{$id}/waive", ['note' => 'إعفاء بموافقة المدير', 'last_day' => '2026-10-12'])->assertOk();
         $this->postJson("/api/hr/offboarding/{$id}/close")->assertConflict()->assertJsonPath('code', 'exit_interview_required');
         $this->postJson("/api/hr/offboarding/{$id}/exit", ['answers' => ['why' => 'فرصة أفضل'], 'rating' => 4, 'would_return' => true, 'rehire' => false, 'noncompete' => true, 'rights' => true])
@@ -195,7 +195,7 @@ class ExitTest extends TestCase
         $this->assertFalse((bool) User::where('employee_id', $samer->id)->value('active'));
         $this->assertSame('2026-10-27', $c['followups']['insurance']['due']);
         $this->postJson("/api/hr/offboarding/{$id}/certificate")->assertOk()->assertJsonPath('data.service_cert_no', 'HR/1/2026');
-        $this->postJson('/api/auth/login', ['email' => 'samer.halabi@alfarada.sy', 'password' => '123456'])->assertForbidden();
+        $this->postJson('/api/auth/login', ['email' => 'samer.halabi@uniqueness.sy', 'password' => '123456'])->assertForbidden();
     }
 
     public function test_notice_pay_when_the_notice_is_short_and_session_ends_on_close(): void
@@ -209,7 +209,7 @@ class ExitTest extends TestCase
         Tenant::forget();
 
         // جلسة موظف موقوف تنتهي عند أول طلب
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         User::where('employee_id', $r->employee_id)->update(['active' => false]);
         $this->app['auth']->forgetGuards();   // طلب جديد يقرأ المستخدم من القاعدة
         $this->getJson('/api/me/exit')->assertUnauthorized()->assertJsonPath('code', 'blocked');
@@ -218,7 +218,7 @@ class ExitTest extends TestCase
 
     public function test_termination_by_hr_skips_hr_and_successor_moves_the_account(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $alaa = $this->emp('UHR-1008');
         $this->postJson('/api/hr/offboarding', ['employee_id' => $alaa->id, 'cause' => 'dismissal', 'last_day' => '2026-10-31', 'rehire' => true, 'notes' => 'ضعف الأداء المتكرر رغم الإنذارات'])
             ->assertUnprocessable()->assertJsonPath('code', 'reasons_required');
@@ -229,24 +229,24 @@ class ExitTest extends TestCase
         $this->assertStringStartsWith('TRM-2026-', $t['ref_no']);
         $this->assertSame(['المدير المباشر', 'المدير العام'], array_map(fn ($s) => $s['role']['ar'], $t['steps']));   // HR رفعه فلا يعتمده
 
-        $this->login('hani.samman@alfarada.sy');
+        $this->login('hani.samman@uniqueness.sy');
         $inbox = collect($this->getJson('/api/me/approvals')->json('data'))->where('kind', 'exit');
         // مدير علاء (المدير العام نفسه أو غيره) ← ثم المدير العام
         foreach (range(1, 2) as $_) {
             $row = collect($this->getJson('/api/me/approvals')->json('data'))->firstWhere('kind', 'exit');
             if (! $row) { $mgr = User::where('employee_id', $alaa->manager_id)->firstOrFail(); $this->login($mgr->email); $row = collect($this->getJson('/api/me/approvals')->json('data'))->firstWhere('kind', 'exit'); }
             $this->postJson("/api/me/approvals/{$row['step_id']}", ['decision' => 'approve'])->assertOk();
-            $this->login('hani.samman@alfarada.sy');
+            $this->login('hani.samman@uniqueness.sy');
             if (Resignation::find($t['id'])->status === 'clearance') break;
         }
         $this->assertSame('clearance', Resignation::find($t['id'])->status);
 
         // علاء مدير ← لا يُغلق ملفه قبل تحديد البديل، ومدير النظام ينقل الصلاحيات
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->assertTrue($this->getJson("/api/hr/offboarding/{$t['id']}")->json('data.needs_successor'));
-        $this->postJson("/api/hr/offboarding/{$t['id']}/successor", ['user_id' => User::where('email', 'samer.halabi@alfarada.sy')->value('id')])->assertForbidden();
-        $this->login('admin@alfarada.sy');
-        $lama = User::where('email', 'lama.azmeh@alfarada.sy')->firstOrFail();
+        $this->postJson("/api/hr/offboarding/{$t['id']}/successor", ['user_id' => User::where('email', 'samer.halabi@uniqueness.sy')->value('id')])->assertForbidden();
+        $this->login('admin@uniqueness.sy');
+        $lama = User::where('email', 'lama.azmeh@uniqueness.sy')->firstOrFail();
         $res = $this->postJson("/api/hr/offboarding/{$t['id']}/successor", ['user_id' => $lama->id, 'reset' => true])->assertOk()->json();
         $this->assertContains('manager', $res['roles']);
         $this->assertStringContainsString('/activate/', $res['link']);
@@ -265,7 +265,7 @@ class ExitTest extends TestCase
             'addressee' => ['name' => 'شركة أخرى', 'cr_no' => '99', 'email' => 'x@other.sy', 'phone' => '0222222']]);
         Tenant::forget();
         $id = $this->approvedResignation();
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $n = collect($this->getJson("/api/hr/offboarding/{$id}")->json('data.notices'));
         $this->assertSame(['prepared', 'blocked'], $n->sortBy('id')->pluck('status')->values()->all());
         $blocked = $n->firstWhere('status', 'blocked');
@@ -282,7 +282,7 @@ class ExitTest extends TestCase
 
     public function test_exit_lists_and_policy_are_configurable(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $d = $this->getJson('/api/hr/offboarding/settings')->assertOk()->json('data');
         $d['reasons'] = array_values(array_filter($d['reasons'], fn ($x) => $x['key'] !== 'other'));
         $this->putJson('/api/hr/offboarding/settings', $d)->assertUnprocessable()->assertJsonPath('code', 'required_item');

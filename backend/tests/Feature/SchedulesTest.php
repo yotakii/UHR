@@ -35,12 +35,12 @@ class SchedulesTest extends TestCase
         $this->postJson('/api/auth/login', ['email' => $email, 'password' => '123456'])->assertOk();
     }
 
-    private function samer(): Employee { return Employee::findOrFail(User::where('email', 'samer.halabi@alfarada.sy')->value('employee_id')); }
+    private function samer(): Employee { return Employee::findOrFail(User::where('email', 'samer.halabi@uniqueness.sy')->value('employee_id')); }
 
     /** 24 و76: جدول دائم، ورديات لفترة، قالب موسمي — والأولوية: الإسناد بفترة ← جدول الموظف ← السياسة */
     public function test_schedules_shifts_and_assignment_priority(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $samer = $this->samer();
         $mgr = $this->postJson('/api/hr/schedules', ['name_ar' => 'دوام الإدارة', 'kind' => 'fixed', 'shifts' => [['key' => 'day', 'ar' => 'نهاري', 'start' => 600, 'end' => 1080]],
             'work_days' => [0, 1, 2, 3, 4]])->assertCreated()->json('data');
@@ -79,7 +79,7 @@ class SchedulesTest extends TestCase
     /** 80: فرع خاص بالشركة بمنطقة زمنية — أوقات حضور موظفيه تُقرأ بتوقيته */
     public function test_branch_timezone_applies_to_attendance(): void
     {
-        $this->login('admin@alfarada.sy');
+        $this->login('admin@uniqueness.sy');
         $b = collect($this->postJson('/api/hr/branches', ['code' => 'dubai', 'name_ar' => 'دبي', 'name_en' => 'Dubai', 'timezone' => 'Asia/Dubai'])->assertOk()->json('data'))->firstWhere('code', 'dubai');
         $this->assertTrue($b['own']);
         $samer = $this->samer();
@@ -98,7 +98,7 @@ class SchedulesTest extends TestCase
     /** 23 و31: إحصائية الفترة وربطها بالكشف، فلتر الفرع، اتجاه أسبوعي */
     public function test_period_totals_branch_filter_and_weekly_trend(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $p = $this->getJson('/api/hr/attendance/period?from=2026-10-01&to=2026-10-11')->assertOk()->json();
         $this->assertSame(count($p['rows']), $p['totals']['employees']);
         $this->assertSame(array_sum(array_column($p['rows'], 'present')), $p['totals']['present']);
@@ -114,7 +114,7 @@ class SchedulesTest extends TestCase
     /** 06: الموظف يرى أي شهر سابق منذ مباشرته */
     public function test_employee_sees_previous_months(): void
     {
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $r = $this->getJson('/api/me/attendance?month=2026-10')->assertOk()->json();
         $this->assertContains('2026-10', $r['months']);
         $this->assertSame('2026-10', $r['month']['month']);

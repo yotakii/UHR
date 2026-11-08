@@ -62,15 +62,15 @@ class DatabaseTest extends TestCase
 
     public function test_install_creates_admin_with_temporary_password(): void
     {
-        $this->artisan('uhr:install', ['--email' => 'Owner@Atmata.sy', '--company' => 'alfarada', '--company-name-ar' => 'الفرادة', '--company-name-en' => 'Uniqueness', '--company-admin' => 'admin@alfarada.sy'])
+        $this->artisan('uhr:install', ['--email' => 'Owner@Atmata.sy', '--company' => 'uniqueness', '--company-name-ar' => 'الفرادة', '--company-name-en' => 'Uniqueness', '--company-admin' => 'admin@uniqueness.sy'])
             ->expectsOutputToContain('Temporary password')
             ->assertSuccessful();
         $u = User::where('email', 'owner@atmata.sy')->firstOrFail();
         $this->assertTrue($u->hasRole('platform_admin'));
         $this->assertTrue($u->must_change_password);
         $this->assertSame('platform', $u->portal());
-        $admin = User::where('email', 'admin@alfarada.sy')->firstOrFail();
-        $this->assertSame(['hr', 'alfarada', 'invite', null], [$admin->portal(), $admin->company->slug, $admin->invite_kind, $admin->activated_at]);
+        $admin = User::where('email', 'admin@uniqueness.sy')->firstOrFail();
+        $this->assertSame(['hr', 'uniqueness', 'invite', null], [$admin->portal(), $admin->company->slug, $admin->invite_kind, $admin->activated_at]);
         $this->assertSame(1, AuditLog::where('action', 'system.installed')->count());
     }
 

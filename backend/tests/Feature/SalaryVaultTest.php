@@ -65,7 +65,7 @@ class SalaryVaultTest extends TestCase
 
     public function test_salaries_are_masked_until_verified_and_lock_again(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $month = Payroll::currentMonth();
         $this->postJson('/api/hr/payroll', ['month' => $month])->assertCreated();
         $p = $this->getJson("/api/hr/payroll?month={$month}")->assertOk()->assertJsonPath('masked', true)->assertJsonPath('sheet.totals.net', null);
@@ -96,7 +96,7 @@ class SalaryVaultTest extends TestCase
 
     public function test_totp_code_is_single_use_and_wrong_attempts_lock_out(): void
     {
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         [$secret] = $this->enrol();
         $this->postJson('/api/me/mfa/lock')->assertOk()->assertJsonPath('data.unlocked', false);
         // نفس رمز الإعداد لا يُقبل مرة ثانية
@@ -117,7 +117,7 @@ class SalaryVaultTest extends TestCase
 
     public function test_backup_codes_work_once_and_password_reset_unlinks(): void
     {
-        $u = $this->login('samer.halabi@alfarada.sy');
+        $u = $this->login('samer.halabi@uniqueness.sy');
         [, $codes] = $this->enrol();
         $this->assertCount(8, $codes);
         $this->assertMatchesRegularExpression('/^[A-Z2-7]{4}-[A-Z2-7]{4}$/', $codes[0]);
@@ -137,7 +137,7 @@ class SalaryVaultTest extends TestCase
     public function test_one_time_code_by_email(): void
     {
         Notification::fake();
-        $u = $this->login('samer.halabi@alfarada.sy');
+        $u = $this->login('samer.halabi@uniqueness.sy');
         $this->getJson('/api/me/services')->assertOk()->assertJsonPath('masked', true)->assertJsonPath('advance.available', null);
         $this->getJson('/api/me/payslips')->assertOk()->assertJsonPath('masked', true)->assertJsonPath('current.money', null);
         $this->postJson('/api/me/mfa/otp/send')->assertOk()->assertJsonPath('data.otp.expires_in', 120);
@@ -159,12 +159,12 @@ class SalaryVaultTest extends TestCase
     public function test_passkey_register_and_verify(): void
     {
         config(['app.frontend_url' => 'https://atmata-uhr.duckdns.org']);
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $key = openssl_pkey_new(['curve_name' => 'prime256v1', 'private_key_type' => OPENSSL_KEYTYPE_EC]);
         $pem = openssl_pkey_get_details($key)['key'];
         $spki = base64_decode(preg_replace('/-----[^-]+-----|\s/', '', $pem));
-        $origin = 'https://alfarada.atmata-uhr.duckdns.org';
-        $auth = fn (int $count, int $flags = 0x05) => hash('sha256', 'alfarada.atmata-uhr.duckdns.org', true).chr($flags).pack('N', $count);
+        $origin = 'https://uniqueness.atmata-uhr.duckdns.org';
+        $auth = fn (int $count, int $flags = 0x05) => hash('sha256', 'uniqueness.atmata-uhr.duckdns.org', true).chr($flags).pack('N', $count);
         $client = fn (string $type, string $challenge, string $o = null) => json_encode(['type' => $type, 'challenge' => $challenge, 'origin' => $o ?? $origin]);
         $b = fn ($x) => SalaryVault::b64u($x);
 
@@ -196,7 +196,7 @@ class SalaryVaultTest extends TestCase
 
     public function test_company_settings_drive_the_vault(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $d = $this->getJson('/api/hr/vault-settings')->assertOk()->json('data');
         $this->putJson('/api/hr/vault-settings', ['methods' => ['link' => false, 'phone' => false, 'passkey' => false, 'app' => false]] + $d)->assertStatus(422);
         $this->putJson('/api/hr/vault-settings', ['unlock_minutes' => 1, 'methods' => ['link' => false, 'phone' => false, 'passkey' => true, 'app' => true]] + $d)->assertOk()->assertJsonPath('data.unlock_minutes', 1);
@@ -205,14 +205,14 @@ class SalaryVaultTest extends TestCase
         $this->enrol();
         $this->assertSame(60, $this->getJson('/api/me/mfa')->json('data.remaining'));
 
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->putJson('/api/hr/vault-settings', $d)->assertForbidden();
         Tenant::forget();
     }
 
     public function test_phone_approval_unlocks_the_computer(): void
     {
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $l = $this->postJson('/api/me/mfa/link')->assertOk()->json('data');
         $this->assertSame(120, $l['expires_in']);
         $this->assertStringEndsWith('/approve/'.$l['token'], $l['url']);
@@ -226,7 +226,7 @@ class SalaryVaultTest extends TestCase
         $this->assertSame('link', $this->getJson('/api/me/mfa')->json('data.last_ok.method'));
         // حساب آخر لا يستطيع الموافقة، والطلب ينتهي بعد link_seconds
         $l2 = $this->postJson('/api/me/mfa/link')->json('data');
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->postJson("/api/me/mfa/link/{$l2['token']}", ['approve' => true])->assertForbidden()->assertJsonPath('code', 'link_other_user');
         Carbon::setTestNow(now()->addSeconds(121));
         $this->getJson("/api/me/mfa/link/{$l2['token']}/info")->assertStatus(410);
@@ -234,7 +234,7 @@ class SalaryVaultTest extends TestCase
 
     public function test_unlock_window_slides_with_use_up_to_the_maximum(): void
     {
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->enrol();
         for ($i = 0; $i < 3; $i++) {
             Carbon::setTestNow(now()->addMinutes(4));
@@ -251,7 +251,7 @@ class SalaryVaultTest extends TestCase
         $code = null;
         \Illuminate\Support\Facades\Notification::fake();
         $this->postJson('/api/me/mfa/otp/send')->assertOk();
-        \Illuminate\Support\Facades\Notification::assertSentTo(User::where('email', 'samer.halabi@alfarada.sy')->first(), SalaryCode::class, function ($n) use (&$code) { $code = $n->code; return true; });
+        \Illuminate\Support\Facades\Notification::assertSentTo(User::where('email', 'samer.halabi@uniqueness.sy')->first(), SalaryCode::class, function ($n) use (&$code) { $code = $n->code; return true; });
         $this->postJson('/api/me/mfa/otp/verify', ['code' => $code])->assertOk();
         for ($i = 0; $i < 14; $i++) { Carbon::setTestNow(now()->addMinutes(4)); $this->getJson('/api/me/payslips')->assertJsonPath('masked', false); }
         $this->assertSame('240', $this->getJson('/api/me/payslips')->headers->get('X-Salary-Remaining'));
@@ -262,7 +262,7 @@ class SalaryVaultTest extends TestCase
     public function test_others_salaries_need_a_renewable_grant_from_the_general_manager(): void
     {
         $month = Payroll::currentMonth();
-        $hr = $this->login('hr@alfarada.sy');
+        $hr = $this->login('hr@uniqueness.sy');
         $this->postJson('/api/hr/payroll', ['month' => $month])->assertCreated();
         $this->unlockSalaries(false);
         $this->getJson('/api/me/mfa')->assertJsonPath('data.grant.needed', true)->assertJsonPath('data.grant.last', null);
@@ -277,14 +277,14 @@ class SalaryVaultTest extends TestCase
         $this->postJson('/api/me/salary-access', ['scope' => 'all', 'reason' => 'مراجعة كشف تشرين الأول قبل الإغلاق'])->assertStatus(409)->assertJsonPath('code', 'grant_open');
 
         // المدير العام يعتمد من صندوقه الموحد
-        $this->login('hani.samman@alfarada.sy');
+        $this->login('hani.samman@uniqueness.sy');
         $row = collect($this->getJson('/api/me/approvals')->json('data'))->firstWhere('kind', 'salary');
         $this->assertSame('all', $row['scope']);
         $this->postJson("/api/me/approvals/{$row['step_id']}", ['decision' => 'approve'])->assertOk();
         $this->unlockSalaries(false);
         $this->assertNotNull($this->getJson("/api/hr/payroll?month={$month}")->assertJsonPath('masked', false)->json('sheet.totals.net'));   // المعتمِد معفى
 
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->unlockSalaries(false);
         $this->getJson('/api/me/mfa')->assertJsonPath('data.grant.last.status', 'approved');
         $this->assertNotNull($this->getJson("/api/hr/payroll?month={$month}")->assertJsonPath('masked', false)->json('sheet.totals.net'));
@@ -297,10 +297,10 @@ class SalaryVaultTest extends TestCase
         $this->getJson("/api/hr/payroll?month={$month}")->assertJsonPath('masked', true);
         $dept = \App\Models\Employee::allCompanies()->where('code', 'UHR-1007')->value('department_id');
         $this->postJson('/api/me/salary-access', ['scope' => 'department', 'department_id' => $dept, 'reason' => 'تدقيق رواتب قسم تقنية المعلومات'])->assertOk();
-        $this->login('hani.samman@alfarada.sy');
+        $this->login('hani.samman@uniqueness.sy');
         $row = collect($this->getJson('/api/me/approvals')->json('data'))->firstWhere('kind', 'salary');
         $this->postJson("/api/me/approvals/{$row['step_id']}", ['decision' => 'approve'])->assertOk();
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->unlockSalaries(false);
         $rows = collect($this->getJson("/api/hr/payroll?month={$month}")->assertJsonPath('masked', true)->json('rows'));
         $this->assertNotNull($rows->firstWhere('employee.code', 'UHR-1007')['money']);
@@ -308,11 +308,11 @@ class SalaryVaultTest extends TestCase
 
         // السحب: المعتمِد فقط
         $id = $row['id'];
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->postJson("/api/hr/vault-settings/grants/{$id}/revoke")->assertForbidden();
-        $this->login('hani.samman@alfarada.sy');
+        $this->login('hani.samman@uniqueness.sy');
         $this->postJson("/api/hr/vault-settings/grants/{$id}/revoke", ['note' => 'انتهى التدقيق'])->assertOk();
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->unlockSalaries(false);
         $this->assertNull(collect($this->getJson("/api/hr/payroll?month={$month}")->json('rows'))->firstWhere('employee.code', 'UHR-1007')['money']);
         $this->assertDatabaseHas('audit_logs', ['action' => 'salary.access_revoked']);

@@ -46,7 +46,7 @@ class EmployeeDirectoryTest extends TestCase
 
     public function test_directory_filters_and_company_isolation(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $r = $this->getJson('/api/hr/employees')->assertOk();
         $this->assertCount(32, $r->json('data'));
         $this->assertSame(32, $r->json('current'));
@@ -66,25 +66,25 @@ class EmployeeDirectoryTest extends TestCase
         $this->assertNotContains('UHR-1012', collect($this->getJson('/api/hr/employees')->json('data'))->pluck('code')->all());
         $this->getJson('/api/hr/employees/'.$this->emp('UHR-1012')->id)->assertNotFound();
         // حساب الموظف لا يدخل نظام الشركة
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->getJson('/api/hr/employees')->assertForbidden();
     }
 
     public function test_scope_team_and_own(): void
     {
-        $alaa = User::where('email', 'alaa.sheikhani@alfarada.sy')->firstOrFail();   // رئيس تقنية المعلومات: مدير بنطاق فريقه
+        $alaa = User::where('email', 'alaa.sheikhani@uniqueness.sy')->firstOrFail();   // رئيس تقنية المعلومات: مدير بنطاق فريقه
         Tenant::set($alaa->company);
         $team = Directory::scoped($alaa)->pluck('code')->sort()->values()->all();
         $this->assertContains('UHR-1008', $team);
         $this->assertCount(1 + Employee::where('manager_id', $alaa->employee_id)->count(), $team);
         $this->assertFalse(Directory::visible($alaa, $this->emp('UHR-1003')->id));
-        $samer = User::where('email', 'samer.halabi@alfarada.sy')->firstOrFail();
+        $samer = User::where('email', 'samer.halabi@uniqueness.sy')->firstOrFail();
         $this->assertSame([$samer->employee_id], Directory::scoped($samer)->pluck('id')->all());
     }
 
     public function test_file_has_tabs_entitlement_and_attendance(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $e = $this->emp('UHR-1012');
         $d = $this->getJson("/api/hr/employees/{$e->id}")->assertOk()->json('data');
         $this->assertSame('UHR-1004', $this->emp('UHR-1004')->code);
@@ -125,7 +125,7 @@ class EmployeeDirectoryTest extends TestCase
 
     public function test_edit_profile_logs_moves_and_refuses_loops(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $e = $this->emp('UHR-1012');
         $base = $this->getJson("/api/hr/employees/{$e->id}")->json('data');
         $input = ['name' => $base['name_ar'], 'name_en' => $base['name_en'], 'gender' => $base['gender'], 'title_ar' => 'محاسب أول', 'title_en' => 'Senior accountant',
@@ -145,16 +145,16 @@ class EmployeeDirectoryTest extends TestCase
             'location_id' => $m['location_id'], 'manager_id' => Employee::allCompanies()->where('manager_id', $mgr->id)->value('id'), 'email' => $m['email']];
         $this->putJson("/api/hr/employees/{$mgr->id}", $loop)->assertUnprocessable()->assertJsonPath('code', 'manager_loop');
         $this->putJson("/api/hr/employees/{$e->id}", ['phone' => 'مطور أول'] + $input)->assertUnprocessable()->assertJsonValidationErrors('phone');
-        $this->putJson("/api/hr/employees/{$e->id}", ['email' => 'hr@alfarada.sy'] + $input)->assertUnprocessable()->assertJsonValidationErrors('email');
+        $this->putJson("/api/hr/employees/{$e->id}", ['email' => 'hr@uniqueness.sy'] + $input)->assertUnprocessable()->assertJsonValidationErrors('email');
 
         // البريد الجديد يصبح اسم الدخول
-        $this->putJson("/api/hr/employees/{$e->id}", ['email' => 'samer.new@alfarada.sy'] + $input)->assertOk();
-        $this->assertSame('samer.new@alfarada.sy', User::where('employee_id', $e->id)->value('email'));
+        $this->putJson("/api/hr/employees/{$e->id}", ['email' => 'samer.new@uniqueness.sy'] + $input)->assertOk();
+        $this->assertSame('samer.new@uniqueness.sy', User::where('employee_id', $e->id)->value('email'));
     }
 
     public function test_nfc_card_link_change_and_uniqueness(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $e = $this->emp('UHR-1012'); $other = $this->emp('UHR-1013');
         $this->putJson("/api/hr/employees/{$e->id}/card", ['uid' => '04a1b2c3d4'])->assertOk()->assertJsonPath('data.nfc_uid', '04:A1:B2:C3:D4');
         $this->putJson("/api/hr/employees/{$other->id}/card", ['uid' => '04:A1:B2:C3:D4'])->assertUnprocessable()->assertJsonPath('code', 'card_taken');
@@ -165,7 +165,7 @@ class EmployeeDirectoryTest extends TestCase
 
     public function test_documents_upload_sensitivity_log_archive_and_expiry(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $e = $this->emp('UHR-1007');                                     // سامر الحلبي
         $pdf = fn (string $n = 'id.pdf', int $kb = 40) => UploadedFile::fake()->create($n, $kb, 'application/pdf');
 
@@ -185,16 +185,16 @@ class EmployeeDirectoryTest extends TestCase
         $this->assertSame(['download', 'view', 'upload'], array_column($log, 'action'));
 
         // الحساس: المالية (عرض الموظفين) لا تراه ولا تنزّله
-        $this->login('basel.atassi@alfarada.sy');
+        $this->login('basel.atassi@uniqueness.sy');
         $docs = $this->getJson("/api/hr/employees/{$e->id}")->assertOk()->json('data.documents');
         $this->assertSame([$id['id']], array_column($docs, 'id'));
         $this->get("/api/files/{$med['file']['id']}")->assertForbidden();
         $this->getJson("/api/hr/employees/{$e->id}/documents/{$med['id']}/log")->assertNotFound();
-        $this->login('samer.halabi@alfarada.sy');                                  // صاحب المستند ينزّله
+        $this->login('samer.halabi@uniqueness.sy');                                  // صاحب المستند ينزّله
         $this->get("/api/files/{$med['file']['id']}")->assertOk();
 
         // الأرشفة بلا حذف، والاستعادة
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->postJson("/api/hr/employees/{$e->id}/documents/{$id['id']}/archive")->assertOk()->assertJsonPath('data.status', 'archived');
         $this->postJson("/api/hr/employees/{$e->id}/documents/{$id['id']}/archive", ['restore' => true])->assertOk()->assertJsonPath('data.status', 'active');
         $this->assertSame(2, EmployeeDocument::allCompanies()->where('employee_id', $e->id)->count());
@@ -212,7 +212,7 @@ class EmployeeDirectoryTest extends TestCase
 
     public function test_document_settings_are_validated_and_audited(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $s = $this->getJson('/api/hr/employee-docs/settings')->assertOk()->json();
         $this->assertSame(10, $s['data']['max_mb']);
         $new = ['types' => [['key' => 'id', 'ar' => 'هوية', 'en' => 'ID'], ['key' => 'visa', 'ar' => 'إقامة', 'en' => 'Residence permit']],
@@ -232,13 +232,13 @@ class EmployeeDirectoryTest extends TestCase
         $this->assertFalse(EmployeeDocs::canSensitive($officer));
 
         // تعديل الإعدادات لـ settings,edit فقط
-        $this->login('basel.atassi@alfarada.sy');
+        $this->login('basel.atassi@uniqueness.sy');
         $this->putJson('/api/hr/employee-docs/settings', $new)->assertForbidden();
     }
 
     public function test_export_needs_permission_and_is_audited(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $r = $this->get('/api/hr/employees/export?status=all')->assertOk();
         $path = tempnam(sys_get_temp_dir(), 'x').'.xlsx';
         file_put_contents($path, $r->streamedContent() ?: file_get_contents($r->baseResponse->getFile()->getPathname()));
@@ -248,13 +248,13 @@ class EmployeeDirectoryTest extends TestCase
         $this->assertSame(33, $rows);                                               // ترويسة + 32
         $this->assertSame(32, AuditLog::where('action', 'employees.export')->latest('id')->first()->after['count']);
 
-        $this->login('basel.atassi@alfarada.sy');                                  // المالية: عرض بلا تصدير
+        $this->login('basel.atassi@uniqueness.sy');                                  // المالية: عرض بلا تصدير
         $this->get('/api/hr/employees/export')->assertForbidden();
     }
 
     public function test_org_chart_lists_current_staff_under_their_managers(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $r = $this->getJson('/api/hr/org')->assertOk()->json();
         $this->assertCount(32, $r['data']);
         $this->assertCount(1, array_filter($r['data'], fn ($n) => $n['manager_id'] === null));     // جذر واحد
@@ -265,7 +265,7 @@ class EmployeeDirectoryTest extends TestCase
         $e = $this->emp('UHR-1012');
         Tenant::set($e->company);
         $new = Employee::create(['code' => 'UHR-2001', 'name' => 'تجربة', 'name_en' => 'Trial', 'gender' => 'M', 'title_ar' => 'محاسب', 'title_en' => 'Accountant',
-            'department_id' => $e->department_id, 'location_id' => $e->location_id, 'email' => 'trial@alfarada.sy', 'hire_date' => '2026-10-12', 'status' => 'onboarding', 'manager_id' => $e->department->head_id]);
+            'department_id' => $e->department_id, 'location_id' => $e->location_id, 'email' => 'trial@uniqueness.sy', 'hire_date' => '2026-10-12', 'status' => 'onboarding', 'manager_id' => $e->department->head_id]);
         // ملاحظة الاختبار 41: لا يظهر في الهيكل قبل المباشرة الفعلية
         $this->assertNull(collect($this->getJson('/api/hr/org')->json('data'))->firstWhere('id', $new->id));
         $new->update(['status' => 'active']);

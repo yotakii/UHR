@@ -48,11 +48,11 @@ class CustodyTest extends TestCase
 
     public function test_register_summary_and_new_asset(): void
     {
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->getJson('/api/hr/custody')->assertForbidden();
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $d = $this->getJson('/api/hr/custody')->assertOk()->json();
-        $this->assertSame(Asset::allCompanies()->whereHas('company', fn ($q) => $q->where('slug', 'alfarada'))->count(), $d['summary']['total']);
+        $this->assertSame(Asset::allCompanies()->whereHas('company', fn ($q) => $q->where('slug', 'uniqueness'))->count(), $d['summary']['total']);
         $this->assertSame(8, $d['summary']['available']);
         $this->assertCount(7, $d['categories']);   // + أدوات مكتبية، أدوات عمل مخصصة (ملاحظة الاختبار 52)
         $this->assertSame(1, count($this->getJson('/api/hr/custody?q=Kia&status=assigned')->json('data')) >= 1 ? 1 : 0);
@@ -68,18 +68,18 @@ class CustodyTest extends TestCase
 
     public function test_issue_sign_return_maintenance_and_retire(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $a = Asset::allCompanies()->where('status', 'available')->orderBy('id')->firstOrFail();
         $samer = $this->emp('UHR-1007');
         $this->postJson("/api/hr/custody/{$a->id}/issue", ['employee_id' => $samer->id, 'note' => 'للعمل من المنزل'])->assertOk()->assertJsonPath('data.status', 'pending_ack')->assertJsonPath('data.holder.code', 'UHR-1007');
         $this->postJson("/api/hr/custody/{$a->id}/issue", ['employee_id' => $samer->id])->assertStatus(409)->assertJsonPath('code', 'asset_unavailable');
-        $this->assertTrue(Notice::where('user_id', User::where('email', 'samer.halabi@alfarada.sy')->value('id'))->where('link', 'docs')->exists());
+        $this->assertTrue(Notice::where('user_id', User::where('email', 'samer.halabi@uniqueness.sy')->value('id'))->where('link', 'docs')->exists());
 
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->postJson('/api/me/documents/sign', ['doc' => 'asset', 'asset_id' => $a->id, 'signature' => self::signature()])->assertOk();
         $this->assertSame('assigned', $a->fresh()->status);
 
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->postJson("/api/hr/custody/{$a->id}/return", ['condition' => 'broken'])->assertUnprocessable();
         $this->postJson("/api/hr/custody/{$a->id}/return", ['condition' => 'damaged', 'note' => 'شاشة مكسورة'])->assertOk()->assertJsonPath('data.status', 'maintenance')->assertJsonPath('data.holder', null);
         $this->postJson("/api/hr/custody/{$a->id}/issue", ['employee_id' => $samer->id])->assertStatus(409);
@@ -96,7 +96,7 @@ class CustodyTest extends TestCase
 
     public function test_import_keeps_good_rows_and_reports_errors(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->get('/api/hr/custody/import/template')->assertOk();
         $existing = Asset::allCompanies()->whereNotNull('serial')->value('serial');
         $path = tempnam(sys_get_temp_dir(), 'imp').'.xlsx';

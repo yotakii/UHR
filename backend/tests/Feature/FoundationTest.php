@@ -55,9 +55,9 @@ class FoundationTest extends TestCase
         $this->getJson('/api/hr/permissions')->assertForbidden();
 
         // HR يعرض الشواغر ويضيفها؛ المدير التنفيذي يعرضها فقط
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->getJson('/api/hr/jobs')->assertOk();
-        $exec = \App\Models\User::whereHas('roles', fn ($q) => $q->where('key', 'executive'))->where('company_id', $this->company('alfarada'))->firstOrFail();
+        $exec = \App\Models\User::whereHas('roles', fn ($q) => $q->where('key', 'executive'))->where('company_id', $this->company('uniqueness'))->firstOrFail();
         $this->login($exec->email);
         $this->getJson('/api/hr/jobs')->assertOk();
         $this->postJson('/api/hr/jobs', [])->assertForbidden();
@@ -65,7 +65,7 @@ class FoundationTest extends TestCase
 
     public function test_admin_edits_the_matrix_immediately_and_it_is_audited(): void
     {
-        $this->login('admin@alfarada.sy');
+        $this->login('admin@uniqueness.sy');
         $grid = $this->getJson('/api/hr/permissions')->assertOk();
         $this->assertSame(['ع', 'ض', 'ت', 'ق', 'ص', 'ط', 'ح'], array_column($grid->json('actions'), 'letter'));
         $this->assertSame(32, collect($grid->json('roles'))->firstWhere('key', 'employee')['users']);
@@ -73,7 +73,7 @@ class FoundationTest extends TestCase
         // سحب «إضافة» الشواغر من مسؤول التوظيف + «عرض» يُضاف تلقائياً مع أي إجراء
         $this->putJson('/api/hr/permissions', ['matrix' => ['recruiter' => ['jobs' => ['actions' => ['view', 'edit'], 'scope' => 'all'], 'policies' => ['actions' => ['print'], 'scope' => 'all']]]])
             ->assertOk()->assertJsonPath('changed', 2)->assertJsonPath('matrix.recruiter.policies.actions', ['view', 'print']);
-        $this->assertSame(2, RolePermission::allCompanies()->where('company_id', $this->company('alfarada'))->count());
+        $this->assertSame(2, RolePermission::allCompanies()->where('company_id', $this->company('uniqueness'))->count());
         $log = AuditLog::where('action', 'permissions.updated')->latest('id')->firstOrFail();
         $this->assertSame('عضتح · all', $log->before['recruiter.jobs']);
         $this->assertSame('عت · all', $log->after['recruiter.jobs']);
@@ -94,7 +94,7 @@ class FoundationTest extends TestCase
         $this->postJson('/api/hr/jobs', [])->assertForbidden();
         $this->getJson('/api/hr/jobs')->assertOk();
         // تعديل الفرادة لا يمس مسؤول توظيف أتمتة
-        $this->login('admin@alfarada.sy');
+        $this->login('admin@uniqueness.sy');
         $this->putJson('/api/hr/permissions', ['matrix' => ['recruiter' => ['jobs' => ['actions' => [], 'scope' => 'all']]]])->assertOk();
         $this->login('jobs@atmata.sy');
         $this->getJson('/api/hr/jobs')->assertOk();
@@ -102,7 +102,7 @@ class FoundationTest extends TestCase
 
     public function test_dashboard_sections_follow_permissions(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $d = $this->getJson('/api/hr/dashboard')->assertOk()->json('data');
         $this->assertSame(32, $d['people']['total']);
         $this->assertSame(7, count($d['attendance']['series']));
@@ -121,35 +121,35 @@ class FoundationTest extends TestCase
         $this->assertArrayNotHasKey('attendance', $r);
         $this->assertArrayHasKey('funnel', $r);
 
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->getJson('/api/hr/dashboard')->assertForbidden();
     }
 
     public function test_bell_shows_hr_notices_by_module_and_marks_them_read(): void
     {
-        Tenant::run($this->company('alfarada'), function () {
+        Tenant::run($this->company('uniqueness'), function () {
             Notice::query()->delete();
             Notify::hr('طلب توظيف جديد', 'New application', 'cand:1');
             Notify::hr('طلب إجازة', 'Leave request', 'leaves');
         });
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->getJson('/api/notices')->assertOk()->assertJsonPath('unread', 2)->assertJsonCount(2, 'data');
         $this->postJson('/api/notices/read')->assertOk();
         $this->getJson('/api/notices')->assertJsonPath('unread', 0)->assertJsonPath('data.0.read', true);
 
         // نفس الإشعارات لمستخدم HR آخر: غير مقروءة عنده
-        $officer = \App\Models\User::whereHas('roles', fn ($q) => $q->where('key', 'hr_officer'))->where('company_id', $this->company('alfarada'))->firstOrFail();
+        $officer = \App\Models\User::whereHas('roles', fn ($q) => $q->where('key', 'hr_officer'))->where('company_id', $this->company('uniqueness'))->firstOrFail();
         $this->login($officer->email);
         $this->getJson('/api/notices')->assertJsonPath('unread', 2);
 
         // الموظف لا يرى إشعارات الموارد البشرية — إشعاراته فقط
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->getJson('/api/notices')->assertJsonPath('unread', 0);
     }
 
     public function test_search_respects_permissions(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $r = $this->getJson('/api/hr/search?q=UHR-100')->assertOk();
         $this->assertCount(6, $r->json('employees'));
         $this->assertSame([], $this->getJson('/api/hr/search?q=a')->json('employees'));   // حرفان على الأقل
@@ -173,11 +173,11 @@ class FoundationTest extends TestCase
         $this->getJson("/api/files/{$file->id}")->assertUnauthorized();
         $this->login('leen.ali@mail.sy');                       // صاحبة الملف
         $this->get("/api/files/{$file->id}")->assertOk()->assertHeader('Content-Disposition', 'attachment; filename=leen.pdf');
-        $this->login('hr@alfarada.sy');                         // HR نفس الشركة
+        $this->login('hr@uniqueness.sy');                         // HR نفس الشركة
         $this->get("/api/files/{$file->id}?inline=1")->assertOk()->assertHeader('Content-Disposition', 'inline; filename=leen.pdf');
         $this->login('hr@atmata.sy');                           // شركة أخرى
         $this->getJson("/api/files/{$file->id}")->assertForbidden();
-        $this->login('samer.halabi@alfarada.sy');               // موظف بلا صلاحية المتقدمين
+        $this->login('samer.halabi@uniqueness.sy');               // موظف بلا صلاحية المتقدمين
         $this->getJson("/api/files/{$file->id}")->assertForbidden();
 
         $logs = AuditLog::whereIn('action', ['file.download', 'file.view'])->where('subject_id', $file->id)->orderBy('id')->get();
@@ -187,19 +187,19 @@ class FoundationTest extends TestCase
 
     public function test_forms_registry_print_meta_and_sensitive_print_log(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $forms = $this->getJson('/api/hr/forms')->assertOk();
         $this->assertSame('Uniqueness-HR.01-01-F-03', collect($forms->json('data'))->firstWhere('code', 'HR.01-01-F-03')['ref']);
         $this->assertSame('Uniqueness-HR-01-F-28', collect($forms->json('data'))->firstWhere('code', 'F-28')['ref']);
 
-        $id = FormTemplate::allCompanies()->where('company_id', $this->company('alfarada'))->where('code', 'F-28')->value('id');
+        $id = FormTemplate::allCompanies()->where('company_id', $this->company('uniqueness'))->where('code', 'F-28')->value('id');
         $this->putJson("/api/hr/forms/{$id}", ['ref' => 'Uniqueness-HR-01-F-28', 'title_ar' => 'طلب توظيف', 'title_en' => 'Employment application', 'issue' => '02', 'issued_on' => '2026-01-15', 'sensitive' => false])->assertOk();
         $this->putJson('/api/hr/print-template', ['logo' => true, 'logo_height' => 64, 'align' => 'center', 'margin_mm' => 12])->assertOk();
 
         $meta = $this->getJson('/api/print/F-28')->assertOk()->json('data');
         $this->assertSame(['02', '2026-01-15'], [$meta['form']['issue'], $meta['form']['issued_on']]);
         $this->assertSame('center', $meta['template']['align']);
-        $this->assertStringContainsString('/api/public/companies/alfarada/logo', $meta['company']['logo']);
+        $this->assertStringContainsString('/api/public/companies/uniqueness/logo', $meta['company']['logo']);
 
         $this->postJson('/api/print/F-28', ['subject' => 'UNQ-1'])->assertJsonPath('logged', false);
         $this->postJson('/api/print/F-31', ['subject' => 'QR-2026-001'])->assertJsonPath('logged', true);
@@ -207,7 +207,7 @@ class FoundationTest extends TestCase
 
         // المتقدم يطبع عرضه من الشركة التي قدّم لها فقط
         $this->login('leen.ali@mail.sy');
-        $this->getJson('/api/print/F-29?company=alfarada')->assertOk()->assertJsonPath('data.form.ref', 'Uniqueness-HR-01-F-29');
+        $this->getJson('/api/print/F-29?company=uniqueness')->assertOk()->assertJsonPath('data.form.ref', 'Uniqueness-HR-01-F-29');
         $this->getJson('/api/print/F-29?company=atmata')->assertNotFound();
 
         $this->login('jobs@atmata.sy');

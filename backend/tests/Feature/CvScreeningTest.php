@@ -50,7 +50,7 @@ class CvScreeningTest extends TestCase
 
     public function test_filters_batch_reading_ranking_and_progress(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $d = $this->getJson('/api/hr/cv-screening?stage=all')->assertOk()->json();
         $this->assertTrue($d['status']['available']);
         $this->assertTrue($d['can']['run']);
@@ -97,7 +97,7 @@ class CvScreeningTest extends TestCase
 
     public function test_monthly_limit_permissions_and_unavailable(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $ids = array_column($this->getJson('/api/hr/cv-screening?stage=all')->json('data'), 'id');
         $cid = Candidate::find($ids[0])->company_id;
         Settings::putPlatform('ai_cv', ['enabled' => true, 'monthly_limit' => 2, 'companies' => []]);
@@ -106,7 +106,7 @@ class CvScreeningTest extends TestCase
         $this->postJson('/api/hr/cv-screening/run', ['ids' => []])->assertStatus(422);
         Settings::putPlatform('ai_cv', ['enabled' => true, 'monthly_limit' => 300, 'companies' => [(string) $cid => ['enabled' => false]]]);
         $this->postJson('/api/hr/cv-screening/run', ['ids' => [$ids[5]]])->assertStatus(409)->assertJsonPath('code', 'review_unavailable');
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->getJson('/api/hr/cv-screening')->assertForbidden();
         $this->postJson('/api/hr/cv-screening/run', ['ids' => [$ids[0]]])->assertForbidden();
     }

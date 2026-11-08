@@ -71,7 +71,7 @@ services:
       MAIL_MAILER: smtp
       MAIL_HOST: mailpit
       MAIL_PORT: 1025
-      MAIL_FROM_ADDRESS: no-reply@alfarada.sy
+      MAIL_FROM_ADDRESS: no-reply@uniqueness.sy
       MAIL_FROM_NAME: UHR
       PHP_CLI_SERVER_WORKERS: "4"           # «المساعد» يكتب الرد بالتدفق — لا يوقف بقية الطلبات
       <<: [*reverb-env, *ai-env]
@@ -100,7 +100,7 @@ services:
       MAIL_MAILER: smtp
       MAIL_HOST: mailpit
       MAIL_PORT: 1025
-      MAIL_FROM_ADDRESS: no-reply@alfarada.sy
+      MAIL_FROM_ADDRESS: no-reply@uniqueness.sy
       MAIL_FROM_NAME: UHR
       <<: *reverb-env
     volumes:

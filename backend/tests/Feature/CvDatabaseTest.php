@@ -41,7 +41,7 @@ class CvDatabaseTest extends TestCase
 
     public function test_search_filters_are_logged_and_export_needs_permission(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $all = $this->getJson('/api/hr/cv')->assertOk();
         $this->assertSame(10, $all->json('meta.total'));
         $this->assertNotEmpty($all->json('cities'));
@@ -58,10 +58,10 @@ class CvDatabaseTest extends TestCase
         $this->assertSame(1, AuditLog::where('action', 'cvdb.export')->count());
 
         // المدير التنفيذي يعرض فقط ولا يصدّر، والموظف لا يصل
-        $this->login('mazen.droubi@alfarada.sy');
+        $this->login('mazen.droubi@uniqueness.sy');
         $this->getJson('/api/hr/cv')->assertOk();
         $this->get('/api/hr/cv/export', ['Accept' => 'application/json'])->assertForbidden();
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->getJson('/api/hr/cv')->assertForbidden();
     }
 
@@ -70,7 +70,7 @@ class CvDatabaseTest extends TestCase
         $this->login('jobs@atmata.sy');                                  // مسؤول توظيف شركة أخرى: لا يرى سير الفرادة
         $this->assertSame(0, $this->getJson('/api/hr/cv')->json('meta.total'));
 
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $id = $this->getJson('/api/hr/cv')->json('data.0.id');
         $this->postJson("/api/hr/cv/{$id}/archive")->assertOk()->assertJsonPath('data.cv_status', 'archived');
         $this->assertSame(9, $this->getJson('/api/hr/cv')->json('meta.total'));
@@ -115,8 +115,8 @@ class CvDatabaseTest extends TestCase
             'public_sector' => 0, 'conviction' => 0, 'salary' => 750, 'source' => 'website', 'cv' => UploadedFile::fake()->create('cv.pdf', 100, 'application/pdf'),
             'password' => 'Sara2026pw', 'password_confirmation' => 'Sara2026pw', 'agree_info' => 1, 'agree_medical' => 1, 'agree_data' => 1,
         ];
-        $this->withHeaders(['Accept' => 'application/json'])->post('/api/public/jobs/alfarada/REQ-2026-034/apply', $form)->assertCreated();
-        $basel = User::where('email', 'basel.atassi@alfarada.sy')->value('id');      // مدير الإدارة المالية
+        $this->withHeaders(['Accept' => 'application/json'])->post('/api/public/jobs/uniqueness/REQ-2026-034/apply', $form)->assertCreated();
+        $basel = User::where('email', 'basel.atassi@uniqueness.sy')->value('id');      // مدير الإدارة المالية
         $n = Notice::where('user_id', $basel)->latest('id')->first();
         $this->assertStringContainsString('سيرة ذاتية جديدة', $n->text_ar);
         $this->assertStringNotContainsString('سارة', $n->text_ar);

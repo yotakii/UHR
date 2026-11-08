@@ -44,14 +44,14 @@ class AdminToolsTest extends TestCase
     public function test_audit_log_search_window_archive_and_export(): void
     {
         $c = $this->useCompany();
-        $admin = User::where('email', 'admin@alfarada.sy')->first();
+        $admin = User::where('email', 'admin@uniqueness.sy')->first();
         $old = AuditLog::create(['company_id' => $c->id, 'user_id' => $admin->id, 'action' => 'employee.updated', 'subject_type' => \App\Models\Employee::class, 'subject_id' => 1,
             'before' => ['title_ar' => 'قديم'], 'after' => ['title_ar' => 'جديد'], 'at' => now()->subDays(70)]);
         $other = $this->makeCompany('acme');
         AuditLog::create(['company_id' => $other->id, 'action' => 'auth.login', 'at' => now()]);
         Tenant::forget();
 
-        $this->login('admin@alfarada.sy');
+        $this->login('admin@uniqueness.sy');
         $r = $this->getJson('/api/hr/admin/audit')->assertOk()->json();
         $this->assertSame(30, $r['settings']['visible_days']);
         $this->assertSame('تسجيل دخول', collect($r['data'])->firstWhere('action', 'auth.login')['label']['ar']);
@@ -62,7 +62,7 @@ class AdminToolsTest extends TestCase
         $arc = $this->getJson('/api/hr/admin/audit?archive=1&group=employee')->assertOk()->json('data');
         $this->assertSame('تعديل موظف', collect($arc)->firstWhere('id', $old->id)['label']['ar']);
         $this->getJson('/api/hr/admin/audit?archive=1&q=قديم')->assertOk()->assertJsonPath('total', 1);
-        $this->getJson("/api/hr/admin/audit?user={$admin->id}&group=auth")->assertOk()->assertJsonPath('data.0.user.email', 'admin@alfarada.sy');
+        $this->getJson("/api/hr/admin/audit?user={$admin->id}&group=auth")->assertOk()->assertJsonPath('data.0.user.email', 'admin@uniqueness.sy');
 
         $this->get('/api/hr/admin/audit/export')->assertOk()->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         $this->assertDatabaseHas('audit_logs', ['action' => 'audit.exported', 'company_id' => $c->id]);
@@ -80,18 +80,18 @@ class AdminToolsTest extends TestCase
         $this->getJson('/api/hr/admin/audit?group=employee')->assertOk()->assertJsonFragment(['id' => $old->id]);
 
         // مدير الموارد البشرية: عرض بلا أرشيف ولا تصدير؛ الموظف: ممنوع
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->putJson('/api/hr/admin/audit/settings', ['visible_days' => 30])->assertOk();
         $this->getJson('/api/hr/admin/audit?archive=1&q=قديم')->assertOk()->assertJsonPath('total', 0)->assertJsonPath('can.archive', false);
         $this->get('/api/hr/admin/audit/export')->assertForbidden();
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->getJson('/api/hr/admin/audit')->assertForbidden();
     }
 
     public function test_policy_library_publish_search_links_and_reads(): void
     {
         // وثائق الشركة مبذورة ومنشورة، وفقرة الدوام مربوطة بإعداد الوردية
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $list = $this->getJson('/api/policies')->assertOk()->json('data');
         $this->assertCount(5, $list);
         $hit = collect($this->getJson('/api/policies/search?q='.urlencode('الساعة التاسعة'))->assertOk()->json('data'))->first();
@@ -106,7 +106,7 @@ class AdminToolsTest extends TestCase
         $this->postJson('/api/policies', ['title_ar' => 'x', 'category' => 'policy'])->assertForbidden();
 
         // HR يرفع سياسة جديدة (مسودة لا يراها الموظف) ثم ينشرها ← إشعار الموظفين
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $txt = UploadedFile::fake()->createWithContent('remote.txt', "سياسة العمل عن بعد\n\nيحق للموظف العمل من المنزل يومين في الأسبوع بموافقة المدير المباشر.\n\nتُسجَّل أيام العمل عن بعد في النظام.");
         $d = $this->post('/api/policies', ['code' => 'HR.01-09', 'title_ar' => 'العمل عن بعد', 'title_en' => 'Remote work', 'category' => 'policy', 'issue' => '01', 'file' => $txt], ['Accept' => 'application/json'])
             ->assertOk()->assertJsonPath('data.status', 'draft')->json('data');
@@ -116,14 +116,14 @@ class AdminToolsTest extends TestCase
         $this->putJson("/api/policies/paragraphs/{$pid}", ['rule_key' => 'work_days', 'rule_note' => 'أيام العمل'])->assertOk()->assertJsonPath('data.rule.key', 'work_days');
         $fileId = $d['version']['file']['id'];
 
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->getJson("/api/policies/{$d['id']}")->assertNotFound();
         $this->get("/api/files/{$fileId}")->assertForbidden();
         $this->assertEmpty($this->getJson('/api/policies/search?q='.urlencode('من المنزل'))->json('data'));
 
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->postJson("/api/policies/versions/{$vid}/publish")->assertOk()->assertJsonPath('data.status', 'published');
-        $samer = User::where('email', 'samer.halabi@alfarada.sy')->first();
+        $samer = User::where('email', 'samer.halabi@uniqueness.sy')->first();
         $this->assertTrue(Notice::where('user_id', $samer->id)->where('link', "policy:{$d['id']}")->exists());
 
         // إصدار ثانٍ: مسودة واحدة فقط، ثم النشر يؤرشف السابق وينقل ربط الفقرة ذات النص نفسه
@@ -136,24 +136,24 @@ class AdminToolsTest extends TestCase
         $this->postJson("/api/policies/versions/{$vid}", ['note' => 'x'])->assertStatus(409)->assertJsonPath('code', 'version_locked');
 
         // الاطلاع: الموظف يقرأ ← HR يرى العدد ومن قرأ
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->getJson("/api/policies/{$d['id']}")->assertOk()->assertJsonPath('data.version.number', 2);
         $this->assertNotEmpty($this->getJson('/api/policies/search?q='.urlencode('من المنزل'))->json('data'));
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->getJson("/api/policies/{$d['id']}")->assertOk()->assertJsonPath('data.version.reads.n', 2); // سامر + رشا (HR موظفة أيضاً)
         $reads = $this->getJson("/api/policies/versions/{$d2['version']['id']}/reads")->assertOk()->json('data');
         $this->assertNotNull(collect($reads)->firstWhere('id', $samer->id)['read_at']);
 
         // الأرشفة تخفي الوثيقة عن الموظفين
         $this->postJson("/api/policies/{$d['id']}/archive")->assertOk()->assertJsonPath('data.status', 'archived');
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->getJson("/api/policies/{$d['id']}")->assertNotFound();
         $this->assertCount(5, $this->getJson('/api/policies')->json('data'));
     }
 
     public function test_company_backup_needs_salary_verification_and_skips_secrets(): void
     {
-        $this->login('admin@alfarada.sy');
+        $this->login('admin@uniqueness.sy');
         $this->getJson('/api/hr/admin/backups')->assertOk()->assertJsonPath('settings.keep', 5);
         $b = $this->postJson('/api/hr/admin/backups')->assertCreated()->assertJsonPath('data.status', 'ok')->json('data');
         $this->assertGreaterThan(1000, $b['meta']['rows']);
@@ -165,7 +165,7 @@ class AdminToolsTest extends TestCase
         $this->assertNotEmpty($users);
         $this->assertArrayNotHasKey('password', $users[0]);
         $this->assertNotFalse($zip->getFromName('tables/employees.json'));
-        $this->assertSame('alfarada', json_decode($zip->getFromName('manifest.json'), true)['company']['slug']);
+        $this->assertSame('uniqueness', json_decode($zip->getFromName('manifest.json'), true)['company']['slug']);
         $zip->close();
 
         $this->unlockSalaries();
@@ -178,7 +178,7 @@ class AdminToolsTest extends TestCase
         $this->assertSame('removed', Backup::find($b['id'])->status);
         $this->assertFalse(Storage::disk('local')->exists($row->path));
 
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->postJson('/api/hr/admin/backups')->assertForbidden();
     }
 
@@ -199,7 +199,7 @@ class AdminToolsTest extends TestCase
         $this->unlockSalaries(false);
         $this->get("/api/platform/backups/{$b['id']}/download")->assertOk();
 
-        $this->login('admin@alfarada.sy');
+        $this->login('admin@uniqueness.sy');
         $this->getJson('/api/platform/backups')->assertForbidden();
         $this->getJson('/api/hr/admin/backups')->assertOk()->assertJsonPath('server.last.id', $b['id']);
         $this->get("/api/hr/admin/backups/{$b['id']}/download")->assertNotFound();
@@ -207,12 +207,12 @@ class AdminToolsTest extends TestCase
 
     public function test_org_chart_export_is_logged(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->getJson('/api/hr/org')->assertOk()->assertJsonPath('chart.mode', 'names_titles')->assertJsonPath('can.print', true);
         $this->postJson('/api/hr/org/export', ['scope' => 'department', 'dept' => 'hr', 'levels' => 3, 'mode' => 'titles', 'pages' => 2])->assertOk();
         $this->assertDatabaseHas('audit_logs', ['action' => 'org.exported']);
         $this->putJson('/api/hr/org/settings', ['mode' => 'titles', 'levels' => 4])->assertOk()->assertJsonPath('data.levels', 4);
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->postJson('/api/hr/org/export', ['scope' => 'company', 'levels' => 3, 'mode' => 'titles'])->assertForbidden();
     }
 }

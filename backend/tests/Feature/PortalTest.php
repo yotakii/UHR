@@ -27,7 +27,7 @@ class PortalTest extends TestCase
     {
         $p = $this->getJson('/api/public/portal')->assertOk()->assertJsonPath('hero.title.ar', 'فرص عمل حقيقية في شركات سورية رائدة')
             ->assertJsonPath('stats.jobs', 8)->assertJsonPath('stats.companies', 2);
-        $this->assertSame(['alfarada', 'atmata'], collect($p->json('companies'))->pluck('slug')->all());
+        $this->assertSame(['uniqueness', 'atmata'], collect($p->json('companies'))->pluck('slug')->all());
         $this->assertStringStartsWith('/api/public/companies/atmata/logo', collect($p->json('companies'))->firstWhere('slug', 'atmata')['logo']);
 
         $jobs = collect($this->getJson('/api/public/jobs')->assertOk()->json('data'));
@@ -51,9 +51,9 @@ class PortalTest extends TestCase
 
     public function test_company_page_shows_its_jobs_including_pending_review(): void
     {
-        $c = $this->getJson('/api/public/companies/alfarada')->assertOk()->assertJsonPath('data.brand_latin', 'UNIQUENESS GROUP')->assertJsonPath('data.about.en', 'Syrian development and investment group in Damascus, Aleppo and Homs.');
+        $c = $this->getJson('/api/public/companies/uniqueness')->assertOk()->assertJsonPath('data.brand_latin', 'UNIQUENESS GROUP')->assertJsonPath('data.about.en', 'Syrian development and investment group in Damascus, Aleppo and Homs.');
         $this->assertCount(6, $c->json('data.jobs'));   // صفحة الشركة لا تنتظر مراجعة المنصة
-        $this->getJson('/api/public/jobs/alfarada/REQ-2026-041')->assertOk()->assertJsonPath('data.company.slug', 'alfarada')->assertJsonCount(3, 'data.requirements');
+        $this->getJson('/api/public/jobs/uniqueness/REQ-2026-041')->assertOk()->assertJsonPath('data.company.slug', 'uniqueness')->assertJsonCount(3, 'data.requirements');
         $this->getJson('/api/public/companies/nope')->assertNotFound();
     }
 
@@ -66,9 +66,9 @@ class PortalTest extends TestCase
         $codes = collect($this->getJson('/api/public/jobs')->json('data'))->pluck('code');
         $this->assertEqualsCanonicalizing(['ATM-2026-003', 'REQ-2026-036', 'REQ-2026-038', 'REQ-2026-040'], $codes->all());
         $this->getJson('/api/public/jobs/atmata/ATM-2026-001')->assertNotFound();
-        $this->getJson('/api/public/jobs/alfarada/REQ-2026-034')->assertOk();
+        $this->getJson('/api/public/jobs/uniqueness/REQ-2026-034')->assertOk();
 
-        Company::where('slug', 'alfarada')->update(['portal_enabled' => false]);
+        Company::where('slug', 'uniqueness')->update(['portal_enabled' => false]);
         $this->assertSame(['ATM-2026-003'], collect($this->getJson('/api/public/jobs')->json('data'))->pluck('code')->all());
         Company::where('slug', 'atmata')->update(['status' => 'suspended']);
         $this->assertSame([], $this->getJson('/api/public/jobs')->json('data'));
@@ -86,7 +86,7 @@ class PortalTest extends TestCase
     {
         $xml = $this->get('/api/public/sitemap.xml')->assertOk()->assertHeader('Content-Type', 'application/xml; charset=utf-8')->getContent();
         $this->assertStringContainsString('<loc>http://localhost:5180/jobs/atmata/ATM-2026-001</loc>', $xml);
-        $this->assertStringContainsString('<loc>http://localhost:5180/c/alfarada</loc>', $xml);
+        $this->assertStringContainsString('<loc>http://localhost:5180/c/uniqueness</loc>', $xml);
         $this->assertStringNotContainsString('REQ-2026-041', $xml);
         $this->get('/api/public/companies/atmata/logo')->assertOk();
         $this->get('/api/public/companies/nope/logo')->assertNotFound();

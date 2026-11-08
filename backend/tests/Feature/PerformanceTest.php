@@ -46,7 +46,7 @@ class PerformanceTest extends TestCase
 
     public function test_seeded_cycle_matches_the_demo_and_approval_creates_awards_into_the_sheet(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $d = $this->getJson('/api/hr/performance')->assertOk()->json();
         $this->assertSame('open', $d['cycle']['status']);
         $this->assertCount(32, $d['reviews']);
@@ -86,7 +86,7 @@ class PerformanceTest extends TestCase
         }
 
         // الموظف يرى نتيجته ومكافأته (وزالت نماذج الدورة المغلقة)
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $me = $this->getJson('/api/me/reviews')->assertOk()->json();
         $this->assertEquals(3.5, $me['results'][0]['score']);
         $this->assertSame([], $me['forms']);
@@ -95,7 +95,7 @@ class PerformanceTest extends TestCase
 
     public function test_seeded_cycle_leaves_a_form_to_try_without_changing_scores(): void
     {
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $me = $this->getJson('/api/me/reviews')->assertOk()->json();
         $pending = collect($me['forms'])->where('status', 'pending')->values();
         $this->assertCount(1, $pending);
@@ -108,7 +108,7 @@ class PerformanceTest extends TestCase
 
     public function test_new_cycle_forms_score_calibration_and_peers(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $seeded = PerformanceCycle::allCompanies()->where('status', 'open')->firstOrFail();
         $this->postJson("/api/hr/performance/cycles/{$seeded->id}/approve")->assertOk();
         $samer = $this->emp('UHR-1007');
@@ -126,7 +126,7 @@ class PerformanceTest extends TestCase
         // نموذج غيري ممنوع، والإرسال يحتاج كل الكفاءات
         $self = $forms->firstWhere('role', 'self');
         $this->postJson("/api/me/reviews/{$self->id}", ['ratings' => $all(4), 'submit' => true])->assertForbidden();
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->assertNotEmpty(collect($this->getJson('/api/me/reviews')->json('forms'))->where('role', 'self'));
         $this->postJson("/api/me/reviews/{$self->id}", ['ratings' => [$comps[0]['id'] => 4], 'submit' => true])->assertUnprocessable();
         $this->postJson("/api/me/reviews/{$self->id}", ['ratings' => $all(4), 'submit' => true])->assertOk();
@@ -142,7 +142,7 @@ class PerformanceTest extends TestCase
         $this->assertSame([3, 3], [$r->performance, $r->potential]);
 
         // المعايرة تبقى بعد إعادة الاحتساب
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->postJson("/api/hr/performance/reviews/{$r->id}/place", ['performance' => 2, 'potential' => 3])->assertOk()->assertJsonPath('data.calibrated', true);
         \App\Services\Performance\Reviews::recompute(Tenant::run($samer->company_id, fn () => $r->fresh()));
         $this->assertSame(2, $r->fresh()->performance);
@@ -160,7 +160,7 @@ class PerformanceTest extends TestCase
 
     public function test_settings_validation_preview_and_recompute(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->putJson('/api/hr/performance/settings', $this->settings(['weights' => ['manager' => 50, 'peers' => 30, 'self' => 30]]))->assertUnprocessable()->assertJsonValidationErrors('config.weights.manager');
         $this->putJson('/api/hr/performance/settings', $this->settings(['rewards' => [['from' => 3, 'to' => 4, 'kind' => 'points', 'value' => 10], ['from' => 3.5, 'to' => 5, 'kind' => 'points', 'value' => 20]]]))->assertUnprocessable();
         $this->putJson('/api/hr/performance/settings', $this->settings(['high_from' => 2, 'mid_from' => 3]))->assertUnprocessable();
@@ -175,14 +175,14 @@ class PerformanceTest extends TestCase
         $s['competencies'] = array_map(fn ($c, $i) => $i < 4 ? array_merge($c, ['active' => false]) : $c, $s['competencies'], array_keys($s['competencies']));
         $this->putJson('/api/hr/performance/settings', $s)->assertUnprocessable()->assertJsonValidationErrors('competencies');
 
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->getJson('/api/hr/performance')->assertForbidden();
         $this->putJson('/api/hr/performance/settings', $s)->assertForbidden();
     }
 
     public function test_analytics_reads_system_data(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->unlockSalaries();
         $d = $this->getJson('/api/hr/analytics')->assertOk()->json();
         $this->assertSame(Employee::allCompanies()->where('company_id', $this->emp('UHR-1007')->company_id)->whereNotIn('status', ['terminated'])->count(), $d['headcount']['total']);
@@ -194,7 +194,7 @@ class PerformanceTest extends TestCase
         $this->assertNotNull($d['pay']);
         $this->assertNotEmpty($d['performance']['grid']);
         $this->getJson('/api/hr/analytics/export')->assertOk();
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->getJson('/api/hr/analytics')->assertForbidden();
     }
 }

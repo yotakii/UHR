@@ -56,40 +56,40 @@ class TrackAndResetTest extends TestCase
     public function test_company_email_domains_and_reset_through_hr(): void
     {
         Notification::fake();
-        $this->login('admin@alfarada.sy');
+        $this->login('admin@uniqueness.sy');
         $this->putJson('/api/hr/admin/users/settings', ['invite_hours' => 72, 'email_domains' => ['bad domain']])->assertStatus(422);
-        $this->putJson('/api/hr/admin/users/settings', ['invite_hours' => 72, 'email_domains' => ['@Alfarada.sy'], 'reset_mode' => 'email'])->assertOk()
-            ->assertJsonPath('settings.email_domains', ['alfarada.sy'])->assertJsonPath('settings.reset_mode', 'email');
+        $this->putJson('/api/hr/admin/users/settings', ['invite_hours' => 72, 'email_domains' => ['@Uniqueness.sy'], 'reset_mode' => 'email'])->assertOk()
+            ->assertJsonPath('settings.email_domains', ['uniqueness.sy'])->assertJsonPath('settings.reset_mode', 'email');
         // حساب جديد ببريد خارجي مرفوض، وبريد الشركة مقبول
         $this->postJson('/api/hr/admin/users', ['email' => 'ops@gmail.com', 'name' => 'العمليات', 'roles' => ['executive']])->assertStatus(422)->assertJsonPath('code', 'email_domain');
-        $this->postJson('/api/hr/admin/users', ['email' => 'ops@alfarada.sy', 'name' => 'العمليات', 'roles' => ['executive']])->assertCreated();
+        $this->postJson('/api/hr/admin/users', ['email' => 'ops@uniqueness.sy', 'name' => 'العمليات', 'roles' => ['executive']])->assertCreated();
         // تعديل بريد موظف إلى بريد شخصي مرفوض
-        $this->login('hr@alfarada.sy');
-        $samer = User::where('email', 'samer.halabi@alfarada.sy')->firstOrFail();
+        $this->login('hr@uniqueness.sy');
+        $samer = User::where('email', 'samer.halabi@uniqueness.sy')->firstOrFail();
         $e = \App\Models\Employee::findOrFail($samer->employee_id);
         $in = ['name' => $e->name, 'name_en' => $e->name_en, 'gender' => $e->gender, 'title_ar' => $e->title_ar, 'title_en' => $e->title_en, 'department_id' => $e->department_id,
             'location_id' => $e->location_id, 'manager_id' => $e->manager_id, 'phone' => $e->phone, 'national_id' => $e->national_id, 'dob' => $e->dob?->toDateString()];
         $this->putJson('/api/hr/employees/'.$e->id, $in + ['email' => 'samer@gmail.com'])->assertStatus(422)->assertJsonPath('code', 'email_domain');
-        $this->putJson('/api/hr/employees/'.$e->id, $in + ['email' => 'samer.halabi@alfarada.sy'])->assertOk();
+        $this->putJson('/api/hr/employees/'.$e->id, $in + ['email' => 'samer.halabi@uniqueness.sy'])->assertOk();
 
         // «نسيت كلمة المرور» ببريد الشركة ← رابط إلى البريد نفسه
         $this->logout();
-        $this->postJson('/api/auth/forgot', ['email' => 'samer.halabi@alfarada.sy'])->assertOk();
+        $this->postJson('/api/auth/forgot', ['email' => 'samer.halabi@uniqueness.sy'])->assertOk();
         Notification::assertSentTo($samer, ResetPasswordNotice::class);
 
         // طريقة الموارد البشرية ← لا رسالة؛ إشعار للموارد البشرية برابط صفحة المستخدمين
-        $this->login('admin@alfarada.sy');
+        $this->login('admin@uniqueness.sy');
         $this->putJson('/api/hr/admin/users/settings', ['invite_hours' => 72, 'reset_mode' => 'hr'])->assertOk();
         $this->logout();
         Notification::fake();
-        $this->postJson('/api/auth/forgot', ['email' => 'samer.halabi@alfarada.sy'])->assertOk()->assertJsonStructure(['message', 'hint']);
+        $this->postJson('/api/auth/forgot', ['email' => 'samer.halabi@uniqueness.sy'])->assertOk()->assertJsonStructure(['message', 'hint']);
         Notification::assertNothingSent();
-        $n = Notice::where('audience', 'hr')->where('link', 'users:samer.halabi@alfarada.sy')->first();
+        $n = Notice::where('audience', 'hr')->where('link', 'users:samer.halabi@uniqueness.sy')->first();
         $this->assertNotNull($n);
         $this->assertSame($samer->company_id, $n->company_id);
         // يراه من يملك إدارة المستخدمين
-        $this->login('admin@alfarada.sy');
-        $this->assertTrue(collect($this->getJson('/api/notices')->json('data'))->contains(fn ($x) => ($x['link'] ?? null) === 'users:samer.halabi@alfarada.sy'));
+        $this->login('admin@uniqueness.sy');
+        $this->assertTrue(collect($this->getJson('/api/notices')->json('data'))->contains(fn ($x) => ($x['link'] ?? null) === 'users:samer.halabi@uniqueness.sy'));
 
         // المتقدم (بلا شركة) يصله الرابط دائماً على بريده
         $this->logout();

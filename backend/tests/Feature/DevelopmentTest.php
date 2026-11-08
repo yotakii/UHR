@@ -56,7 +56,7 @@ class DevelopmentTest extends TestCase
 
         // الموظف يحدّث نشاطه ولا يلغي، وغيره لا يحدّث
         $acts = DevelopmentActivity::allCompanies()->where('development_plan_id', $p['id'])->orderBy('id')->get();
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $mine = $this->getJson('/api/development')->assertOk()->json();
         $this->assertContains($p['id'], array_column($mine['plans'], 'id'));
         $this->assertFalse($mine['can']['team']);
@@ -91,7 +91,7 @@ class DevelopmentTest extends TestCase
         $this->login($this->mail($mgr));
         $this->postJson('/api/development/succession', ['title_ar' => 'مدير', 'title_en' => 'Manager', 'risk' => 'high', 'competencies' => [1]])->assertForbidden();
 
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $comps = $this->getJson('/api/development')->assertOk()->json('competencies');
         $sp = $this->postJson('/api/development/succession', ['title_ar' => 'رئيس قسم المحاسبة', 'title_en' => 'Head of accounting', 'department_id' => $samer->department_id, 'incumbent_id' => $mgr->id,
             'risk' => 'high', 'competencies' => array_column(array_slice($comps, 0, 2), 'id')])->assertCreated()->json('data');
@@ -111,7 +111,7 @@ class DevelopmentTest extends TestCase
         $this->assertSame(0, $run()['gaps']);
 
         // HR: الفجوات + خطة تطوير مرتبطة؛ ثم مرشح «جاهز الآن» يسد الفجوة
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $cid = $d['candidates'][0]['id'];
         $this->putJson("/api/development/candidates/{$cid}", ['readiness' => '1y', 'create_plan' => true])->assertUnprocessable()->assertJsonValidationErrors('gaps');
         $r = $this->putJson("/api/development/candidates/{$cid}", ['readiness' => '1y', 'gaps' => 'إدارة الفريق والموازنات', 'create_plan' => true])->assertOk()->json('data');
@@ -122,13 +122,13 @@ class DevelopmentTest extends TestCase
         $this->postJson("/api/development/succession/{$sp['id']}/review", ['note' => 'مراجعة نصف سنوية للمرشحين'])->assertOk()->assertJsonPath('data.status', 'reviewed');
 
         // الموظف لا يرى التعاقب
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->assertSame([], $this->getJson('/api/development')->json('succession'));
     }
 
     public function test_settings_and_seeded_sample(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $d = $this->getJson('/api/development')->assertOk()->json();
         $this->assertSame(3, $d['settings']['review_months']);
         $this->assertTrue(collect($d['succession'])->contains('gap', true));
@@ -139,7 +139,7 @@ class DevelopmentTest extends TestCase
         $this->putJson('/api/development/settings', $s)->assertOk()->assertJsonPath('settings.readiness.0.ar', 'جاهز فوراً')->assertJsonPath('settings.review_months', 6);
         $s['readiness'][1]['key'] = 'now';
         $this->putJson('/api/development/settings', $s)->assertUnprocessable();
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->putJson('/api/development/settings', $s)->assertForbidden();
         $this->assertSame(1, SuccessionPlan::allCompanies()->count());
     }

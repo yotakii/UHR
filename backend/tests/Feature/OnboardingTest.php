@@ -51,10 +51,10 @@ class OnboardingTest extends TestCase
 
     private function wizard(array $over = []): array
     {
-        $co = User::where('email', 'hr@alfarada.sy')->value('company_id');
+        $co = User::where('email', 'hr@uniqueness.sy')->value('company_id');
         return Tenant::run($co, fn () => array_merge([
             'name' => 'نور الخطيب', 'name_en' => 'Nour Al-Khatib', 'gender' => 'F', 'national_id' => '01090807060', 'dob' => '1997-03-02', 'phone' => '+963 944 123 456',
-            'email' => 'nour.khatib@alfarada.sy', 'department_id' => \App\Models\Department::where('code', 'it')->value('id'), 'title_ar' => 'محللة نظم', 'title_en' => 'Systems analyst',
+            'email' => 'nour.khatib@uniqueness.sy', 'department_id' => \App\Models\Department::where('code', 'it')->value('id'), 'title_ar' => 'محللة نظم', 'title_en' => 'Systems analyst',
             'location_id' => \App\Models\Location::where('code', 'dam')->value('id'), 'salary' => 950, 'currency' => 'USD', 'hire_date' => '2026-10-15',
         ], $over));
     }
@@ -62,12 +62,12 @@ class OnboardingTest extends TestCase
     public function test_wizard_creates_an_onboarding_employee_with_account_and_custody(): void
     {
         Notification::fake();
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $lk = $this->getJson('/api/hr/employees/lookups')->assertOk()->json();
         $this->assertNotEmpty($lk['departments']); $this->assertNotEmpty($lk['assets']);
         $assets = array_slice(array_column($lk['assets'], 'id'), 0, 2);
 
-        $this->postJson('/api/hr/employees', $this->wizard(['email' => 'hr@alfarada.sy', 'national_id' => 'x']))->assertStatus(422)
+        $this->postJson('/api/hr/employees', $this->wizard(['email' => 'hr@uniqueness.sy', 'national_id' => 'x']))->assertStatus(422)
             ->assertJsonValidationErrors(['email', 'national_id']);
         $id = $this->postJson('/api/hr/employees', $this->wizard() + ['asset_ids' => $assets])->assertCreated()->assertJsonPath('data.code', 'UHR-1033')->json('data.id');
 
@@ -75,7 +75,7 @@ class OnboardingTest extends TestCase
         $this->assertSame(['onboarding', 'UHR-1008'], [$e->status, $e->manager()->value('code')]);   // رئيس الإدارة تلقائياً
         $this->assertSame([0, 13], array_keys(array_filter($e->onboarding->checklist)));
         $this->assertSame(2, Asset::where('employee_id', $id)->where('status', 'pending_ack')->count());
-        $u = User::where('email', 'nour.khatib@alfarada.sy')->firstOrFail();
+        $u = User::where('email', 'nour.khatib@uniqueness.sy')->firstOrFail();
         $this->assertSame([$id, 'invite', 'employee'], [$u->employee_id, $u->invite_kind, $u->portal()]);
         Notification::assertSentTo($u, AccountInvite::class, fn ($n) => $n->kind === 'employee' && $n->code === 'UHR-1033');
         $this->assertSame(1, AuditLog::where('action', 'employee.added')->count());
@@ -87,7 +87,7 @@ class OnboardingTest extends TestCase
         $this->assertSame($id, collect($this->getJson('/api/hr/onboarding')->json('joiners'))->firstWhere('id', $id)['id']);
 
         // الموظف العادي لا يصل لصفحات المباشرة، ولا مسؤول التوظيف
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->getJson("/api/hr/onboarding/{$id}")->assertForbidden();
         $this->login('jobs@atmata.sy');
         $this->getJson('/api/hr/onboarding')->assertForbidden();
@@ -96,7 +96,7 @@ class OnboardingTest extends TestCase
 
     public function test_checklist_signatures_custody_probation_and_confirmation(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $assets = array_slice(array_column($this->getJson('/api/hr/employees/lookups')->json('assets'), 'id'), 0, 1);
         $id = $this->postJson('/api/hr/employees', $this->wizard() + ['asset_ids' => $assets])->json('data.id');
         $ob = fn () => Employee::findOrFail($id)->onboarding()->first();
@@ -114,8 +114,8 @@ class OnboardingTest extends TestCase
         $this->assertSame('available', $free->refresh()->status);
 
         // الموظف يوقّع من حسابه: عهدة + F-22 + F-20 (باسم الأم) + الميثاق
-        User::where('email', 'nour.khatib@alfarada.sy')->first()->update(['password' => '123456', 'must_change_password' => false]);
-        $this->login('nour.khatib@alfarada.sy');
+        User::where('email', 'nour.khatib@uniqueness.sy')->first()->update(['password' => '123456', 'must_change_password' => false]);
+        $this->login('nour.khatib@uniqueness.sy');
         $docs = $this->getJson('/api/me/documents')->assertOk();
         $this->assertCount(1, $docs->json('pending'));
         $this->postJson('/api/me/documents/sign', ['doc' => 'asset', 'asset_id' => $assets[0]])->assertStatus(422)->assertJsonPath('code', 'signature_required');
@@ -130,7 +130,7 @@ class OnboardingTest extends TestCase
         $this->assertSame([true, true, true], [$ob()->checklist[10], $ob()->checklist[12], $ob()->checklist[22]]);
 
         // 14 بنداً ← فترة التجربة تلقائياً
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->postJson("/api/hr/onboarding/{$id}/confirm")->assertStatus(409)->assertJsonPath('code', 'not_in_probation');
         foreach ([2, 3, 5, 6, 7, 8, 9] as $i) $this->postJson("/api/hr/onboarding/{$id}/check", ['index' => $i])->assertOk();
         $this->assertSame([14, 'probation'], [$ob()->doneCount(), Employee::find($id)->status]);
@@ -144,7 +144,7 @@ class OnboardingTest extends TestCase
 
     public function test_staged_referral_points_once_per_stage_doubled_for_hard_to_fill_and_none_after_rejection(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $c = Candidate::whereNotNull('referrer_id')->where('stage', 'new')->with('jobOpening')->first()
             ?? Candidate::whereNotNull('referrer_id')->with('jobOpening')->firstOrFail();
         $c->update(['stage' => 'new']);
@@ -189,7 +189,7 @@ class OnboardingTest extends TestCase
     public function test_excel_import_previews_errors_and_saves_all_or_nothing(): void
     {
         Notification::fake();
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $tpl = $this->get('/api/hr/employees/import/template')->assertOk();
         $this->assertStringContainsString('spreadsheetml', $tpl->headers->get('Content-Type'));
 
@@ -201,11 +201,11 @@ class OnboardingTest extends TestCase
             $w->close();
             return new UploadedFile($path, 'employees.xlsx', null, null, true);
         };
-        $good = ['name' => 'مازن عيسى', 'name_en' => 'Mazen Issa', 'gender' => 'ذكر', 'email' => 'mazen.issa@alfarada.sy', 'department' => 'it', 'title_ar' => 'مهندس شبكات', 'title_en' => 'Network engineer',
+        $good = ['name' => 'مازن عيسى', 'name_en' => 'Mazen Issa', 'gender' => 'ذكر', 'email' => 'mazen.issa@uniqueness.sy', 'department' => 'it', 'title_ar' => 'مهندس شبكات', 'title_en' => 'Network engineer',
             'location' => 'dam', 'salary' => '1,100', 'hire_date' => '2021-02-01', 'code' => 'UHR-2001'];
-        $second = ['name' => 'رنا يوسف', 'name_en' => 'Rana Youssef', 'gender' => 'F', 'email' => 'rana.youssef@alfarada.sy', 'department' => 'IT', 'title_ar' => 'فنية دعم', 'title_en' => 'Support technician',
+        $second = ['name' => 'رنا يوسف', 'name_en' => 'Rana Youssef', 'gender' => 'F', 'email' => 'rana.youssef@uniqueness.sy', 'department' => 'IT', 'title_ar' => 'فنية دعم', 'title_en' => 'Support technician',
             'location' => 'Damascus', 'salary' => '700', 'hire_date' => '01/06/2023', 'manager_code' => 'UHR-2001'];
-        $bad = ['name' => 'خطأ', 'name_en' => 'Bad', 'gender' => 'x', 'email' => 'mazen.issa@alfarada.sy', 'department' => 'nope', 'title_ar' => 'x', 'title_en' => 'x', 'location' => 'dam', 'salary' => 'abc', 'hire_date' => '2021-13-40'];
+        $bad = ['name' => 'خطأ', 'name_en' => 'Bad', 'gender' => 'x', 'email' => 'mazen.issa@uniqueness.sy', 'department' => 'nope', 'title_ar' => 'x', 'title_en' => 'x', 'location' => 'dam', 'salary' => 'abc', 'hire_date' => '2021-13-40'];
 
         $p = $this->post('/api/hr/employees/import/preview', ['file' => $file([$good, $second, $bad])])->assertOk();
         $this->assertSame([2, 1], [$p->json('ok'), $p->json('errors')]);
@@ -213,13 +213,13 @@ class OnboardingTest extends TestCase
         // ملخص الأخطاء حسب الحقل (ملاحظة 72)
         $this->assertSame(['count' => 1, 'rows' => [$p->json('rows.2.row')]], array_intersect_key(collect($p->json('summary'))->firstWhere('field', 'department'), ['count' => 0, 'rows' => 0]));
         $this->post('/api/hr/employees/import', ['file' => $file([$good, $second, $bad])])->assertStatus(422)->assertJsonPath('code', 'import_errors');
-        $this->assertFalse(Employee::where('email', 'mazen.issa@alfarada.sy')->exists());
+        $this->assertFalse(Employee::where('email', 'mazen.issa@uniqueness.sy')->exists());
 
         $this->post('/api/hr/employees/import', ['file' => $file([$good, $second]), 'invite' => '0'])->assertCreated()->assertJsonPath('created', 2);
-        $m = Employee::where('code', 'UHR-2001')->firstOrFail(); $r = Employee::where('email', 'rana.youssef@alfarada.sy')->firstOrFail();
+        $m = Employee::where('code', 'UHR-2001')->firstOrFail(); $r = Employee::where('email', 'rana.youssef@uniqueness.sy')->firstOrFail();
         $this->assertSame(['active', 1100.0, false], [$m->status, (float) $m->salary, $m->onboarding()->exists()]);
         $this->assertSame([$m->id, '2023-06-01', 'UHR-2002'], [$r->manager_id, $r->hire_date->toDateString(), $r->code]);   // العداد بعد أعلى رقم مستورد
-        $this->assertFalse(User::where('email', 'rana.youssef@alfarada.sy')->first()->isActivated());   // بلا دعوة: يرسلها المدير لاحقاً
+        $this->assertFalse(User::where('email', 'rana.youssef@uniqueness.sy')->first()->isActivated());   // بلا دعوة: يرسلها المدير لاحقاً
         Notification::assertNothingSent();
         $this->assertSame(1, AuditLog::where('action', 'employees.imported')->count());
     }

@@ -29,8 +29,8 @@ class SpaceTest extends TestCase
         $this->seed(TestDataSeeder::class);
         Storage::fake('local');
         $this->withoutMiddleware(ThrottleRequests::class);
-        $this->samer = User::with('employee')->where('email', 'samer.halabi@alfarada.sy')->firstOrFail();
-        $this->hr = User::where('email', 'hr@alfarada.sy')->firstOrFail();
+        $this->samer = User::with('employee')->where('email', 'samer.halabi@uniqueness.sy')->firstOrFail();
+        $this->hr = User::where('email', 'hr@uniqueness.sy')->firstOrFail();
         $dept = $this->samer->employee->department_id;
         $this->other = User::where('company_id', $this->samer->company_id)->where('active', true)->whereHas('employee', fn ($e) => $e->where('department_id', '!=', $dept)->where('status', 'active'))
             ->whereDoesntHave('roles', fn ($r) => $r->whereIn('key', ['hr_director', 'hr_officer', 'admin']))->orderBy('id')->firstOrFail();

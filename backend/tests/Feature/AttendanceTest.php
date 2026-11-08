@@ -53,7 +53,7 @@ class AttendanceTest extends TestCase
 
     public function test_daily_log_period_summary_and_export(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $r = $this->getJson('/api/hr/attendance')->assertOk()->json();
         $this->assertSame('2026-10-12', $r['date']);
         $this->assertSame(count($r['rows']), collect($r['rows'])->count());
@@ -69,7 +69,7 @@ class AttendanceTest extends TestCase
         $this->get('/api/hr/attendance/export?from=2026-09-29&to=2026-10-12')->assertOk();
         $this->assertTrue(AuditLog::where('action', 'attendance.export')->exists());
 
-        $this->login('basel.atassi@alfarada.sy');                                            // المالية: عرض وتصدير، بلا تعديل
+        $this->login('basel.atassi@uniqueness.sy');                                            // المالية: عرض وتصدير، بلا تعديل
         $this->getJson('/api/hr/attendance')->assertOk()->assertJsonPath('can.edit', false);
         $this->putJson('/api/hr/attendance/'.$this->emp('UHR-1007')->id, ['date' => '2026-10-11', 'in' => '08:00', 'note' => 'نسي البطاقة'])->assertForbidden();
     }
@@ -79,7 +79,7 @@ class AttendanceTest extends TestCase
         $e = $this->emp('UHR-1007');
         Tenant::set($e->company);
         AttendanceDay::updateOrCreate(['employee_id' => $e->id, 'date' => '2026-10-11'], ['in_at' => Carbon::parse('2026-10-11 08:05:00', 'Asia/Damascus'), 'out_at' => null, 'status' => 'present']);
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $row = collect($this->getJson('/api/hr/attendance?date=2026-10-11')->json('rows'))->firstWhere('employee.id', $e->id);
         $this->assertSame('incomplete', $row['status']);                                   // دخول بلا خروج = ناقص
 
@@ -95,7 +95,7 @@ class AttendanceTest extends TestCase
 
     public function test_policy_versions_validation_preview_and_department_override(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $p = $this->getJson('/api/hr/policies')->assertOk()->json();
         $this->assertSame('current', $p['versions']['shift'][0]['state']);
         $this->assertSame(480, $p['current']['shift']['start']);
@@ -132,13 +132,13 @@ class AttendanceTest extends TestCase
         $bad = Settings::POLICY_DEFAULTS['late_deduction']; $bad['tiers'][1]['from'] = 20;
         $this->postJson('/api/hr/policies', ['key' => 'late_deduction', 'effective_from' => '2026-10-12', 'value' => $bad])->assertUnprocessable()->assertJsonPath('code', 'tiers_order');
 
-        $this->login('basel.atassi@alfarada.sy');                                            // المالية لا تعدّل السياسات
+        $this->login('basel.atassi@uniqueness.sy');                                            // المالية لا تعدّل السياسات
         $this->postJson('/api/hr/policies', ['key' => 'shift', 'effective_from' => '2026-11-01', 'value' => $shift])->assertForbidden();
     }
 
     public function test_holidays_count_as_rest_days(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->postJson('/api/hr/holidays/fixed', ['year' => 2026])->assertOk()->assertJsonCount(7, 'data');
         $this->postJson('/api/hr/holidays/fixed', ['year' => 2026])->assertOk()->assertJsonCount(7, 'data');     // بلا تكرار
         $r = $this->postJson('/api/hr/holidays', ['date' => '2026-03-30', 'days' => 3, 'name_ar' => 'عيد الفطر', 'name_en' => 'Eid al-Fitr'])->assertOk()->json('data');
@@ -151,7 +151,7 @@ class AttendanceTest extends TestCase
 
     public function test_device_registration_scan_in_out_duplicate_unknown_and_revoke(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $res = $this->postJson('/api/hr/devices', ['name_ar' => 'بوابة المقر', 'name_en' => 'HQ gate', 'kind' => 'reader'])->assertCreated()->json();
         $key = $res['key'];
         $this->assertSame(48, strlen($key));
@@ -160,7 +160,7 @@ class AttendanceTest extends TestCase
 
         $h = ['X-Device-Key' => $key];
         $this->getJson('/api/device/me')->assertUnauthorized()->assertJsonPath('code', 'device_unknown');
-        $this->getJson('/api/device/me', $h)->assertOk()->assertJsonPath('device.name.en', 'HQ gate')->assertJsonPath('company.slug', 'alfarada');
+        $this->getJson('/api/device/me', $h)->assertOk()->assertJsonPath('device.name.en', 'HQ gate')->assertJsonPath('company.slug', 'uniqueness');
 
         // موظف جديد قيد المباشرة: أول تمرير يُنجز البند 15 من F-19
         $e = $this->emp('UHR-1007');
@@ -174,7 +174,7 @@ class AttendanceTest extends TestCase
         $this->assertTrue(Onboarding::where('employee_id', $e->id)->first()->checklist[14]);
         $this->postJson('/api/device/scan', ['uid' => $e->nfc_uid], $h)->assertOk()->assertJsonPath('kind', 'dup');   // خلال مهلة التكرار
         // الحركة تظهر فوراً في «آخر الحركات» وفي سجل اليوم
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $day = $this->getJson('/api/hr/attendance')->assertOk()->json();
         $this->assertSame(['UHR-1007', 'in', '10:30', 'HQ gate'], [$day['latest'][0]['employee']['code'], $day['latest'][0]['type'], $day['latest'][0]['time'], $day['latest'][0]['device']['en']]);
         $this->assertSame('10:30', collect($day['rows'])->firstWhere('employee.code', 'UHR-1007')['in']);
@@ -194,7 +194,7 @@ class AttendanceTest extends TestCase
         if ($other) $this->postJson('/api/device/scan', ['uid' => $other->nfc_uid], $h)->assertOk()->assertJsonPath('kind', 'unknown');
 
         // إيقاف الجهاز يقطعه فوراً، وتجديد المفتاح يبطل القديم
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $id = $res['data']['id'];
         $new = $this->postJson("/api/hr/devices/{$id}/rotate")->assertOk()->json('key');
         $this->postJson('/api/auth/logout');
@@ -209,14 +209,14 @@ class AttendanceTest extends TestCase
         $e = $this->emp('UHR-1007');
         Tenant::set($e->company);
         AttendanceDay::updateOrCreate(['employee_id' => $e->id, 'date' => '2026-10-11'], ['in_at' => Carbon::parse('2026-10-11 08:05:00', 'Asia/Damascus'), 'out_at' => null, 'status' => 'present']);
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $rows = $this->getJson("/api/hr/employees/{$e->id}")->json('data.attendance');
         $this->assertSame('incomplete', collect($rows)->firstWhere('date', '2026-10-11')['status']);
     }
 
     public function test_card_tapped_on_a_bridge_reaches_the_link_card_window(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $key = $this->postJson('/api/hr/devices', ['name_ar' => 'جسر', 'name_en' => 'Bridge', 'kind' => 'bridge'])->json('key');
         $e = $this->emp('UHR-1012');
         $now = $this->getJson("/api/hr/employees/{$e->id}/card/last-read")->assertOk()->json('now');
@@ -226,13 +226,13 @@ class AttendanceTest extends TestCase
         $r = $this->getJson("/api/hr/employees/{$e->id}/card/last-read?since=".urlencode($now))->assertOk()->json('data');
         $this->assertSame(['A1:B2:C3:D4:E5', false, 'جسر'], [$r['uid'], $r['known'], $r['device']['ar']]);
         $this->putJson("/api/hr/employees/{$e->id}/card", ['uid' => $r['uid']])->assertOk()->assertJsonPath('data.nfc_uid', 'A1:B2:C3:D4:E5');
-        $this->login('basel.atassi@alfarada.sy');
+        $this->login('basel.atassi@uniqueness.sy');
         $this->getJson("/api/hr/employees/{$e->id}/card/last-read")->assertForbidden();
     }
 
     public function test_ready_made_bridge_package_carries_a_fresh_key_and_the_system_url(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $res = $this->postJson('/api/hr/devices', ['name_ar' => 'قارئ', 'name_en' => 'Reader', 'kind' => 'bridge'])->json();
         $r = $this->post("/api/hr/devices/{$res['data']['id']}/package", [], ['Origin' => 'http://localhost:5180'])->assertOk();
         $path = tempnam(sys_get_temp_dir(), 'z'); file_put_contents($path, file_get_contents($r->baseResponse->getFile()->getPathname()));
@@ -246,7 +246,7 @@ class AttendanceTest extends TestCase
         $this->postJson('/api/auth/logout');
         $this->getJson('/api/device/me', ['X-Device-Key' => $res['key']])->assertUnauthorized();      // المفتاح القديم توقف
         $this->getJson('/api/device/me', ['X-Device-Key' => $m[1]])->assertOk();
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->assertTrue($this->getJson('/api/hr/devices')->json('data.0.online'));
     }
 }

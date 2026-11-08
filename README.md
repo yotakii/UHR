@@ -36,8 +36,8 @@ docker compose exec api php artisan uhr:install --email=admin@company.sy
 docker compose exec api php artisan migrate:fresh --seed
 docker compose exec api php artisan db:seed --class=TestDataSeeder
 ```
-حسابات بيانات الاختبار (كلمة المرور 123456): `admin@alfarada.sy` مدير النظام · `hr@alfarada.sy` الموارد البشرية ·
-`samer.halabi@alfarada.sy` موظف · `leen.ali@mail.sy` متقدمة (لديها عرض عمل). بريد كل موظف: `الاسم.الكنية@alfarada.sy`.
+حسابات بيانات الاختبار (كلمة المرور 123456): `admin@uniqueness.sy` مدير النظام · `hr@uniqueness.sy` الموارد البشرية ·
+`samer.halabi@uniqueness.sy` موظف · `leen.ali@mail.sy` متقدمة (لديها عرض عمل). بريد كل موظف: `الاسم.الكنية@uniqueness.sy`.
 
 ## أوامر مفيدة
 ```powershell

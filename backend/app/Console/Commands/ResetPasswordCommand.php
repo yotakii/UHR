@@ -9,8 +9,8 @@ use Illuminate\Support\Str;
 
 /**
  * لمدير الخادم: فك قفل حساب وإعادة تعيين كلمة مروره (حين يُقفل المدير الوحيد مثلاً).
- *   php artisan uhr:reset-password admin@alfarada.sy               ← كلمة مؤقتة تُطبع ويُلزم بتغييرها
- *   php artisan uhr:reset-password admin@alfarada.sy --password=…  ← كلمة محددة
+ *   php artisan uhr:reset-password admin@uniqueness.sy               ← كلمة مؤقتة تُطبع ويُلزم بتغييرها
+ *   php artisan uhr:reset-password admin@uniqueness.sy --password=…  ← كلمة محددة
  */
 class ResetPasswordCommand extends Command
 {

@@ -51,7 +51,7 @@ class PayrollNotesTest extends TestCase
 
     public function test_pay_currency_uses_the_rate_on_the_pay_date(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $id = $this->postJson('/api/hr/payroll', ['month' => '2026-09'])->assertCreated()->json('sheet.id');
         $this->postJson("/api/hr/payroll/{$id}/pay", ['currency' => 'SYP', 'pay_date' => '2026-09-30'])->assertOk()
             ->assertJsonPath('sheet.pay_currency', 'SYP')->assertJsonPath('sheet.missing_rates', ['USD']);
@@ -80,7 +80,7 @@ class PayrollNotesTest extends TestCase
 
     public function test_diff_checks_and_report_templates(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->postJson('/api/hr/payroll', ['month' => '2026-08'])->assertCreated();
         $s = $this->postJson('/api/hr/payroll', ['month' => '2026-09'])->assertCreated();
         $s->assertJsonPath('diff.prev', '2026-08');

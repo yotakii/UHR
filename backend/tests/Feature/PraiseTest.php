@@ -37,9 +37,9 @@ class PraiseTest extends TestCase
 
     public function test_praise_posts_in_company_space_adds_points_and_respects_limits(): void
     {
-        $samer = $this->emp('samer.halabi@alfarada.sy'); $dana = $this->emp('dana.shami@alfarada.sy');
+        $samer = $this->emp('samer.halabi@uniqueness.sy'); $dana = $this->emp('dana.shami@uniqueness.sy');
         $before = (int) $samer->points;
-        $this->login('dana.shami@alfarada.sy');
+        $this->login('dana.shami@uniqueness.sy');
         $this->getJson('/api/space')->assertOk()->assertJsonPath('praise.enabled', true)->assertJsonPath('praise.left', 10)->assertJsonPath('praise.points', 5);
         $this->getJson('/api/space/colleagues?q=سامر')->assertOk()->assertJsonPath('data.0.id', $samer->id);
         $this->postJson('/api/space/praise', ['recipients' => [$dana->id], 'value' => 'teamwork', 'message' => 'شكراً لنفسي على العمل'])->assertUnprocessable()->assertJsonPath('code', 'self');
@@ -51,12 +51,12 @@ class PraiseTest extends TestCase
         $this->assertSame($before + 5, (int) $samer->fresh()->points);
         $this->assertSame(5, (int) PointLog::allCompanies()->where('employee_id', $samer->id)->where('source', 'praise')->sum('points'));
 
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->getJson('/api/space?filter=praise')->assertOk()->assertJsonPath('data.0.id', $id)->assertJsonPath('praise_top.0.employee_id', $samer->id);
         $this->getJson('/api/me/rewards')->assertOk()->assertJsonPath('points', $before + 5);
 
         // الحد الشهري + النقاط 0 = بلا نقاط
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $cfg = $this->getJson('/api/space/settings')->assertOk()->json();
         $this->putJson('/api/space/praise-settings', ['praise' => ['values' => $cfg['praise']['values'], 'points' => 0, 'monthly_limit' => 1] + $cfg['praise'], 'celebrations' => $cfg['celebrations']])
             ->assertOk()->assertJsonPath('praise.monthly_limit', 1);
@@ -68,7 +68,7 @@ class PraiseTest extends TestCase
 
     public function test_daily_celebrations_promotion_and_hidden_birthday(): void
     {
-        $samer = $this->emp('samer.halabi@alfarada.sy'); $dana = $this->emp('dana.shami@alfarada.sy');
+        $samer = $this->emp('samer.halabi@uniqueness.sy'); $dana = $this->emp('dana.shami@uniqueness.sy');
         $samer->update(['dob' => '1990-10-12']);
         $dana->update(['dob' => '1992-10-12', 'hide_birthday' => true, 'hire_date' => '2023-10-12']);
         Tenant::run($samer->company_id, function () use ($samer, $dana) {
@@ -81,7 +81,7 @@ class PraiseTest extends TestCase
             $this->assertNull($b['birthday']->user_id);
         });
 
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $row = collect($this->getJson('/api/space?filter=celebrations')->assertOk()->json('data'))->firstWhere('meta.type', 'birthday');
         $this->assertTrue($row['author']['system']);
         $this->assertFalse($row['can']['report']);
@@ -91,7 +91,7 @@ class PraiseTest extends TestCase
         $this->assertTrue($this->getJson('/api/me/account')->json('data.employee.hide_birthday'));
 
         // ترقية بخيار الإعلان
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->putJson("/api/hr/employees/{$samer->id}", array_merge($this->profilePayload($samer->fresh()), ['title_ar' => 'مهندس شبكات أول', 'announce_promotion' => true]))->assertOk();
         $this->assertSame(1, Celebration::allCompanies()->where('kind', 'promotion')->count());
         $this->putJson("/api/hr/employees/{$samer->id}", array_merge($this->profilePayload($samer->fresh()), ['title_ar' => 'مهندس شبكات رئيسي']))->assertOk();

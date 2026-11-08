@@ -36,7 +36,7 @@ class PlatformTest extends TestCase
 
     public function test_only_platform_admin(): void
     {
-        $this->postJson('/api/auth/login', ['email' => 'hr@alfarada.sy', 'password' => '123456']);
+        $this->postJson('/api/auth/login', ['email' => 'hr@uniqueness.sy', 'password' => '123456']);
         $this->getJson('/api/platform/companies')->assertForbidden();
     }
 
@@ -45,7 +45,7 @@ class PlatformTest extends TestCase
         $this->asPlatform();
         $this->getJson('/api/platform/overview')->assertOk()->assertJsonPath('companies', 2)->assertJsonPath('portal_jobs', 8)->assertJsonPath('pending', 1)->assertJsonPath('applications', 10);
         $list = collect($this->getJson('/api/platform/companies')->json('data'));
-        $this->assertSame(['jobs_open' => 6, 'jobs_portal' => 5, 'jobs_pending' => 1, 'applications' => 10, 'employees' => 32], $list->firstWhere('slug', 'alfarada')['counts']);
+        $this->assertSame(['jobs_open' => 6, 'jobs_portal' => 5, 'jobs_pending' => 1, 'applications' => 10, 'employees' => 32], $list->firstWhere('slug', 'uniqueness')['counts']);
         $this->assertArrayNotHasKey('candidates', $list->first());
     }
 
@@ -54,7 +54,7 @@ class PlatformTest extends TestCase
         Notification::fake();
         $this->asPlatform();
         $this->post('/api/platform/companies', ['slug' => 'Bad Slug', 'name_ar' => '', 'name_en' => 'X'], ['Accept' => 'application/json'])->assertStatus(422)->assertJsonValidationErrors(['slug', 'name_ar', 'admin_email']);
-        $this->post('/api/platform/companies', ['slug' => 'alfarada', 'name_ar' => 'x', 'name_en' => 'x', 'admin_email' => 'n@n.sy'], ['Accept' => 'application/json'])->assertJsonValidationErrors('slug');
+        $this->post('/api/platform/companies', ['slug' => 'uniqueness', 'name_ar' => 'x', 'name_en' => 'x', 'admin_email' => 'n@n.sy'], ['Accept' => 'application/json'])->assertJsonValidationErrors('slug');
 
         $res = $this->post('/api/platform/companies', [
             'slug' => 'sham-cables', 'name_ar' => 'الشام للكابلات', 'name_en' => 'Sham Cables', 'about_ar' => 'تصنيع كابلات', 'portal_enabled' => 1, 'portal_review' => 1,
@@ -79,13 +79,13 @@ class PlatformTest extends TestCase
     public function test_suspend_company_blocks_its_users_and_jobs(): void
     {
         $this->asPlatform();
-        $alf = Company::where('slug', 'alfarada')->value('id');
+        $alf = Company::where('slug', 'uniqueness')->value('id');
         $this->postJson("/api/platform/companies/{$alf}/status", ['status' => 'suspended'])->assertStatus(422)->assertJsonValidationErrors('reason');
         $this->postJson("/api/platform/companies/{$alf}/status", ['status' => 'suspended', 'reason' => 'انتهاء الاشتراك السنوي'])->assertOk()->assertJsonPath('data.status', 'suspended');
         $atm = Company::where('slug', 'atmata')->value('id');
         $this->postJson("/api/platform/companies/{$atm}/status", ['status' => 'suspended', 'reason' => 'اختبار التعليق للمالك'])->assertStatus(409);
         $this->postJson('/api/auth/logout');
-        $this->postJson('/api/auth/login', ['email' => 'hr@alfarada.sy', 'password' => '123456'])->assertForbidden()->assertJsonPath('code', 'blocked');
+        $this->postJson('/api/auth/login', ['email' => 'hr@uniqueness.sy', 'password' => '123456'])->assertForbidden()->assertJsonPath('code', 'blocked');
         $this->assertSame(['atmata'], collect($this->getJson('/api/public/jobs')->json('data'))->pluck('company.slug')->unique()->values()->all());
     }
 

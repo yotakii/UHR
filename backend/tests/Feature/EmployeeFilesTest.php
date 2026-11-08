@@ -44,12 +44,12 @@ class EmployeeFilesTest extends TestCase
         return 'data:image/png;base64,'.base64_encode($png);
     }
 
-    private function samer(): Employee { return Employee::allCompanies()->where('email', 'samer.halabi@alfarada.sy')->firstOrFail(); }
+    private function samer(): Employee { return Employee::allCompanies()->where('email', 'samer.halabi@uniqueness.sy')->firstOrFail(); }
 
     public function test_document_awaiting_signature_with_due_date_and_reminder(): void
     {
         $e = $this->samer();
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->post("/api/hr/employees/{$e->id}/documents", ['file' => UploadedFile::fake()->create('contract.pdf', 50, 'application/pdf'), 'type' => 'contract', 'title' => 'ملحق العقد',
             'needs_signature' => '1', 'sign_due' => '2026-10-20'])->assertCreated()->assertJsonPath('data.needs_signature', true)->assertJsonPath('data.sign_due', '2026-10-20');
         $this->post("/api/hr/employees/{$e->id}/documents", ['file' => UploadedFile::fake()->create('x.pdf', 5, 'application/pdf'), 'type' => 'other', 'needs_signature' => '1', 'sign_due' => '2026-10-01'])
@@ -61,13 +61,13 @@ class EmployeeFilesTest extends TestCase
         Tenant::run($e->company_id, fn () => app(EmployeeDocs::class)->sweep());
         $this->assertNotNull($doc->fresh()->sign_alerted_at);
 
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->getJson('/api/me/documents')->assertOk()->assertJsonPath('files.0.id', $doc->id);
         $this->postJson("/api/me/documents/files/{$doc->id}/sign", ['signature' => self::signature()])->assertOk()->assertJsonCount(0, 'files');
         $this->assertNotNull($doc->fresh()->signed_at);
         $this->postJson("/api/me/documents/files/{$doc->id}/sign", ['signature' => self::signature()])->assertStatus(409);
 
-        $this->login('hr@alfarada.sy');   // موظف آخر
+        $this->login('hr@uniqueness.sy');   // موظف آخر
         $this->postJson("/api/me/documents/files/{$doc->id}/sign", ['signature' => self::signature()])->assertNotFound();
     }
 
@@ -80,7 +80,7 @@ class EmployeeFilesTest extends TestCase
             return $f;
         });
         $other = Tenant::run($e->company_id, fn () => StoredFile::create(['disk' => 'local', 'path' => 'x/o.pdf', 'name' => 'o.pdf', 'size' => 10, 'mime' => 'application/pdf']));
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->assertContains($f->id, collect($this->getJson("/api/hr/employees/{$e->id}/linkable")->assertOk()->json('data'))->pluck('id')->all());
         $this->postJson("/api/hr/employees/{$e->id}/documents/link", ['file_id' => $f->id, 'title' => 'تقرير طبي'])->assertCreated()->assertJsonPath('data.source', 'linked');
         $this->postJson("/api/hr/employees/{$e->id}/documents/link", ['file_id' => $f->id])->assertUnprocessable()->assertJsonPath('code', 'already_linked');
@@ -90,16 +90,16 @@ class EmployeeFilesTest extends TestCase
         $file = $this->getJson("/api/hr/employees/{$e->id}")->assertOk()->json('data.biometrics');
         $this->assertStringStartsWith('data:image/png', $file['signature']);
         $this->get("/api/files/{$file['fingerprint_id']}")->assertOk();
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->get("/api/files/{$file['fingerprint_id']}")->assertOk();   // صاحبها
     }
 
     public function test_onboarding_item_files_welcome_memo_and_form_text(): void
     {
-        $this->login('hr@alfarada.sy');
-        $co = User::where('email', 'hr@alfarada.sy')->value('company_id');
+        $this->login('hr@uniqueness.sy');
+        $co = User::where('email', 'hr@uniqueness.sy')->value('company_id');
         $data = Tenant::run($co, fn () => ['name' => 'نور الخطيب', 'name_en' => 'Nour Al-Khatib', 'gender' => 'F', 'national_id' => '01090807060', 'dob' => '1997-03-02', 'phone' => '+963 944 123 456',
-            'email' => 'nour.khatib@alfarada.sy', 'department_id' => \App\Models\Department::where('code', 'it')->value('id'), 'title_ar' => 'محللة نظم', 'title_en' => 'Systems analyst',
+            'email' => 'nour.khatib@uniqueness.sy', 'department_id' => \App\Models\Department::where('code', 'it')->value('id'), 'title_ar' => 'محللة نظم', 'title_en' => 'Systems analyst',
             'location_id' => \App\Models\Location::where('code', 'dam')->value('id'), 'salary' => 950, 'currency' => 'USD', 'hire_date' => '2026-10-15']);
         $id = $this->postJson('/api/hr/employees', $data)->assertCreated()->json('data.id');
         $this->post("/api/hr/employees/{$id}/documents", ['file' => UploadedFile::fake()->create('medical.pdf', 20, 'application/pdf'), 'type' => 'onboarding', 'onboarding_item' => 7])->assertCreated();
@@ -127,7 +127,7 @@ class EmployeeFilesTest extends TestCase
     {
         $e = $this->samer();
         Tenant::run($e->company_id, fn () => $e->update(['phone' => '+963 944 555 777']));
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->getJson('/api/hr/search?q=555777')->assertOk()->assertJsonPath('employees.0.id', $e->id);
         $asset = Tenant::run($e->company_id, fn () => \App\Models\Asset::first());
         $r = collect($this->getJson('/api/hr/search?q='.urlencode($asset->tag))->json('records'));
@@ -139,11 +139,11 @@ class EmployeeFilesTest extends TestCase
         $this->putJson('/api/me/account', ['locale' => 'en', 'theme' => 'light', 'name' => 'x'])->assertOk()->assertJsonPath('user.prefs.theme', 'light')->assertJsonPath('user.prefs.locale', 'en');
         $av = $this->post('/api/me/account/avatar', ['file' => UploadedFile::fake()->image('me.png', 120, 120)])->assertOk()->json('user.avatar');
         $this->post('/api/me/account/avatar', ['file' => UploadedFile::fake()->create('me.pdf', 10, 'application/pdf')])->assertUnprocessable();
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->get("/api/files/{$av}")->assertOk();   // صورة زميل في الشركة نفسها
         $this->login('hr@atmata.sy');
         $this->get("/api/files/{$av}")->assertForbidden();   // شركة أخرى
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->deleteJson('/api/me/account/avatar')->assertOk()->assertJsonPath('user.avatar', null);
     }
 }

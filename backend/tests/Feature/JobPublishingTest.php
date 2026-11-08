@@ -44,7 +44,7 @@ class JobPublishingTest extends TestCase
     public function test_only_job_roles_of_the_company_manage_jobs(): void
     {
         $this->getJson('/api/hr/jobs')->assertUnauthorized();
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->getJson('/api/hr/jobs')->assertForbidden();
         $this->postJson('/api/auth/logout');
         $this->login('leen.ali@mail.sy');
@@ -57,7 +57,7 @@ class JobPublishingTest extends TestCase
 
     public function test_hr_list_shows_pipeline_counts(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $j = collect($this->getJson('/api/hr/jobs')->json('data'))->firstWhere('code', 'REQ-2026-034');
         $this->assertSame(['new' => 1, 'offer' => 1], array_filter($j['pipeline']));
         $this->assertSame(['public', 'approved'], [$j['visibility'], $j['portal_status']]);
@@ -65,11 +65,11 @@ class JobPublishingTest extends TestCase
 
     public function test_client_job_waits_for_platform_review_then_goes_live(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $res = $this->postJson('/api/hr/jobs', $this->job())->assertCreated()->assertJsonPath('data.portal_status', 'pending')->assertJsonPath('data.status', 'open');
         $code = $res->json('data.code');
         $this->assertMatchesRegularExpression('/^REQ-2026-\d{3}$/', $code);
-        $this->getJson("/api/public/jobs/alfarada/{$code}")->assertOk();             // صفحة الشركة فوراً
+        $this->getJson("/api/public/jobs/uniqueness/{$code}")->assertOk();             // صفحة الشركة فوراً
         $this->assertFalse(collect($this->getJson('/api/public/jobs')->json('data'))->contains('code', $code));   // البوابة بعد المراجعة
         $this->postJson('/api/auth/logout');
 
@@ -80,11 +80,11 @@ class JobPublishingTest extends TestCase
         $this->postJson("/api/platform/reviews/{$id}", ['decision' => 'rejected', 'reason' => 'قصير'])->assertStatus(422)->assertJsonValidationErrors('reason');
         $this->postJson("/api/platform/reviews/{$id}", ['decision' => 'approved'])->assertOk()->assertJsonPath('data.portal_status', 'approved');
         $this->assertTrue(collect($this->getJson('/api/public/jobs')->json('data'))->contains('code', $code));
-        $this->assertTrue(\App\Models\Notice::allCompanies()->where('company_id', Company::where('slug', 'alfarada')->value('id'))->where('text_ar', 'نُشر الشاغر «محلل بيانات» على بوابة فرص العمل')->exists());
+        $this->assertTrue(\App\Models\Notice::allCompanies()->where('company_id', Company::where('slug', 'uniqueness')->value('id'))->where('text_ar', 'نُشر الشاغر «محلل بيانات» على بوابة فرص العمل')->exists());
         $this->postJson('/api/auth/logout');
 
         // تعديل المحتوى يعيده للمراجعة
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->putJson("/api/hr/jobs/{$id}", $this->job(['title_ar' => 'محلل بيانات أول', 'title_en' => 'Senior Data Analyst']))->assertOk()->assertJsonPath('data.portal_status', 'pending');
         $this->putJson("/api/hr/jobs/{$id}", $this->job(['title_ar' => 'محلل بيانات أول', 'title_en' => 'Senior Data Analyst', 'closes_at' => '2026-12-15']))->assertOk()->assertJsonPath('data.portal_status', 'pending');
     }
@@ -95,7 +95,7 @@ class JobPublishingTest extends TestCase
         $id = JobOpening::allCompanies()->where('code', 'REQ-2026-041')->value('id');
         $this->postJson("/api/platform/reviews/{$id}", ['decision' => 'rejected', 'reason' => 'أضف نطاق الراتب وموقع العمل بدقة.'])->assertOk();
         $this->postJson('/api/auth/logout');
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $j = collect($this->getJson('/api/hr/jobs')->json('data'))->firstWhere('code', 'REQ-2026-041');
         $this->assertSame(['rejected', 'أضف نطاق الراتب وموقع العمل بدقة.'], [$j['portal_status'], $j['portal_note']]);
         // إعادة الحفظ ترجعه للمراجعة
@@ -111,17 +111,17 @@ class JobPublishingTest extends TestCase
 
     public function test_visibility_internal_company_and_disabled_portal(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->postJson('/api/hr/jobs', $this->job(['visibility' => 'internal']))->assertCreated()->assertJsonPath('data.portal_status', 'none');
         $c = $this->postJson('/api/hr/jobs', $this->job(['visibility' => 'company']))->assertCreated()->assertJsonPath('data.portal_status', 'none')->json('data.code');
-        $this->getJson("/api/public/jobs/alfarada/{$c}")->assertOk();
-        Company::where('slug', 'alfarada')->update(['portal_enabled' => false]);
+        $this->getJson("/api/public/jobs/uniqueness/{$c}")->assertOk();
+        Company::where('slug', 'uniqueness')->update(['portal_enabled' => false]);
         $this->postJson('/api/hr/jobs', $this->job())->assertStatus(422)->assertJsonPath('code', 'portal_disabled');
     }
 
     public function test_validation_and_close(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->postJson('/api/hr/jobs', $this->job(['title_ar' => '', 'salary_max' => 100, 'requirements' => [], 'closes_at' => '2026-01-01']))->assertStatus(422)
             ->assertJsonValidationErrors(['title_ar', 'salary_max', 'requirements', 'closes_at']);
         // إدارة من شركة أخرى غير مقبولة
@@ -130,6 +130,6 @@ class JobPublishingTest extends TestCase
 
         $id = JobOpening::where('code', 'REQ-2026-031')->value('id');
         $this->postJson("/api/hr/jobs/{$id}/status", ['status' => 'closed'])->assertOk()->assertJsonPath('data.accepting', false);
-        $this->getJson('/api/public/jobs/alfarada/REQ-2026-031')->assertNotFound();
+        $this->getJson('/api/public/jobs/uniqueness/REQ-2026-031')->assertNotFound();
     }
 }

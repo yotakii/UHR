@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react'
 
 /**
- * توجيه بروابط حقيقية (History API): /jobs/alfarada/REQ-2026-034?ref=X → { page: 'jobs', id: 'alfarada/REQ-2026-034', parts: […], query: {ref: 'X'} }
+ * توجيه بروابط حقيقية (History API): /jobs/uniqueness/REQ-2026-034?ref=X → { page: 'jobs', id: 'uniqueness/REQ-2026-034', parts: […], query: {ref: 'X'} }
  * روابط قابلة للمشاركة والفهرسة في محركات البحث (SRS §10.15). الروابط القديمة #/… تُحوَّل تلقائياً.
  */
 export type Route = { page: string; id?: string; parts: string[]; query: Record<string, string> }
@@ -13,7 +13,7 @@ export function parse(path: string, search = ''): Route {
   return { page, id: rest.length ? rest.join('/') : undefined, parts, query: Object.fromEntries(new URLSearchParams(qs)) }
 }
 
-/** href('jobs', 'alfarada/REQ-1') → /jobs/alfarada/REQ-1 — كل مقطع يُرمَّز وحده */
+/** href('jobs', 'uniqueness/REQ-1') → /jobs/uniqueness/REQ-1 — كل مقطع يُرمَّز وحده */
 export function href(page: string, id?: string, query?: Record<string, string | undefined>) {
   const clean = query ? Object.fromEntries(Object.entries(query).filter(([, v]) => v !== undefined && v !== '')) as Record<string, string> : {}
   const q = Object.keys(clean).length ? '?' + new URLSearchParams(clean).toString() : ''

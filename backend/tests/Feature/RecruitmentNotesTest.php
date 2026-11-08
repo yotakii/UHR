@@ -73,7 +73,7 @@ class RecruitmentNotesTest extends TestCase
     /** 30 و58: أسئلة الشاغر ومهاراته في F-25 — مع تبديل السؤال — والنتيجة الرسمية لا تتغير */
     public function test_job_interview_questions_and_skills_are_recorded(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $c = Candidate::where('stage', 'interview')->firstOrFail();
         JobOpening::whereKey($c->job_opening_id)->update(['interview' => json_encode(['questions' => [['ar' => 'لماذا هذه الوظيفة؟', 'en' => 'Why this job?']], 'skills' => [['ar' => 'Excel', 'en' => 'Excel']]])]);
         $plan = $this->getJson("/api/hr/candidates/{$c->id}")->assertOk()->json('data.interview_plan');
@@ -94,7 +94,7 @@ class RecruitmentNotesTest extends TestCase
     public function test_offer_needs_interview_and_over_budget_needs_gm_approval(): void
     {
         Notification::fake();
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $c = Candidate::where('stage', 'technical')->whereNotNull('user_id')->firstOrFail();
         $c->interview()->delete();
         $job = $c->jobOpening;
@@ -125,7 +125,7 @@ class RecruitmentNotesTest extends TestCase
 
         // سياسة «منع»: الحفظ مرفوض
         Tenant::run($c->company_id, fn () => Settings::put('rules', ['offer_budget' => 'block'] + Settings::get('rules')));
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->unlockSalaries(false);
         $this->putJson("/api/hr/candidates/{$c->id}/offer", $offer + ['budget_reason' => 'خبرة نادرة وعرض منافس'])->assertStatus(422)->assertJsonValidationErrors('basic');
     }
@@ -133,7 +133,7 @@ class RecruitmentNotesTest extends TestCase
     /** رفض تجاوز الميزانية يعيد العرض لفريق التوظيف */
     public function test_rejected_budget_returns_the_offer(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $c = Candidate::where('stage', 'technical')->whereNotNull('user_id')->firstOrFail();
         $this->putJson("/api/hr/candidates/{$c->id}/interview", ['ratings' => $this->ratings(), 'recommendation' => 'recommended'])->assertOk();
         $this->unlockSalaries(false);
@@ -151,10 +151,10 @@ class RecruitmentNotesTest extends TestCase
     /** 59: إضافة موظف بالراتب المفصّل ونوع العقد */
     public function test_new_employee_keeps_pay_breakdown_and_contract(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $lk = $this->getJson('/api/hr/employees/lookups')->assertOk()->json();
         $r = $this->postJson('/api/hr/employees', ['name' => 'رامي الحسن', 'name_en' => 'Rami Hasan', 'gender' => 'M', 'national_id' => '01099887766', 'dob' => '1995-01-01', 'phone' => '+963 944 111 222',
-            'email' => 'rami.hasan@alfarada.sy', 'department_id' => $lk['departments'][0]['id'], 'title_ar' => 'محاسب', 'title_en' => 'Accountant', 'location_id' => $lk['locations'][0]['id'],
+            'email' => 'rami.hasan@uniqueness.sy', 'department_id' => $lk['departments'][0]['id'], 'title_ar' => 'محاسب', 'title_en' => 'Accountant', 'location_id' => $lk['locations'][0]['id'],
             'currency' => 'USD', 'hire_date' => '2026-10-15', 'contract' => 'open', 'basic' => 600, 'housing' => 80, 'transport' => 40, 'fuel' => 0, 'asset_ids' => []])->assertCreated();
         $e = Employee::findOrFail($r->json('data.id'));
         $this->assertSame([720.0, 'open', 600.0], [$e->salary, $e->contract, (float) $e->pay['basic']]);
@@ -164,7 +164,7 @@ class RecruitmentNotesTest extends TestCase
     public function test_cv_bank_matches_new_job_and_invites_once(): void
     {
         Notification::fake();
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $src = Candidate::where('keep_cv', true)->where('cv_status', 'active')->orderBy('id')->firstOrFail();
         $lk = $this->getJson('/api/hr/jobs/lookups')->assertOk()->json();
         $job = $this->postJson('/api/hr/jobs', ['title_ar' => 'محلل', 'title_en' => 'Analyst', 'department_id' => $lk['departments'][0]['id'], 'location_id' => $lk['locations'][0]['id'],

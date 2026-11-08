@@ -40,8 +40,8 @@ class AuthTest extends TestCase
 
     public function test_each_role_lands_on_its_portal(): void
     {
-        foreach (['admin@alfarada.sy' => 'hr', 'hr@alfarada.sy' => 'hr', 'basel.atassi@alfarada.sy' => 'hr', 'samer.halabi@alfarada.sy' => 'employee',
-            'alaa.sheikhani@alfarada.sy' => 'employee', 'leen.ali@mail.sy' => 'candidate', 'platform@atmata.sy' => 'platform', 'jobs@atmata.sy' => 'hr'] as $email => $portal) {
+        foreach (['admin@uniqueness.sy' => 'hr', 'hr@uniqueness.sy' => 'hr', 'basel.atassi@uniqueness.sy' => 'hr', 'samer.halabi@uniqueness.sy' => 'employee',
+            'alaa.sheikhani@uniqueness.sy' => 'employee', 'leen.ali@mail.sy' => 'candidate', 'platform@atmata.sy' => 'platform', 'jobs@atmata.sy' => 'hr'] as $email => $portal) {
             $this->login(strtoupper($email))->assertOk()->assertJsonPath('user.portal', $portal)->assertJsonPath('user.email', $email);
             $this->getJson('/api/auth/me')->assertJsonPath('user.portal', $portal);
             $this->postJson('/api/auth/logout')->assertOk();
@@ -51,7 +51,7 @@ class AuthTest extends TestCase
 
     public function test_session_payload_for_employee(): void
     {
-        $this->login('hr@alfarada.sy')->assertOk()
+        $this->login('hr@uniqueness.sy')->assertOk()
             ->assertJsonPath('user.name.ar', 'رشا الخطيب')
             ->assertJsonPath('user.name.en', 'Rasha Al-Khatib')
             ->assertJsonPath('user.employee.code', 'UHR-1003')
@@ -63,23 +63,23 @@ class AuthTest extends TestCase
 
     public function test_wrong_password_is_generic_and_bilingual(): void
     {
-        $this->login('nobody@alfarada.sy')->assertStatus(422)->assertJsonPath('code', 'invalid');
-        $this->login('samer.halabi@alfarada.sy', 'bad')->assertStatus(422)->assertJsonPath('remaining', 4)
+        $this->login('nobody@uniqueness.sy')->assertStatus(422)->assertJsonPath('code', 'invalid');
+        $this->login('samer.halabi@uniqueness.sy', 'bad')->assertStatus(422)->assertJsonPath('remaining', 4)
             ->assertJsonPath('message', 'البريد أو كلمة المرور غير صحيحة. تحقق منهما وحاول مجدداً.');
-        $this->login('samer.halabi@alfarada.sy', 'bad', 'en')->assertJsonPath('message', 'Email or password is incorrect. Check them and try again.');
+        $this->login('samer.halabi@uniqueness.sy', 'bad', 'en')->assertJsonPath('message', 'Email or password is incorrect. Check them and try again.');
         $this->postJson('/api/auth/login', [])->assertStatus(422)->assertJsonValidationErrors(['email', 'password']);
     }
 
     /** ملاحظة الاختبار 81: سياسة كلمة المرور وعدد المحاولات من إعداد الشركة */
     public function test_password_policy_and_attempts_follow_company_settings(): void
     {
-        $samer = \App\Models\User::where('email', 'samer.halabi@alfarada.sy')->first();
+        $samer = \App\Models\User::where('email', 'samer.halabi@uniqueness.sy')->first();
         \App\Support\Tenant::run($samer->company_id, fn () => \App\Support\Settings::put('accounts', [...\App\Support\Settings::DEFAULTS['accounts'], 'pw_min' => 10, 'pw_symbol' => true, 'max_attempts' => 3, 'lock_minutes' => 30]));
-        foreach (range(1, 2) as $i) $this->login('samer.halabi@alfarada.sy', 'bad')->assertStatus(422)->assertJsonPath('remaining', 3 - $i);
-        $this->login('samer.halabi@alfarada.sy', 'bad')->assertStatus(423)->assertJsonPath('minutes', 30);
+        foreach (range(1, 2) as $i) $this->login('samer.halabi@uniqueness.sy', 'bad')->assertStatus(422)->assertJsonPath('remaining', 3 - $i);
+        $this->login('samer.halabi@uniqueness.sy', 'bad')->assertStatus(423)->assertJsonPath('minutes', 30);
         $samer->refresh()->forceFill(['locked_until' => null, 'failed_logins' => 0])->save();
 
-        $this->login('samer.halabi@alfarada.sy')->assertOk();
+        $this->login('samer.halabi@uniqueness.sy')->assertOk();
         $this->assertSame(['min' => 10, 'upper' => false, 'symbol' => true], $this->getJson('/api/auth/me')->json('user.password_policy'));
         $this->postJson('/api/auth/password', ['current_password' => '123456', 'password' => 'abcdefgh12', 'password_confirmation' => 'abcdefgh12'])->assertStatus(422)->assertJsonValidationErrors('password');
         $this->postJson('/api/auth/password', ['current_password' => '123456', 'password' => 'abcdefg1!x', 'password_confirmation' => 'abcdefg1!x'])->assertOk();
@@ -87,14 +87,14 @@ class AuthTest extends TestCase
 
     public function test_five_failures_lock_the_account_then_it_unlocks(): void
     {
-        foreach (range(1, 4) as $i) $this->login('samer.halabi@alfarada.sy', 'bad')->assertStatus(422);
-        $this->login('samer.halabi@alfarada.sy', 'bad')->assertStatus(423)->assertJsonPath('code', 'locked')->assertJsonPath('minutes', 5);
-        $this->login('samer.halabi@alfarada.sy')->assertStatus(423);              // حتى كلمة المرور الصحيحة
+        foreach (range(1, 4) as $i) $this->login('samer.halabi@uniqueness.sy', 'bad')->assertStatus(422);
+        $this->login('samer.halabi@uniqueness.sy', 'bad')->assertStatus(423)->assertJsonPath('code', 'locked')->assertJsonPath('minutes', 5);
+        $this->login('samer.halabi@uniqueness.sy')->assertStatus(423);              // حتى كلمة المرور الصحيحة
         $this->assertSame(1, AuditLog::where('action', 'auth.locked')->count());
 
         Carbon::setTestNow(now()->addMinutes(6));
-        $this->login('samer.halabi@alfarada.sy')->assertOk();
-        $u = User::where('email', 'samer.halabi@alfarada.sy')->first();
+        $this->login('samer.halabi@uniqueness.sy')->assertOk();
+        $u = User::where('email', 'samer.halabi@uniqueness.sy')->first();
         $this->assertSame(0, $u->failed_logins);
         $this->assertNull($u->locked_until);
     }
@@ -102,9 +102,9 @@ class AuthTest extends TestCase
     public function test_terminated_employee_and_disabled_account_cannot_sign_in(): void
     {
         Employee::where('code', 'UHR-1028')->update(['status' => 'terminated']);
-        $this->login('hussam.bitar@alfarada.sy')->assertStatus(403)->assertJsonPath('code', 'blocked');
-        User::where('email', 'samer.halabi@alfarada.sy')->update(['active' => false]);
-        $this->login('samer.halabi@alfarada.sy')->assertStatus(403);
+        $this->login('hussam.bitar@uniqueness.sy')->assertStatus(403)->assertJsonPath('code', 'blocked');
+        User::where('email', 'samer.halabi@uniqueness.sy')->update(['active' => false]);
+        $this->login('samer.halabi@uniqueness.sy')->assertStatus(403);
         $this->assertGuest();
     }
 
@@ -133,9 +133,9 @@ class AuthTest extends TestCase
         $this->postJson('/api/auth/forgot', ['email' => 'nobody@x.sy'])->assertOk();
         Notification::assertNothingSent();
 
-        $msg = $this->postJson('/api/auth/forgot', ['email' => 'samer.halabi@alfarada.sy'])->assertOk()->json('message');
+        $msg = $this->postJson('/api/auth/forgot', ['email' => 'samer.halabi@uniqueness.sy'])->assertOk()->json('message');
         $this->assertSame($msg, $this->postJson('/api/auth/forgot', ['email' => 'ghost@x.sy'])->json('message'), 'same reply either way');
-        $u = User::where('email', 'samer.halabi@alfarada.sy')->first();
+        $u = User::where('email', 'samer.halabi@uniqueness.sy')->first();
         $token = null;
         Notification::assertSentTo($u, ResetPasswordNotice::class, function ($n) use (&$token, $u) {
             $token = $n->token;
@@ -154,10 +154,10 @@ class AuthTest extends TestCase
     {
         \Illuminate\Support\Facades\Route::middleware(['api', 'auth', 'fresh', 'portal:hr'])->get('/api/_hr', fn () => ['ok' => true]);
         $this->getJson('/api/_hr')->assertStatus(401);
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->getJson('/api/_hr')->assertStatus(403);
         $this->postJson('/api/auth/logout');
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->getJson('/api/_hr')->assertOk();
     }
 }

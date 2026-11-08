@@ -43,7 +43,7 @@ class PreliminaryTestTest extends TestCase
 
     private function prepare(string $audience = 'passed'): array
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $id = $this->job()->id;
         $qs = [
             ['type' => 'mcq', 'text' => 'ما المعادلة المحاسبية الأساسية؟', 'options' => ['الأصول = الخصوم + حقوق الملكية', 'الأصول = الإيرادات', 'الخصوم = المصاريف'], 'answer' => 0, 'points' => 10, 'rubric' => ''],
@@ -70,7 +70,7 @@ class PreliminaryTestTest extends TestCase
             'availability' => '2026-11-01', 'source' => 'website', 'cv' => UploadedFile::fake()->create('Sara_CV.pdf', 240, 'application/pdf'),
             'password' => 'Sara2026pw', 'password_confirmation' => 'Sara2026pw', 'agree_info' => 1, 'agree_medical' => 1, 'agree_data' => 1, 'keep_cv' => 1,
         ], $over);
-        $ref = $this->withHeaders(['Accept' => 'application/json'])->post('/api/public/jobs/alfarada/REQ-2026-034/apply', $form)->assertCreated()->json('data.ref');
+        $ref = $this->withHeaders(['Accept' => 'application/json'])->post('/api/public/jobs/uniqueness/REQ-2026-034/apply', $form)->assertCreated()->json('data.ref');
         return Candidate::allCompanies()->where('ref', $ref)->firstOrFail();
     }
 
@@ -83,7 +83,7 @@ class PreliminaryTestTest extends TestCase
         // بلا أسئلة لا اعتماد، والمستخدم العادي لا يعدّل
         $this->putJson("/api/hr/jobs/{$this->job()->id}/test", ['enabled' => true, 'audience' => 'all', 'minutes' => 20, 'attempts' => 1, 'valid_days' => 3, 'questions' => [], 'approve' => true])
             ->assertStatus(422)->assertJsonPath('code', 'no_questions');
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->putJson("/api/hr/jobs/{$this->job()->id}/test", ['enabled' => true, 'audience' => 'all', 'minutes' => 20, 'attempts' => 1, 'valid_days' => 3, 'questions' => $qs, 'approve' => true])->assertForbidden();
     }
 
@@ -111,7 +111,7 @@ class PreliminaryTestTest extends TestCase
         $this->assertNotSame('rejected', $c->refresh()->stage);
 
         // مراجعة HR: درجة كل سؤال مفتوح مطلوبة ← النتيجة النهائية (10+0+12)/35
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $f = $this->getJson("/api/hr/candidates/{$c->id}")->assertOk();
         $this->assertSame('completed', $f->json('data.test_detail.current.status'));
         $this->postJson("/api/hr/candidates/{$c->id}/test/review", ['scores' => [], 'note' => 'مستوى جيد'])->assertStatus(422);
@@ -131,7 +131,7 @@ class PreliminaryTestTest extends TestCase
         $this->postJson("/api/public/tests/{$ct->token}/submit", ['answers' => []])->assertStatus(410)->assertJsonPath('code', 'test_expired');
         $this->assertSame('expired', $ct->refresh()->status);
 
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->postJson("/api/hr/candidates/{$c->id}/test")->assertOk()->assertJsonPath('data.test_detail.current.attempt', 2);
         $this->postJson("/api/hr/candidates/{$c->id}/test")->assertStatus(409)->assertJsonPath('code', 'test_open');
         Carbon::setTestNow(now()->addDays(4));                         // انتهت صلاحية الرابط الثاني

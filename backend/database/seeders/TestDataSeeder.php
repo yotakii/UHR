@@ -41,7 +41,7 @@ use Illuminate\Support\Facades\Hash;
  * بيانات الاختبار = بيانات ديمو المعرض حرفياً (data/seed.ts)، بنفس المولّد العشوائي الحتمي rng(20261006)
  * وبنفس ترتيب السحب، فتطابق الأرقام والتواريخ ما يظهر في الديمو. للتطوير والتجريب فقط — لا تُحمَّل في الإنتاج.
  *   php artisan db:seed --class=TestDataSeeder
- * كلمة مرور كل الحسابات: 123456 — المدير: admin@alfarada.sy · HR: hr@alfarada.sy · موظف: samer.halabi@alfarada.sy · متقدمة: leen.ali@mail.sy
+ * كلمة مرور كل الحسابات: 123456 — المدير: admin@uniqueness.sy · HR: hr@uniqueness.sy · موظف: samer.halabi@uniqueness.sy · متقدمة: leen.ali@mail.sy
  */
 class TestDataSeeder extends Seeder
 {
@@ -82,9 +82,9 @@ class TestDataSeeder extends Seeder
 
         Audit::mute(fn () => DB::transaction(function () {
             (new DefaultsSeeder)->run();
-            [$atmata, $alfarada] = $this->companies();
+            [$atmata, $uniqueness] = $this->companies();
             $this->atmata($atmata);
-            Tenant::run($alfarada, fn () => $this->alfarada());
+            Tenant::run($uniqueness, fn () => $this->uniqueness());
         }));
     }
 
@@ -120,13 +120,13 @@ class TestDataSeeder extends Seeder
         $atmata = $make(['slug' => 'atmata', 'name_ar' => 'مجموعة أتمتة', 'name_en' => 'Atmata Group', 'short_ar' => 'أتمتة', 'short_en' => 'Atmata', 'brand_latin' => 'ATMATA GROUP',
             'about_ar' => 'شركة سورية للحلول التقنية وأتمتة الأعمال، مالكة منصة UHR.', 'about_en' => 'Syrian technology and business-automation company, owner of the UHR platform.',
             'website' => 'https://atmata.sy', 'status' => 'active', 'portal_enabled' => true, 'portal_review' => false, 'is_platform' => true], 'atmata.png');
-        $alfarada = $make(['slug' => 'alfarada', 'name_ar' => 'شركة الفرادة للتطوير والاستثمار', 'name_en' => 'Uniqueness Development & Investment Co.', 'short_ar' => 'مجموعة الفرادة', 'short_en' => 'Uniqueness Group',
+        $uniqueness = $make(['slug' => 'uniqueness', 'name_ar' => 'شركة الفرادة للتطوير والاستثمار', 'name_en' => 'Uniqueness Development & Investment Co.', 'short_ar' => 'مجموعة الفرادة', 'short_en' => 'Uniqueness Group',
             'brand_latin' => 'UNIQUENESS GROUP', 'about_ar' => 'مجموعة سورية للتطوير والاستثمار في دمشق وحلب وحمص.', 'about_en' => 'Syrian development and investment group in Damascus, Aleppo and Homs.',
-            'website' => 'https://alfarada.sy', 'status' => 'active', 'portal_enabled' => true, 'portal_review' => true, 'is_platform' => false], 'alfarada.png');
+            'website' => 'https://uniqueness.sy', 'status' => 'active', 'portal_enabled' => true, 'portal_review' => true, 'is_platform' => false], 'uniqueness.png');
 
         $platform = User::updateOrCreate(['email' => 'platform@atmata.sy'], ['name' => 'مدير المنصة', 'name_en' => 'Platform admin', 'company_id' => null, 'password' => Hash::make('123456'), 'must_change_password' => false, 'active' => true]);
         $platform->roles()->sync(Role::where('key', 'platform_admin')->pluck('id'));
-        return [$atmata, $alfarada];
+        return [$atmata, $uniqueness];
     }
 
     /** Atmata: إدارتان، مسؤولة موارد بشرية ومسؤول توظيف، وثلاث شواغر منشورة على البوابة */
@@ -159,7 +159,7 @@ class TestDataSeeder extends Seeder
     }
 
     /** الفرادة = بيانات ديمو المعرض حرفياً */
-    private function alfarada(): void
+    private function uniqueness(): void
     {
             $loc = Location::pluck('id', 'code');
             $depts = $this->departments();
@@ -174,7 +174,7 @@ class TestDataSeeder extends Seeder
             $this->performance($emp);
             $this->development($emp);
             // مكتبة السياسات (D-26): وثائق الشركة الفعلية منشورة
-            app(\App\Services\Policies\PolicyLibrary::class)->seedCompanyDocs(\App\Models\User::where('email', 'hr@alfarada.sy')->firstOrFail());
+            app(\App\Services\Policies\PolicyLibrary::class)->seedCompanyDocs(\App\Models\User::where('email', 'hr@uniqueness.sy')->firstOrFail());
             Counters::atLeast('employee', 1000 + count($employees));
             Counters::atLeast('asset', Asset::count());
             Counters::atLeast('cand-app-'.now()->year, 48210 + 9 * 37);
@@ -227,7 +227,7 @@ class TestDataSeeder extends Seeder
             ['أيهم يوسف', 'Ayham Youssef', 'M', 'سائق', 'Driver', 'admin', 'dam', 380, '5.0'],
             ['زياد قاسم', 'Ziad Kassem', 'M', 'مسؤول مستودع', 'Warehouse Officer', 'admin', 'dam', 520, '3.0'],
         ];
-        $emailOf = fn (string $en) => implode('.', array_filter(array_map(fn ($w) => preg_replace('/[^a-z]/', '', preg_replace('/^al-/', '', $w)), explode(' ', strtolower($en))))).'@alfarada.sy';
+        $emailOf = fn (string $en) => implode('.', array_filter(array_map(fn ($w) => preg_replace('/[^a-z]/', '', preg_replace('/^al-/', '', $w)), explode(' ', strtolower($en))))).'@uniqueness.sy';
         $rows = []; $byCode = [];
         foreach ($E as $i => $e) {
             [$y, $m] = array_map('intval', explode('.', $e[8]));
@@ -536,14 +536,14 @@ class TestDataSeeder extends Seeder
             return $u;
         };
         $company = Tenant::id();
-        $mk('admin@alfarada.sy', ['name' => 'مدير النظام', 'name_en' => 'System admin', 'company_id' => $company], ['admin']);
+        $mk('admin@uniqueness.sy', ['name' => 'مدير النظام', 'name_en' => 'System admin', 'company_id' => $company], ['admin']);
         $special = ['UHR-1001' => ['ceo'], 'UHR-1002' => ['executive'], 'UHR-1003' => ['hr_director'], 'UHR-1004' => ['finance'], 'UHR-1005' => ['hr_officer'], 'UHR-1006' => ['hr_officer']];
         $heads = Department::pluck('head_id')->filter()->all();
         $byCode = [];
         foreach ($employees as $e) {
             $roles = array_merge(['employee'], $special[$e->code] ?? [], in_array($e->id, $heads, true) ? ['manager'] : []);
-            // حساب رشا الخطيب يبقى hr@alfarada.sy كما في الديمو
-            $byCode[$e->code] = $mk($e->code === 'UHR-1003' ? 'hr@alfarada.sy' : $e->email, ['employee_id' => $e->id, 'name' => $e->name, 'name_en' => $e->name_en, 'company_id' => $company], $roles);
+            // حساب رشا الخطيب يبقى hr@uniqueness.sy كما في الديمو
+            $byCode[$e->code] = $mk($e->code === 'UHR-1003' ? 'hr@uniqueness.sy' : $e->email, ['employee_id' => $e->id, 'name' => $e->name, 'name_en' => $e->name_en, 'company_id' => $company], $roles);
         }
         // المتقدمون: حسابات على مستوى المنصة (بلا شركة)، وطلبهم داخل الفرادة
         foreach ($cands as $c) $c->update(['user_id' => $mk($c->email, ['name' => $c->name, 'name_en' => $c->name_en, 'company_id' => null], ['candidate'])->id, 'consent_at' => $c->created_at, 'keep_cv' => true]);

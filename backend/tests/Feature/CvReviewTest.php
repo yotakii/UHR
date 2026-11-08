@@ -68,7 +68,7 @@ class CvReviewTest extends TestCase
             'availability' => '2026-11-01', 'source' => 'website', 'cv' => UploadedFile::fake()->create('Sara_CV.pdf', 240, 'application/pdf'),
             'password' => 'Sara2026pw', 'password_confirmation' => 'Sara2026pw', 'agree_info' => 1, 'agree_data' => 1, 'agree_medical' => 1, 'keep_cv' => 1,
         ], $over);
-        $ref = $this->withHeaders(['Accept' => 'application/json'])->post('/api/public/jobs/alfarada/REQ-2026-034/apply', $form)->assertCreated()->json('data.ref');
+        $ref = $this->withHeaders(['Accept' => 'application/json'])->post('/api/public/jobs/uniqueness/REQ-2026-034/apply', $form)->assertCreated()->json('data.ref');
         return Candidate::allCompanies()->where('ref', $ref)->firstOrFail();
     }
 
@@ -82,7 +82,7 @@ class CvReviewTest extends TestCase
         $this->assertStringContainsString('محاسب', $p);
         foreach (['سارة', 'Sara', 'sara.ahmad@mail.sy', '944 555', '01020304050', 'المزة', '1997', 'الجنسية'] as $secret) $this->assertStringNotContainsString($secret, $p);
 
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $f = $this->getJson("/api/hr/candidates/{$c->id}")->assertOk();
         $this->assertSame(82, $f->json('data.review_detail.score'));
         $this->assertSame('لا خبرة في التدقيق', $f->json('data.review_detail.gaps.0'));
@@ -93,7 +93,7 @@ class CvReviewTest extends TestCase
         // إعادة القراءة
         $this->postJson("/api/hr/candidates/{$c->id}/review")->assertOk()->assertJsonPath('data.review_detail.status', 'done');
         $this->assertCount(2, $this->prompts);
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->postJson("/api/hr/candidates/{$c->id}/review")->assertForbidden();
     }
 
@@ -128,7 +128,7 @@ class CvReviewTest extends TestCase
         Settings::putPlatform('ai_cv', ['enabled' => true, 'monthly_limit' => 1, 'companies' => []]);
         $c2 = $this->apply(['email' => 'third@mail.sy', 'national_id' => '0888']);
         $this->assertSame(0, CandidateReview::allCompanies()->where('candidate_id', $c2->id)->count());   // بلغ الحد
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->postJson("/api/hr/candidates/{$c2->id}/review")->assertStatus(409)->assertJsonPath('code', 'review_limit');
         $this->postJson("/api/hr/candidates/{$c0->id}/review")->assertOk();   // إعادة قراءة موجودة لا تحسب من الحد
         $this->getJson('/api/platform/cv-reading')->assertForbidden();

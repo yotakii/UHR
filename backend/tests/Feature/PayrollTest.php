@@ -54,7 +54,7 @@ class PayrollTest extends TestCase
         $policy('overtime', ['weekly_hours' => 10]);
         $policy('payroll', ['start_date' => null]);
         Settings::bumpPolicies();
-        $e = Employee::create(['code' => 'UHR-1900', 'name' => 'اختبار الكشف', 'name_en' => 'Sheet Test', 'gender' => 'M', 'email' => 'sheet@alfarada.sy', 'title_ar' => 'محاسب', 'title_en' => 'Accountant',
+        $e = Employee::create(['code' => 'UHR-1900', 'name' => 'اختبار الكشف', 'name_en' => 'Sheet Test', 'gender' => 'M', 'email' => 'sheet@uniqueness.sy', 'title_ar' => 'محاسب', 'title_en' => 'Accountant',
             'department_id' => $ref->department_id, 'location_id' => $ref->location_id, 'hire_date' => '2026-01-01', 'salary' => 3000, 'currency' => 'USD', 'status' => 'active']);
         $day = fn (string $d, ?string $in, ?string $out, bool $j = false) => AttendanceDay::create(['employee_id' => $e->id, 'date' => $d, 'in_at' => $in ? "{$d} {$in}:00" : null, 'out_at' => $out ? "{$d} {$out}:00" : null, 'status' => 'present', 'justified' => $j]);
         foreach (['01' => '08:10', '02' => '08:05', '03' => '08:07', '06' => '08:12'] as $d => $in) $day("2026-09-{$d}", $in, '16:00', true);   // تأخير مبرر ≤ 15: 3 إعفاءات ثم حسم
@@ -90,9 +90,9 @@ class PayrollTest extends TestCase
     public function test_sheet_lifecycle_blocks_incomplete_days_and_notifies(): void
     {
         $e = $this->september();
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->getJson('/api/hr/payroll')->assertForbidden();
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->getJson('/api/hr/payroll?month=2026-09')->assertOk()->assertJsonPath('sheet', null);
         $this->postJson('/api/hr/payroll', ['month' => '2026-11'])->assertUnprocessable()->assertJsonPath('code', 'month_future');
         $s = $this->postJson('/api/hr/payroll', ['month' => '2026-09'])->assertCreated()->json();
@@ -107,7 +107,7 @@ class PayrollTest extends TestCase
         $this->postJson("/api/hr/payroll/{$id}/close")->assertStatus(409)->assertJsonPath('code', 'incomplete_days');
 
         // التصحيح من الحضور ← لازم إعادة الاحتساب (بسبب) قبل الإغلاق
-        $hr = User::where('email', 'hr@alfarada.sy')->first();
+        $hr = User::where('email', 'hr@uniqueness.sy')->first();
         foreach ($this->getJson("/api/hr/payroll?month=2026-09")->json('incomplete') as $x) app(Attendance::class)->correct(Employee::find($x['employee_id']), $x['date'], '08:00', '16:00', 'نسي البطاقة', $hr);
         $this->postJson("/api/hr/payroll/{$id}/close")->assertStatus(409)->assertJsonPath('code', 'sheet_stale');
         $this->postJson("/api/hr/payroll/{$id}/reopen", ['note' => 'قصير'])->assertUnprocessable();
@@ -121,13 +121,13 @@ class PayrollTest extends TestCase
         $this->get("/api/hr/payroll/{$id}/export")->assertOk();
 
         // الموظف يرى كشفه المغلق وإشعار «كشفك جاهز»
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $p = $this->getJson('/api/me/payslips')->assertOk()->json();
         $this->assertSame(['2026-09', 'closed'], [$p['data'][0]['month'], $p['data'][0]['status']]);
         $this->assertSame('estimate', $p['current']['status']);
-        $this->assertTrue(Notice::where('user_id', User::where('email', 'samer.halabi@alfarada.sy')->value('id'))->where('link', 'payslip')->exists());
+        $this->assertTrue(Notice::where('user_id', User::where('email', 'samer.halabi@uniqueness.sy')->value('id'))->where('link', 'payslip')->exists());
         // الشهر الجاري لا يُغلق
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $o = $this->postJson('/api/hr/payroll', ['month' => '2026-10'])->assertCreated()->json('sheet.id');
         $this->postJson("/api/hr/payroll/{$o}/approve")->assertOk();
         $this->postJson("/api/hr/payroll/{$o}/close")->assertStatus(409)->assertJsonPath('code', 'month_open');
@@ -135,7 +135,7 @@ class PayrollTest extends TestCase
 
     public function test_advance_is_limited_by_earned_pay_and_deducted(): void
     {
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->unlockSalaries();
         $d = $this->getJson('/api/me/services')->assertOk()->json();
         $av = $d['advance'];
@@ -145,7 +145,7 @@ class PayrollTest extends TestCase
         $r = $this->postJson('/api/me/services', ['kind' => 'advance', 'amount' => 100, 'note' => 'ظرف طارئ'])->assertCreated()->json('data');
         $this->assertSame('pending_hr', $r['status']);
         $this->assertSame(0, $this->getJson('/api/me/services')->json('advance.available'));   // سلفة واحدة بالشهر
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->postJson("/api/me/approvals/{$r['step_id']}", ['decision' => 'approve'])->assertOk();
         $a = Advance::allCompanies()->firstOrFail();
         $this->assertSame([100.0, '2026-10', 'open'], [$a->amount, $a->month, $a->status]);
@@ -154,7 +154,7 @@ class PayrollTest extends TestCase
 
     public function test_certificates_need_the_organisation_and_get_a_serial(): void
     {
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $to = ['name' => 'بنك بيمو', 'cr_no' => 'CR-5521', 'email' => 'hr@bemo.sy', 'phone' => '+963 11 999 0000'];
         $this->postJson('/api/me/services', ['kind' => 'salary_cert', 'addressee' => ['name' => 'بنك بيمو']])->assertUnprocessable()->assertJsonValidationErrors(['addressee.cr_no', 'addressee.email', 'addressee.phone']);
         $r = $this->postJson('/api/me/services', ['kind' => 'salary_cert', 'addressee' => $to, 'notify_consent' => true])->assertCreated()->json('data');
@@ -162,7 +162,7 @@ class PayrollTest extends TestCase
         $this->getJson("/api/me/services/{$r['id']}/certificate")->assertNotFound();
         $u = $this->postJson('/api/me/services', ['kind' => 'data_update', 'data' => ['phone' => '+963 944 000 111'], 'note' => 'رقم جديد'])->assertCreated()->json('data');
 
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->assertSame(3, $this->getJson('/api/hr/leaves?tab=services')->assertOk()->json('counts.services'));   // + طلب الديمو
         $this->postJson("/api/me/approvals/{$r['step_id']}", ['decision' => 'reject', 'note' => 'قصير'])->assertUnprocessable();
         $this->postJson("/api/me/approvals/{$r['step_id']}", ['decision' => 'approve'])->assertOk();
@@ -175,16 +175,16 @@ class PayrollTest extends TestCase
         $this->unlockSalaries();
         $this->getJson("/api/hr/services/{$r['id']}/certificate")->assertOk()->assertJsonPath('data.salary.amount', 1450);
 
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $c = $this->getJson("/api/me/services/{$r['id']}/certificate")->assertOk()->json('data');
         $this->assertSame(['CRT-2026-0001', 'بنك بيمو', true, 'SAL'], [$c['ref_no'], $c['addressee']['name'], $c['notify_consent'], $c['form']]);
-        $this->login('alaa.sheikhani@alfarada.sy');
+        $this->login('alaa.sheikhani@uniqueness.sy');
         $this->getJson("/api/me/services/{$r['id']}/certificate")->assertNotFound();
     }
 
     public function test_payroll_policy_is_versioned_and_validated(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $v = Settings::POLICY_DEFAULTS['payroll'];
         $this->postJson('/api/hr/policies', ['key' => 'payroll', 'effective_from' => '2026-11-01', 'value' => ['month_days' => 50] + $v])->assertUnprocessable()->assertJsonValidationErrors('month_days');
         $this->postJson('/api/hr/policies', ['key' => 'payroll', 'effective_from' => '2026-11-01', 'value' => ['absent_days' => 2] + $v])->assertOk();

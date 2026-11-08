@@ -40,54 +40,54 @@ class AccountsMailTest extends TestCase
     public function test_invite_validity_expiry_resend_and_forgot_password(): void
     {
         Notification::fake();
-        $this->login('admin@alfarada.sy');
+        $this->login('admin@uniqueness.sy');
         $this->putJson('/api/hr/admin/users/settings', ['invite_hours' => 0])->assertStatus(422);
         $this->putJson('/api/hr/admin/users/settings', ['invite_hours' => 24])->assertOk()->assertJsonPath('settings.invite_hours', 24);
-        $r = $this->postJson('/api/hr/admin/users', ['email' => 'ops@alfarada.sy', 'name' => 'العمليات', 'roles' => ['executive']])->assertCreated();
-        $u = User::where('email', 'ops@alfarada.sy')->first();
+        $r = $this->postJson('/api/hr/admin/users', ['email' => 'ops@uniqueness.sy', 'name' => 'العمليات', 'roles' => ['executive']])->assertCreated();
+        $u = User::where('email', 'ops@uniqueness.sy')->first();
         $this->assertSame(now()->addHours(24)->toIso8601String(), $u->invite_expires_at->toIso8601String());
         Notification::assertSentTo($u, AccountInvite::class, fn ($n) => $n->hours === 24 && $n->url === $r->json('link'));
-        $this->assertSame(1, collect($this->getJson('/api/hr/admin/users?status=pending')->json('data'))->where('email', 'ops@alfarada.sy')->count());
+        $this->assertSame(1, collect($this->getJson('/api/hr/admin/users?status=pending')->json('data'))->where('email', 'ops@uniqueness.sy')->count());
 
         // انتهاء الصلاحية ← 410 مع expired، ثم رابط جديد من «إعادة الإرسال»
         $this->travel(25)->hours();
         $this->getJson('/api/auth/activate/'.basename($r->json('link')))->assertStatus(410)->assertJsonPath('expired', true);
-        $this->assertSame('expired', collect($this->getJson('/api/hr/admin/users')->json('data'))->firstWhere('email', 'ops@alfarada.sy')['invite']['state']);
+        $this->assertSame('expired', collect($this->getJson('/api/hr/admin/users')->json('data'))->firstWhere('email', 'ops@uniqueness.sy')['invite']['state']);
         $link = $this->postJson("/api/hr/admin/users/{$u->id}/reset-password")->assertOk()->json('link');
         Notification::assertSentTo($u, AccountInvite::class, fn ($n) => $n->kind === 'invite' && $n->url === $link);   // لم يُفعَّل بعد → دعوة لا «إعادة تعيين»
 
         // «نسيت كلمة المرور» يعمل أيضاً لحساب لم يُفعَّل، ويفعّله
         $this->postJson('/api/auth/logout'); $this->app['auth']->forgetGuards();
-        $this->postJson('/api/auth/forgot', ['email' => 'ops@alfarada.sy'])->assertOk();
+        $this->postJson('/api/auth/forgot', ['email' => 'ops@uniqueness.sy'])->assertOk();
         $token = null;
         Notification::assertSentTo($u, ResetPasswordNotice::class, function ($n) use (&$token) { $token = $n->token; return true; });
-        $this->postJson('/api/auth/reset', ['token' => $token, 'email' => 'ops@alfarada.sy', 'password' => 'Ops2026pass', 'password_confirmation' => 'Ops2026pass'])->assertOk();
+        $this->postJson('/api/auth/reset', ['token' => $token, 'email' => 'ops@uniqueness.sy', 'password' => 'Ops2026pass', 'password_confirmation' => 'Ops2026pass'])->assertOk();
         $u->refresh();
         $this->assertNotNull($u->activated_at);
         $this->assertNull($u->invite_hash);
         $this->getJson('/api/auth/activate/'.basename($link))->assertStatus(410);
-        $this->postJson('/api/auth/login', ['email' => 'ops@alfarada.sy', 'password' => 'Ops2026pass'])->assertOk();
+        $this->postJson('/api/auth/login', ['email' => 'ops@uniqueness.sy', 'password' => 'Ops2026pass'])->assertOk();
     }
 
     public function test_reset_link_keeps_the_current_password_until_used(): void
     {
         Notification::fake();
-        $this->login('admin@alfarada.sy');
-        $samer = User::where('email', 'samer.halabi@alfarada.sy')->first();
+        $this->login('admin@uniqueness.sy');
+        $samer = User::where('email', 'samer.halabi@uniqueness.sy')->first();
         $link = $this->postJson("/api/hr/admin/users/{$samer->id}/reset-password")->assertOk()->json('link');
         Notification::assertSentTo($samer, AccountInvite::class, fn ($n) => $n->kind === 'reset');
-        $this->login('samer.halabi@alfarada.sy');                        // كلمة المرور الحالية ما زالت تعمل
+        $this->login('samer.halabi@uniqueness.sy');                        // كلمة المرور الحالية ما زالت تعمل
         $this->postJson('/api/auth/logout'); $this->app['auth']->forgetGuards();
         $this->getJson('/api/auth/activate/'.basename($link))->assertOk()->assertJsonPath('data.kind', 'reset');
-        $this->postJson('/api/auth/activate/'.basename($link), ['password' => 'Samer2026new', 'password_confirmation' => 'Samer2026new'])->assertOk()->assertJsonPath('user.email', 'samer.halabi@alfarada.sy');
+        $this->postJson('/api/auth/activate/'.basename($link), ['password' => 'Samer2026new', 'password_confirmation' => 'Samer2026new'])->assertOk()->assertJsonPath('user.email', 'samer.halabi@uniqueness.sy');
         $this->postJson('/api/auth/logout'); $this->app['auth']->forgetGuards();
-        $this->postJson('/api/auth/login', ['email' => 'samer.halabi@alfarada.sy', 'password' => '123456'])->assertStatus(422);
-        $this->postJson('/api/auth/login', ['email' => 'samer.halabi@alfarada.sy', 'password' => 'Samer2026new'])->assertOk();
+        $this->postJson('/api/auth/login', ['email' => 'samer.halabi@uniqueness.sy', 'password' => '123456'])->assertStatus(422);
+        $this->postJson('/api/auth/login', ['email' => 'samer.halabi@uniqueness.sy', 'password' => 'Samer2026new'])->assertOk();
     }
 
     public function test_platform_smtp_settings_test_message_sender_name_and_log(): void
     {
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->getJson('/api/platform/mail')->assertForbidden();
         $this->login('platform@atmata.sy');
         $this->putJson('/api/platform/mail', ['host' => 'smtp.example.com', 'port' => 587, 'encryption' => 'tls', 'from_name' => 'UHR', 'log_days' => 90])
@@ -110,16 +110,16 @@ class AccountsMailTest extends TestCase
         $this->assertSame(['me@example.com', 'sent', null], [$log->to, $log->status, $log->company_id]);
 
         // رسالة لحساب شركة: اسم المرسل من «قنوات الإشعارات» + الرد إلى، وتظهر في سجل الشركة فقط
-        $this->login('hr@alfarada.sy');
-        $this->putJson('/api/hr/admin/channels/email', ['enabled' => true, 'config' => ['from_name' => 'موارد الفرادة البشرية', 'reply_to' => 'hr@alfarada.sy']])->assertOk();
-        $this->login('admin@alfarada.sy');
-        $samer = User::where('email', 'samer.halabi@alfarada.sy')->first();
+        $this->login('hr@uniqueness.sy');
+        $this->putJson('/api/hr/admin/channels/email', ['enabled' => true, 'config' => ['from_name' => 'موارد الفرادة البشرية', 'reply_to' => 'hr@uniqueness.sy']])->assertOk();
+        $this->login('admin@uniqueness.sy');
+        $samer = User::where('email', 'samer.halabi@uniqueness.sy')->first();
         $this->postJson("/api/hr/admin/users/{$samer->id}/reset-password")->assertOk();
         $sent = collect(app('mailer')->getSymfonyTransport()->messages())->last()->getOriginalMessage();
-        $this->assertSame(['موارد الفرادة البشرية', 'no-reply@atmata-group.com', 'hr@alfarada.sy'], [$sent->getFrom()[0]->getName(), $sent->getFrom()[0]->getAddress(), $sent->getReplyTo()[0]->getAddress()]);
+        $this->assertSame(['موارد الفرادة البشرية', 'no-reply@atmata-group.com', 'hr@uniqueness.sy'], [$sent->getFrom()[0]->getName(), $sent->getFrom()[0]->getAddress(), $sent->getReplyTo()[0]->getAddress()]);
         $this->assertStringContainsString('/activate/', $sent->getHtmlBody());
         $mine = $this->getJson('/api/hr/admin/mail-log')->assertOk()->json('data');
-        $this->assertSame(['samer.halabi@alfarada.sy', 'sent', 'AccountInvite'], [$mine[0]['to'], $mine[0]['status'], $mine[0]['kind']]);
+        $this->assertSame(['samer.halabi@uniqueness.sy', 'sent', 'AccountInvite'], [$mine[0]['to'], $mine[0]['status'], $mine[0]['kind']]);
         $this->assertNotContains('me@example.com', array_column($mine, 'to'));
         $this->login('platform@atmata.sy');
         $this->assertGreaterThanOrEqual(2, $this->getJson('/api/platform/mail/log')->assertOk()->json('meta.total'));

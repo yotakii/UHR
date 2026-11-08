@@ -50,7 +50,7 @@ class CandidatePortalTest extends TestCase
     public function test_applicant_sees_own_application_with_pending_offer(): void
     {
         $this->asLeen()->getJson('/api/me/applications')->assertOk()->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.company.slug', 'alfarada')->assertJsonPath('data.0.offer', 'sent')->assertJsonPath('data.0.job.title.en', 'Accountant');
+            ->assertJsonPath('data.0.company.slug', 'uniqueness')->assertJsonPath('data.0.offer', 'sent')->assertJsonPath('data.0.job.title.en', 'Accountant');
         $this->getJson("/api/me/applications/{$this->leenId}")->assertOk()->assertJsonPath('data.company.name.en', 'Uniqueness Development & Investment Co.')
             ->assertJsonPath('data.name', 'لين العلي')->assertJsonPath('data.stage', 'offer')
             ->assertJsonPath('data.job.title.en', 'Accountant')->assertJsonPath('data.job.dept.en', 'Finance')
@@ -62,7 +62,7 @@ class CandidatePortalTest extends TestCase
     public function test_only_applicants_reach_the_portal(): void
     {
         $this->getJson('/api/me/applications')->assertUnauthorized();
-        $this->postJson('/api/auth/login', ['email' => 'hr@alfarada.sy', 'password' => '123456']);
+        $this->postJson('/api/auth/login', ['email' => 'hr@uniqueness.sy', 'password' => '123456']);
         $this->getJson('/api/me/applications')->assertForbidden();
         $this->postJson('/api/auth/logout');
         // متقدم لا يصل لطلب غيره

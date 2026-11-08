@@ -39,7 +39,7 @@ class RealtimeTest extends TestCase
 
     public function test_writes_broadcast_one_changed_event_per_request_without_data(): void
     {
-        $this->login('admin@alfarada.sy');
+        $this->login('admin@uniqueness.sy');
         Event::fake([Changed::class, NoticeCreated::class]);
         $d = Department::allCompanies()->where('code', 'hr')->firstOrFail();
         $this->putJson("/api/hr/admin/departments/{$d->id}", ['code' => 'hr', 'ar' => 'الموارد البشرية', 'en' => 'Human Resources', 'headcount' => 9, 'color' => 'brand', 'active' => true, 'head_id' => null])->assertOk();
@@ -60,7 +60,7 @@ class RealtimeTest extends TestCase
     {
         $c = $this->useCompany();
         Event::fake([NoticeCreated::class, Changed::class]);
-        $samer = User::where('email', 'samer.halabi@alfarada.sy')->first();
+        $samer = User::where('email', 'samer.halabi@uniqueness.sy')->first();
         Notify::user($samer->id, 'اختبار', 'Test', 'requests');
         Notify::hr('للموارد البشرية', 'For HR', 'leaves');
         Event::assertDispatched(NoticeCreated::class, function ($e) use ($samer) { return $e->broadcastOn()[0]->name === "private-user.{$samer->id}" && $e->broadcastWith()['link'] === 'requests'; });
@@ -72,8 +72,8 @@ class RealtimeTest extends TestCase
     {
         $channels = app(BroadcastManager::class)->driver()->getChannels();
         $company = $channels['company.{id}']; $user = $channels['user.{id}'];
-        $hr = User::where('email', 'hr@alfarada.sy')->first();
-        $samer = User::where('email', 'samer.halabi@alfarada.sy')->first();
+        $hr = User::where('email', 'hr@uniqueness.sy')->first();
+        $samer = User::where('email', 'samer.halabi@uniqueness.sy')->first();
         $other = User::where('email', 'hr@atmata.sy')->first();
         $this->assertTrue($company($hr, $hr->company_id));
         $this->assertFalse($company($samer, $samer->company_id));          // الموظف: قناته فقط
@@ -81,9 +81,9 @@ class RealtimeTest extends TestCase
         $this->assertTrue($user($samer, $samer->id));
         $this->assertFalse($user($samer, $hr->id));
 
-        $this->login('hr@alfarada.sy');
+        $this->login('hr@uniqueness.sy');
         $this->getJson('/api/realtime')->assertOk()->assertJsonPath('enabled', false)->assertJsonPath('channels', ["user.{$hr->id}", "company.{$hr->company_id}"]);
-        $this->login('samer.halabi@alfarada.sy');
+        $this->login('samer.halabi@uniqueness.sy');
         $this->getJson('/api/realtime')->assertOk()->assertJsonPath('channels', ["user.{$samer->id}"]);
     }
 }

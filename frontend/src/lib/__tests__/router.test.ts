@@ -5,14 +5,14 @@ import { api, ApiError } from '../api'
 
 describe('path router', () => {
   it('parses page, id, parts and query', () => {
-    expect(parse('/jobs/alfarada/REQ-2026-031', '?ref=UHR1007-J1')).toEqual({ page: 'jobs', id: 'alfarada/REQ-2026-031', parts: ['jobs', 'alfarada', 'REQ-2026-031'], query: { ref: 'UHR1007-J1' } })
+    expect(parse('/jobs/uniqueness/REQ-2026-031', '?ref=UHR1007-J1')).toEqual({ page: 'jobs', id: 'uniqueness/REQ-2026-031', parts: ['jobs', 'uniqueness', 'REQ-2026-031'], query: { ref: 'UHR1007-J1' } })
     expect(parse('/')).toEqual({ page: '', id: undefined, parts: [], query: {} })
     expect(parse('/reset?token=abc&email=a%40b.sy').query).toEqual({ token: 'abc', email: 'a@b.sy' })
   })
   it('builds links that round-trip, encoding each segment and dropping empty filters', () => {
-    const h = href('jobs', 'alfarada/REQ 1', { ref: 'X 1', q: '' })
-    expect(h).toBe('/jobs/alfarada/REQ%201?ref=X+1')
-    expect(parse(h)).toEqual({ page: 'jobs', id: 'alfarada/REQ 1', parts: ['jobs', 'alfarada', 'REQ 1'], query: { ref: 'X 1' } })
+    const h = href('jobs', 'uniqueness/REQ 1', { ref: 'X 1', q: '' })
+    expect(h).toBe('/jobs/uniqueness/REQ%201?ref=X+1')
+    expect(parse(h)).toEqual({ page: 'jobs', id: 'uniqueness/REQ 1', parts: ['jobs', 'uniqueness', 'REQ 1'], query: { ref: 'X 1' } })
     expect(href('')).toBe('/')
   })
 })
@@ -20,7 +20,7 @@ describe('path router', () => {
 describe('link interception', () => {
   it('leaves API calls and static files to the browser', () => {
     expect(isAppPath('/hr/employees/7')).toBe(true)
-    expect(isAppPath('/jobs/alfarada/REQ-2026-034')).toBe(true)
+    expect(isAppPath('/jobs/uniqueness/REQ-2026-034')).toBe(true)
     expect(isAppPath('/api/files/3')).toBe(false)
     expect(isAppPath('/downloads/UHR-NFC-Bridge.zip')).toBe(false)
     expect(isAppPath('/sitemap.xml')).toBe(false)
