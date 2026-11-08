@@ -73,6 +73,7 @@ services:
       MAIL_PORT: 1025
       MAIL_FROM_ADDRESS: no-reply@alfarada.sy
       MAIL_FROM_NAME: UHR
+      PHP_CLI_SERVER_WORKERS: "4"           # «المساعد» يكتب الرد بالتدفق — لا يوقف بقية الطلبات
       <<: [*reverb-env, *ai-env]
     volumes:
       - ./backend:/var/www
@@ -130,7 +131,7 @@ services:
     environment:
       OLLAMA_MODEL: ${UHR_AI_MODEL:-qwen2.5:3b}
       OLLAMA_KEEP_ALIVE: 30m
-      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_NUM_PARALLEL: "2"            # سؤال «المساعد» لا ينتظر قراءة سيرة جارية
       OLLAMA_MAX_LOADED_MODELS: "1"
     mem_limit: 4g
     volumes:

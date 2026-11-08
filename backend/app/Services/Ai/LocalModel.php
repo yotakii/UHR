@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Log;
  * نموذج مفتوح المصدر يعمل على خادمنا (خدمة ollama في Docker) — مجاني، والبيانات لا تخرج من الخادم.
  * العنوان OLLAMA_URL والنموذج OLLAMA_MODEL من البيئة؛ بلا عنوان = الميزة متوقفة بصمت.
  */
-class LocalModel implements AiClient
+class LocalModel implements AiClient, Writer
 {
     public function url(): ?string { return rtrim((string) config('services.ollama.url'), '/') ?: null; }
 
@@ -64,5 +64,36 @@ class LocalModel implements AiClient
         if ($a === false || $b === false || $b <= $a) return null;
         $d = json_decode(substr($text, $a, $b - $a + 1), true);
         return is_array($d) ? $d : null;
+    }
+
+    /**
+     * «المساعد»: نص حر بالتدفق — إخراج قصير (num_predict صغير) وحرارة منخفضة، ونفس النموذج المحمّل لقراءة السير (لا تحميل ثانٍ).
+     * الرسالة الثابتة أولاً (system) فيُعاد استخدام ذاكرتها بين الأسئلة.
+     */
+    public function stream(string $system, string $prompt, callable $onDelta, array $options = []): string
+    {
+        $body = ['model' => $this->model(), 'stream' => true, 'keep_alive' => (string) config('services.ollama.keep_alive', '30m'),
+            'options' => array_filter(['temperature' => 0.1, 'top_p' => 0.9, 'num_ctx' => (int) config('services.ollama.assistant_ctx', 2048),
+                'num_predict' => (int) ($options['max'] ?? config('services.ollama.assistant_predict', 180)), 'num_thread' => (int) config('services.ollama.threads', 0) ?: null], fn ($v) => $v !== null),
+            'messages' => [['role' => 'system', 'content' => $system], ['role' => 'user', 'content' => $prompt]]];
+        $res = Http::withOptions(['stream' => true])->timeout((int) config('services.ollama.assistant_timeout', 90))->post($this->url().'/api/chat', $body);
+        if (! $res->successful()) throw new \RuntimeException('local model HTTP '.$res->status());
+        $stream = $res->toPsrResponse()->getBody();
+        $buf = ''; $text = '';
+        while (! $stream->eof()) {
+            $buf .= $stream->read(512);
+            while (($p = strpos($buf, "\n")) !== false) {
+                $line = substr($buf, 0, $p); $buf = substr($buf, $p + 1);
+                $d = json_decode($line, true);
+                if (! is_array($d)) continue;
+                $piece = (string) ($d['message']['content'] ?? '');
+                if ($piece !== '') { $text .= $piece; $onDelta($piece); }
+                if (! empty($d['done'])) {
+                    Log::info('ollama assistant', ['prompt_tokens' => $d['prompt_eval_count'] ?? null, 'out_tokens' => $d['eval_count'] ?? null, 'total_s' => round(((int) ($d['total_duration'] ?? 0)) / 1e9, 1)]);
+                    return trim($text);
+                }
+            }
+        }
+        return trim($text);
     }
 }

@@ -41,3 +41,7 @@ page=f'''<!doctype html>
 </body></html>'''
 open(D+'UHR-User-Guide.html','w').write(page)
 print(len(secs),'sections')
+
+# فهرس معرفة «المساعد» من الدليل نفسه
+import subprocess, sys
+subprocess.run([sys.executable, D + 'tools/assistant_index.py'], check=True)

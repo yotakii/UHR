@@ -660,3 +660,14 @@ Route::middleware(['auth', 'fresh', 'perm:space,view'])->prefix('space')->group(
     Route::put('/settings', [$C, 'saveSettings'])->middleware('perm:settings,edit');
     Route::put('/praise-settings', [$C, 'savePraiseSettings'])->middleware('perm:settings,edit');
 });
+
+// «المساعد» (13) — للبوابتين (حسابات الشركات)
+Route::middleware(['auth', 'fresh'])->prefix('assistant')->group(function () {
+    $C = \App\Http\Controllers\Api\AssistantController::class;
+    Route::get('/', [$C, 'index']);
+    Route::post('/ask', [$C, 'ask'])->middleware('throttle:30,1,assistant-ask');
+    Route::post('/messages/{id}/action', [$C, 'action'])->whereNumber('id')->middleware('throttle:60,1,assistant-action');
+    Route::delete('/', [$C, 'clear']);
+    Route::get('/settings', [$C, 'settings'])->middleware('perm:settings,view');
+    Route::put('/settings', [$C, 'saveSettings'])->middleware('perm:settings,edit');
+});

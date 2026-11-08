@@ -119,3 +119,14 @@ Artisan::command('space:celebrate', function () {
     $this->info("Celebration posts: {$n}.");
 })->purpose('Post today\'s birthdays, work anniversaries and new joiners in the Space');
 Schedule::command('space:celebrate')->dailyAt('07:45');
+
+// 13 «المساعد»: حذف المحادثات الأقدم من مدة الاحتفاظ في إعداد كل شركة — يومياً
+Artisan::command('assistant:prune', function () {
+    $n = 0;
+    foreach (\App\Models\Company::pluck('id') as $id) \App\Support\Tenant::run($id, function () use (&$n) {
+        $days = (int) \App\Services\Assistant\Assistant::config()['history_days'];
+        $n += \App\Models\AssistantMessage::where('created_at', '<', now()->subDays($days))->delete();
+    });
+    $this->info("Assistant messages removed: {$n}.");
+})->purpose('Delete assistant conversations older than each company\'s retention');
+Schedule::command('assistant:prune')->dailyAt('04:20');
