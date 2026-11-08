@@ -28,13 +28,13 @@ class ApplicationReceived extends Notification implements ShouldQueue
         $tpl = Tenant::run($this->companyId, fn () => MessageTemplate::where('key', 'application_received')->where('channel', 'email')->first());
         $fill = fn (?string $s, string $job, string $fallback) => strtr($s ?: $fallback, [':job' => $job, ':ref' => $this->ref]);
         $company = ['ar' => $this->companyAr, 'en' => $this->companyEn];
-        $url = rtrim(config('app.frontend_url'), '/').'/';
+        $url = rtrim(config('app.frontend_url'), '/').'/track?ref='.rawurlencode($this->ref);
         return (new MailMessage)
             ->subject("استلمنا طلبك · Application received — {$this->ref}")
             ->view('mail.notice', [
                 'company' => $company, 'url' => $url,
-                'ar' => ['title' => 'استلمنا طلبك', 'body' => $fill($tpl?->body_ar, $this->jobAr, 'استلمنا طلبك على وظيفة :job. رقم المتابعة: :ref'), 'hint' => 'تابع حالة طلبك من حسابك ببريدك وكلمة المرور التي أنشأتها.', 'action' => 'متابعة حالة الطلب'],
-                'en' => ['title' => 'We received your application', 'body' => $fill($tpl?->body_en, $this->jobEn, 'We received your application for :job. Reference: :ref'), 'hint' => 'Follow your application by signing in with your email and the password you created.', 'action' => 'Track my application'],
+                'ar' => ['title' => 'استلمنا طلبك', 'body' => $fill($tpl?->body_ar, $this->jobAr, 'استلمنا طلبك على وظيفة :job. رقم المتابعة: :ref'), 'hint' => 'تابع حالة طلبك في أي وقت من صفحة «متابعة طلب» برقم المتابعة وبريدك هذا، أو من حسابك ببريدك وكلمة المرور التي أنشأتها.', 'action' => 'متابعة حالة الطلب'],
+                'en' => ['title' => 'We received your application', 'body' => $fill($tpl?->body_en, $this->jobEn, 'We received your application for :job. Reference: :ref'), 'hint' => 'Follow your application at any time on the «Track application» page with this reference and your email, or sign in with your email and the password you created.', 'action' => 'Track my application'],
                 'ref' => $this->ref,
                 'name' => method_exists($notifiable, 'displayName') ? $notifiable->displayName('ar') : '',
             ]);

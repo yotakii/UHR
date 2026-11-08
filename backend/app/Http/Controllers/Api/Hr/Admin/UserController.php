@@ -47,12 +47,16 @@ class UserController extends Controller
     public function saveSettings(Request $request): JsonResponse
     {
         $d = $request->validate(['invite_hours' => ['required', 'integer', 'between:1,720'], 'pw_min' => ['sometimes', 'integer', 'between:6,64'], 'pw_upper' => ['sometimes', 'boolean'], 'pw_symbol' => ['sometimes', 'boolean'],
-            'max_attempts' => ['sometimes', 'integer', 'between:3,20'], 'lock_minutes' => ['sometimes', 'integer', 'between:1,1440']], [],
-            ['invite_hours' => L::t('صلاحية الرابط', 'Link validity'), 'pw_min' => L::t('أقل طول لكلمة المرور', 'Minimum password length'), 'max_attempts' => L::t('المحاولات المسموحة', 'Allowed attempts'), 'lock_minutes' => L::t('مدة القفل', 'Lock duration')]);
+            'max_attempts' => ['sometimes', 'integer', 'between:3,20'], 'lock_minutes' => ['sometimes', 'integer', 'between:1,1440'],
+            'email_domains' => ['sometimes', 'array', 'max:10'], 'email_domains.*' => ['string', 'max:100', 'regex:/^@?[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/i'],
+            'reset_mode' => ['sometimes', Rule::in(['email', 'hr'])]], ['email_domains.*.regex' => L::t('اكتب النطاق مثل company.com', 'Write the domain like company.com')],
+            ['invite_hours' => L::t('صلاحية الرابط', 'Link validity'), 'email_domains' => L::t('نطاقات البريد', 'Email domains'), 'reset_mode' => L::t('استعادة كلمة المرور', 'Password recovery'), 'pw_min' => L::t('أقل طول لكلمة المرور', 'Minimum password length'), 'max_attempts' => L::t('المحاولات المسموحة', 'Allowed attempts'), 'lock_minutes' => L::t('مدة القفل', 'Lock duration')]);
         $before = Settings::merged('accounts');
         $new = $before;
         foreach (['invite_hours', 'pw_min', 'max_attempts', 'lock_minutes'] as $k) if (array_key_exists($k, $d)) $new[$k] = (int) $d[$k];
         foreach (['pw_upper', 'pw_symbol'] as $k) if (array_key_exists($k, $d)) $new[$k] = (bool) $d[$k];
+        if (array_key_exists('email_domains', $d)) $new['email_domains'] = array_values(array_unique(array_filter(array_map(fn ($x) => strtolower(ltrim(trim($x), '@')), $d['email_domains']))));
+        if (array_key_exists('reset_mode', $d)) $new['reset_mode'] = $d['reset_mode'];
         Settings::put('accounts', array_intersect_key($new, Settings::DEFAULTS['accounts']));
         Audit::record('settings.accounts', null, $before, Settings::merged('accounts'));
         return response()->json(['settings' => Settings::merged('accounts')]);
@@ -89,6 +93,7 @@ class UserController extends Controller
         if ($e && User::where('employee_id', $e->id)->exists()) throw new ApiException(L::t('لهذا الموظف حساب مسبقاً.', 'This employee already has an account.'), 'has_account', 409);
         $email = strtolower(trim($e?->email ?: $d['email']));
         if (User::where('email', $email)->exists()) throw ApiException::field('email', L::t('البريد مستخدم لحساب آخر.', 'This email belongs to another account.'), 'email_taken');
+        \App\Support\AccountEmail::check($email, $e ? 'employee_id' : 'email');
         $url = null;
         $u = DB::transaction(function () use ($d, $e, $email, $by, &$url) {
             $u = User::create(['email' => $email, 'password' => Invites::unusable(), 'invited_at' => now(), 'name' => $e ? null : trim($d['name']), 'name_en' => $e ? null : (trim((string) ($d['name_en'] ?? '')) ?: null),

@@ -49,6 +49,7 @@ class NewEmployee
         $v['email'] = mb_strtolower($v['email']);
         if ($v['email'] !== '' && ! filter_var($v['email'], FILTER_VALIDATE_EMAIL)) $err['email'] = L::t('صيغة البريد غير صحيحة', 'Invalid email');
         elseif ($v['email'] !== '' && (in_array($v['email'], $seen['emails'] ?? [], true) || Employee::where('email', $v['email'])->exists() || User::where('email', $v['email'])->exists())) $err['email'] = L::t('البريد مستخدم لحساب آخر', 'This email is already used');
+        elseif ($v['email'] !== '' && ! \App\Support\AccountEmail::allowed($v['email'])) $err['email'] = \App\Support\AccountEmail::message();
 
         $g = mb_strtolower($txt('gender'));
         $v['gender'] = in_array($g, ['m', 'ذكر', 'male'], true) ? 'M' : (in_array($g, ['f', 'أنثى', 'انثى', 'female'], true) ? 'F' : null);

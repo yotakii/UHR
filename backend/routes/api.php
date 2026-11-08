@@ -72,6 +72,7 @@ Route::prefix('public')->group(function () {
     Route::get('/og-image.png', [PublicController::class, 'ogImage']);
     Route::get('/og-image/{slug}.png', [PublicController::class, 'ogImage']);
     Route::get('/context', [PublicController::class, 'context']);
+    Route::post('/track', [\App\Http\Controllers\Api\TrackController::class, 'track'])->middleware('throttle:10,1');
     Route::get('/companies/{slug}', [PublicController::class, 'company']);
     Route::get('/companies/{slug}/logo', [PublicController::class, 'logo']);
     Route::get('/jobs/{slug}/{code}', [PublicController::class, 'job']);

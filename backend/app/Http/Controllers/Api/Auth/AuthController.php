@@ -146,10 +146,21 @@ class AuthController extends Controller
         $email = strtolower(trim($request->input('email')));
         $user = User::where('email', $email)->first();
         if ($user && ! $user->blocked()) {
-            Password::sendResetLink(['email' => $email]);
-            Audit::record('auth.reset_requested', $user);
+            // حساب موظف: الرابط إلى بريده الرسمي فقط. إن كانت الشركة تستقبل الطلبات عبر الموارد البشرية أو كان البريد خارج نطاقاتها
+            // لا تُرسل رسالة؛ يصل طلب إلى الموارد البشرية لتسلّمه رابطاً من «المستخدمون والأدوار» بعد التحقق من هويته.
+            $cid = $user->company_id;
+            if ($cid && (\App\Support\AccountEmail::resetMode($cid) === 'hr' || ! \App\Support\AccountEmail::allowed($email, $cid))) {
+                $name = $user->displayName('ar'); $nameEn = $user->displayName('en');
+                \App\Support\Tenant::run($cid, fn () => \App\Support\Notify::hr("طلب {$name} رابطاً لتعيين كلمة مرور جديدة. تحقق من هويته ثم أرسل له الرابط من «المستخدمون والأدوار».",
+                    "{$nameEn} asked for a new-password link. Verify their identity, then send the link from «Users and roles».", 'users:'.$user->email));
+                Audit::record('auth.reset_requested_hr', $user);
+            } else {
+                Password::sendResetLink(['email' => $email]);
+                Audit::record('auth.reset_requested', $user);
+            }
         }
-        return response()->json(['message' => L::t('إذا كان البريد مسجلاً لدينا فستصلك رسالة فيها رابط لتعيين كلمة مرور جديدة خلال دقائق.', 'If this email is registered, you will receive a link to set a new password within minutes.')]);
+        return response()->json(['message' => L::t('إذا كان البريد مسجلاً لدينا فستصلك رسالة فيها رابط لتعيين كلمة مرور جديدة خلال دقائق.', 'If this email is registered, you will receive a link to set a new password within minutes.'),
+            'hint' => L::t('يصل الرابط إلى البريد المسجّل في حسابك فقط. موظفو الشركات: إن لم يصلك خلال دقائق فراجع الموارد البشرية في شركتك.', 'The link goes only to the email registered on your account. Company staff: if it does not arrive within minutes, contact your HR department.')]);
     }
 
     public function reset(Request $request): JsonResponse

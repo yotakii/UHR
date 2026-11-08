@@ -69,14 +69,15 @@ export function Users() {
 function LinkSettings({ s, onClose }: { s: AccountSettings; onClose: () => void }) {
   const L = useL()
   const save = useSaveAccountSettings()
-  const [v, setV] = useState<AccountSettings>({ invite_hours: s.invite_hours, pw_min: s.pw_min ?? 8, pw_upper: !!s.pw_upper, pw_symbol: !!s.pw_symbol, max_attempts: s.max_attempts ?? 5, lock_minutes: s.lock_minutes ?? 5 })
+  const [v, setV] = useState<AccountSettings>({ invite_hours: s.invite_hours, pw_min: s.pw_min ?? 8, pw_upper: !!s.pw_upper, pw_symbol: !!s.pw_symbol, max_attempts: s.max_attempts ?? 5, lock_minutes: s.lock_minutes ?? 5, email_domains: s.email_domains ?? [], reset_mode: s.reset_mode ?? 'email' })
+  const [domains, setDomains] = useState((s.email_domains ?? []).join(', '))
   const err = save.error instanceof ApiError ? save.error : null
   const num = (k: 'invite_hours' | 'pw_min' | 'max_attempts' | 'lock_minutes', label: string, min: number, max: number, hint?: string) =>
     <Field label={label} error={err?.field(k)} hint={hint}><input className="field num ltr text-start" type="number" min={min} max={max} value={v[k]} onChange={e => setV({ ...v, [k]: Number(e.target.value) })} /></Field>
   const tog = (k: 'pw_upper' | 'pw_symbol', label: string) => <label className="flex items-center gap-2 text-[13.5px] cursor-pointer"><input type="checkbox" className="accent-[var(--primary)] size-4" checked={v[k]} onChange={e => setV({ ...v, [k]: e.target.checked })} />{label}</label>
   return <Modal open onClose={onClose} width={620} title={L('سياسة الحسابات', 'Account policy')}
-    footer={<><Btn onClick={() => setV({ invite_hours: 72, pw_min: 8, pw_upper: false, pw_symbol: false, max_attempts: 5, lock_minutes: 5 })}>{L('القيم الافتراضية', 'Defaults')}</Btn><span className="flex-1" />
-      <Btn onClick={onClose}>{L('إلغاء', 'Cancel')}</Btn><Btn kind="primary" disabled={save.isPending} onClick={() => save.mutate(v, { onSuccess: () => { toast(L('حُفظت', 'Saved')); onClose() } })}>{L('حفظ', 'Save')}</Btn></>}>
+    footer={<><Btn onClick={() => { setV({ invite_hours: 72, pw_min: 8, pw_upper: false, pw_symbol: false, max_attempts: 5, lock_minutes: 5, email_domains: [], reset_mode: 'email' }); setDomains('') }}>{L('القيم الافتراضية', 'Defaults')}</Btn><span className="flex-1" />
+      <Btn onClick={onClose}>{L('إلغاء', 'Cancel')}</Btn><Btn kind="primary" disabled={save.isPending} onClick={() => save.mutate({ ...v, email_domains: domains.split(/[\s,،]+/).map(x => x.trim()).filter(Boolean) }, { onSuccess: () => { toast(L('حُفظت', 'Saved')); onClose() } })}>{L('حفظ', 'Save')}</Btn></>}>
     <div className="space-y-5">
       <section><h4 className="font-semibold text-[14px] mb-2">{L('كلمة المرور', 'Password')}</h4>
         <div className="grid sm:grid-cols-2 gap-3 items-end">{num('pw_min', L('أقل عدد أحرف', 'Minimum length'), 6, 64, L('من 6 إلى 64. الحرف والرقم مطلوبان دائماً.', '6–64. A letter and a number are always required.'))}
@@ -86,6 +87,15 @@ function LinkSettings({ s, onClose }: { s: AccountSettings; onClose: () => void 
         <div className="grid sm:grid-cols-2 gap-3">{num('max_attempts', L('المحاولات الخاطئة قبل القفل', 'Wrong attempts before lock'), 3, 20)}{num('lock_minutes', L('مدة القفل (دقيقة)', 'Lock duration (minutes)'), 1, 1440)}</div></section>
       <section><h4 className="font-semibold text-[14px] mb-2">{L('روابط الحساب', 'Account links')}</h4>
         {num('invite_hours', L('صلاحية رابط التفعيل ورابط كلمة المرور (ساعة)', 'Activation and password links valid for (hours)'), 1, 720, L('من 1 إلى 720. تنطبق على الروابط الجديدة.', '1–720. Applies to new links.'))}</section>
+      <section><h4 className="font-semibold text-[14px] mb-2">{L('البريد الرسمي واستعادة كلمة المرور', 'Official email and password recovery')}</h4>
+        <Field label={L('نطاقات بريد الشركة', 'Company email domains')} error={err?.field('email_domains') ?? Object.entries(err?.errors ?? {}).find(([k]) => k.startsWith('email_domains.'))?.[1]?.[0]}
+          hint={L('مثل alfarada.sy — افصل بفاصلة. عند تحديدها لا يُقبل لحسابات الموظفين بريد من خارجها، ولا يُرسل رابط كلمة المرور إلى بريد خارجها. اتركه فارغاً لقبول أي بريد.', 'For example alfarada.sy — separate with commas. When set, staff accounts must use these domains and password links are never sent outside them. Leave empty to accept any email.')}>
+          <input className="field ltr text-start" value={domains} onChange={e => setDomains(e.target.value)} placeholder="company.com" /></Field>
+        <div className="mt-3 text-[13px] font-medium mb-1.5">{L('عند الضغط على «نسيت كلمة المرور» من موظف', 'When an employee uses «Forgot password»')}</div>
+        <Seg value={v.reset_mode ?? 'email'} onChange={x => setV({ ...v, reset_mode: x as 'email' | 'hr' })} options={[{ v: 'email', label: L('رابط إلى بريده الرسمي', 'Link to their official email') }, { v: 'hr', label: L('طلب إلى الموارد البشرية', 'Request to HR') }]} />
+        <p className="text-[12px] text-ink-3 mt-2">{v.reset_mode === 'hr'
+          ? L('لا تُرسل أي رسالة؛ يصل إشعار إلى من يدير المستخدمين، فيتحقق من هوية الموظف ثم ينسخ له رابطاً من زر «رابط كلمة المرور» ويسلّمه إياه.', 'No email is sent; whoever manages users gets a notice, verifies the employee, then copies a link from «Password link» and hands it over.')
+          : L('يُرسل الرابط إلى البريد المسجّل في الحساب فقط. المتقدمون للوظائف يصلهم الرابط دائماً على بريدهم.', 'The link goes only to the email on the account. Job applicants always receive it at their own email.')}</p></section>
     </div>
   </Modal>
 }

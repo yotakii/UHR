@@ -11,7 +11,7 @@ export function Applied() {
   const login = useLogin()
   const s = getSubmission()
   if (!s) return <div className="max-w-xl mx-auto px-5 py-12"><div className="bg-surface border border-line rounded-2xl">
-    <Empty title={L('تابع طلبك من حسابك', 'Follow your application from your account')} action={<Btn kind="primary" onClick={() => go('login')}>{L('تسجيل الدخول', 'Sign in')}</Btn>}>{L('سجّل الدخول بالبريد وكلمة المرور اللذين استخدمتهما في الطلب.', 'Sign in with the email and password you used in your application.')}</Empty>
+    <Empty title={L('تابع طلبك من حسابك', 'Follow your application from your account')} action={<div className="flex flex-wrap justify-center gap-2"><Btn kind="primary" onClick={() => go('login')}>{L('تسجيل الدخول', 'Sign in')}</Btn><Btn onClick={() => go('track')}>{L('المتابعة برقم الطلب', 'Track by reference')}</Btn></div>}>{L('سجّل الدخول بالبريد وكلمة المرور اللذين استخدمتهما في الطلب.', 'Sign in with the email and password you used in your application.')}</Empty>
   </div></div>
 
   const copy = () => navigator.clipboard?.writeText(s.ref).then(() => toast(L('تم نسخ رقم المتابعة', 'Reference copied')), () => {})
@@ -33,6 +33,8 @@ export function Applied() {
         <Btn kind="primary" onClick={track} disabled={login.isPending}>{L('متابعة حالة الطلب', 'Track my application')}</Btn>
         <Btn onClick={() => { clearSubmission(); go('jobs') }}>{L('تصفّح فرصاً أخرى', 'Browse more jobs')}</Btn>
       </div>
+      <p className="text-[12.5px] text-ink-3 mt-4">{L('احتفظ برقم المتابعة: يمكنك في أي وقت فتح صفحة «متابعة طلب» من أعلى الموقع أو أسفله، وإدخال الرقم مع بريدك لمعرفة حالة طلبك دون تسجيل الدخول.', 'Keep this reference: at any time, open «Track application» at the top or bottom of the site and enter it with your email to see your status without signing in.')}</p>
+      <a className="text-[13px] text-brand font-semibold" href={`/track?ref=${encodeURIComponent(s.ref)}`}>{L('صفحة متابعة الطلب', 'Track application page')}</a>
       <div className="mt-6"><Badge tone="info">{L('الخطوة التالية: الفرز الأولي من الموارد البشرية', 'Next: HR screening')}</Badge></div>
       <p className="mt-5 text-[14px] font-semibold text-brand">{L('شكراً لاستخدامكم نظام UHR', 'Thank you for using UHR')}</p>
     </div>

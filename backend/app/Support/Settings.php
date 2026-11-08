@@ -111,7 +111,9 @@ class Settings
         // نسخ بيانات الشركة (zip): عدد النسخ المحفوظة، وهل تشمل الملفات المرفوعة
         'backup' => ['keep' => 5, 'include_files' => true],
         // الحسابات (11e): صلاحية رابط تفعيل الحساب أو تعيين كلمة المرور بالساعات
-        'accounts' => ['invite_hours' => 72, 'pw_min' => 8, 'pw_upper' => false, 'pw_symbol' => false, 'max_attempts' => 5, 'lock_minutes' => 5],
+        'accounts' => ['invite_hours' => 72, 'pw_min' => 8, 'pw_upper' => false, 'pw_symbol' => false, 'max_attempts' => 5, 'lock_minutes' => 5,
+            // نطاقات البريد الرسمية لحسابات الموظفين (فارغ = أي بريد)، وطريقة «نسيت كلمة المرور»: email = رابط إلى بريد الحساب، hr = طلب إلى الموارد البشرية
+            'email_domains' => [], 'reset_mode' => 'email'],
         // بنك أسئلة المقابلة الأولية والمهارات (ملاحظتا 30 و58): يُنسخ لكل شاغر ويُعدَّل فيه، ويمكن تبديل السؤال أثناء المقابلة
         'interview_bank' => ['questions' => [
             ['ar' => 'حدّثنا عن خبرتك الأخيرة وأهم إنجاز حققته فيها.', 'en' => 'Tell us about your latest role and your main achievement there.'],

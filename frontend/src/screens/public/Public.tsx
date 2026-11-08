@@ -13,12 +13,13 @@ import { JobPage } from './JobPage'
 import { Activate, CompanyLogin, Forgot, Login, Reset } from './Auth'
 import { usePortalContext } from '../../lib/public'
 import { CompanyLogo } from './parts'
+import { Track } from './Track'
 
 /** صفحات الزائر: البوابة، فرص العمل، صفحة الشركة، صفحة الشاغر، التقديم، الدخول */
-export const PUBLIC_PAGES = ['', 'jobs', 'c', 'apply', 'applied', 'login', 'forgot', 'reset', 'activate', 'test']
+export const PUBLIC_PAGES = ['', 'jobs', 'c', 'apply', 'applied', 'login', 'forgot', 'reset', 'activate', 'test', 'track']
 
 export function Public() {
-  const route = useRoute(); const { page, parts, query } = route
+  const L = useL(); const route = useRoute(); const { page, parts, query } = route
   const [slug, code] = [parts[1], parts.slice(2).join('/')]
   // بوابة الشركة (86): على عنوانها تصبح الصفحة الرئيسية صفحتها، والدخول بهويتها
   const ctx = usePortalContext().data
@@ -34,6 +35,7 @@ export function Public() {
         : page === 'login' ? <Login />
         : page === 'approve' && parts[1] ? <Login after={`/approve/${parts[1]}`} />
         : page === 'forgot' ? <Forgot />
+        : page === 'track' ? <Track />
         : page === 'test' && parts[1] ? <TakeTest token={parts[1]} />
         : page === 'reset' ? <Reset token={query.token ?? ''} email={query.email ?? ''} />
         : page === 'activate' ? <Activate token={route.parts[1] ?? ''} />
@@ -41,7 +43,7 @@ export function Public() {
         : <PortalHome />}
     </main>
     <footer className="border-t border-line text-[12px] text-ink-3 px-5 md:px-8 py-4 flex flex-wrap justify-between gap-2">
-      <span>UHR · Atmata Group</span><span className="ltr">© {new Date().getFullYear()}</span>
+      <span>UHR · Atmata Group</span><a href="/track" className="hover:text-ink">{L('متابعة طلب توظيف برقم المتابعة', 'Track an application by reference')}</a><span className="ltr">© {new Date().getFullYear()}</span>
     </footer>
   </div>
 }
@@ -55,6 +57,7 @@ function PublicHeader() {
     <div className="flex items-center gap-4 min-w-0">
       {ctx ? <a href="/" className="flex items-center gap-2 min-w-0"><CompanyLogo c={ctx} size={34} /><span className="font-bold truncate hidden sm:inline">{bi(ctx.short, lang)}</span></a> : <a href="/" aria-label="UHR"><Logo h={30} /></a>}
       <a href="/jobs" className={`${link} hidden sm:inline-flex text-ink-2 hover:text-ink hover:bg-sub`}>{L('فرص العمل', 'Jobs')}</a>
+      <a href="/track" className={`${link} hidden md:inline-flex text-ink-2 hover:text-ink hover:bg-sub`}>{L('متابعة طلب', 'Track application')}</a>
     </div>
     <div className="flex items-center gap-2">
       {user

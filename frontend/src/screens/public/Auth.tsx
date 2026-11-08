@@ -69,15 +69,16 @@ export function CompanyLogin({ slug }: { slug: string }) {
 export function Forgot() {
   const L = useL(); const route = useRoute()
   const [email, setEmail] = useState(route.query.email ?? '')
-  const m = useMutation({ mutationFn: () => api<{ message: string }>('/auth/forgot', { json: { email: email.trim() } }) })
+  const m = useMutation({ mutationFn: () => api<{ message: string; hint?: string }>('/auth/forgot', { json: { email: email.trim() } }) })
   const err = m.error instanceof ApiError ? (m.error.field('email') ?? m.error.message) : m.error ? L('تعذّر الاتصال بالخادم.', 'Could not reach the server.') : ''
   if (m.isSuccess) return <AuthCard title={L('تحقق من بريدك', 'Check your email')}>
     <div className="text-center"><div className="size-12 rounded-full bg-brand-soft text-brand grid place-items-center mx-auto"><MailCheck /></div>
       <p className="text-ink-2 mt-4">{m.data.message}</p>
+      {m.data.hint && <p className="text-[13px] text-ink-2 mt-2">{m.data.hint}</p>}
       <p className="text-[13px] text-ink-3 mt-2">{L('لم تصلك الرسالة؟ تحقق من مجلد الرسائل غير المرغوبة، أو أعد الطلب بعد دقيقة.', "Didn't get it? Check your spam folder, or request again in a minute.")}</p>
       <div className="flex justify-center gap-2 mt-5"><Btn kind="primary" onClick={() => go('login')}>{L('العودة لتسجيل الدخول', 'Back to sign in')}</Btn><Btn onClick={() => m.reset()}>{L('إعادة الإرسال', 'Send again')}</Btn></div></div>
   </AuthCard>
-  return <AuthCard title={L('نسيت كلمة المرور؟', 'Forgot your password?')} sub={L('أدخل بريدك المسجّل وسنرسل لك رابطاً لتعيين كلمة مرور جديدة.', "Enter your registered email and we'll send you a link to set a new password.")}>
+  return <AuthCard title={L('نسيت كلمة المرور؟', 'Forgot your password?')} sub={L('أدخل البريد المسجّل في حسابك؛ يُرسل الرابط إليه فقط. موظفو الشركات: بريد العمل الرسمي.', 'Enter the email registered on your account; the link is sent only there. Company staff: your official work email.')}>
     <form onSubmit={e => { e.preventDefault(); m.mutate() }} className="space-y-4" noValidate>
       <Field label={L('البريد الإلكتروني', 'Email')} req error={err}><input className="field ltr text-start" type="email" value={email} onChange={e => { setEmail(e.target.value); m.reset() }} autoComplete="username" autoFocus /></Field>
       <Btn kind="primary" size="lg" className="w-full" type="submit" disabled={m.isPending || !email}>{m.isPending ? L('جارٍ الإرسال…', 'Sending…') : L('أرسل رابط التعيين', 'Send reset link')}</Btn>

@@ -101,7 +101,7 @@ export async function download(path: string, name: string) {
 }
 export const fmtSize = (n: number | null) => n === null ? '—' : n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(0)} KB` : `${(n / 1048576).toFixed(1)} MB`
 
-export type AccountSettings = { invite_hours: number; pw_min: number; pw_upper: boolean; pw_symbol: boolean; max_attempts: number; lock_minutes: number }
+export type AccountSettings = { invite_hours: number; pw_min: number; pw_upper: boolean; pw_symbol: boolean; max_attempts: number; lock_minutes: number; email_domains?: string[]; reset_mode?: 'email' | 'hr' }
 export const useSaveAccountSettings = () => useMutation({ mutationFn: (v: AccountSettings) => api<{ settings: AccountSettings }>('/hr/admin/users/settings', { method: 'PUT', json: v }), onSuccess: usersChanged })
 
 // سجل البريد الصادر (11e)

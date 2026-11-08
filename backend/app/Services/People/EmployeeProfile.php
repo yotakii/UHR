@@ -41,6 +41,7 @@ class EmployeeProfile
             if (! Employee::current()->whereKey($d['manager_id'])->exists()) throw ApiException::field('manager_id', L::t('المدير غير موجود', 'Unknown manager'), 'unknown');
             if ($this->loops($e->id, (int) $d['manager_id'])) throw ApiException::field('manager_id', L::t('لا يمكن أن يتبع الموظف لنفسه أو لأحد مرؤوسيه.', 'An employee cannot report to themselves or to someone in their own team.'), 'manager_loop');
         }
+        if ($d['email'] !== $e->email) \App\Support\AccountEmail::check($d['email']);   // البريد الرسمي فقط (لا يُفرض على بريد قديم لم يتغير)
         if (Employee::where('email', $d['email'])->whereKeyNot($e->id)->exists() || User::where('email', $d['email'])->where(fn ($q) => $q->whereNull('employee_id')->orWhere('employee_id', '!=', $e->id))->exists()) {
             throw ApiException::field('email', L::t('البريد مستخدم لحساب آخر', 'This email is already used'), 'email_taken');
         }
