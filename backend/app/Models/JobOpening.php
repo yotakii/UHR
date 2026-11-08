@@ -33,8 +33,9 @@ class JobOpening extends Model
             'salary_min' => 'float', 'salary_max' => 'float', 'hard_to_fill' => 'boolean', 'requires_photo' => 'boolean', 'match_weights' => 'array', 'test_enabled' => 'boolean', 'interview' => 'array'];
     }
 
-    public function department(): BelongsTo { return $this->belongsTo(Department::class); }
-    public function location(): BelongsTo { return $this->belongsTo(Location::class); }
+    // إدارة الشاغر وموقعه من شركته هو دائماً — بلا نطاق الشركة الحالية، فالبوابة العامة تعرض شواغر كل الشركات حتى لمستخدم مسجّل الدخول (التحقق النهائي 14)
+    public function department(): BelongsTo { return $this->belongsTo(Department::class)->withoutGlobalScopes(); }
+    public function location(): BelongsTo { return $this->belongsTo(Location::class)->withoutGlobalScopes(); }
     public function candidates(): HasMany { return $this->hasMany(Candidate::class); }
 
     public function scopeOpen($q) { return $q->where('status', 'open'); }

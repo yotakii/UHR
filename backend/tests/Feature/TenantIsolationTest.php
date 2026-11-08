@@ -92,6 +92,40 @@ class TenantIsolationTest extends TestCase
         $this->assertSame('calculated', $sheet->fresh()->status);
     }
 
+    /** 14 — الوحدات الأحدث: الساحة، الشكر، المهام والمؤشرات، خطط التطوير، المساعد */
+    public function test_newer_modules_are_isolated_too(): void
+    {
+        $fa = Company::where('slug', 'alfarada')->firstOrFail();
+        [$post, $task, $kpi, $msg] = Tenant::run($fa->id, function () {
+            $u = User::where('email', 'samer.halabi@alfarada.sy')->firstOrFail();
+            $space = app(\App\Services\Space\Space::class);
+            $space->ensureDefaults();
+            $c = \App\Models\Community::where('kind', 'company')->firstOrFail();
+            $post = $space->create($u, ['community_id' => $c->id, 'kind' => 'post', 'body' => 'منشور داخلي للفرادة'], []);
+            $hr = User::where('email', 'hr@alfarada.sy')->firstOrFail();
+            $task = app(\App\Services\Work\Tasks::class)->save(null, ['title' => 'مهمة سرية', 'employee_id' => $u->employee_id, 'priority' => 'normal'], $hr);
+            $kpi = app(\App\Services\Work\Kpis::class)->save(null, ['scope' => 'company', 'name_ar' => 'مؤشر الفرادة', 'unit' => 'count', 'target' => 10, 'direction' => 'higher', 'period' => 'month'], $hr);
+            $msg = \App\Models\AssistantMessage::create(['user_id' => $u->id, 'role' => 'assistant', 'text' => 'رد', 'data' => ['action' => ['kind' => 'leave', 'status' => 'pending', 'fields' => [], 'errors' => [], 'warnings' => [], 'info' => [], 'digest' => 'x', 'expires_at' => now()->addHour()->toIso8601String(), 'result' => null]]]);
+            return [$post, $task, $kpi, $msg];
+        });
+
+        $this->login('hr@atmata.sy')->assertOk();
+        $deny = fn ($r) => $this->assertContains($r->status(), [403, 404], substr((string) $r->baseResponse->getContent(), 0, 200));
+        $deny($this->getJson("/api/space/posts/{$post->id}"));
+        $deny($this->postJson("/api/space/posts/{$post->id}/comments", ['body' => 'تعليق من شركة أخرى']));
+        $deny($this->postJson("/api/space/post/{$post->id}/react", ['type' => 'like']));
+        $deny($this->deleteJson("/api/space/posts/{$post->id}"));
+        $deny($this->getJson("/api/work/tasks/{$task->id}"));
+        $deny($this->postJson("/api/work/tasks/{$task->id}/cancel", ['note' => 'إلغاء من شركة أخرى']));
+        $deny($this->postJson("/api/work/kpis/{$kpi->id}/entries", ['period' => '2026-10', 'actual' => 5]));
+        $deny($this->postJson("/api/assistant/messages/{$msg->id}/action", ['decision' => 'cancel']));
+        $this->assertFalse(collect($this->getJson('/api/space')->assertOk()->json('data'))->pluck('id')->contains($post->id));
+        $this->assertFalse(collect($this->getJson('/api/work/kpis')->assertOk()->json('data'))->pluck('id')->contains($kpi->id));
+        $this->assertSame([], collect($this->getJson('/api/space/colleagues?q='.urlencode('سامر'))->assertOk()->json('data'))->all());
+        $this->assertFalse(collect($this->getJson('/api/development')->assertOk()->json('plans'))->contains(fn ($p) => ($p['employee']['name']['ar'] ?? '') === 'سامر الحلبي'));
+        $this->assertSame('pending', Tenant::run($fa->id, fn () => $msg->fresh()->data['action']['status']));
+    }
+
     public function test_company_portal_login_and_platform_company_details(): void
     {
         // من بوابة «أتمتة» لا يدخل موظف «الفرادة» — نفس رسالة الخطأ
