@@ -24,7 +24,7 @@ for p in 'abcde':
         paths = re.findall(r'<span class="path">([^<]+)</span>', who.group(1)) if who else []
         me = [x.strip() for x in paths if x.strip().startswith('/me')]
         hr = [x.strip() for x in paths if x.strip().startswith('/hr')]
-        employee = bool(me) or 'كل موظف' in who_t or 'الموظف' in who_t
+        employee = (not who) or bool(me) or 'كل موظف' in who_t or 'الموظف' in who_t   # بلا «يصل إليها» = شرح عام للجميع
         sub = title
         buf = []
         def flush():

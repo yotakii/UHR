@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react'
-import { ListChecks, LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed, Megaphone, Gift, ClipboardCheck, SlidersHorizontal, Sprout, KeyRound, Building, UserCog, GitBranch, BellRing, Library, History, DatabaseBackup, ScanText, MessagesSquare, ArrowRight, ArrowLeft, X, CalendarDays, CalendarClock, MapPin , UserRound } from 'lucide-react'
+import { Sparkles, ListChecks, LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed, Megaphone, Gift, ClipboardCheck, SlidersHorizontal, Sprout, KeyRound, Building, UserCog, GitBranch, BellRing, Library, History, DatabaseBackup, ScanText, MessagesSquare, ArrowRight, ArrowLeft, X, CalendarDays, CalendarClock, MapPin , UserRound } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { navigate, useRoute } from '../../lib/router'
 import { can, type SessionUser } from '../../lib/session'
@@ -23,6 +23,7 @@ import { CvDatabase } from './recruitment/CvDatabase'
 import { CvScreening } from './recruitment/CvScreening'
 import { SpaceApp } from '../space/Space'
 import { SpaceSettings } from './SpaceSettings'
+import { AssistantSettings } from './AssistantSettings'
 import { OnboardingList } from './onboarding/OnboardingList'
 import { OnboardPage } from './onboarding/OnboardPage'
 import { MyDocuments } from '../employee/MyDocuments'
@@ -142,6 +143,7 @@ export function HrApp({ user }: { user: SessionUser }) {
     { item: { to: '/hr/settings/schedules', icon: <CalendarClock size={18} />, label: L('جداول الدوام والورديات', 'Work schedules & shifts'), group: g4, hidden: true }, section: 'rules', module: 'attendance', view: () => <Schedules /> },
     { item: { to: '/hr/settings/branches', icon: <MapPin size={18} />, label: L('الفروع والمناطق الزمنية', 'Branches & time zones'), group: g4, hidden: true }, section: 'org', module: 'attendance', view: () => <Branches /> },
     { item: { to: '/hr/settings/devices', icon: <Nfc size={18} />, label: L('أجهزة الحضور', 'Attendance devices'), group: g4, hidden: true }, section: 'system', module: u => can(u, 'attendance', 'edit'), view: () => <Devices /> },
+    { item: { to: '/hr/settings/assistant', icon: <Sparkles size={18} />, label: L('إعدادات المساعد', 'Assistant settings'), group: g4, hidden: true }, section: 'system', module: u => can(u, 'settings'), view: () => <AssistantSettings /> },
     { item: { to: '/hr/settings/space', icon: <MessagesSquare size={18} />, label: L('إعدادات الساحة', 'Space settings'), group: g4, hidden: true }, section: 'system', module: u => can(u, 'settings', 'edit'), view: () => <SpaceSettings /> },
     { item: { to: '/hr/settings/recruitment', icon: <Scale size={18} />, label: L('قواعد التوظيف والمطابقة', 'Recruitment & matching rules'), group: g4, hidden: true }, section: 'rules', module: u => can(u, 'settings') || can(u, 'candidates'), view: () => <RecruitmentSettings /> },
     { item: { to: '/hr/settings/security', icon: <KeyRound size={18} />, label: L('حماية الرواتب', 'Salary protection'), group: g4, hidden: true }, section: 'org', module: u => can(u, 'settings'), view: () => <VaultSettings /> },

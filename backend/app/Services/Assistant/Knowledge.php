@@ -18,6 +18,9 @@ class Knowledge
     public function search(User $u, string $question, int $limit = 3): array
     {
         $q = Text::terms(self::translate($question));
+        // كلمات تصف السؤال لا موضوعه (سياسة، نظام، شروط…) لا تُحتسب إن وُجد غيرها
+        $topic = array_values(array_filter($q, fn ($t) => ! in_array($t, ['سياس', 'سياسه', 'نظام', 'قانون', 'قاعد', 'قاعده', 'شروط', 'شرط', 'لايح', 'لائح', 'اجراء', 'مده', 'يحق', 'مسموح'], true)));
+        if ($topic) $q = $topic;
         if (! $q) return [];
         $docs = array_merge($this->policies($u, $q), $this->guide($u));
         if (! $docs) return [];
@@ -30,8 +33,8 @@ class Knowledge
         foreach ($docs as $d) {
             $s = 0.0; $cover = 0.0;
             foreach ($q as $t) {
-                $tf = self::tf($d, $t) + 0.6 * self::tf(['tokens' => $d['head']], $t);
-                if ($tf <= 0 && ($alt = self::alt($t))) $tf = 0.8 * (self::tf($d, $alt) + 0.6 * self::tf(['tokens' => $d['head']], $alt));
+                $tf = self::tf($d, $t) + 1.5 * self::tf(['tokens' => $d['head']], $t);
+                if ($tf <= 0 && ($alt = self::alt($t))) $tf = 0.8 * (self::tf($d, $alt) + 1.5 * self::tf(['tokens' => $d['head']], $alt));
                 if ($tf <= 0) continue;
                 $s += $idf[$t] * ($tf * 2.2) / ($tf + 1.2 * (0.25 + 0.75 * $d['len'] / $avg));
                 $cover += $idf[$t];
@@ -100,7 +103,17 @@ class Knowledge
         $rows = PolicyParagraph::query()->join('policy_versions as v', 'v.id', '=', 'policy_paragraphs.version_id')->join('policy_documents as d', 'd.id', '=', 'v.document_id')
             ->where('v.status', 'published')->where('d.status', 'published')
             ->where(function ($w) use ($pfx) { foreach ($pfx as $x) $w->orWhere('policy_paragraphs.norm', 'like', '%'.str_replace(['%', '_'], ['\%', '\_'], $x).'%'); })
-            ->limit(400)->get(['policy_paragraphs.id', 'policy_paragraphs.n', 'policy_paragraphs.text', 'd.id as document_id', 'd.title_ar', 'd.title_en']);
+            ->limit(400)->get(['policy_paragraphs.id', 'policy_paragraphs.n', 'policy_paragraphs.version_id', 'policy_paragraphs.text', 'd.id as document_id', 'd.title_ar', 'd.title_en']);
+        // فقرة قصيرة (عنوان مثل «إجازة مرضية.») تُضم إلى الفقرتين التاليتين لتحمل معناها
+        $short = $rows->filter(fn ($r) => count(explode(' ', trim($r->text))) < 8);
+        if ($short->isNotEmpty()) {
+            $next = PolicyParagraph::query()->where(function ($w) use ($short) { foreach ($short as $r) $w->orWhere(fn ($x) => $x->where('version_id', $r->version_id)->whereIn('n', [$r->n + 1, $r->n + 2])); })
+                ->get(['version_id', 'n', 'text'])->groupBy(fn ($x) => $x->version_id.':'.$x->n);
+            foreach ($short as $r) {
+                $more = collect([$r->n + 1, $r->n + 2])->map(fn ($k) => $next->get($r->version_id.':'.$k)?->first()?->text)->filter()->implode(' ');
+                if ($more !== '') $r->text = rtrim(trim($r->text), '.:').': '.$more;
+            }
+        }
         $base = Assistant::link($u, '/me/policies');
         return $rows->map(fn ($r) => ['kind' => 'policy', 'title' => ['ar' => $r->title_ar, 'en' => $r->title_en ?: $r->title_ar], 'sub' => null, 'text' => $r->text,
             'to' => $base.'?doc='.$r->document_id.'&p='.$r->n, 'tokens' => self::bag($r->text), 'head' => self::bag($r->title_ar), 'len' => max(1, count(explode(' ', $r->text)))])->all();
@@ -112,10 +125,10 @@ class Knowledge
             $c['tokens'] = self::bag($c['text']); $c['head'] = self::bag($c['title'].' '.$c['sub']); $c['len'] = max(1, count(explode(' ', $c['text'])));
             return $c;
         }, json_decode((string) @file_get_contents(resource_path('assistant/guide.json')), true) ?: []);
-        $hr = Perm::can($u, 'employees', 'view') || Perm::can($u, 'candidates', 'view') || Perm::can($u, 'settings', 'view');
+        $hr = $u->portal() === 'hr';
         $out = [];
         foreach (self::$guide as $c) {
-            if (! $hr && ! $c['employee']) continue;   // الموظف لا يرى شروح صفحات الموارد البشرية
+            if (! $hr && (! $c['employee'] || str_contains((string) $c['sub'], 'الموارد البشرية') || str_contains((string) $c['sub'], 'المدير'))) continue;   // الموظف لا يرى شروح صفحات الموارد البشرية
             $to = $hr ? ($c['hr'] ?? $c['me']) : ($c['me'] ?? null);
             $out[] = ['kind' => 'guide', 'title' => ['ar' => $c['title'], 'en' => $c['title']], 'sub' => $c['sub'] !== $c['title'] ? $c['sub'] : null, 'text' => $c['text'], 'to' => $to,
                 'tokens' => $c['tokens'], 'head' => $c['head'], 'len' => $c['len']];

@@ -6,6 +6,7 @@ import { can, useLogout, type SessionUser } from '../../lib/session'
 import { useMarkNoticesRead, useNotices, useSearch } from '../../lib/console'
 import { Logo, LangToggle, ThemeToggle } from '../../ui/brand'
 import { VaultButton, VaultDialog } from '../../ui/vault'
+import { AssistantButton, AssistantPanel } from '../assistant/Assistant'
 
 /**
  * إطار لوحات الإدارة (M15 — منقول من Shell.tsx في الديمو بدون أدوات المعرض):
@@ -68,6 +69,7 @@ export function Shell({ items, user, org, sub, children, linkOf, search }: { ite
           <Search size={16} /><span className="flex-1 text-start">{L('ابحث في النظام…', 'Search the platform…')}</span><kbd className="text-[11px] border border-line rounded px-1.5 ltr">Ctrl K</kbd></button>
         <div className="flex items-center gap-2 ms-auto md:ms-0">
           <button onClick={() => setPalette(true)} className="md:hidden h-9 w-9 grid place-items-center rounded-lg border border-line bg-surface hover:bg-sub" aria-label={L('بحث', 'Search')}><Search size={17} /></button>
+          {user.portal === 'hr' && <AssistantButton />}
           {(can(user, 'payroll') || !!user.employee) && <VaultButton others={can(user, 'payroll')} />}
           <LangToggle /><span className="hidden sm:inline-flex"><ThemeToggle /></span>
           {linkOf && <BellMenu open={bell} setOpen={v => { setBell(v); setMenu(false) }} linkOf={linkOf} />}
@@ -77,6 +79,7 @@ export function Shell({ items, user, org, sub, children, linkOf, search }: { ite
     </div>
     {palette && <Palette items={items} search={search} onClose={() => setPalette(false)} />}
     <VaultDialog />
+    {user.portal === 'hr' && <AssistantPanel />}
   </div>
 }
 
