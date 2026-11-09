@@ -7,3 +7,4 @@ deploy/.env
 deploy/deployed.log
 dump.rdb
 docs/UHR-Test-Accounts.xlsx
+docs/UHR-Test-Accounts.pdf

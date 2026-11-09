@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>UHR — حسابات بيئة التجربة</title>
+<link rel="stylesheet" href="../user/_style.css">
+<style>
+  @page { size: A4; margin: 16mm 14mm 18mm; }
+  .head { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid var(--brand); padding-bottom: 10px; margin-bottom: 10px; }
+  .head h1 { margin: 0; font-size: 20pt; color: var(--brand); }
+  .head img { height: 40px; }
+  .info { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .info div { background: var(--sub); border-radius: 8px; padding: 6px 12px; }
+  .info b { display: block; font-size: 9pt; color: var(--ink3); font-weight: 600; }
+  .info span { font-size: 12pt; font-weight: 700; }
+  table.t { width: 100%; border-collapse: collapse; font-size: 9.3pt; margin: 4px 0 10px; break-inside: avoid; }
+  table.t th, table.t td { border: 1px solid var(--line); padding: 4px 7px; line-height: 1.5; text-align: right; vertical-align: top; }
+  table.t th { background: var(--brand); color: #fff; font-weight: 700; }
+  table.t tr:nth-child(even) td { background: #f8fafb; }
+  table.t td.n { width: 22px; text-align: center; color: var(--ink3); }
+  .ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; font-family: Figtree, sans-serif; }
+  td.e { font-weight: 600; } .ltr { white-space: nowrap; } td:nth-child(3) { min-width: 80px; }
+  .box { font-size: 9pt !important; padding: 6px 10px !important; margin: 6px 0 !important; line-height: 1.55; } .box ul { margin: 2px 0; } .info span { font-size: 11pt; }
+  h2 { font-size: 12pt; margin: 10px 0 4px; break-after: avoid; color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="head"><h1>حسابات بيئة التجربة</h1><img src="../../../frontend/src/assets/logo.png" alt="UHR"></div>
+
+<div class="info">
+  <div><b>عنوان النظام</b><span class="ltr">https://atmata-uhr.duckdns.org</span></div>
+  <div><b>كلمة المرور لجميع الحسابات</b><span class="ltr">123456</span></div>
+  <div><b>نسخة الجوال للموظفين</b><span class="ltr">https://atmata-uhr.duckdns.org/m</span></div>
+  <div><b>الشركة</b><span>شركة الفرادة للتطوير والاستثمار</span></div>
+</div>
+
+<h2>حسابات الإدارة والصلاحيات</h2>
+<table class="t">
+<tr><th>#</th><th>البريد الإلكتروني</th><th>الاسم</th><th>الدور</th><th>ما يمكنه تجربته</th></tr>
+<tr><td class="n">1</td><td class="e"><span class="ltr">admin@uniqueness.sy</span></td><td>مدير النظام</td><td>مدير النظام، مدير الموارد البشرية</td><td>كل الإعدادات، المستخدمون والأدوار، الصلاحيات، سجل التدقيق، وكل شاشات الموارد البشرية.</td></tr>
+<tr><td class="n">2</td><td class="e"><span class="ltr">rahaf.hr.test@uniqueness.sy</span></td><td>رهف سامر الخطيب</td><td>مدير الموارد البشرية</td><td>التوظيف، الموظفون، الحضور، الإجازات، الكشف الشهري، العهد، المخالفات، الخروج، التقييم.</td></tr>
+<tr><td class="n">3</td><td class="e"><span class="ltr">hr.officer@uniqueness.sy</span></td><td>موظف الموارد البشرية</td><td>موظف موارد بشرية</td><td>الأعمال اليومية للموارد البشرية ضمن صلاحياته.</td></tr>
+<tr><td class="n">4</td><td class="e"><span class="ltr">recruiter@uniqueness.sy</span></td><td>مسؤول التوظيف</td><td>مسؤول توظيف</td><td>الشواغر، المتقدمون، قاعدة السير الذاتية وفرزها — دون بيانات الموظفين.</td></tr>
+<tr><td class="n">5</td><td class="e"><span class="ltr">finance@uniqueness.sy</span></td><td>الإدارة المالية</td><td>المالية</td><td>الكشف الشهري والتقارير المالية وموافقات المالية.</td></tr>
+<tr><td class="n">6</td><td class="e"><span class="ltr">executive@uniqueness.sy</span></td><td>المدير التنفيذي</td><td>المدير التنفيذي</td><td>الاطلاع على لوحات المتابعة والتقارير والموافقات المخصصة له.</td></tr>
+<tr><td class="n">7</td><td class="e"><span class="ltr">ceo@uniqueness.sy</span></td><td>المدير العام</td><td>المدير العام</td><td>الموافقات العليا: قرار التعيين، العقوبات، الاستقالات، تجاوز ميزانية العرض، الاطلاع على الرواتب.</td></tr>
+</table>
+
+<h2>حسابات الموظفين</h2>
+<table class="t">
+<tr><th>#</th><th>البريد الإلكتروني</th><th>الاسم</th><th>الرقم الوظيفي</th><th>ما يمكنه تجربته</th></tr>
+<tr><td class="n">8</td><td class="e"><span class="ltr">lbnyjwijaty@uniqueness.sy</span></td><td>محمد الاحمد</td><td><span class="ltr">UHR-1001</span></td><td rowspan="4">بوابة الموظف ونسخة الجوال: تسجيل الحضور، طلب إجازة أو مغادرة ساعية، السلفة والشهادات، طلباتي، الكشف الشهري، الوثائق، الساحة، المهام، «المساعد».</td></tr>
+<tr><td class="n">9</td><td class="e"><span class="ltr">shamsalameh075@uniqueness.sy</span></td><td>سامر الحلبي</td><td><span class="ltr">UHR-1003</span></td></tr>
+<tr><td class="n">10</td><td class="e"><span class="ltr">mrunige401@uniqueness.sy</span></td><td>علا احمد</td><td><span class="ltr">UHR-1004</span></td></tr>
+<tr><td class="n">11</td><td class="e"><span class="ltr">info@uniqueness.sy</span></td><td>محمد المدير</td><td><span class="ltr">UHR-1005</span></td></tr>
+</table>
+
+<h2>ملاحظات</h2>
+<ul style="font-size:9pt;line-height:1.6;margin:2px 0;padding-inline-start:18px">
+<li><b>موافقات المدير المباشر:</b> تصل طلبات الموظف إلى مديره المسجّل في ملفه. لتجربتها: من حساب الموارد البشرية افتح ملف الموظف ← «تعديل» ← اختر «المدير»، ثم قدّم طلباً من حساب الموظف واعتمده من حساب المدير في «الموافقات».</li>
+<li>هذه حسابات بيئة التجربة فقط؛ تُنشأ حسابات الإنتاج لاحقاً بروابط تفعيل، ويختار كل مستخدم كلمة مروره بنفسه.</li>
+<li>بعد عدة محاولات دخول خاطئة يُقفل الحساب مؤقتاً لبضع دقائق. عرض الرواتب يتطلب التحقق من الهوية.</li>
+</ul>
+</body>
+</html>
