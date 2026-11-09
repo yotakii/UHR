@@ -6,3 +6,4 @@ backend/.env
 deploy/.env
 deploy/deployed.log
 dump.rdb
+docs/UHR-Test-Accounts.xlsx
