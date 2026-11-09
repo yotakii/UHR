@@ -187,6 +187,8 @@ class Settings
         // البريد الصادر (11e): خادم SMTP للمنصة كلها — host فارغ = إعداد الخادم (MAIL_* في البيئة). password مشفّر. log_days = مدة حفظ سجل البريد
         // بوابة لكل شركة (86): base_domain فارغ = لا عناوين فرعية؛ وإلا {slug}.base_domain يفتح بوابة الشركة
         'portal_hosts' => ['base_domain' => ''],
+        // إشعارات تطبيق الجوال (Firebase): مفتاح حساب الخدمة JSON مشفّراً؛ فارغ = بلا إشعارات خارج التطبيق
+        'push' => ['enabled' => true, 'credentials' => ''],
         'mail' => ['host' => '', 'port' => 587, 'encryption' => 'tls', 'username' => '', 'password' => '', 'from_address' => '', 'from_name' => 'UHR', 'log_days' => 90],
         'portal' => [
             'brand_latin' => 'UHR · ATMATA GROUP',

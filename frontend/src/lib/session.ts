@@ -35,7 +35,7 @@ onPrefsChange(p => {
   api('/me/account', { method: 'PUT', json: { locale: p.lang, theme: p.theme } }).catch(() => { /* يكفي المحلي */ })
 })
 export function useLogin() {
-  return useMutation({ mutationFn: (v: { email: string; password: string; company?: string }) => api<{ user: SessionUser }>('/auth/login', { json: v }), onSuccess: r => { setMe(r); applyPrefs(r.user) } })
+  return useMutation({ mutationFn: (v: { email: string; password: string; company?: string; remember?: boolean }) => api<{ user: SessionUser }>('/auth/login', { json: v }), onSuccess: r => { setMe(r); applyPrefs(r.user) } })
 }
 /** رابط تفعيل الحساب / تعيين كلمة المرور (11e): يختار كلمة المرور ثم يدخل مباشرة */
 export function useActivate(token: string) {

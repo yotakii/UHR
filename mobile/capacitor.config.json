@@ -1,0 +1,25 @@
+{
+  "appId": "sy.atmata.uhr",
+  "appName": "UHR",
+  "webDir": "www",
+  "server": {
+    "url": "https://atmata-uhr.duckdns.org/m",
+    "allowNavigation": [
+      "atmata-uhr.duckdns.org"
+    ],
+    "errorPath": "offline.html"
+  },
+  "android": {
+    "backgroundColor": "#0f172a",
+    "adjustMarginsForEdgeToEdge": "force"
+  },
+  "plugins": {
+    "PushNotifications": {
+      "presentationOptions": [
+        "badge",
+        "sound",
+        "alert"
+      ]
+    }
+  }
+}

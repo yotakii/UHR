@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { LayoutGrid, Building2, ClipboardCheck, Type, Briefcase, Inbox, Clock, CheckCircle2, XCircle, MapPin, DatabaseBackup, ScanText, Mail } from 'lucide-react'
+import { LayoutGrid, Building2, ClipboardCheck, Type, Briefcase, Inbox, Clock, CheckCircle2, XCircle, MapPin, DatabaseBackup, ScanText, Mail, Smartphone } from 'lucide-react'
 import { useL, useLang, bi, fmtDateTime } from '../../lib/store'
 import { useRoute } from '../../lib/router'
 import type { SessionUser } from '../../lib/session'
@@ -13,6 +13,7 @@ import { CompanyDetailPage } from './CompanyDetail'
 import { PortalTexts } from './PortalTexts'
 import { PlatformBackups } from '../hr/admin/Backups'
 import { CvReading } from './CvReading'
+import { PushSettings } from './PushSettings'
 import { MailSettings } from './MailSettings'
 
 /** لوحة مدير المنصة: نظرة عامة، الشركات، مراجعة الشواغر، نصوص البوابة */
@@ -26,12 +27,13 @@ export function PlatformApp({ user }: { user: SessionUser }) {
     { to: '/platform/reviews', icon: <ClipboardCheck size={18} />, label: L('مراجعة الشواغر', 'Job reviews'), count: pending, group: L('المنصة', 'Platform') },
     { to: '/platform/portal', icon: <Type size={18} />, label: L('نصوص البوابة', 'Portal texts'), group: L('المنصة', 'Platform') },
     { to: '/platform/cv-reading', icon: <ScanText size={18} />, label: L('قراءة السير', 'CV reading'), group: L('المنصة', 'Platform') },
+    { to: '/platform/push', icon: <Smartphone size={18} />, label: L('إشعارات الجوال', 'Mobile notifications'), group: L('المنصة', 'Platform') },
     { to: '/platform/mail', icon: <Mail size={18} />, label: L('البريد الصادر', 'Outgoing mail'), group: L('المنصة', 'Platform') },
     { to: '/platform/backups', icon: <DatabaseBackup size={18} />, label: L('النسخ الاحتياطي', 'Backups'), group: L('المنصة', 'Platform') },
   ]
   const sub = route.parts[1]
   return <Shell items={items} user={user} org="Atmata · UHR" sub={L('إدارة منصة UHR وبوابة فرص العمل', 'UHR platform & jobs portal administration')}>
-    {sub === 'companies' && route.parts[2] && /^\d+$/.test(route.parts[2]) ? <CompanyDetailPage id={Number(route.parts[2])} /> : sub === 'companies' ? <Companies /> : sub === 'reviews' ? <Reviews /> : sub === 'portal' ? <PortalTexts /> : sub === 'backups' ? <PlatformBackups /> : sub === 'cv-reading' ? <CvReading /> : sub === 'mail' ? <MailSettings /> : <OverviewPage />}
+    {sub === 'companies' && route.parts[2] && /^\d+$/.test(route.parts[2]) ? <CompanyDetailPage id={Number(route.parts[2])} /> : sub === 'companies' ? <Companies /> : sub === 'reviews' ? <Reviews /> : sub === 'portal' ? <PortalTexts /> : sub === 'backups' ? <PlatformBackups /> : sub === 'cv-reading' ? <CvReading /> : sub === 'mail' ? <MailSettings /> : sub === 'push' ? <PushSettings /> : <OverviewPage />}
   </Shell>
 }
 

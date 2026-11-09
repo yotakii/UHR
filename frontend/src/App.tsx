@@ -17,6 +17,7 @@ import { EmployeeApp } from './screens/employee/EmployeeApp'
 import { Terminal } from './screens/kiosk/Terminal'
 import { ApproveLink } from './screens/public/ApproveLink'
 import { startRealtime, stopRealtime } from './lib/realtime'
+import { MobileApp } from './screens/mobile/MobileApp'
 
 function Splash() {
   return <div className="min-h-full grid place-items-center app-glow"><div className="flex flex-col items-center gap-4"><Logo h={34} /><Loader2 className="animate-spin text-brand" size={22} /></div></div>
@@ -33,6 +34,8 @@ function Root() {
   if (route.page === 'status') return <SystemStatus />
   // شاشة جهاز الحضور: بمفتاح الجهاز المسجّل، بلا حساب مستخدم
   if (route.page === 'kiosk') return <Terminal />
+  // تطبيق الجوال للموظف (يُفتح أيضاً داخل تطبيق Android)
+  if (route.page === 'm') return <MobileApp />
   if (me.isLoading) return <Splash />
   if (me.isError) return <div className="min-h-full grid place-items-center app-glow"><div className="bg-surface border border-line rounded-2xl"><Empty title={L('تعذّر الاتصال بالخادم', 'Cannot reach the server')} action={<Btn onClick={() => me.refetch()}>{L('إعادة المحاولة', 'Retry')}</Btn>}>{L('تحقق من الشبكة أو من حالة النظام.', 'Check your connection or the system status.')} <a className="underline" href="#/status">#/status</a></Empty></div></div>
   const user = me.data

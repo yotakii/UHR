@@ -113,6 +113,10 @@ Route::middleware(['auth', 'fresh', 'portal:candidate'])->prefix('me')->group(fu
 // M14 — «وثائق للتوقيع»: لكل حساب مرتبط بموظف (ومنهم موظفو الموارد البشرية أنفسهم)
 // المسار الموحد للطلبات (SRS §10.1): طلباتي وحضوري لكل حساب له ملف موظف، وصندوق الاعتماد لكل معتمِد (المدير، HR، المستويات العليا)
 Route::middleware(['auth', 'fresh'])->prefix('me')->group(function () {
+    // تطبيق الجوال: جهاز الإشعارات
+    Route::get('/push', fn () => response()->json(['enabled' => \App\Services\Push\Fcm::enabled()]));
+    Route::post('/push', [\App\Http\Controllers\Api\PushController::class, 'register'])->middleware('throttle:20,1');
+    Route::delete('/push', [\App\Http\Controllers\Api\PushController::class, 'unregister']);
     // «حسابي» (67): الصورة، اللغة والمظهر، الاسم لحسابات بلا ملف موظف
     Route::get('/account', [\App\Http\Controllers\Api\MyAccountController::class, 'show']);
     Route::put('/account', [\App\Http\Controllers\Api\MyAccountController::class, 'update'])->middleware('throttle:30,1');
@@ -533,6 +537,9 @@ Route::middleware(['auth', 'fresh', 'portal:platform'])->prefix('platform')->gro
     // قراءة السير بالنموذج المحلي: الحالة، والتشغيل والحد الشهري لكل شركة
     Route::get('/cv-reading', [\App\Http\Controllers\Api\Platform\CvReadingController::class, 'show']);
     Route::put('/cv-reading', [\App\Http\Controllers\Api\Platform\CvReadingController::class, 'update']);
+    Route::get('/push', [\App\Http\Controllers\Api\PushController::class, 'settings']);
+    Route::put('/push', [\App\Http\Controllers\Api\PushController::class, 'saveSettings']);
+    Route::post('/push/test', [\App\Http\Controllers\Api\PushController::class, 'test'])->middleware('throttle:5,1');
     // نسخة الخادم الكاملة (11b)
     Route::get('/backups', [AdminBackupController::class, 'platform']);
     Route::post('/backups', [AdminBackupController::class, 'platformRun'])->middleware('throttle:6,10,platform-backup');

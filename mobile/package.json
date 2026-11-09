@@ -1,0 +1,19 @@
+{
+  "name": "uhr-mobile",
+  "private": true,
+  "version": "1.0.0",
+  "description": "UHR employee app (Android) — opens the server's /m pages with native notifications",
+  "scripts": {
+    "url": "node set-url.mjs",
+    "sync": "cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/android": "7.6.10",
+    "@capacitor/app": "7.1.2",
+    "@capacitor/core": "7.6.10",
+    "@capacitor/push-notifications": "7.0.7"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "7.6.10"
+  }
+}

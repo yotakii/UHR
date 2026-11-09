@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">UHR</string>
+    <string name="title_activity_main">UHR</string>
+    <string name="package_name">sy.atmata.uhr</string>
+    <string name="custom_url_scheme">sy.atmata.uhr</string>
+</resources>

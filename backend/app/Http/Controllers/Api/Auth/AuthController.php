@@ -32,7 +32,7 @@ class AuthController extends Controller
 
     public function login(Request $request): JsonResponse
     {
-        $data = $request->validate(['email' => ['required', 'email'], 'password' => ['required', 'string'], 'company' => ['nullable', 'string', 'max:40']], [
+        $data = $request->validate(['email' => ['required', 'email'], 'password' => ['required', 'string'], 'company' => ['nullable', 'string', 'max:40'], 'remember' => ['nullable', 'boolean']], [
             'email.required' => L::t('أدخل البريد الإلكتروني.', 'Enter your email.'), 'email.email' => L::t('صيغة البريد غير صحيحة.', 'Invalid email format.'), 'password.required' => L::t('أدخل كلمة المرور.', 'Enter your password.'),
         ]);
         $email = strtolower(trim($data['email']));
@@ -73,7 +73,7 @@ class AuthController extends Controller
         }
 
         $user->forceFill(['failed_logins' => 0, 'locked_until' => null, 'last_login_at' => now(), 'activated_at' => $user->activated_at ?? now()])->save();
-        Auth::login($user);
+        Auth::login($user, (bool) ($data['remember'] ?? false));   // تطبيق الجوال: يبقى مسجّلاً حتى يخرج بنفسه
         $request->session()->regenerate();
         Audit::record('auth.login', $user);
         return response()->json(['user' => $user->sessionPayload()]);
