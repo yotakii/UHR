@@ -49,7 +49,7 @@ class WorkSchedules
 
     public static function tz(Employee $e): string { return self::tzOf($e->getAttributes()['location_id'] ?? null); }
 
-    private static function tzOf(?int $locationId): string
+    public static function tzOf(?int $locationId): string
     {
         if (! $locationId) return config('app.timezone');
         return self::$tz[$locationId] ??= (Location::withoutGlobalScopes()->whereKey($locationId)->value('timezone') ?: config('app.timezone'));

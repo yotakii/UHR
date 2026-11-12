@@ -322,6 +322,10 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
         Route::put('/devices/{id}', [DeviceController::class, 'update'])->whereNumber('id');
         Route::post('/devices/{id}/rotate', [DeviceController::class, 'rotate'])->whereNumber('id');
         Route::post('/devices/{id}/package', [DeviceController::class, 'package'])->whereNumber('id');
+        Route::post('/devices/{id}/zk-package', [DeviceController::class, 'zkPackage'])->whereNumber('id');
+        Route::get('/devices/{id}/zk', [DeviceController::class, 'zk'])->whereNumber('id');
+        Route::post('/devices/{id}/zk/resync', [DeviceController::class, 'zkResync'])->whereNumber('id');
+        Route::post('/devices/zk/map', [DeviceController::class, 'zkMap']);
     });
 
     // M09 — الإجازات والتبريرات والتكليف بالإضافي (القرار من صندوق الاعتماد /me/approvals)
@@ -556,6 +560,10 @@ Route::middleware(['auth', 'fresh', 'portal:platform'])->prefix('platform')->gro
 Route::middleware(['device', 'throttle:120,1'])->prefix('device')->group(function () {
     Route::get('/me', [TerminalController::class, 'me']);
     Route::post('/scan', [TerminalController::class, 'scan']);
+    // بصّامة ZKTeco عبر الجسر (المهمة 17)
+    Route::get('/zk/config', [\App\Http\Controllers\Api\Device\ZkController::class, 'config']);
+    Route::post('/zk/punches', [\App\Http\Controllers\Api\Device\ZkController::class, 'punches']);
+    Route::post('/zk/status', [\App\Http\Controllers\Api\Device\ZkController::class, 'status']);
 });
 
 // حماية الرواتب بخطوتين (SRS §4.4): لكل حساب بجلسة؛ المحاولات والإيقاف في SalaryVault

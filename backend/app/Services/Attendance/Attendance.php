@@ -162,6 +162,42 @@ class Attendance
         });
     }
 
+    /**
+     * حركة بوقت محدد من بصّامة (قد تصل متأخرة أو بغير ترتيب بعد انقطاع الشبكة):
+     * تُحفظ الحركة، ثم يُعاد حساب اليوم من كل حركاته — أول حركة = دخول، وآخر حركة = خروج.
+     * اليوم المصحّح يدوياً من الموارد البشرية لا يُغيَّر وقتاه.
+     */
+    public function punch(Employee $e, Device $device, CarbonInterface $at, string $via = 'zk'): array
+    {
+        if (in_array($e->status, ['terminated'], true)) return ['kind' => 'inactive'];
+        $tz = WorkSchedules::tz($e);
+        $at = $at->copy()->setTimezone($tz);
+        $cool = (int) Settings::policy('terminal')['cooldown'];
+        // الأوقات تُخزَّن بتوقيت فرع الموظف (كما في scan) فتُقارن به
+        if (Scan::where('employee_id', $e->id)->whereBetween('ts', [$at->copy()->subSeconds($cool)->format('Y-m-d H:i:s'), $at->copy()->addSeconds($cool)->format('Y-m-d H:i:s')])->exists()) return ['kind' => 'dup'];
+
+        return DB::transaction(function () use ($e, $device, $at, $via, $tz) {
+            $date = $at->toDateString();
+            $scan = Scan::create(['employee_id' => $e->id, 'ts' => $at, 'device_id' => $device->id, 'device_ar' => $device->name_ar, 'device_en' => $device->name_en, 'type' => 'in', 'raw_uid' => null, 'via' => $via]);
+            $day = Scan::where('employee_id', $e->id)->where('ts', '>=', $date.' 00:00:00')->where('ts', '<=', $date.' 23:59:59')->orderBy('ts')->get();
+            $local = fn (Scan $x) => Carbon::parse($x->getRawOriginal('ts'), $tz);
+            $first = $day->first(); $last = $day->count() > 1 ? $day->last() : null;
+            Scan::whereIn('id', $day->pluck('id'))->where('id', '!=', $first->id)->update(['type' => 'out']);
+            Scan::whereKey($first->id)->update(['type' => 'in']);
+            $d = AttendanceDay::where('employee_id', $e->id)->where('date', $date)->lockForUpdate()->first() ?? new AttendanceDay(['employee_id' => $e->id, 'date' => $date]);
+            if ($d->source !== 'manual') {
+                $d->in_at = $local($first);
+                $d->out_at = $last ? $local($last) : null;
+                $d->source = 'device';
+                $c = DayCalc::day($date, $d->in_at, $d->out_at, $e);
+                $d->status = $c['late'] ? 'late' : ($c['rest'] ? 'weekend' : 'present');
+                $d->save();
+            }
+            $this->firstScan($e);
+            return ['kind' => 'ok', 'scan_id' => $scan->id, 'type' => $scan->id === $first->id ? 'in' : 'out'];
+        });
+    }
+
     /** F-19 البند 15 «تعريف الموظف على النظام وجهاز الحضور» يُنجز عند أول تمرير (كما في الديمو) */
     private function firstScan(Employee $e): void
     {

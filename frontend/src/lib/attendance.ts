@@ -92,9 +92,11 @@ export const useFixedHolidays = () => useMutation({ mutationFn: (year: number) =
 export const useDeleteHoliday = () => useMutation({ mutationFn: (id: number) => api<{ year: number; data: Holiday[] }>(`/hr/holidays/${id}`, { method: 'DELETE' }), onSuccess: setHol })
 
 /* ---------- الأجهزة ---------- */
-export type DeviceKind = 'reader' | 'sunmi' | 'mobile' | 'bridge'
-export interface DeviceRow { id: number; name: Bi; name_ar: string; name_en: string; kind: DeviceKind; location_id: number | null; location: Bi | null; active: boolean; online: boolean; key_hint: string | null; last_seen_at: string | null; last_ip: string | null }
-export interface DeviceInput { name_ar: string; name_en: string; kind: DeviceKind; location_id: number | null; active?: boolean }
+export type DeviceKind = 'reader' | 'sunmi' | 'mobile' | 'bridge' | 'zk'
+export interface ZkCfg { ip: string; port: number; comm_key: string; machine_no: number; card_order: 'normal' | 'reversed' }
+export interface ZkSyncState { ok?: boolean; error?: string | null; at?: string; received?: number; new?: number; applied?: number; dup?: number; unmatched?: number; info?: { serial?: string; firmware?: string; ip?: string } | null }
+export interface DeviceRow { id: number; name: Bi; name_ar: string; name_en: string; kind: DeviceKind; location_id: number | null; location: Bi | null; active: boolean; online: boolean; key_hint: string | null; last_seen_at: string | null; last_ip: string | null; zk?: ZkCfg | null; last_sync?: ZkSyncState | null; last_sync_at?: string | null }
+export interface DeviceInput { name_ar: string; name_en: string; kind: DeviceKind; location_id: number | null; active?: boolean; zk?: ZkCfg }
 // حالة «متصل» تتغير مع الوقت (آخر ظهور خلال 3 دقائق) ← تحديث كل 30 ثانية حتى دون أحداث
 export const useDevices = () => useQuery({ queryKey: ['hr', 'devices'], queryFn: () => api<{ data: DeviceRow[]; locations: (Bi & { id: number })[] }>('/hr/devices'), refetchInterval: 30_000 })
 const devs = () => queryClient.invalidateQueries({ queryKey: ['hr', 'devices'] })
@@ -103,15 +105,22 @@ export const useUpdateDevice = () => useMutation({ mutationFn: (v: DeviceInput &
 export const useRotateDevice = () => useMutation({ mutationFn: (id: number) => api<{ data: DeviceRow; key: string }>(`/hr/devices/${id}/rotate`, { json: {} }), onSuccess: devs })
 
 /** تنزيل الجسر جاهزاً (zip بعنوان النظام ومفتاح جديد للجهاز) — POST لأن المفتاح يتجدد */
-export async function downloadBridge(id: number) {
+export async function downloadBridge(id: number, zk = false) {
   if (!xsrf()) await fetch('/api/auth/me', { credentials: 'same-origin' })
-  const res = await fetch(`/api/hr/devices/${id}/package`, { method: 'POST', credentials: 'same-origin', headers: { 'X-XSRF-TOKEN': xsrf(), Accept: 'application/zip' } })
+  const res = await fetch(`/api/hr/devices/${id}/${zk ? 'zk-package' : 'package'}`, { method: 'POST', credentials: 'same-origin', headers: { 'X-XSRF-TOKEN': xsrf(), Accept: 'application/zip' } })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   const url = URL.createObjectURL(await res.blob())
-  const a = document.createElement('a'); a.href = url; a.download = 'UHR-NFC-Bridge.zip'; document.body.appendChild(a); a.click(); a.remove()
+  const a = document.createElement('a'); a.href = url; a.download = zk ? 'UHR-ZK-Bridge.zip' : 'UHR-NFC-Bridge.zip'; document.body.appendChild(a); a.click(); a.remove()
   setTimeout(() => URL.revokeObjectURL(url), 5000)
   queryClient.invalidateQueries({ queryKey: ['hr', 'devices'] })
 }
+
+/** بصّامة ZKTeco: آخر الحركات والأرقام غير المربوطة، الربط بموظف، وإعادة إرسال الموظفين */
+export interface ZkPunch { pin: string; at: string; status: 'ok' | 'dup' | 'unmatched' | 'inactive'; verify: number | null; employee: { id: number; code: string; name: Bi } | null }
+export interface ZkOverview { data: DeviceRow; recent: ZkPunch[]; unmatched: { pin: string; count: number; last: string }[]; today: number }
+export const useZk = (id: number | null) => useQuery({ queryKey: ['hr', 'devices', 'zk', id], enabled: !!id, queryFn: () => api<ZkOverview>(`/hr/devices/${id}/zk`), refetchInterval: 20_000 })
+export const useZkMap = () => useMutation({ mutationFn: (v: { pin: string; employee_id: number }) => api<{ applied: number }>('/hr/devices/zk/map', { json: v }), onSuccess: devs })
+export const useZkResync = () => useMutation({ mutationFn: (id: number) => api(`/hr/devices/${id}/zk/resync`, { json: {} }), onSuccess: devs })
 
 /** دقائق اليوم ↔ «HH:MM» */
 export const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`

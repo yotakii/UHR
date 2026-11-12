@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Copy, KeyRound, Loader2, Monitor, Plus, RefreshCw, Download, Usb, CheckCircle2 } from 'lucide-react'
+import { Copy, KeyRound, Loader2, Monitor, Plus, RefreshCw, Download, Usb, CheckCircle2, Fingerprint } from 'lucide-react'
+import { ZkFields, ZkPanel, ZkSetup, ZK_DEFAULT } from './ZkDevices'
 import { useL, useLang, bi, fmtDateTime } from '../../lib/store'
 import { ApiError } from '../../lib/api'
 import { downloadBridge, useAddDevice, useDevices, useRotateDevice, useUpdateDevice, type DeviceInput, type DeviceKind, type DeviceRow } from '../../lib/attendance'
@@ -16,11 +17,12 @@ export function Devices() {
   const [key, setKey] = useState<{ name: string; key: string } | null>(null)
   const rotate = useRotateDevice()
   const [reader, setReader] = useState(false)
+  const [zkNew, setZkNew] = useState(false); const [zkOpen, setZkOpen] = useState<number | null>(null)
   const bridge = (id: number) => downloadBridge(id).then(() => toast(L('نُزّل الجسر — شغّل install.bat على الحاسوب الموصول به القارئ', 'Bridge downloaded — run install.bat on the PC with the reader'))).catch(x => toast((x as Error).message))
-  const kind: Record<DeviceKind, string> = { reader: L('حاسوب + قارئ USB', 'PC + USB reader'), sunmi: L('جهاز Sunmi', 'Sunmi device'), mobile: L('جوال NFC', 'NFC phone'), bridge: L('جسر القارئ UHR-NFC-Bridge', 'UHR-NFC-Bridge') }
+  const kind: Record<DeviceKind, string> = { reader: L('حاسوب + قارئ USB', 'PC + USB reader'), sunmi: L('جهاز Sunmi', 'Sunmi device'), mobile: L('جوال NFC', 'NFC phone'), bridge: L('جسر القارئ UHR-NFC-Bridge', 'UHR-NFC-Bridge'), zk: L('بصّامة ZKTeco عبر حاسوب', 'ZKTeco terminal via a PC') }
   return <div className="max-w-[1100px] mx-auto space-y-5">
     <PageHead title={L('أجهزة الحضور', 'Attendance devices')} sub={L('شاشة الجهاز تعمل فقط على جهاز مسجّل بمفتاحه. افتح /kiosk على الجهاز والصق المفتاح مرة واحدة.', 'The terminal screen only runs on a registered device. Open /kiosk on it and paste the key once.')}
-      actions={<><Btn icon={<Usb size={15} />} onClick={() => setReader(true)}>{L('قارئ ACS على حاسوب', 'ACS reader on a PC')}</Btn>
+      actions={<><Btn icon={<Fingerprint size={15} />} onClick={() => setZkNew(true)}>{L('بصّامة ZKTeco', 'ZKTeco terminal')}</Btn><Btn icon={<Usb size={15} />} onClick={() => setReader(true)}>{L('قارئ ACS على حاسوب', 'ACS reader on a PC')}</Btn>
         <Btn kind="primary" icon={<Plus size={15} />} onClick={() => setEdit('new')}>{L('إضافة جهاز', 'Add device')}</Btn></>} />
     <Panel pad={false}>{!data ? <div className="grid place-items-center py-12"><Loader2 className="animate-spin text-brand" /></div> : data.data.length === 0 ? <Empty title={L('لا توجد أجهزة', 'No devices')}>{L('أضف جهاز البوابة أو جهاز Sunmi لتبدأ تسجيل الحضور بالبطاقات.', 'Add the gate PC or a Sunmi device to start card attendance.')}</Empty> :
       <table className="tbl"><thead><tr><th>{L('الجهاز', 'Device')}</th><th className="hidden md:table-cell">{L('النوع', 'Kind')}</th><th className="hidden lg:table-cell">{L('آخر اتصال', 'Last seen')}</th><th>{L('الحالة', 'Status')}</th><th /></tr></thead>
@@ -30,11 +32,14 @@ export function Devices() {
           <td className="hidden lg:table-cell num text-[13px]">{d.last_seen_at ? fmtDateTime(d.last_seen_at, lang) : '—'}{d.last_ip && <div className="text-ink-3 ltr">{d.last_ip}</div>}</td>
           <td>{!d.active ? <Badge>{L('موقوف', 'Disabled')}</Badge> : d.online ? <Badge tone="brand" dot>{L('متصل', 'Online')}</Badge> : <Badge tone="warn">{L('غير متصل', 'Offline')}</Badge>}</td>
           <td><div className="flex justify-end gap-1">
+            {d.kind === 'zk' && <Btn size="sm" kind="ghost" icon={<Fingerprint size={13} />} onClick={() => setZkOpen(d.id)}>{L('الحركات والربط', 'Punches & links')}</Btn>}
             {d.kind === 'bridge' && <Btn size="sm" kind="ghost" icon={<Download size={13} />} onClick={() => bridge(d.id)}>{L('تنزيل الجسر', 'Download bridge')}</Btn>}
             <Btn size="sm" kind="ghost" onClick={() => setEdit(d)}>{L('تعديل', 'Edit')}</Btn>
             <Btn size="sm" kind="ghost" icon={<RefreshCw size={13} />} disabled={rotate.isPending} onClick={() => rotate.mutate(d.id, { onSuccess: r => setKey({ name: bi(r.data.name, lang), key: r.key }) })}>{L('مفتاح جديد', 'New key')}</Btn>
           </div></td></tr>)}</tbody></table>}</Panel>
     {edit && data && <DeviceForm d={edit === 'new' ? null : edit} locations={data.locations} kinds={kind} onClose={() => setEdit(null)} onKey={(name, k) => setKey({ name, key: k })} />}
+    {zkNew && data && <ZkSetup locations={data.locations} onClose={() => setZkNew(false)} />}
+    {zkOpen && <ZkPanel id={zkOpen} onClose={() => setZkOpen(null)} />}
     {reader && data && <ReaderSetup locations={data.locations} onClose={() => setReader(false)} />}
     {key && <Modal open onClose={() => setKey(null)} title={<span className="flex items-center gap-2"><KeyRound size={17} className="text-brand" />{L('مفتاح الجهاز', 'Device key')} — {key.name}</span>} width={560}
       footer={<Btn kind="primary" onClick={() => setKey(null)}>{L('حفظته', 'I saved it')}</Btn>}>
@@ -48,7 +53,7 @@ export function Devices() {
 function DeviceForm({ d, locations, kinds, onClose, onKey }: { d: DeviceRow | null; locations: { id: number; ar: string; en: string }[]; kinds: Record<DeviceKind, string>; onClose: () => void; onKey: (name: string, key: string) => void }) {
   const L = useL(); const lang = useLang()
   const add = useAddDevice(); const upd = useUpdateDevice()
-  const [v, setV] = useState<DeviceInput & { active: boolean }>({ name_ar: d?.name_ar ?? '', name_en: d?.name_en ?? '', kind: d?.kind ?? 'reader', location_id: d?.location_id ?? null, active: d?.active ?? true })
+  const [v, setV] = useState<DeviceInput & { active: boolean }>({ name_ar: d?.name_ar ?? '', name_en: d?.name_en ?? '', kind: d?.kind ?? 'reader', location_id: d?.location_id ?? null, active: d?.active ?? true, zk: d?.zk ?? ZK_DEFAULT })
   const m = d ? upd : add
   const err = m.error instanceof ApiError ? m.error : null
   const submit = () => d ? upd.mutate({ ...v, id: d.id }, { onSuccess: () => { toast(L('حُفظ الجهاز', 'Device saved')); onClose() } })
@@ -61,6 +66,7 @@ function DeviceForm({ d, locations, kinds, onClose, onKey }: { d: DeviceRow | nu
       <Field label={L('النوع', 'Kind')} className="sm:col-span-2"><select className="field" value={v.kind} onChange={e => setV({ ...v, kind: e.target.value as DeviceKind })}>{(Object.keys(kinds) as DeviceKind[]).map(k => <option key={k} value={k}>{kinds[k]}</option>)}</select></Field>
       <Field label={L('المقر', 'Location')} className="sm:col-span-2"><select className="field" value={v.location_id ?? ''} onChange={e => setV({ ...v, location_id: e.target.value ? Number(e.target.value) : null })}>
         <option value="">—</option>{locations.map(l => <option key={l.id} value={l.id}>{bi(l, lang)}</option>)}</select></Field>
+      {v.kind === 'zk' && <div className="sm:col-span-2"><ZkFields v={v.zk ?? ZK_DEFAULT} onChange={zk => setV({ ...v, zk })} err={err} /></div>}
       {d && <Field label={L('الحالة', 'Status')} div className="sm:col-span-2"><Seg value={v.active ? 'on' : 'off'} onChange={x => setV({ ...v, active: x === 'on' })} options={[{ v: 'on', label: L('فعّال', 'Active') }, { v: 'off', label: L('موقوف', 'Disabled') }]} /></Field>}
     </div>
   </Modal>
