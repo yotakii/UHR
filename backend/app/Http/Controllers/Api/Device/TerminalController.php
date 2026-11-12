@@ -19,7 +19,10 @@ class TerminalController extends Controller
     {
         /** @var Device $d */
         $d = $request->attributes->get('device');
+        // الجهاز عاد متصلاً (لم يُرَ منذ 3 دقائق) ← تتحدث صفحة الأجهزة لحظياً؛ النبضات العادية لا تُبث
+        $wasOffline = ! $d->last_seen_at || $d->last_seen_at->lt(now()->subMinutes(3));
         $d->update(['last_seen_at' => now(), 'last_ip' => $request->ip()]);
+        if ($wasOffline) \App\Support\Realtime::touch('devices', $d->company_id);
         $c = Tenant::company();
         return response()->json(['device' => ['id' => $d->id, 'name' => ['ar' => $d->name_ar, 'en' => $d->name_en], 'kind' => $d->kind],
             'company' => ['slug' => $c->slug, 'name' => ['ar' => $c->short_ar ?: $c->name_ar, 'en' => $c->short_en ?: $c->name_en]],

@@ -95,7 +95,8 @@ export const useDeleteHoliday = () => useMutation({ mutationFn: (id: number) => 
 export type DeviceKind = 'reader' | 'sunmi' | 'mobile' | 'bridge'
 export interface DeviceRow { id: number; name: Bi; name_ar: string; name_en: string; kind: DeviceKind; location_id: number | null; location: Bi | null; active: boolean; online: boolean; key_hint: string | null; last_seen_at: string | null; last_ip: string | null }
 export interface DeviceInput { name_ar: string; name_en: string; kind: DeviceKind; location_id: number | null; active?: boolean }
-export const useDevices = () => useQuery({ queryKey: ['hr', 'devices'], queryFn: () => api<{ data: DeviceRow[]; locations: (Bi & { id: number })[] }>('/hr/devices') })
+// حالة «متصل» تتغير مع الوقت (آخر ظهور خلال 3 دقائق) ← تحديث كل 30 ثانية حتى دون أحداث
+export const useDevices = () => useQuery({ queryKey: ['hr', 'devices'], queryFn: () => api<{ data: DeviceRow[]; locations: (Bi & { id: number })[] }>('/hr/devices'), refetchInterval: 30_000 })
 const devs = () => queryClient.invalidateQueries({ queryKey: ['hr', 'devices'] })
 export const useAddDevice = () => useMutation({ mutationFn: (v: DeviceInput) => api<{ data: DeviceRow; key: string }>('/hr/devices', { json: v }), onSuccess: devs })
 export const useUpdateDevice = () => useMutation({ mutationFn: (v: DeviceInput & { id: number; active: boolean }) => api<{ data: DeviceRow }>(`/hr/devices/${v.id}`, { method: 'PUT', json: v }), onSuccess: devs })

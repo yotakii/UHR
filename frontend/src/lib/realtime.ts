@@ -20,10 +20,19 @@ export function refreshActive(delay = 700) {
   timer = window.setTimeout(() => void queryClient.invalidateQueries({ refetchType: 'active', predicate: q => !SKIP.has(String(q.queryKey[0])) }), delay)
 }
 
+/** احتياط: إن لم يكن الاتصال اللحظي قائماً (شبكة، وكيل يمنع websockets…) تُحدَّث الشاشة المفتوحة كل 20 ثانية */
+let fallback: number | undefined
+const live = () => (echo?.connector as unknown as { pusher?: { connection?: { state?: string } } } | undefined)?.pusher?.connection?.state === 'connected'
+function startFallback() {
+  window.clearInterval(fallback)
+  fallback = window.setInterval(() => { if (userId !== null && !live() && document.visibilityState === 'visible') refreshActive(0) }, 20_000)
+}
+
 export async function startRealtime(id: number) {
   if (userId === id && echo) return
   stopRealtime()
   userId = id
+  startFallback()
   let cfg: Config
   try { cfg = await api<Config>('/realtime') } catch { return }
   if (!cfg.enabled || !cfg.key || userId !== id) return
@@ -52,5 +61,6 @@ export async function startRealtime(id: number) {
 
 export function stopRealtime() {
   try { echo?.disconnect() } catch { /* */ }
+  window.clearInterval(fallback)
   echo = null; userId = null
 }
