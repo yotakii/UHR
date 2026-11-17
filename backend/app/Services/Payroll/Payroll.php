@@ -86,6 +86,7 @@ class Payroll
         return DB::transaction(function () use ($s, $by) {
             Advance::where('month', $s->month)->where('status', 'open')->update(['status' => 'deducted', 'month_sheet_id' => $s->id]);
             \App\Models\PerformanceAward::where('month', $s->month)->where('status', 'approved')->update(['status' => 'paid', 'paid_at' => now(), 'month_sheet_id' => $s->id]);
+            \App\Services\Missions\PayLines::postMonth($s);   // بنود المهمات والمكافآت مرحّلة ومقفلة (BR-TM-04)
             $s->update(['status' => 'closed', 'closed_at' => now(), 'closed_by' => $by->id]);
             Audit::record('payroll.closed', $s, null, ['month' => $s->month, 'net' => $s->totals['net'] ?? null]);
             $users = User::whereIn('employee_id', MonthSheetRow::where('month_sheet_id', $s->id)->pluck('employee_id'))->pluck('id');
@@ -114,7 +115,7 @@ class Payroll
         return $s->refresh();
     }
 
-    public const AMOUNTS = ['base', 'ot_pay', 'late', 'absent', 'leave', 'insurance', 'advance', 'discipline', 'bonus', 'net', 'day', 'hour'];
+    public const AMOUNTS = ['base', 'ot_pay', 'late', 'absent', 'leave', 'insurance', 'advance', 'discipline', 'bonus', 'allowances', 'line_deductions', 'net', 'day', 'hour'];
 
     /** تحويل كل الصفوف إلى عملة الصرف بسعر تاريخ الصرف (آخر سعر بتاريخه أو قبله)؛ السعر الناقص يمنع الاعتماد */
     public function convert(MonthSheet $s): void
@@ -222,7 +223,7 @@ class Payroll
         $byCur = $curs->mapWithKeys(fn ($c) => [$c => round($rows->where('currency', $c)->sum(fn ($r) => $r->money['net'] ?? 0), 2)])->all();
         return ['employees' => $rows->count(), 'incomplete' => $rows->sum(fn ($r) => $r->data['incomplete']), 'absent' => $rows->sum(fn ($r) => $r->data['absent']),
             'late' => $rows->sum(fn ($r) => $r->data['late']), 'deduct' => round($rows->sum(fn ($r) => $r->data['deduct']), 1), 'ot_paid' => $rows->sum(fn ($r) => $r->data['ot_paid']),
-            'base' => $sum('base'), 'ot_pay' => $sum('ot_pay'), 'deductions' => round($sum('late') + $sum('absent') + $sum('leave') + $sum('insurance') + $sum('discipline'), 2), 'advance' => $sum('advance'), 'bonus' => $sum('bonus'), 'net' => $sum('net'),
+            'base' => $sum('base'), 'ot_pay' => $sum('ot_pay'), 'deductions' => round($sum('late') + $sum('absent') + $sum('leave') + $sum('insurance') + $sum('discipline') + $sum('line_deductions'), 2), 'advance' => $sum('advance'), 'bonus' => $sum('bonus'), 'allowances' => $sum('allowances'), 'net' => $sum('net'),
             'currency' => $s->pay_currency ?: ($curs->count() === 1 ? $curs[0] : null), 'by_currency' => $byCur, 'missing_rates' => self::missingRates($s)];
     }
 

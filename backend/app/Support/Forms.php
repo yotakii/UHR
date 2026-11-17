@@ -48,6 +48,8 @@ class Forms
         'RNE' => ['تقييم تجديد العقد', 'Contract renewal evaluation', 'contracts', false],
         'CRL' => ['خطاب إخطار', 'Notification letter', 'contracts', false],
         'ANX' => ['ملحق عقد', 'Contract annex', 'contracts', false],
+        // المهمات (الدفعة 20): نموذج مهمة السفر HR-11-F-05
+        'MSN' => ['نموذج مهمة سفر', 'Travel mission form', 'missions', false],
     ];
 
     public const ISSUED_ON = '2025-04-01';

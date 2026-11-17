@@ -46,6 +46,8 @@ class ApprovalInboxController extends Controller
                 $x instanceof PenaltyApproval => RequestRow::penalty($x->load(RequestRow::PENALTY_WITH), $u),
                 $x instanceof \App\Models\OfferApproval => RequestRow::offerBudget($x->load(['candidate.jobOpening', 'requester', 'steps.actor.employee', 'steps.user.employee', 'steps.delegator.employee']), $u),
                 $x instanceof \App\Models\SalaryGrant => \App\Services\Security\SalaryGrants::row($x->load(\App\Services\Security\SalaryGrants::WITH), $u),
+                $x instanceof \App\Models\Mission => \App\Services\Missions\Missions::inboxRow($x, $u),
+                $x instanceof \App\Models\Bonus => \App\Services\Missions\Bonuses::row($x, $u),
                 $x instanceof \App\Models\ContractException => \App\Services\Contracts\ContractCases::exceptionRow($x, $u),
                 default => RequestRow::overtime($x->load(RequestRow::SERVICE_WITH), $u),
             };
@@ -76,6 +78,8 @@ class ApprovalInboxController extends Controller
         elseif ($x instanceof PenaltyApproval) app(Discipline::class)->decideApproval($x, $u, $ok, $d['note'] ?? null);
         elseif ($x instanceof \App\Models\OfferApproval) app(\App\Services\Recruitment\Pipeline::class)->decideBudget($x, $u, $ok, $d['note'] ?? null);
         elseif ($x instanceof \App\Models\SalaryGrant) app(\App\Services\Security\SalaryGrants::class)->decide($x, $u, $ok, $d['note'] ?? null);
+        elseif ($x instanceof \App\Models\Mission) app(\App\Services\Missions\Missions::class)->decide($x, $u, $ok, $d['note'] ?? null);
+        elseif ($x instanceof \App\Models\Bonus) app(\App\Services\Missions\Bonuses::class)->decide($x, $u, $ok, $d['note'] ?? null);
         elseif ($x instanceof \App\Models\ContractException) app(\App\Services\Contracts\ContractCases::class)->decideException($x, $u, $ok, $d['note'] ?? null);
         else abort(404);
         return $this->index($request);

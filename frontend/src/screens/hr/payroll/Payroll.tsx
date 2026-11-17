@@ -121,7 +121,7 @@ function RowDetail({ r }: { r: SheetRow }) {
     </div>
     {m ? <div>
       <div className="text-[12px] font-semibold text-ink-3 mb-1">{L('المبالغ (تقديرية)', 'Amounts (estimate)')} <span className="num">· {L('الأجر اليومي', 'day')} {money(m.day, m.currency, lang)} · {L('الساعة', 'hour')} {money(m.hour, m.currency, lang)}</span></div>
-      {line(L('الراتب', 'Salary'), money(m.base, m.currency, lang))}{line(L('أجر الإضافي', 'Overtime pay'), money(m.ot_pay, m.currency, lang), 'text-brand')}{!!m.bonus && line(L('مكافأة التقييم', 'Performance reward'), money(m.bonus, m.currency, lang), 'text-brand')}
+      {line(L('الراتب', 'Salary'), money(m.base, m.currency, lang))}{line(L('أجر الإضافي', 'Overtime pay'), money(m.ot_pay, m.currency, lang), 'text-brand')}{!!m.bonus && line(L('مكافأة التقييم', 'Performance reward'), money(m.bonus, m.currency, lang), 'text-brand')}{!!m.allowances && line(L('بدلات ومكافآت (بنود المهمات)', 'Allowances & bonuses (pay lines)'), money(m.allowances, m.currency, lang), 'text-brand')}{!!m.line_deductions && line(L('استقطاعات البنود (تسوية سلف المهمات)', 'Line deductions (mission advances)'), money(m.line_deductions, m.currency, lang), 'text-danger')}
       {line(L('حسم التأخير', 'Lateness'), money(m.late, m.currency, lang), 'text-danger')}{line(L('حسم الغياب', 'Absence'), money(m.absent, m.currency, lang), 'text-danger')}
       {line(L('إجازات بلا أجر', 'Unpaid leave'), money(m.leave, m.currency, lang), 'text-danger')}{line(L('التأمينات', 'Insurance'), money(m.insurance, m.currency, lang), 'text-danger')}
       {!!m.discipline && line(L(`جزاءات المخالفات (${t.discipline_days ?? 0} يوم)`, `Disciplinary deductions (${t.discipline_days ?? 0} d)`), money(m.discipline, m.currency, lang), 'text-danger')}

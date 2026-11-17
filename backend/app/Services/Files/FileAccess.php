@@ -56,6 +56,10 @@ class FileAccess
             return ['module' => 'policies', 'owner' => null, 'label' => 'policy:'.($v->document?->code ?: $v->document_id).'#'.$v->number,
                 'manage_only' => $v->status === 'draft' || $v->document?->status === 'archived'];
         }
+        // المهمات (الدفعة 20): مرفقات المهمة وفواتير التسوية وملفات التعليقات — لمن يرى المهمة
+        $m = \App\Models\Mission::whereJsonContains('attachments', $f->id)->orWhereRaw("settlement->'expenses' @> ?::jsonb", [json_encode([['file_id' => $f->id]])])->first()
+            ?? (($mc = \App\Models\MissionComment::whereJsonContains('files', $f->id)->first()) ? \App\Models\Mission::find($mc->mission_id) : null);
+        if ($m) return ['module' => 'missions', 'owner' => $f->uploaded_by, 'label' => 'mission:'.$m->ref_no, 'mission_id' => $m->id] + ($m->employee_id ? ['employee_id' => $m->employee_id] : []);
         return null;
     }
 

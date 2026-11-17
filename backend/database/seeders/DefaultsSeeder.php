@@ -32,7 +32,8 @@ class DefaultsSeeder extends Seeder
         foreach ($roles as $key => [$ar, $en]) Role::updateOrCreate(['key' => $key], ['name_ar' => $ar, 'name_en' => $en]);
 
         $cities = ['dam' => ['دمشق', 'Damascus'], 'alp' => ['حلب', 'Aleppo'], 'hom' => ['حمص', 'Homs'], 'lat' => ['اللاذقية', 'Latakia'], 'tar' => ['طرطوس', 'Tartus'], 'ham' => ['حماة', 'Hama']];
-        foreach ($cities as $code => [$ar, $en]) Location::updateOrCreate(['code' => $code], ['name_ar' => $ar, 'name_en' => $en]);
+        $gov = ['dam' => 'DAM', 'alp' => 'ALP', 'hom' => 'HMS', 'lat' => 'LAT', 'tar' => 'TAR', 'ham' => 'HMA'];
+        foreach ($cities as $code => [$ar, $en]) Location::updateOrCreate(['code' => $code], ['name_ar' => $ar, 'name_en' => $en, 'governorate' => $gov[$code]]);
 
         foreach (Settings::PLATFORM_DEFAULTS as $key => $value) if (! Setting::whereNull('company_id')->where('key', $key)->exists()) Settings::putPlatform($key, $value);
     }

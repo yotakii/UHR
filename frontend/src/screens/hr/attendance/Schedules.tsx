@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { CalendarRange, Clock, Plus, Trash2, UserPlus, Users, Pencil, MapPin } from 'lucide-react'
+import { useLookup } from '../../../lib/codes'
 import { useL, useLang, bi } from '../../../lib/store'
 import { ApiError } from '../../../lib/api'
 import { hm, toMins, useAssignSchedule, useBranches, useDeleteSchedule, useSaveBranch, useSaveSchedule, useSchedules, useUnassign, type Branch, type SchedulesData, type ShiftDef, type WorkSchedule } from '../../../lib/attendance'
@@ -144,6 +145,7 @@ export function Branches() {
   const { data: d } = useBranches()
   const save = useSaveBranch()
   const [edit, setEdit] = useState<(Partial<Branch> & { name_ar: string; name_en: string; timezone: string }) | null>(null)
+  const govs = useLookup('governorates').data
   const err = save.error instanceof ApiError ? save.error : null
   if (!d) return <div className="max-w-[1000px] mx-auto"><PageHead title={L('الفروع والمناطق الزمنية', 'Branches & time zones')} /><Panel><Empty title={L('جارٍ التحميل…', 'Loading…')} /></Panel></div>
   return <div className="max-w-[1000px] mx-auto">
@@ -160,6 +162,8 @@ export function Branches() {
         <Field label={L('الاسم', 'Name')} req error={err?.field('name_ar')}><input className="field" value={edit.name_ar} onChange={e => setEdit({ ...edit, name_ar: e.target.value })} /></Field>
         <Field label={L('الاسم بالإنكليزية', 'English name')} req error={err?.field('name_en')}><input className="field ltr" value={edit.name_en} onChange={e => setEdit({ ...edit, name_en: e.target.value })} /></Field>
         <Field label={L('الرمز', 'Code')} req={!edit.id} error={err?.field('code')} hint={L('أحرف إنكليزية صغيرة، لا يتغير بعد الإنشاء', 'Lowercase letters; fixed after creation')}><input className="field ltr" disabled={!!edit.id} value={edit.code ?? ''} onChange={e => setEdit({ ...edit, code: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '') })} /></Field>
+        <Field label={L('المحافظة (لقاعدة بدل السفر)', 'Governorate (for the travel allowance rule)')}><select className="field" value={edit.governorate ?? ''} onChange={e => setEdit({ ...edit, governorate: e.target.value || null })}>
+          <option value="">—</option>{(govs ?? []).map(g => <option key={g.code} value={g.code}>{g.code} · {lang === 'ar' ? g.ar : g.en}</option>)}</select></Field>
         <Field label={L('المنطقة الزمنية', 'Time zone')} req><select className="field ltr" value={edit.timezone} onChange={e => setEdit({ ...edit, timezone: e.target.value })}>{d.timezones.map(z => <option key={z}>{z}</option>)}</select></Field>
       </div>
       {edit.id && <label className="flex items-center gap-2 mt-3 text-[13.5px]"><input type="checkbox" className="accent-[var(--primary)] size-4" checked={edit.active ?? true} onChange={e => setEdit({ ...edit, active: e.target.checked })} />{L('فعّال', 'Active')}</label>}

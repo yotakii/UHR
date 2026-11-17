@@ -63,6 +63,7 @@ class CodeCatalog
             'mission_types' => ['أنواع المهمات', 'Mission types', 'ops', 'hr_director', '^MT-[0-9]{2}$', 'MT-30', false, false, null, null, [
                 $bool('travel', 'سفر (بدل سفر)', 'Travel (allowance)'), $bool('financial', 'له أثر مالي', 'Has a pay effect'),
             ]],
+            'mission_categories' => ['تصنيفات المهمات', 'Mission categories', 'ops', 'hr_director', '^[A-Z]{2,4}-[0-9]{2}$', 'SAL-01', false, false, 'mission_types', null, null],
             'bonus_types' => ['أنواع المكافآت', 'Bonus types', 'ops', 'hr_director', '^BN-[0-9]{2}$', 'BN-10', false, false, null, null, [
                 ['key' => 'element', 'ar' => 'عنصر الراتب', 'en' => 'Pay element', 'type' => 'list', 'list' => 'pay_elements'],
                 ['key' => 'method', 'ar' => 'طريقة الحساب', 'en' => 'Calculation', 'type' => 'select', 'options' => ['fixed', 'percent', 'free', 'hours', 'formula']],
@@ -119,6 +120,8 @@ class CodeCatalog
                 ['MT-50', 'مهمة تدريبية', 'Training mission', ['travel' => true, 'financial' => true]], ['MT-60', 'تدريب كمحاضر داخلي', 'Internal trainer', ['travel' => false, 'financial' => true]],
                 ['MT-70', 'مهمة فريق أو فرع', 'Team / branch mission', ['travel' => false, 'financial' => false]],
             ],
+            'mission_categories' => [['SAL-01', 'مبيعات', 'Sales', null, 'MT-20'], ['AUD-01', 'تدقيق', 'Audit', null, 'MT-20'], ['MNT-01', 'صيانة', 'Maintenance', null, 'MT-20'],
+                ['REP-01', 'تمثيل رسمي', 'Official representation', null, 'MT-30'], ['BR-01', 'افتتاح فرع', 'Branch opening', null, 'MT-30']],
             'bonus_types' => [
                 ['BN-10', 'مكافأة إنجاز مهمة', 'Mission completion bonus', ['element' => 'E-200', 'method' => 'fixed']], ['BN-20', 'مكافأة أداء دورية', 'Periodic performance bonus', ['element' => 'E-210', 'method' => 'percent']],
                 ['BN-30', 'مكافأة استثنائية', 'Exceptional bonus', ['element' => 'E-220', 'method' => 'free']], ['BN-40', 'أتعاب محاضر داخلي', 'Internal trainer fee', ['element' => 'E-230', 'method' => 'hours']],
@@ -175,7 +178,9 @@ class CodeCatalog
         }
         foreach (self::defaults() as $key => $rows) {
             if (CodeItem::where('code_list_id', $ids[$key])->exists()) continue;
-            foreach ($rows as $i => $r) CodeItem::create(['code_list_id' => $ids[$key], 'code' => $r[0], 'name_ar' => $r[1], 'name_en' => $r[2], 'attrs' => $r[3] ?? null, 'legacy_code' => $r[5] ?? null, 'sort' => $i + 1]);
+            $parentList = self::lists()[$key][8] ?? null;
+            foreach ($rows as $i => $r) CodeItem::create(['code_list_id' => $ids[$key], 'code' => $r[0], 'name_ar' => $r[1], 'name_en' => $r[2], 'attrs' => $r[3] ?? null, 'legacy_code' => $r[5] ?? null, 'sort' => $i + 1,
+                'parent_id' => $parentList && ! empty($r[4]) ? CodeItem::where('code_list_id', $ids[$parentList] ?? 0)->where('code', $r[4])->value('id') : null]);
         }
     }
 

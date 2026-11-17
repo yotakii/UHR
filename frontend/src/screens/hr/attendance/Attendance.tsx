@@ -13,7 +13,7 @@ const minus = (d: string, n: number) => { const x = new Date(d + 'T12:00:00'); x
 export function AttBadge({ s }: { s: AttStatus }) {
   const L = useL()
   return {
-    before_start: <span className="text-ink-3 text-[12px]">{L('قبل المباشرة', 'Before start')}</span>, leave: <Badge>{L('إجازة', 'Leave')}</Badge>, holiday: <Badge>{L('عطلة رسمية', 'Holiday')}</Badge>,
+    before_start: <span className="text-ink-3 text-[12px]">{L('قبل المباشرة', 'Before start')}</span>, mission: <Badge tone="info">{L('في مهمة', 'On mission')}</Badge>, leave: <Badge>{L('إجازة', 'Leave')}</Badge>, holiday: <Badge>{L('عطلة رسمية', 'Holiday')}</Badge>,
     weekend: <Badge>{L('عطلة', 'Weekend')}</Badge>, not_in: <Badge tone="warn">{L('لم يسجل', 'Not in')}</Badge>, absent: <Badge tone="danger">{L('غياب', 'Absent')}</Badge>,
     incomplete: <Badge tone="danger">{L('ناقص — بلا خروج', 'Incomplete — no out')}</Badge>, justified: <Badge tone="brand">{L('تأخير مبرر', 'Justified')}</Badge>,
     late: <Badge tone="warn">{L('متأخر', 'Late')}</Badge>, present: <Badge tone="brand">{L('حاضر', 'Present')}</Badge>,

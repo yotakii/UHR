@@ -25,6 +25,7 @@ class ChainController extends Controller
         'service' => ['طلبات الخدمات والشهادات', 'Services & certificates'], 'advance' => ['السلفة', 'Salary advance'], 'internal' => ['الترشيح الداخلي F-27', 'Internal application F-27'],
         'resignation' => ['الاستقالة F-02', 'Resignation F-02'], 'termination' => ['إنهاء العقد F-03', 'Termination F-03'], 'penalty' => ['الجزاءات الأشد', 'Higher penalties'],
         'appointment' => ['قرار التعيين F-31', 'Appointment decision F-31'], 'salary_access' => ['إذن الاطلاع على الرواتب', 'Salary data access'], 'offer_budget' => ['عرض عمل يتجاوز الميزانية', 'Job offer over budget'],
+        'mission' => ['المهمات ذات الأثر المالي والسفر', 'Missions with a pay effect & travel'], 'bonus' => ['المكافآت', 'Bonuses'],
         'contract_exception' => ['قرار عقد مخالف للسياسة (استثناء)', 'Contract decision outside the policy (exception)'],
     ];
 

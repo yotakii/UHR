@@ -174,7 +174,7 @@ class PayrollController extends Controller
     public static function totals(?array $t, bool $open): ?array
     {
         if ($t === null || $open) return $t;
-        foreach (['base', 'ot_pay', 'deductions', 'advance', 'bonus', 'net', 'by_currency'] as $k) if (array_key_exists($k, $t)) $t[$k] = null;
+        foreach (['base', 'ot_pay', 'deductions', 'advance', 'bonus', 'allowances', 'net', 'by_currency'] as $k) if (array_key_exists($k, $t)) $t[$k] = null;
         return $t;
     }
 

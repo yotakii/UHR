@@ -17,7 +17,7 @@ export function MyPayslip() {
   const all: Payslip[] = [d.current, ...d.data]
   const p = all.find(x => x.month === sel) ?? all[0]
   const m = p.money, t = p.data, cur = m?.currency ?? 'USD'
-  const row = (k: string, v: number, neg?: boolean) => <div className="flex justify-between gap-3 py-2 border-b border-line-2 text-[14px]"><span className={neg ? 'text-ink-2' : ''}>{k}</span><span className={`num font-semibold shrink-0 ${neg ? 'text-danger' : ''}`}>{neg ? '− ' : ''}{money(v, cur, lang)}</span></div>
+  const row = (k: React.ReactNode, v: number, neg?: boolean) => <div className="flex justify-between gap-3 py-2 border-b border-line-2 text-[14px]"><span className={neg ? 'text-ink-2' : ''}>{k}</span><span className={`num font-semibold shrink-0 ${neg ? 'text-danger' : ''}`}>{neg ? '− ' : ''}{money(v, cur, lang)}</span></div>
   return <div className="max-w-[880px] mx-auto">
     <div className="flex flex-wrap items-center justify-between gap-3 mb-4" data-noprint><h1 className="text-[22px] font-bold">{L('كشفي الشهري', 'My monthly sheet')}</h1>
       <div className="flex flex-wrap items-center gap-1 rounded-lg border border-line bg-surface p-0.5">{all.slice(0, 6).map(x => <button key={x.month} onClick={() => setSel(x.month)}
@@ -28,6 +28,7 @@ export function MyPayslip() {
         {!m ? <ProtectedBlock masked>{null}</ProtectedBlock> : <>
         <div className="text-[12px] font-semibold text-ink-3 mb-1">{L('المستحقات', 'Earnings')}</div>
         {row(L('الراتب', 'Salary'), m.base)}{m.ot_pay > 0 && row(L(`أجر العمل الإضافي (${minsLabel(t.ot_paid, lang)})`, `Overtime pay (${minsLabel(t.ot_paid, lang)})`), m.ot_pay)}{!!m.bonus && row(L('مكافأة التقييم', 'Performance reward'), m.bonus)}
+        {(t.pay_lines ?? []).filter(x => x.kind === 'earning').map((x, i) => <div key={'e' + i}>{row(<>{lang === 'ar' ? x.ar : x.en}{x.channel === 'cash' ? <span className="text-[11px] text-ink-3"> ({L('نقداً — للعلم', 'cash — for information')})</span> : null}</>, x.amount)}</div>)}
         <div className="text-[12px] font-semibold text-ink-3 mt-4 mb-1">{L('الاقتطاعات', 'Deductions')}</div>
         {row(L('التأمينات الاجتماعية (حصة العامل)', 'Social insurance (employee)'), m.insurance, true)}
         {m.late > 0 && row(L(`تأخير (${minsLabel(Math.round(t.deduct), 'ar')} حسم)`, `Lateness (${minsLabel(Math.round(t.deduct), 'en')} deducted)`), m.late, true)}
@@ -35,6 +36,7 @@ export function MyPayslip() {
         {m.leave > 0 && row(L(`إجازات بلا أجر (${t.leave_unpaid} يوم)`, `Unpaid leave (${t.leave_unpaid} d)`), m.leave, true)}
         {!!m.discipline && row(L(`جزاءات المخالفات (${t.discipline_days ?? 0} يوم)`, `Disciplinary deductions (${t.discipline_days ?? 0} d)`), m.discipline, true)}
         {m.advance > 0 && row(L('سلفة', 'Advance'), m.advance, true)}
+        {(t.pay_lines ?? []).filter(x => x.kind === 'deduction').map((x, i) => <div key={'d' + i}>{row(lang === 'ar' ? x.ar : x.en, Math.abs(x.amount), true)}</div>)}
         <div className="flex justify-between pt-3 mt-1 text-[17px] font-bold"><span>{L('الصافي', 'Net')}</span><span className="num text-brand">{money(m.net, cur, lang)}</span></div>
         {p.pay && p.pay.from !== p.pay.currency && <div className="flex justify-between pt-1 text-[14px] font-semibold"><span>{L('المصروف بعملة الصرف', 'Paid in')} <span className="text-[12px] font-normal text-ink-3 num ltr inline-block">(1 {p.pay.from} = {p.pay.rate.toLocaleString('en-US', { maximumFractionDigits: 6 })} {p.pay.currency})</span></span><span className="num">{money(p.pay.net, p.pay.currency, lang)}</span></div>}
         </>}

@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react'
-import { Sparkles, ListChecks, LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed, Megaphone, Gift, ClipboardCheck, SlidersHorizontal, Sprout, KeyRound, Building, UserCog, GitBranch, BellRing, Library, History, DatabaseBackup, ScanText, MessagesSquare, ArrowRight, ArrowLeft, X, CalendarDays, CalendarClock, MapPin, UserRound, Binary } from 'lucide-react'
+import { Sparkles, ListChecks, LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed, Megaphone, Gift, ClipboardCheck, SlidersHorizontal, Sprout, KeyRound, Building, UserCog, GitBranch, BellRing, Library, History, DatabaseBackup, ScanText, MessagesSquare, ArrowRight, ArrowLeft, X, CalendarDays, CalendarClock, MapPin, UserRound, Binary, Plane } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { navigate, useRoute } from '../../lib/router'
 import { can, type SessionUser } from '../../lib/session'
@@ -64,6 +64,9 @@ import { ContractsHR } from '../contracts/Contracts'
 import { MyContracts } from '../contracts/MyContracts'
 import { ContractPrint } from '../contracts/ContractPrint'
 import { ContractSettings } from './ContractSettings'
+import { MissionsApp } from '../missions/Missions'
+import { MissionPrint } from '../missions/MissionPrint'
+import { MissionSettings } from './MissionSettings'
 import { CodebookPrint } from './admin/CodebookPrint'
 import { Departments } from './admin/Departments'
 import { Chains } from './admin/Chains'
@@ -117,6 +120,8 @@ export function HrApp({ user }: { user: SessionUser }) {
     { item: { to: '/hr/payroll', icon: <Wallet size={18} />, label: L('الكشف الشهري', 'Monthly sheet'), group: g2 }, module: 'payroll', view: () => <Payroll /> },
     { item: { to: '/hr/contracts', icon: <FileSignature size={18} />, label: L('العقود والتجديد', 'Contracts & renewals'), group: g2 }, module: 'contracts',
       view: () => route.parts[2] === 'print' && route.parts[3] && /^\d+$/.test(route.parts[4] ?? '') ? <ContractPrint me={false} kind={route.parts[3]} id={Number(route.parts[4])} /> : <ContractsHR /> },
+    { item: { to: '/hr/missions', icon: <Plane size={18} />, label: L('المهمات والسفر', 'Missions & travel'), group: g2 }, module: u => can(u, 'missions') || !!u.employee,
+      view: () => route.parts[2] === 'print' && /^\d+$/.test(route.parts[3] ?? '') ? <MissionPrint id={Number(route.parts[3])} /> : <MissionsApp base="/hr/missions" /> },
     { item: { to: '/hr/custody', icon: <Package size={18} />, label: L('العهد', 'Custody'), group: g2 }, module: 'assets', view: () => <Custody /> },
     { item: { to: '/hr/discipline', icon: <Gavel size={18} />, label: L('المخالفات والجزاءات', 'Violations & penalties'), count: count('discipline'), group: g2 }, module: 'discipline', view: () => <Discipline /> },
     { item: { to: '/hr/offboarding', icon: <DoorOpen size={18} />, label: L('الاستقالات وإنهاء الخدمة', 'Resignations & exits'), count: count('resignation'), group: g2 }, module: 'employees', view: () => <Offboarding /> },
@@ -166,6 +171,7 @@ export function HrApp({ user }: { user: SessionUser }) {
     { item: { to: '/hr/settings/codes', icon: <Binary size={18} />, label: L('دليل الترميز', 'Codebook'), group: g4, hidden: true }, section: 'org', module: 'codes',
       view: () => route.parts[3] === 'print' ? <CodebookPrint /> : <Codebook /> },
     { item: { to: '/hr/settings/contracts', icon: <FileSignature size={18} />, label: L('إعدادات العقود والتجديد', 'Contracts settings'), group: g4, hidden: true }, section: 'rules', module: u => can(u, 'settings', 'edit') && can(u, 'contracts'), view: () => <ContractSettings /> },
+    { item: { to: '/hr/settings/missions', icon: <Plane size={18} />, label: L('إعدادات المهمات والسفر والمكافآت', 'Missions & bonus settings'), group: g4, hidden: true }, section: 'rules', module: u => can(u, 'settings', 'edit') && can(u, 'missions'), view: () => <MissionSettings /> },
     { item: { to: '/hr/settings/forms', icon: <FileText size={18} />, label: L('النماذج وقالب الطباعة', 'Forms & print template'), group: g4, hidden: true }, section: 'system', module: 'settings', view: () => <Forms /> },
   ]
   const allowed = pages.filter(p => typeof p.module === 'function' ? p.module(user) : can(user, p.module))

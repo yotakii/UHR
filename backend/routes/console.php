@@ -148,3 +148,17 @@ Artisan::command('contracts:sweep', function () {
     $this->info(json_encode($out));
 })->purpose('Daily contracts sweep');
 Schedule::command('contracts:sweep')->dailyAt('06:40');
+
+// المهمات: تذكير مهلة الإغلاق والتصعيد (FR-TM-023) — ومكافأة الالتزام بالدوام للشهر المنتهي (BN-70)
+Artisan::command('missions:sweep', function () {
+    $n = 0;
+    foreach (\App\Models\Company::pluck('id') as $id) \App\Support\Tenant::run($id, function () use (&$n) { $n += app(\App\Services\Missions\Missions::class)->sweep(); });
+    $this->info("reminded {$n}");
+})->purpose('Remind and escalate missions past their closing deadline');
+Schedule::command('missions:sweep')->dailyAt('08:25');
+Artisan::command('bonuses:attendance {month?}', function (?string $month = null) {
+    $month ??= now()->subMonthNoOverflow()->format('Y-m'); $n = 0;
+    foreach (\App\Models\Company::pluck('id') as $id) \App\Support\Tenant::run($id, function () use (&$n, $month) { $n += app(\App\Services\Missions\Bonuses::class)->attendance($month); });
+    $this->info("proposed {$n}");
+})->purpose('Propose the monthly attendance bonus (BN-70) for review');
+Schedule::command('bonuses:attendance')->monthlyOn(1, '07:05');

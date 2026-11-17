@@ -749,3 +749,23 @@ Route::middleware(['auth', 'fresh'])->prefix('me/contracts')->controller(\App\Ht
     Route::post('/cases/{id}/sign', 'signEval');
     Route::get('/print/{kind}/{id}', 'print')->whereIn('kind', ['contract', 'evaluation', 'letter']);
 });
+
+// الدفعة 20 — المهمات والسفر والمكافآت وبنود الراتب (SRS الأنظمة الأساسية، الجزء B) — البوابتان، والصلاحيات في الخدمات
+Route::middleware(['auth', 'fresh'])->prefix('missions')->controller(\App\Http\Controllers\Api\MissionController::class)->group(function () {
+    Route::get('/', 'index');
+    Route::post('/', 'store');
+    Route::post('/files', 'upload')->middleware('throttle:60,1');
+    Route::get('/bonuses', 'bonuses');
+    Route::post('/bonuses', 'giveBonus');
+    Route::get('/pay-lines', 'payLines');
+    Route::post('/pay-lines/{id}/reverse', 'reverse');
+    Route::get('/reports', 'reports');
+    Route::get('/export', 'export');
+    Route::get('/settings', 'settings');
+    Route::put('/settings', 'saveSettings');
+    Route::get('/{id}', 'show')->whereNumber('id');
+    Route::put('/{id}', 'update')->whereNumber('id');
+    Route::get('/{id}/print', 'print')->whereNumber('id');
+    foreach (['submit', 'progress', 'request-close' => 'requestClose', 'review', 'pay-advance' => 'payAdvance', 'settlement', 'audit', 'cancel', 'amend', 'comments' => 'comment'] as $path => $action)
+        Route::post('/{id}/'.(is_int($path) ? $action : $path), $action)->whereNumber('id');
+});

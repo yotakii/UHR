@@ -6,12 +6,12 @@ import type { ReqRow } from './requests'
 
 /** الكشف الشهري للدوام والمستحقات (D-01)، السلفة، وطلبات الخدمات والشهادات (D-16) */
 export type SheetStatus = 'draft' | 'calculated' | 'approved' | 'closed'
-export interface MonthData {
+export interface MonthData { pay_lines?: { code: string; ar: string; en: string; kind: 'earning' | 'deduction'; amount: number; currency: string; ref: string | null; channel: string }[];
   work_days: number; present: number; absent: number; justified_absent: number; incomplete: number; leave: number; leave_unpaid: number
   late_days: number; late: number; exempted: number; exempt_min: number; deduct: number; worked: number
   ot_raw: number; ot_assigned: number; ot_paid: number; ot_weighted: number; incomplete_dates: string[]; from: string; to: string; discipline_days?: number
 }
-export interface MonthMoney { base: number; ot_pay: number; late: number; absent: number; leave: number; insurance: number; advance: number; discipline?: number; bonus?: number; net: number; day: number; hour: number; currency: string }
+export interface MonthMoney { base: number; ot_pay: number; late: number; absent: number; leave: number; insurance: number; advance: number; discipline?: number; bonus?: number; allowances?: number; line_deductions?: number; net: number; day: number; hour: number; currency: string }
 export interface PayMoney extends MonthMoney { rate: number; from: string }
 type Person = { id: number; code: string; name: Bi; title: Bi; dept: (Bi & { id: number }) | null }
 export interface SheetRow { id: number; employee: Person; data: MonthData; money: MonthMoney | null; pay?: PayMoney | null; salary: number | null; see?: boolean }   // المبالغ null والرواتب مقفلة (SRS §4.4)

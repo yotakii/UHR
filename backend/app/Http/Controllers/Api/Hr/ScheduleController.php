@@ -114,7 +114,7 @@ class ScheduleController extends Controller
     {
         $count = Employee::current()->selectRaw('location_id, count(*) n')->groupBy('location_id')->pluck('n', 'location_id');
         return response()->json(['data' => Location::orderByRaw('company_id is null desc')->orderBy('id')->get()->map(fn ($l) => ['id' => $l->id, 'code' => $l->code, 'ar' => $l->name_ar, 'en' => $l->name_en,
-            'timezone' => $l->timezone, 'active' => $l->active, 'own' => $l->company_id !== null, 'employees' => (int) ($count[$l->id] ?? 0)]),
+            'timezone' => $l->timezone, 'governorate' => $l->governorate, 'active' => $l->active, 'own' => $l->company_id !== null, 'employees' => (int) ($count[$l->id] ?? 0)]),
             'timezones' => self::ZONES, 'can' => ['edit' => Perm::can($request->user(), 'settings', 'edit')]]);
     }
 
@@ -126,7 +126,7 @@ class ScheduleController extends Controller
         $l = $id ? Location::whereNotNull('company_id')->findOrFail($id) : new Location;
         $d = $request->validate(['code' => [$id ? 'sometimes' : 'required', 'string', 'max:20', 'regex:/'.\App\Services\Codes\Codes::pattern('branches', '^[A-Za-z][A-Za-z0-9_-]{1,19}$').'/',
                 Rule::unique('locations', 'code')->where(fn ($q) => $q->where('company_id', \App\Support\Tenant::id())->orWhereNull('company_id'))->ignore($id)],
-            'name_ar' => ['required', 'string', 'max:100'], 'name_en' => ['required', 'string', 'max:100'], 'timezone' => ['required', Rule::in(self::ZONES)], 'active' => ['boolean']],
+            'name_ar' => ['required', 'string', 'max:100'], 'name_en' => ['required', 'string', 'max:100'], 'timezone' => ['required', Rule::in(self::ZONES)], 'active' => ['boolean'], 'governorate' => ['nullable', 'string', 'size:3']],
             ['code.unique' => L::t('الرمز مستخدم لفرع أو مدينة أخرى.', 'This code is used by another branch or city.'), 'code.regex' => L::t('الرمز لا يطابق نمط قائمة الفروع في دليل الترميز (مثل DAM01).', 'The code does not match the branches pattern in the codebook (e.g. DAM01).')]);
         if ($id && ($d['active'] ?? true) === false && Employee::current()->where('location_id', $l->id)->exists()) throw new ApiException(L::t('لا يمكن إيقاف فرع فيه موظفون.', 'A branch with employees cannot be deactivated.'), 'branch_in_use', 409);
         $l->fill(($id ? collect($d)->except('code')->all() : $d) + ($id ? [] : ['company_id' => \App\Support\Tenant::id()]))->save();

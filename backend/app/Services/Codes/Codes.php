@@ -24,8 +24,12 @@ class Codes
         'grades' => [['employees', 'grade_id', true]],
         'jobs' => [['employees', 'job_id', true]],
         'worker_categories' => [['employees', 'worker_category_id', true]],
-        'contract_types' => [['employees', 'contract_type_id', true]],
-        'cost_centers' => [['employees', 'cost_center_id', true]],
+        'contract_types' => [['employees', 'contract_type_id', true], ['contracts', 'contract_type_id', false]],
+        'cost_centers' => [['employees', 'cost_center_id', true], ['missions', 'cost_center_id', true]],
+        'mission_types' => [['missions', 'type_id', false]],
+        'mission_categories' => [['missions', 'category_id', true]],
+        'bonus_types' => [['bonuses', 'type_id', false]],
+        'pay_elements' => [['pay_lines', 'element_id', false]],
         'departments' => [['employees', 'department_id', true], ['job_openings', 'department_id', true], ['kpis', 'department_id', true], ['development_plans', 'department_id', true],
             ['succession_plans', 'department_id', true], ['announcements', 'department_id', true], ['performance_cycles', 'department_id', true], ['salary_grants', 'department_id', true]],
         'branches' => [['employees', 'location_id', true], ['job_openings', 'location_id', true], ['devices', 'location_id', true]],
@@ -105,7 +109,7 @@ class Codes
     public static function resolve(string $key, mixed $value): ?CodeItem
     {
         if ($value === null || $value === '') return null;
-        $l = CodeList::where('key', $key)->where('system', false)->first(); if (! $l) return null;
+        $l = CodeList::where('key', $key)->orderByRaw('company_id is null')->first(); if (! $l) return null;
         $q = CodeItem::where('code_list_id', $l->id)->live();
         return is_int($value) || ctype_digit((string) $value) && ! preg_match('/^0/', (string) $value) && (clone $q)->whereKey((int) $value)->exists()
             ? (clone $q)->find((int) $value)

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ListChecks, Home, FileSignature, ChevronLeft, ChevronRight, CalendarCheck, Clock, Stamp, ClipboardList, Wallet, ShieldAlert, DoorOpen, Trophy, Megaphone, ClipboardCheck, Sprout, Users, UserRound, Library, MessagesSquare, CalendarDays } from 'lucide-react'
+import { ListChecks, Home, FileSignature, ChevronLeft, ChevronRight, CalendarCheck, Clock, Stamp, ClipboardList, Wallet, ShieldAlert, DoorOpen, Trophy, Megaphone, ClipboardCheck, Sprout, Users, UserRound, Library, MessagesSquare, CalendarDays, Plane } from 'lucide-react'
 import { useL, useLang } from '../../lib/store'
 import { useRoute } from '../../lib/router'
 import type { SessionUser } from '../../lib/session'
@@ -17,6 +17,8 @@ import { MyPayslip } from '../requests/MyPayslip'
 import { CertificatePage } from '../requests/Certificate'
 import { MyDiscipline } from '../discipline/MyDiscipline'
 import { MyContracts } from '../contracts/MyContracts'
+import { MissionsApp } from '../missions/Missions'
+import { MissionPrint } from '../missions/MissionPrint'
 import { ContractPrint } from '../contracts/ContractPrint'
 import { useMyContracts } from '../../lib/contracts'
 import { useMyDiscipline } from '../../lib/discipline'
@@ -34,7 +36,7 @@ import { MyAccount } from '../account/MyAccount'
 import { Work } from '../work/Work'
 
 /** روابط إشعارات الموظف ← مسارات بوابته */
-export const employeeLink = (link: string) => link.startsWith('policy:') ? `/me/policies?doc=${link.slice(7)}` : link.startsWith('space:') ? `/me/space/p/${link.slice(6)}` : ({ space: '/me/space',  docs: '/me/documents', requests: '/me/requests', approvals: '/me/approvals', attendance: '/me/attendance', payslip: '/me/payslip', services: '/me/services', discipline: '/me/discipline', complaints: '/me/discipline', resignation: '/me/resignation', handover: '/me/resignation', profile: '/me/profile', rewards: '/me/rewards', internal: '/me/rewards', announcements: '/me/news', holidays: '/me/holidays', reviews: '/me/reviews', development: '/me/development', contracts: '/me/contracts', 'contract-eval': '/me/contracts', tasks: '/me/tasks', kpis: '/me/tasks?tab=kpis' } as Record<string, string>)[link] ?? null
+export const employeeLink = (link: string) => link.startsWith('policy:') ? `/me/policies?doc=${link.slice(7)}` : link.startsWith('space:') ? `/me/space/p/${link.slice(6)}` : ({ space: '/me/space',  docs: '/me/documents', requests: '/me/requests', approvals: '/me/approvals', attendance: '/me/attendance', payslip: '/me/payslip', services: '/me/services', discipline: '/me/discipline', complaints: '/me/discipline', resignation: '/me/resignation', handover: '/me/resignation', profile: '/me/profile', rewards: '/me/rewards', internal: '/me/rewards', announcements: '/me/news', holidays: '/me/holidays', reviews: '/me/reviews', development: '/me/development', contracts: '/me/contracts', missions: '/me/missions', 'contract-eval': '/me/contracts', tasks: '/me/tasks', kpis: '/me/tasks?tab=kpis' } as Record<string, string>)[link] ?? null
 
 /**
  * بوابة الموظف M14 (PortalShell في الديمو): تبويبات علوية على الحاسب وشريط سفلي بخمسة أزرار على الجوال،
@@ -65,6 +67,7 @@ export function EmployeeApp({ user }: { user: SessionUser }) {
     { to: '/me/rewards', icon: <Trophy size={17} />, label: L('المكافآت', 'Rewards') },
     { to: '/me/space', icon: <MessagesSquare size={17} />, label: L('الساحة', 'Space') }]
   const more: PortalTab[] = [{ to: '/me/services', icon: <ClipboardList size={17} />, label: L('خدماتي', 'My services') },
+    { to: '/me/missions', icon: <Plane size={17} />, label: L('مهماتي وسفري', 'My missions & travel') },
     { to: '/me/contracts', icon: <FileSignature size={17} />, label: L('عقدي', 'My contract'), badge: contractTodo || undefined },
     { to: '/me/reviews', icon: <ClipboardCheck size={17} />, label: L('تقييماتي', 'My reviews'), badge: reviews.length || undefined },
     { to: '/me/tasks', icon: <ListChecks size={17} />, label: L('مهامي ومؤشراتي', 'My tasks & KPIs') },
@@ -96,6 +99,7 @@ export function EmployeeApp({ user }: { user: SessionUser }) {
       case 'approvals': return approver ? <TeamApprovals /> : <PortalHome toSign={n} todos={todos} />
       case 'payslip': return <MyPayslip />
       case 'discipline': return <MyDiscipline />
+      case 'missions': return route.parts[2] === 'print' && /^\d+$/.test(route.parts[3] ?? '') ? <MissionPrint id={Number(route.parts[3])} /> : <MissionsApp base="/me/missions" />
       case 'contracts': return route.parts[2] === 'print' && route.parts[3] && /^\d+$/.test(route.parts[4] ?? '') ? <ContractPrint me kind={route.parts[3]} id={Number(route.parts[4])} /> : <MyContracts base="/me/contracts" />
       case 'rewards': return <MyRewards />
       case 'reviews': return <MyReviews />

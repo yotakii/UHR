@@ -149,7 +149,10 @@ class MonthCalc
         $m = ['base' => $base, 'ot_pay' => $t['ot_weighted'] / 60 * $hour, 'late' => $t['deduct'] / 60 * $hour,
             'absent' => ($t['absent'] * (float) $pay['absent_days'] + $t['justified_absent'] * (float) $pay['justified_absent_days']) * $dayWage,
             'leave' => $t['leave_unpaid'] * $dayWage, 'insurance' => $base * (float) $pay['insurance_base'] * (float) $pay['insurance_rate'], 'advance' => $advance, 'discipline' => $t['discipline_days'] * $dayWage, 'bonus' => $bonus];
-        $m['net'] = $m['base'] + $m['ot_pay'] + $m['bonus'] - $m['late'] - $m['absent'] - $m['leave'] - $m['insurance'] - $m['advance'] - $m['discipline'];
+        // الدفعة 20: بنود الراتب من المهمات والمكافآت (برمز العنصر ومرجعه) — الجسر الوحيد إلى الكشف
+        $lines = \App\Services\Missions\PayLines::forMonth($e, $month);
+        $m['allowances'] = $lines['earn']; $m['line_deductions'] = $lines['ded']; $t['pay_lines'] = $lines['lines'];
+        $m['net'] = $m['base'] + $m['ot_pay'] + $m['bonus'] + $m['allowances'] - $m['late'] - $m['absent'] - $m['leave'] - $m['insurance'] - $m['advance'] - $m['discipline'] - $m['line_deductions'];
         $m = array_map(fn ($v) => round($v, 2), $m) + ['day' => round($dayWage, 2), 'hour' => round($hour, 2), 'currency' => $e->currency];
         return ['data' => $t, 'money' => $m];
     }

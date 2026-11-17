@@ -94,7 +94,7 @@ export function EmployeeFile({ id }: { id: number }) {
 export function AttendanceTable({ rows }: { rows: DayRow[] }) {
   const L = useL(); const lang = useLang(); const P = lang === 'ar' ? '٪' : '%'
   const badge = (r: DayRow) => ({
-    before_start: <span className="text-ink-3 text-[12px]">{L('قبل المباشرة', 'Before start')}</span>, leave: <Badge>{L('إجازة', 'Leave')}</Badge>, holiday: <Badge>{L('عطلة رسمية', 'Holiday')}</Badge>,
+    before_start: <span className="text-ink-3 text-[12px]">{L('قبل المباشرة', 'Before start')}</span>, mission: <Badge tone="info">{L('في مهمة', 'On mission')}</Badge>, leave: <Badge>{L('إجازة', 'Leave')}</Badge>, holiday: <Badge>{L('عطلة رسمية', 'Holiday')}</Badge>,
     not_in: <Badge tone="warn">{L('لم يسجل بعد', 'Not in yet')}</Badge>, weekend: <Badge>{L('عطلة', 'Weekend')}</Badge>, absent: <Badge tone="danger">{L('غياب', 'Absent')}</Badge>, incomplete: <Badge tone="danger">{L('ناقص — بلا خروج', 'Incomplete — no out')}</Badge>,
     justified: <Badge tone="brand">{L('مبرر', 'Justified')}</Badge>, late: <Badge tone="warn">{L('متأخر', 'Late')}</Badge>, present: <Badge tone="brand">{L('حاضر', 'Present')}</Badge>,
   }[r.status])
