@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react'
-import { Sparkles, ListChecks, LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed, Megaphone, Gift, ClipboardCheck, SlidersHorizontal, Sprout, KeyRound, Building, UserCog, GitBranch, BellRing, Library, History, DatabaseBackup, ScanText, MessagesSquare, ArrowRight, ArrowLeft, X, CalendarDays, CalendarClock, MapPin , UserRound } from 'lucide-react'
+import { Sparkles, ListChecks, LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed, Megaphone, Gift, ClipboardCheck, SlidersHorizontal, Sprout, KeyRound, Building, UserCog, GitBranch, BellRing, Library, History, DatabaseBackup, ScanText, MessagesSquare, ArrowRight, ArrowLeft, X, CalendarDays, CalendarClock, MapPin, UserRound, Binary } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { navigate, useRoute } from '../../lib/router'
 import { can, type SessionUser } from '../../lib/session'
@@ -59,6 +59,8 @@ import { Development } from '../development/Development'
 import { MyRewards } from '../rewards/MyRewards'
 import { AnnouncementsHR, MyAnnouncements } from '../rewards/Announcements'
 import { CompanySettings } from './admin/CompanySettings'
+import { Codebook } from './admin/Codebook'
+import { CodebookPrint } from './admin/CodebookPrint'
 import { Departments } from './admin/Departments'
 import { Chains } from './admin/Chains'
 import { Users as AdminUsers } from './admin/Users'
@@ -153,6 +155,8 @@ export function HrApp({ user }: { user: SessionUser }) {
     { item: { to: '/hr/settings/permissions', icon: <ShieldCheck size={18} />, label: L('الصلاحيات', 'Permissions'), group: g4, hidden: true }, section: 'org', module: 'users', view: () => <Permissions user={user} /> },
     { item: { to: '/hr/settings/audit', icon: <History size={18} />, label: L('سجل التدقيق', 'Audit log'), group: g4, hidden: true }, section: 'system', module: 'audit', view: () => <AuditLog /> },
     { item: { to: '/hr/settings/backups', icon: <DatabaseBackup size={18} />, label: L('النسخ الاحتياطي', 'Backups'), group: g4, hidden: true }, section: 'system', module: 'settings', view: () => <Backups /> },
+    { item: { to: '/hr/settings/codes', icon: <Binary size={18} />, label: L('دليل الترميز', 'Codebook'), group: g4, hidden: true }, section: 'org', module: 'codes',
+      view: () => route.parts[3] === 'print' ? <CodebookPrint /> : <Codebook /> },
     { item: { to: '/hr/settings/forms', icon: <FileText size={18} />, label: L('النماذج وقالب الطباعة', 'Forms & print template'), group: g4, hidden: true }, section: 'system', module: 'settings', view: () => <Forms /> },
   ]
   const allowed = pages.filter(p => typeof p.module === 'function' ? p.module(user) : can(user, p.module))

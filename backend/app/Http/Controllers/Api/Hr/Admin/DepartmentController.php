@@ -29,7 +29,8 @@ class DepartmentController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        Department::create($this->valid($request));
+        $d = Department::create($this->valid($request));
+        \App\Services\Codes\Codebook::boundChanged('departments', $d->code, true);
         return $this->index();
     }
 
@@ -37,16 +38,20 @@ class DepartmentController extends Controller
     {
         $d = Department::findOrFail($id);
         $v = $this->valid($request, $d);
+        // دليل الترميز: رمز الإدارة ثابت بعد أول استخدام — الاسم يتغير (POL-CS-04)
+        if ($v['code'] !== $d->code && \App\Services\Codes\Codes::usage(\App\Services\Codes\Codes::list('departments'), $d->id))
+            throw ApiException::field('code', L::t('الرمز مستخدم في سجلات ولا يمكن تعديله — يمكن تعديل الاسم فقط.', 'This code is in use and cannot change — only its name can.'), 'code_locked');
         if ($d->active && ! $v['active'] && Employee::current()->where('department_id', $d->id)->exists())
             throw new ApiException(L::t('لا يمكن إيقاف إدارة فيها موظفون حاليون — انقلهم أولاً.', 'A department with current employees cannot be deactivated — move them first.'), 'dept_in_use', 409);
         $d->update($v);
+        \App\Services\Codes\Codebook::boundChanged('departments', $d->code, false);
         return $this->index();
     }
 
     private function valid(Request $request, ?Department $d = null): array
     {
         $v = $request->validate([
-            'code' => ['required', 'string', 'regex:/^[A-Za-z][A-Za-z0-9_-]{1,19}$/', Rule::unique('departments', 'code')->where('company_id', \App\Support\Tenant::id())->ignore($d?->id)],
+            'code' => ['required', 'string', 'max:20', 'regex:/'.\App\Services\Codes\Codes::pattern('departments', '^[A-Za-z][A-Za-z0-9_-]{1,19}$').'/', Rule::unique('departments', 'code')->where('company_id', \App\Support\Tenant::id())->ignore($d?->id)],
             'ar' => ['required', 'string', 'max:120'], 'en' => ['required', 'string', 'max:120'], 'headcount' => ['required', 'integer', 'between:0,10000'],
             'color' => ['required', Rule::in(self::COLORS)], 'sort' => ['nullable', 'integer', 'between:0,999'], 'active' => ['required', 'boolean'],
             'head_id' => ['nullable', 'integer', Rule::exists('employees', 'id')->where('company_id', \App\Support\Tenant::id())],

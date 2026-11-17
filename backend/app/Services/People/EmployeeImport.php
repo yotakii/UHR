@@ -34,6 +34,9 @@ class EmployeeImport
         'manager_code' => ['الرقم الوظيفي للمدير', ''], 'salary' => ['الراتب الشامل*', '900'], 'currency' => ['العملة USD/SYP/EUR', 'USD'],
         'hire_date' => ['تاريخ المباشرة* YYYY-MM-DD', '2022-03-01'], 'nfc_uid' => ['رقم بطاقة الحضور NFC', ''],
         'bank_name' => ['البنك', ''], 'bank_account' => ['رقم الحساب / IBAN', ''],
+        // رموز دليل الترميز (الدفعة 18) — ورقة «codebook» في القالب
+        'job' => ['رمز المسمى الوظيفي (يملأ المسمى)', ''], 'grade' => ['رمز الدرجة', ''], 'worker_category' => ['فئة العامل (فارغ = EMP)', ''],
+        'contract_type' => ['رمز نوع العقد', ''], 'cost_center' => ['رمز مركز الكلفة', ''],
     ];
 
     public function __construct(private NewEmployee $factory) {}
@@ -56,6 +59,11 @@ class EmployeeImport
             $d = $deps[$i] ?? null; $l = $locs[$i] ?? null;
             $w->addRow(Row::fromValues([$d?->code ?? '', $d?->name_ar ?? '', $d?->name_en ?? '', '', $l?->code ?? '', $l?->name_ar ?? '']));
         }
+        $w->addNewSheetAndMakeItCurrent()->setName('codebook')->setSheetView((new SheetView())->setRightToLeft(true));
+        $w->getCurrentSheet()->setColumnWidthForRange(26, 1, 4);
+        $w->addRow(Row::fromValues(['column', 'code', 'الاسم', 'Name'], $bold));
+        foreach (['job' => 'jobs', 'grade' => 'grades', 'worker_category' => 'worker_categories', 'contract_type' => 'contract_types', 'cost_center' => 'cost_centers'] as $col => $list)
+            foreach (\App\Services\Codes\Codes::items($list) as $it) $w->addRow(Row::fromValues([$col, $it['code'], $it['ar'], $it['en']]));
         $w->close();
         return $path;
     }
@@ -94,6 +102,7 @@ class EmployeeImport
     /** الحفظ: يعيد المعاينة، ولا يحفظ شيئاً إن وُجد خطأ واحد */
     public function commit(UploadedFile $file, bool $invite, User $by): array
     {
+        \App\Services\Codes\Codebook::requireLive();
         $rows = $this->preview($file);
         $bad = array_filter($rows, fn ($r) => $r['errors']);
         if ($bad) throw new ApiException(L::t('صحّح الأسطر التي فيها أخطاء ثم أعد الرفع.', 'Fix the rows with errors and upload again.'), 'import_errors', 422);

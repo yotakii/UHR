@@ -5,10 +5,11 @@ import { navigate } from '../../../lib/router'
 import { ApiError } from '../../../lib/api'
 import { useCreateEmployee, useLookups, type NewEmployeeInput } from '../../../lib/onboarding'
 import { Btn, Field, Modal, Seg, toast } from '../../../ui/kit'
+import { CODE_FIELDS, CodeSelect } from '../../../ui/codes'
 
 const today = () => new Date().toISOString().slice(0, 10)
-const BLANK: NewEmployeeInput = { name: '', name_en: '', gender: 'M', national_id: '', dob: '', phone: '+963 9', email: '', department_id: '', title_ar: '', title_en: '', location_id: '', manager_id: '', salary: '', currency: 'USD', hire_date: today(), contract: 'fixed', basic: '', housing: 0, transport: 0, fuel: 0 }
-const STEP_FIELDS: (keyof NewEmployeeInput)[][] = [['name', 'name_en', 'gender', 'national_id', 'dob', 'phone', 'email'], ['department_id', 'title_ar', 'title_en', 'location_id', 'manager_id', 'salary', 'basic', 'housing', 'transport', 'fuel', 'contract', 'currency', 'hire_date']]
+const BLANK: NewEmployeeInput = { name: '', name_en: '', gender: 'M', national_id: '', dob: '', phone: '+963 9', email: '', department_id: '', title_ar: '', title_en: '', location_id: '', manager_id: '', salary: '', currency: 'USD', hire_date: today(), basic: '', housing: 0, transport: 0, fuel: 0, job_id: null, grade_id: null, contract_type_id: null, worker_category_id: null, cost_center_id: null }
+const STEP_FIELDS: (keyof NewEmployeeInput)[][] = [['name', 'name_en', 'gender', 'national_id', 'dob', 'phone', 'email'], ['department_id', 'title_ar', 'title_en', 'location_id', 'manager_id', 'salary', 'basic', 'housing', 'transport', 'fuel', 'currency', 'hire_date', 'job_id', 'grade_id', 'contract_type_id', 'worker_category_id', 'cost_center_id']]
 
 /**
  * معالج إضافة موظف (M06 — AddEmployee في الديمو، نافذة 680px بأربع خطوات): البيانات الشخصية، الوظيفة والراتب، العهد، المراجعة.
@@ -53,13 +54,13 @@ export function AddEmployee({ onClose }: { onClose: () => void }) {
           <option value="">{L('اختر…', 'Choose…')}</option>{lk.departments.map(x => <option key={x.id} value={x.id}>{x[lang]}</option>)}</select></Field>
         <Field label={L('مقر العمل', 'Location')} req error={e('location_id')}><select className="field" value={d.location_id} onChange={x => set('location_id', x.target.value ? Number(x.target.value) : '')}>
           <option value="">{L('اختر…', 'Choose…')}</option>{lk.locations.map(x => <option key={x.id} value={x.id}>{x[lang]}</option>)}</select></Field>
+        {CODE_FIELDS.map(f => <CodeSelect key={f.k} list={f.list} label={L(f.ar, f.en)} value={d[`${f.k}_id`]} error={e(`${f.k}_id`)}
+          onChange={(v, it) => { set(`${f.k}_id`, v); if (f.k === 'job' && it) { set('title_ar', it.ar); set('title_en', it.en) } }} />)}
         <Field label={L('المسمى الوظيفي', 'Job title')} req error={e('title_ar')}><input className="field" value={d.title_ar} onChange={x => set('title_ar', x.target.value)} /></Field>
         <Field label={L('المسمى بالإنكليزية', 'Job title (EN)')} req error={e('title_en')}><input className="field ltr text-start" value={d.title_en} onChange={x => set('title_en', x.target.value)} /></Field>
         <Field label={L('المدير المباشر', 'Manager')} error={e('manager_id')} className="sm:col-span-2"><select className="field" value={d.manager_id} onChange={x => set('manager_id', x.target.value ? Number(x.target.value) : '')}>
           <option value="">{dept?.head ? L(`رئيس الإدارة تلقائياً — ${dept.head.ar}`, `Department head — ${dept.head.en}`) : L('رئيس الإدارة تلقائياً', 'Department head')}</option>
           {lk.managers.filter(m => !d.department_id || m.department_id === d.department_id).map(m => <option key={m.id} value={m.id}>{m[lang]} — {m.code}</option>)}</select></Field>
-        <Field label={L('نوع العقد', 'Contract type')} error={e('contract')}><select className="field" value={d.contract} onChange={x => set('contract', x.target.value as NewEmployeeInput['contract'])}>
-          <option value="fixed">{L('محدد المدة (سنة قابلة للتجديد)', 'Fixed term (renewable year)')}</option><option value="open">{L('غير محدد المدة', 'Open-ended')}</option><option value="project">{L('عقد مشروع', 'Project contract')}</option></select></Field>
         <Field label={L('العملة', 'Currency')}><select className="field" value={d.currency} onChange={x => set('currency', x.target.value)}>{lk.currencies.map(c => <option key={c}>{c}</option>)}</select></Field>
         <div className="sm:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-3">
           {([['basic', L('الراتب الأساسي', 'Basic salary'), true], ['housing', L('بدل السكن / غلاء المعيشة', 'Housing / COL'), false], ['transport', L('بدل المواصلات', 'Transport'), false], ['fuel', L('بدل المحروقات', 'Fuel'), false]] as const).map(([k, label, req]) =>

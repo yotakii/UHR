@@ -37,7 +37,8 @@ class Counters
     /** الترقيم لكل شركة: c{id}:employee */
     private static function scoped(string $key): string { return ($c = Tenant::id()) ? "c{$c}:{$key}" : $key; }
 
-    public static function employeeCode(): string { return Settings::prefix('employee').'-'.self::next('employee', 1001); }
+    /** الرقم الوظيفي من قالب الشركة في دليل الترميز (الافتراضي UHR-1033؛ ويمكن UNQ-26-0147) */
+    public static function employeeCode(array $ctx = []): string { return \App\Services\Codes\CodeGen::next('employee_no', $ctx); }
     public static function assetTag(): string { return Settings::prefix('asset').'-'.str_pad((string) self::next('asset', 1), 4, '0', STR_PAD_LEFT); }
     public static function candidateRef(bool $internal = false): string
     {

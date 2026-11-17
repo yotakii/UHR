@@ -178,6 +178,9 @@ class Settings
                     ['key' => 'id_card', 'ar' => 'البطاقة التعريفية', 'en' => 'Staff ID card'], ['key' => 'grants', 'ar' => 'منح الدراسة والتدريب', 'en' => 'Study and training grants']]],
             ],
         ],
+        // دليل الترميز (الدفعة 18): بوابة التأسيس، طلبات التغيير بعد الاعتماد، من يعتمد، قوالب الرموز المركّبة
+        'codes' => ['gate' => false, 'change_requests' => true, 'self_approve' => false, 'admin_approves' => true, 'approver_roles' => ['ceo', 'admin'],
+            'restructure_role' => 'ceo', 'unused_months' => 12, 'company_code' => '', 'templates' => []],
     ];
 
     /** إعدادات المنصة (بلا شركة): نصوص بوابة فرص العمل العامة — SRS §10.15 */

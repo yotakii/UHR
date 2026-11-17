@@ -687,3 +687,34 @@ Route::middleware(['auth', 'fresh'])->prefix('assistant')->group(function () {
     Route::get('/settings', [$C, 'settings'])->middleware('perm:settings,view');
     Route::put('/settings', [$C, 'saveSettings'])->middleware('perm:settings,edit');
 });
+
+// الدفعة 18 — دليل الترميز (SRS الأنظمة الأساسية، الجزء A): القراءة الموحدة لكل حساب، والإدارة لأصحاب صلاحية «codes»
+Route::middleware(['auth', 'fresh'])->get('/cs/lists/{key}/items', [\App\Http\Controllers\Api\Hr\Admin\CodesController::class, 'lookup']);
+Route::middleware(['auth', 'fresh', 'portal:hr', 'perm:codes,view'])->prefix('cs')->controller(\App\Http\Controllers\Api\Hr\Admin\CodesController::class)->group(function () {
+    Route::get('/', 'index');
+    Route::get('/lists/{key}', 'show');
+    Route::get('/lists/{key}/impact/{id}', 'impact');
+    Route::post('/lists/{key}/items', 'store')->middleware('perm:codes,create');
+    Route::put('/items/{id}', 'update')->middleware('perm:codes,edit');
+    Route::post('/lists/{key}/items/{id}/status', 'status')->middleware('perm:codes,edit');
+    Route::post('/lists', 'saveList')->middleware(['perm:codes,create', 'perm:settings,edit']);
+    Route::put('/lists/{key}', 'saveList')->middleware(['perm:codes,edit', 'perm:settings,edit']);
+    Route::get('/lists/{key}/export', 'export')->middleware('perm:codes,export');
+    Route::get('/lists/{key}/template', 'template')->middleware('perm:codes,create');
+    Route::post('/lists/{key}/import/preview', 'preview')->middleware('perm:codes,create');
+    Route::post('/lists/{key}/import', 'import')->middleware('perm:codes,create');
+    Route::post('/sector', 'sector')->middleware('perm:codes,create');
+    Route::get('/requests', 'requests');
+    Route::post('/requests', 'submit')->middleware('perm:codes,create');
+    Route::post('/requests/{id}/decide', 'decide')->middleware('perm:codes,decide');
+    Route::post('/requests/{id}/cancel', 'cancel');
+    Route::post('/simulate', 'simulate');
+    Route::post('/approve', 'approve')->middleware('perm:codes,decide');
+    Route::get('/versions', 'versions');
+    Route::get('/versions/compare', 'compare');
+    Route::get('/book', 'book')->middleware('perm:codes,print');
+    Route::post('/book/print', 'printed')->middleware('perm:codes,print');
+    Route::get('/reports', 'reports');
+    Route::get('/generate/{tpl}', 'generate');
+    Route::put('/settings', 'saveSettings')->middleware('perm:settings,edit');
+});

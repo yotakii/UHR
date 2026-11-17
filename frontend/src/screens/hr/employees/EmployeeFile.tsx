@@ -63,9 +63,11 @@ export function EmployeeFile({ id }: { id: number }) {
         <Panel title={L('البيانات الوظيفية', 'Employment')}>
           <KV k={L('تاريخ المباشرة', 'Start date')} v={fmtDate(e.hire_date, lang)} /><KV k={L('مقر العمل', 'Location')} v={bi(e.city, lang)} />
           <KV k={L('الدوام', 'Shift')} v={<span className="num ltr inline-block">{e.shift}</span>} />
+          {e.codes && ([['job', L('رمز المسمى', 'Job code')], ['grade', L('الدرجة', 'Grade')], ['contract_type', L('نوع العقد', 'Contract type')], ['worker_category', L('فئة العامل', 'Worker category')], ['cost_center', L('مركز الكلفة', 'Cost centre')]] as const)
+            .filter(([k]) => e.codes![k]).map(([k, label]) => <KV key={k} k={label} v={<span><span className="ltr inline-block num">{e.codes![k]!.code}</span> · {bi(e.codes![k]!, lang)}</span>} />)}
           {e.can.salary && <KV k={L('الراتب الشامل', 'Total pay')} v={<Masked others value={e.salary}><span className="num font-semibold">{e.salary && money(e.salary.amount, e.salary.currency, lang)}</span>
             {e.salary?.pay && <span className="block text-[12px] text-ink-3 font-normal">{L('أساسي', 'Basic')} {money(e.salary.pay.basic, e.salary.currency, lang)} · {L('سكن', 'Housing')} {money(e.salary.pay.housing, e.salary.currency, lang)} · {L('مواصلات', 'Transport')} {money(e.salary.pay.transport, e.salary.currency, lang)} · {L('محروقات', 'Fuel')} {money(e.salary.pay.fuel, e.salary.currency, lang)}</span>}</Masked>} />}
-          {e.can.salary && e.salary?.contract && <KV k={L('نوع العقد', 'Contract')} v={({ fixed: L('محدد المدة', 'Fixed term'), open: L('غير محدد المدة', 'Open-ended'), project: L('عقد مشروع', 'Project') } as Record<string, string>)[e.salary.contract] ?? e.salary.contract} />}
+          {e.can.salary && e.salary?.contract && !e.codes?.contract_type && <KV k={L('نوع العقد', 'Contract')} v={({ fixed: L('محدد المدة', 'Fixed term'), open: L('غير محدد المدة', 'Open-ended'), project: L('عقد مشروع', 'Project') } as Record<string, string>)[e.salary.contract] ?? e.salary.contract} />}
           {e.end_date && <KV k={L('تاريخ انتهاء الخدمة', 'End date')} v={fmtDate(e.end_date, lang)} />}
         </Panel>
         <Panel title={L('الإجازات', 'Leave')}>

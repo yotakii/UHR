@@ -178,6 +178,10 @@ class TestDataSeeder extends Seeder
             Counters::atLeast('employee', 1000 + count($employees));
             Counters::atLeast('asset', Asset::count());
             Counters::atLeast('cand-app-'.now()->year, 48210 + 9 * 37);
+            // دليل الترميز (الدفعة 18): المسميات من عناوين الموظفين، ودليل معتمد 1.0 — التعديلات بعده بطلبات تغيير
+            \App\Services\Codes\CodeCatalog::seedCompany();
+            \App\Services\Codes\CodeCatalog::backfillEmployees();
+            if (! \App\Models\CodebookVersion::exists()) \App\Services\Codes\Codebook::snapshotVersion(\App\Models\User::where('email', 'admin@uniqueness.sy')->first(), 'اعتماد دليل الترميز', 'Codebook approved', true);
     }
 
     private function departments(): array

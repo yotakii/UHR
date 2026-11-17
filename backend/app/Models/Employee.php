@@ -24,6 +24,12 @@ class Employee extends Model
 
     public function department(): BelongsTo { return $this->belongsTo(Department::class); }
     public function location(): BelongsTo { return $this->belongsTo(Location::class); }
+    // رموز الدليل (الدفعة 18): الدرجة، المسمى، فئة العامل، نوع العقد، مركز الكلفة
+    public function grade(): BelongsTo { return $this->belongsTo(CodeItem::class, 'grade_id'); }
+    public function job(): BelongsTo { return $this->belongsTo(CodeItem::class, 'job_id'); }
+    public function workerCategory(): BelongsTo { return $this->belongsTo(CodeItem::class, 'worker_category_id'); }
+    public function contractType(): BelongsTo { return $this->belongsTo(CodeItem::class, 'contract_type_id'); }
+    public function costCenter(): BelongsTo { return $this->belongsTo(CodeItem::class, 'cost_center_id'); }
     public function manager(): BelongsTo { return $this->belongsTo(Employee::class, 'manager_id'); }
     public function delegate(): BelongsTo { return $this->belongsTo(Employee::class, 'delegate_id'); }
     public function reports(): HasMany { return $this->hasMany(Employee::class, 'manager_id'); }

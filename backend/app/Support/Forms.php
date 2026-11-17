@@ -40,6 +40,8 @@ class Forms
         'PAY' => ['كشف الدوام والمستحقات الشهري', 'Monthly attendance & pay sheet', 'payroll', true],
         // تصدير الهيكل الوظيفي (D-33)
         'ORG' => ['الهيكل التنظيمي', 'Organization chart', 'org', false],
+        // دليل الترميز (الدفعة 18 — FR-CS-015)
+        'CDB' => ['دليل الترميز', 'Codebook', 'codes', false],
     ];
 
     public const ISSUED_ON = '2025-04-01';

@@ -124,13 +124,14 @@ class ScheduleController extends Controller
     public function saveBranch(Request $request, ?int $id = null): JsonResponse
     {
         $l = $id ? Location::whereNotNull('company_id')->findOrFail($id) : new Location;
-        $d = $request->validate(['code' => [$id ? 'sometimes' : 'required', 'string', 'regex:/^[a-z][a-z0-9_-]{1,19}$/',
+        $d = $request->validate(['code' => [$id ? 'sometimes' : 'required', 'string', 'max:20', 'regex:/'.\App\Services\Codes\Codes::pattern('branches', '^[A-Za-z][A-Za-z0-9_-]{1,19}$').'/',
                 Rule::unique('locations', 'code')->where(fn ($q) => $q->where('company_id', \App\Support\Tenant::id())->orWhereNull('company_id'))->ignore($id)],
             'name_ar' => ['required', 'string', 'max:100'], 'name_en' => ['required', 'string', 'max:100'], 'timezone' => ['required', Rule::in(self::ZONES)], 'active' => ['boolean']],
-            ['code.unique' => L::t('الرمز مستخدم لفرع أو مدينة أخرى.', 'This code is used by another branch or city.'), 'code.regex' => L::t('الرمز بأحرف إنكليزية صغيرة (مثل dubai).', 'Lowercase letters (e.g. dubai).')]);
+            ['code.unique' => L::t('الرمز مستخدم لفرع أو مدينة أخرى.', 'This code is used by another branch or city.'), 'code.regex' => L::t('الرمز لا يطابق نمط قائمة الفروع في دليل الترميز (مثل DAM01).', 'The code does not match the branches pattern in the codebook (e.g. DAM01).')]);
         if ($id && ($d['active'] ?? true) === false && Employee::current()->where('location_id', $l->id)->exists()) throw new ApiException(L::t('لا يمكن إيقاف فرع فيه موظفون.', 'A branch with employees cannot be deactivated.'), 'branch_in_use', 409);
         $l->fill(($id ? collect($d)->except('code')->all() : $d) + ($id ? [] : ['company_id' => \App\Support\Tenant::id()]))->save();
         WorkSchedules::forget();
+        \App\Services\Codes\Codebook::boundChanged('branches', $l->code, ! $id);
         return $this->branches($request);
     }
 }

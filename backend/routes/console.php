@@ -130,3 +130,11 @@ Artisan::command('assistant:prune', function () {
     $this->info("Assistant messages removed: {$n}.");
 })->purpose('Delete assistant conversations older than each company\'s retention');
 Schedule::command('assistant:prune')->dailyAt('04:20');
+
+// دليل الترميز: تطبيق طلبات التغيير المعتمدة التي حل تاريخ سريانها (WF-CS-02/03)
+Artisan::command('codes:apply', function () {
+    $n = 0;
+    foreach (\App\Models\Company::pluck('id') as $id) \App\Support\Tenant::run($id, function () use (&$n) { $n += \App\Services\Codes\Codebook::applyDue(); });
+    $this->info("applied {$n}");
+})->purpose('Apply approved codebook changes whose effective date has come');
+Schedule::command('codes:apply')->dailyAt('00:20');

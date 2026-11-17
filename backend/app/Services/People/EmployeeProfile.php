@@ -49,6 +49,16 @@ class EmployeeProfile
             throw ApiException::field('national_id', L::t('الرقم الوطني مسجّل لموظف آخر', 'National ID belongs to another employee'), 'national_id_taken');
         }
 
+        // رموز الدليل (الدفعة 18): تُرسل اختيارياً؛ المرسَل يجب أن يكون رمزاً فعالاً في قائمته (أو القيمة الحالية ولو عُطّلت لاحقاً)
+        foreach (['grade_id' => 'grades', 'job_id' => 'jobs', 'worker_category_id' => 'worker_categories', 'contract_type_id' => 'contract_types', 'cost_center_id' => 'cost_centers'] as $col => $list) {
+            if (! array_key_exists($col, $input)) continue;
+            $val = $input[$col] ? (int) $input[$col] : null;
+            if ($val && $val !== $e->{$col} && ! \App\Services\Codes\Codes::resolve($list, $val)) throw ApiException::field($col, L::t('رمز غير فعّال في دليل الترميز', 'Not an active codebook code'), 'unknown');
+            $d[$col] = $val;
+            if ($col === 'contract_type_id' && $val) $d['contract'] = \App\Models\CodeItem::whereKey($val)->value('legacy_code') ?: \App\Models\CodeItem::whereKey($val)->value('code');
+        }
+        \App\Services\Codes\Codes::markUsed($d['grade_id'] ?? null, $d['job_id'] ?? null, $d['worker_category_id'] ?? null, $d['contract_type_id'] ?? null, $d['cost_center_id'] ?? null);
+
         $announce = filter_var($input['announce_promotion'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $e = DB::transaction(function () use ($e, $d, $by, &$oldTitle) {
             $old = ['dept' => $e->department_id, 'mgr' => $e->manager_id, 'title' => $e->title_ar];

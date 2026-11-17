@@ -6,6 +6,7 @@ import { useLookups } from '../../../lib/onboarding'
 import { lastCardRead, useLinkCard, useUpdateProfile, type CardRead, type EmpFile, type ProfileInput } from '../../../lib/employees'
 import { Btn, Field, Modal, Seg, toast } from '../../../ui/kit'
 import { analyse, normUid, useCardReader } from '../../../lib/cardReader'
+import { CODE_FIELDS, CodeSelect } from '../../../ui/codes'
 
 /** تعديل الملف الوظيفي (M07): الشخصي والوظيفي — الراتب لا يُعدَّل من هنا (محمي بخطوتين) */
 export function EditProfile({ e, onClose }: { e: EmpFile; onClose: () => void }) {
@@ -13,7 +14,8 @@ export function EditProfile({ e, onClose }: { e: EmpFile; onClose: () => void })
   const { data: lk } = useLookups()
   const save = useUpdateProfile(e.id)
   const [d, setD] = useState<ProfileInput>({ name: e.name_ar, name_en: e.name_en, gender: e.gender, title_ar: e.title_ar, title_en: e.title_en, department_id: e.department_id, location_id: e.location_id,
-    manager_id: e.manager_id, email: e.email, phone: e.phone ?? '', national_id: e.national_id ?? '', dob: e.dob ?? '', bank_name: e.bank_name ?? '', bank_account: e.bank_account ?? '' })
+    manager_id: e.manager_id, email: e.email, phone: e.phone ?? '', national_id: e.national_id ?? '', dob: e.dob ?? '', bank_name: e.bank_name ?? '', bank_account: e.bank_account ?? '',
+    grade_id: e.codes?.grade?.id ?? null, job_id: e.codes?.job?.id ?? null, worker_category_id: e.codes?.worker_category?.id ?? null, contract_type_id: e.codes?.contract_type?.id ?? null, cost_center_id: e.codes?.cost_center?.id ?? null })
   const err = save.error instanceof ApiError ? save.error : null
   const x = (k: string) => err?.field(k)
   const set = <K extends keyof ProfileInput>(k: K, v: ProfileInput[K]) => { setD(p => ({ ...p, [k]: v })); if (err) save.reset() }
@@ -40,6 +42,8 @@ export function EditProfile({ e, onClose }: { e: EmpFile; onClose: () => void })
         {lk.departments.map(o => <option key={o.id} value={o.id}>{o[lang]}</option>)}</select></Field>
       <Field label={L('مقر العمل', 'Location')} req error={x('location_id')}><select className="field" value={d.location_id} onChange={v => set('location_id', Number(v.target.value))}>
         {lk.locations.map(o => <option key={o.id} value={o.id}>{o[lang]}</option>)}</select></Field>
+      {CODE_FIELDS.map(f => <CodeSelect key={f.k} list={f.list} label={L(f.ar, f.en)} value={d[`${f.k}_id`]} error={x(`${f.k}_id`)} keep={e.codes?.[f.k]}
+        onChange={(v, it) => { set(`${f.k}_id`, v); if (f.k === 'job' && it) { set('title_ar', it.ar); set('title_en', it.en) } }} />)}
       <Field label={L('المسمى الوظيفي', 'Job title')} req error={x('title_ar')}><input className="field" value={d.title_ar} onChange={v => set('title_ar', v.target.value)} /></Field>
       <Field label={L('المسمى بالإنكليزية', 'Job title (EN)')} req error={x('title_en')}><input className="field ltr text-start" value={d.title_en} onChange={v => set('title_en', v.target.value)} /></Field>
       {d.title_ar.trim() !== e.title_ar && <label className="sm:col-span-2 flex items-center gap-2 text-[13px] rounded-lg bg-sub px-3 py-2">

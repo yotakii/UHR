@@ -30,11 +30,14 @@ class HrEmployee
 
     public static function full(Employee $e, User $u): array
     {
-        $e->loadMissing([...self::WITH, 'manager', 'onboarding', 'logs', 'assets.category', 'resignations']);
+        $e->loadMissing([...self::WITH, 'manager', 'onboarding', 'logs', 'assets.category', 'resignations', 'grade', 'job', 'workerCategory', 'contractType', 'costCenter']);
         $ent = Directory::entitlement($e);
         $shift = Settings::policy('shift');
         $hm = fn (int $m) => sprintf('%02d:%02d', intdiv($m, 60), $m % 60);
+        $code = fn ($i) => $i ? ['id' => $i->id, 'code' => $i->code, 'ar' => $i->name_ar, 'en' => $i->name_en] : null;
         return array_merge(self::row($e), [
+            // رموز دليل الترميز (الدفعة 18)
+            'codes' => ['grade' => $code($e->grade), 'job' => $code($e->job), 'worker_category' => $code($e->workerCategory), 'contract_type' => $code($e->contractType), 'cost_center' => $code($e->costCenter)],
             'department_id' => $e->department_id, 'location_id' => $e->location_id, 'manager_id' => $e->manager_id,
             'title_ar' => $e->title_ar, 'title_en' => $e->title_en, 'name_ar' => $e->name, 'name_en' => $e->name_en,
             'manager' => $e->manager ? ['id' => $e->manager->id, 'ar' => $e->manager->name, 'en' => $e->manager->name_en] : null,

@@ -47,7 +47,9 @@ export interface Lookups {
 export interface NewEmployeeInput {
   name: string; name_en: string; gender: 'M' | 'F'; national_id: string; dob: string; phone: string; email: string
   department_id: number | ''; title_ar: string; title_en: string; location_id: number | ''; manager_id: number | ''; salary: number | ''; currency: string; hire_date: string
-  contract: 'fixed' | 'open' | 'project'; basic: number | ''; housing: number | ''; transport: number | ''; fuel: number | ''
+  basic: number | ''; housing: number | ''; transport: number | ''; fuel: number | ''
+  // رموز دليل الترميز (الدفعة 18)
+  job_id: number | null; grade_id: number | null; contract_type_id: number | null; worker_category_id: number | null; cost_center_id: number | null
 }
 export const useLookups = (enabled = true) => useQuery({ queryKey: ['hr', 'employee-lookups'], queryFn: () => api<Lookups>('/hr/employees/lookups'), enabled })
 export const useCreateEmployee = () => useMutation({

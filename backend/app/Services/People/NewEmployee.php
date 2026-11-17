@@ -40,6 +40,20 @@ class NewEmployee
     public static function check(array $r, bool $import, array $seen = []): array
     {
         $err = []; $v = [];
+        // رموز الدليل (الدفعة 18): المسمى من قائمة المسميات يملأ العنوانين إن تُركا فارغين
+        $codeFields = ['grade' => ['grades', 'الدرجة', 'Grade'], 'job' => ['jobs', 'المسمى الوظيفي', 'Job title'], 'worker_category' => ['worker_categories', 'فئة العامل', 'Worker category'],
+            'contract_type' => ['contract_types', 'نوع العقد', 'Contract type'], 'cost_center' => ['cost_centers', 'مركز الكلفة', 'Cost centre']];
+        foreach ($codeFields as $k => [$list, $ar, $en]) {
+            $raw = $r["{$k}_id"] ?? ($r[$k] ?? null);
+            if ($k === 'contract_type' && ($raw === null || $raw === '')) $raw = $r['contract'] ?? null;   // الحقل القديم fixed/open/project
+            $item = \App\Services\Codes\Codes::resolve($list, is_string($raw) ? trim($raw) : $raw);
+            if ($raw !== null && $raw !== '' && ! $item) $err[$k === 'contract_type' && isset($r['contract']) && ! isset($r['contract_type']) && ! isset($r['contract_type_id']) ? 'contract' : "{$k}_id"] = L::t("{$ar}: رمز غير موجود في الدليل", "{$en}: code not in the codebook");
+            $v["{$k}_id"] = $item?->id;
+            if ($k === 'job' && $item) { if (trim((string) ($r['title_ar'] ?? '')) === '') $r['title_ar'] = $item->name_ar; if (trim((string) ($r['title_en'] ?? '')) === '') $r['title_en'] = $item->name_en; }
+            if ($k === 'contract_type' && $item) $v['contract'] = $item->legacy_code ?: $item->code;
+        }
+        if (! $v['worker_category_id']) $v['worker_category_id'] = \App\Services\Codes\Codes::resolve('worker_categories', 'EMP')?->id;
+
         $txt = fn ($k) => trim((string) ($r[$k] ?? ''));
         $need = fn ($k, $ar, $en) => $txt($k) === '' ? $err[$k] = L::t("{$ar} مطلوب", "{$en} is required") : null;
 
@@ -100,8 +114,7 @@ class NewEmployee
             $v['salary'] = is_numeric($sal) ? round((float) $sal, 2) : null;
             if ($v['salary'] === null || $v['salary'] < 0) $err['salary'] = L::t('الراتب رقم مطلوب', 'Salary must be a number');
         }
-        $v['contract'] = $txt('contract') ?: null;
-        if ($v['contract'] && ! in_array($v['contract'], ['fixed', 'open', 'project'], true)) $err['contract'] = L::t('نوع العقد: fixed أو open أو project', 'Contract: fixed, open or project');
+        $v['contract'] ??= null;
         $v['currency'] = strtoupper($txt('currency') ?: 'USD');
         if (! in_array($v['currency'], self::CURRENCIES, true)) $err['currency'] = L::t('العملة: USD أو SYP أو EUR', 'Currency: USD, SYP or EUR');
 
@@ -118,12 +131,13 @@ class NewEmployee
     /** معالج إضافة موظف: ملف «قيد المباشرة» + حساب + عهد بانتظار التوقيع */
     public function create(array $input, array $assetIds, User $by): Employee
     {
+        \App\Services\Codes\Codebook::requireLive();
         [$v, $err] = self::check($input, false);
         if ($err) throw ValidationException::withMessages(array_map(fn ($m) => [$m], $err));
         return DB::transaction(function () use ($v, $assetIds, $by) {
             $assets = Asset::whereIn('id', $assetIds)->lockForUpdate()->get();
             if ($assets->count() !== count(array_unique($assetIds)) || $assets->contains(fn ($a) => $a->status !== 'available')) throw ApiException::field('asset_ids', L::t('بعض العهد المختارة لم تعد متاحة — حدّث القائمة.', 'Some selected assets are no longer available — refresh the list.'), 'asset_unavailable');
-            $e = $this->make($v, 'onboarding', Counters::employeeCode(), Employee::newNfcUid());
+            $e = $this->make($v, 'onboarding', Counters::employeeCode(self::codeCtx($v)), Employee::newNfcUid());
             Onboarding::create(['employee_id' => $e->id, 'checklist' => F19::blank(0, 13)]);
             $e->log("إنشاء ملف موظف مباشرة (معالج إضافة موظف) — {$e->code} ({$by->displayName('ar')})", "Employee file created via the wizard — {$e->code} ({$by->displayName('en')})", 'ok');
             foreach ($assets as $a) {
@@ -140,7 +154,7 @@ class NewEmployee
     /** استيراد سطر جاهز (بعد المعاينة): موظف active بلا F-19 */
     public function import(array $v, bool $invite, User $by, array &$codes): Employee
     {
-        $code = $v['code'] ?: Counters::employeeCode();
+        $code = $v['code'] ?: Counters::employeeCode(self::codeCtx($v));
         if ($v['manager_code']) $v['manager_id'] = $codes[$v['manager_code']] ?? null;
         $e = $this->make($v, 'active', $code, $v['nfc_uid']);
         $e->log("استيراد ملف الموظف من Excel — {$e->code} ({$by->displayName('ar')})", "Employee imported from Excel — {$e->code} ({$by->displayName('en')})", 'ok');
@@ -150,9 +164,17 @@ class NewEmployee
         return $e;
     }
 
+    /** سياق قالب الرقم الوظيفي: {BR} رمز الفرع و{DEPT} رمز الإدارة */
+    public static function codeCtx(array $v): array
+    {
+        return ['br' => Location::whereKey($v['location_id'] ?? 0)->value('code'), 'dept' => Department::whereKey($v['department_id'] ?? 0)->value('code')];
+    }
+
     private function make(array $v, string $status, string $code, ?string $nfc): Employee
     {
+        \App\Services\Codes\Codes::markUsed($v['grade_id'] ?? null, $v['job_id'] ?? null, $v['worker_category_id'] ?? null, $v['contract_type_id'] ?? null, $v['cost_center_id'] ?? null);
         return Employee::create([
+            'grade_id' => $v['grade_id'] ?? null, 'job_id' => $v['job_id'] ?? null, 'worker_category_id' => $v['worker_category_id'] ?? null, 'contract_type_id' => $v['contract_type_id'] ?? null, 'cost_center_id' => $v['cost_center_id'] ?? null,
             'code' => $code, 'name' => $v['name'], 'name_en' => $v['name_en'], 'gender' => $v['gender'], 'title_ar' => $v['title_ar'], 'title_en' => $v['title_en'],
             'department_id' => $v['department_id'], 'location_id' => $v['location_id'], 'email' => $v['email'], 'phone' => $v['phone'], 'hire_date' => $v['hire_date'],
             'dob' => $v['dob'], 'national_id' => $v['national_id'], 'salary' => $v['salary'], 'currency' => $v['currency'], 'contract' => $v['contract'] ?? null, 'pay' => $v['pay'] ?? null, 'bank_name' => $v['bank_name'] ?? null, 'bank_account' => $v['bank_account'] ?? null, 'status' => $status, 'nfc_uid' => $nfc, 'manager_id' => $v['manager_id'],

@@ -1,0 +1,157 @@
+[
+    {
+        "code": "SYP",
+        "ar": "ليرة سورية",
+        "en": "Syrian Pound"
+    },
+    {
+        "code": "USD",
+        "ar": "دولار أمريكي",
+        "en": "US Dollar"
+    },
+    {
+        "code": "EUR",
+        "ar": "يورو",
+        "en": "Euro"
+    },
+    {
+        "code": "GBP",
+        "ar": "جنيه إسترليني",
+        "en": "British Pound"
+    },
+    {
+        "code": "TRY",
+        "ar": "ليرة تركية",
+        "en": "Turkish Lira"
+    },
+    {
+        "code": "LBP",
+        "ar": "جنيه لبناني",
+        "en": "Lebanese Pound"
+    },
+    {
+        "code": "JOD",
+        "ar": "دينار أردني",
+        "en": "Jordanian Dinar"
+    },
+    {
+        "code": "IQD",
+        "ar": "دينار عراقي",
+        "en": "Iraqi Dinar"
+    },
+    {
+        "code": "SAR",
+        "ar": "ريال سعودي",
+        "en": "Saudi Riyal"
+    },
+    {
+        "code": "AED",
+        "ar": "درهم إماراتي",
+        "en": "United Arab Emirates Dirham"
+    },
+    {
+        "code": "QAR",
+        "ar": "ريال قطري",
+        "en": "Qatari Riyal"
+    },
+    {
+        "code": "KWD",
+        "ar": "دينار كويتي",
+        "en": "Kuwaiti Dinar"
+    },
+    {
+        "code": "BHD",
+        "ar": "دينار بحريني",
+        "en": "Bahraini Dinar"
+    },
+    {
+        "code": "OMR",
+        "ar": "ريال عماني",
+        "en": "Omani Rial"
+    },
+    {
+        "code": "EGP",
+        "ar": "جنيه مصري",
+        "en": "Egyptian Pound"
+    },
+    {
+        "code": "CNY",
+        "ar": "يوان صيني",
+        "en": "Chinese Yuan"
+    },
+    {
+        "code": "RUB",
+        "ar": "روبل روسي",
+        "en": "Russian Ruble"
+    },
+    {
+        "code": "CHF",
+        "ar": "فرنك سويسري",
+        "en": "Swiss Franc"
+    },
+    {
+        "code": "JPY",
+        "ar": "ين ياباني",
+        "en": "Japanese Yen"
+    },
+    {
+        "code": "CAD",
+        "ar": "دولار كندي",
+        "en": "Canadian Dollar"
+    },
+    {
+        "code": "AUD",
+        "ar": "دولار أسترالي",
+        "en": "Australian Dollar"
+    },
+    {
+        "code": "SEK",
+        "ar": "كرونة سويدية",
+        "en": "Swedish Krona"
+    },
+    {
+        "code": "NOK",
+        "ar": "كرونة نرويجية",
+        "en": "Norwegian Krone"
+    },
+    {
+        "code": "DKK",
+        "ar": "كرونة دنماركية",
+        "en": "Danish Krone"
+    },
+    {
+        "code": "IRR",
+        "ar": "ريال إيراني",
+        "en": "Iranian Rial"
+    },
+    {
+        "code": "MAD",
+        "ar": "درهم مغربي",
+        "en": "Moroccan Dirham"
+    },
+    {
+        "code": "DZD",
+        "ar": "دينار جزائري",
+        "en": "Algerian Dinar"
+    },
+    {
+        "code": "TND",
+        "ar": "دينار تونسي",
+        "en": "Tunisian Dinar"
+    },
+    {
+        "code": "LYD",
+        "ar": "دينار ليبي",
+        "en": "Libyan Dinar"
+    },
+    {
+        "code": "SDG",
+        "ar": "جنيه سوداني",
+        "en": "Sudanese Pound"
+    },
+    {
+        "code": "YER",
+        "ar": "ريال يمني",
+        "en": "Yemeni Rial"
+    }
+]

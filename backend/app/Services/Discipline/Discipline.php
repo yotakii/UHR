@@ -230,7 +230,8 @@ class Discipline
         $start = max($from, Settings::policy('payroll', $to)['start_date'] ?? $from);
         if ($start > $to) return [];
         $types = ViolationType::where('active', true)->whereNotNull('auto')->get()->keyBy('auto');
-        $emps = Directory::scoped($u, 'discipline')->current()->get()->keyBy('id');
+        // ترتيب ثابت، ودون ملف المستخدم نفسه (لا يفتح أحد مخالفة على نفسه)
+        $emps = Directory::scoped($u, 'discipline')->current()->when($u->employee_id, fn ($q) => $q->whereKeyNot($u->employee_id))->orderBy('code')->get()->keyBy('id');
         $days = AttendanceDay::whereIn('employee_id', $emps->keys())->whereBetween('date', [$start, $to])->get()->groupBy('employee_id');
         $leave = Attendance::onLeave($emps->keys(), $start, $to);
         $existing = DisciplineCase::whereIn('employee_id', $emps->keys())->where('source', 'attendance')->whereBetween('occurred_on', [$from, Carbon::parse($from)->endOfMonth()->toDateString()])

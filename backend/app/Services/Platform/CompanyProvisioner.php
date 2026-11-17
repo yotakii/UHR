@@ -22,6 +22,9 @@ class CompanyProvisioner
         [$company, $temp] = DB::transaction(function () use ($data, $adminEmail, $password) {
             $company = Company::create($data);
             CompanyDefaults::seed($company);
+            // شركة جديدة على المنصة: بوابة التأسيس مفعلة — لا موظفين قبل اعتماد دليل الترميز (POL-CS-01، قابلة للإيقاف من الإعدادات)
+            \App\Support\Tenant::run($company, fn () => \App\Support\Settings::put('codes', [...\App\Support\Settings::DEFAULTS['codes'], 'gate' => true,
+                'company_code' => strtoupper(substr(preg_replace('/[^A-Za-z]/', '', $company->brand_latin ?: $company->name_en ?: $company->slug), 0, 3))]));
             $link = null;
             if ($adminEmail) {
                 $admin = User::create(['email' => strtolower(trim($adminEmail)), 'password' => $password ?? Invites::unusable(), 'name' => 'مدير '.$company->name_ar, 'name_en' => $company->name_en.' admin',

@@ -61,6 +61,7 @@ class CompanyDefaults
         // عرض عمل يتجاوز ميزانية الشاغر (ملاحظتا 56 و70) ← المدير العام
         ApprovalChain::firstOrCreate(['type' => 'offer_budget'], ['levels' => [$gm]]);
         \App\Support\ViolationCatalog::seed();
+        \App\Services\Codes\CodeCatalog::seedCompany();
         ApprovalChain::firstOrCreate(['type' => 'appointment'], ['levels' => [
             $hr + ['user_id' => null],
             ['role_ar' => 'الإدارة المالية', 'role_en' => 'Finance', 'role_key' => 'finance', 'user_id' => null],
