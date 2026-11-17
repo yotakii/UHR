@@ -63,6 +63,8 @@ export function hrLink(link: string): string {
   if (k === 'rewards' || k === 'internal') return '/hr/my-rewards'
   if (k === 'reviews') return '/hr/my-reviews'
   if (k === 'codes') return '/hr/settings/codes?tab=requests'
+  if (k === 'contract-case') return id ? `/hr/contracts?case=${id}` : '/hr/contracts'
+  if (k === 'contracts' || k === 'contract-eval') return '/hr/my-contracts'
   if (k === 'development') return '/hr/development'
   if (k === 'kpis') return '/hr/tasks?tab=kpis'
   if (k === 'referrals') return '/hr/referrals?tab=red'

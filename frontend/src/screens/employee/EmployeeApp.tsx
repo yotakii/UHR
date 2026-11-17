@@ -16,6 +16,9 @@ import { MyServices } from '../requests/MyServices'
 import { MyPayslip } from '../requests/MyPayslip'
 import { CertificatePage } from '../requests/Certificate'
 import { MyDiscipline } from '../discipline/MyDiscipline'
+import { MyContracts } from '../contracts/MyContracts'
+import { ContractPrint } from '../contracts/ContractPrint'
+import { useMyContracts } from '../../lib/contracts'
 import { useMyDiscipline } from '../../lib/discipline'
 import { MyResignation } from '../exit/MyResignation'
 import { useMyExit } from '../../lib/exit'
@@ -31,7 +34,7 @@ import { MyAccount } from '../account/MyAccount'
 import { Work } from '../work/Work'
 
 /** روابط إشعارات الموظف ← مسارات بوابته */
-export const employeeLink = (link: string) => link.startsWith('policy:') ? `/me/policies?doc=${link.slice(7)}` : link.startsWith('space:') ? `/me/space/p/${link.slice(6)}` : ({ space: '/me/space',  docs: '/me/documents', requests: '/me/requests', approvals: '/me/approvals', attendance: '/me/attendance', payslip: '/me/payslip', services: '/me/services', discipline: '/me/discipline', complaints: '/me/discipline', resignation: '/me/resignation', handover: '/me/resignation', profile: '/me/profile', rewards: '/me/rewards', internal: '/me/rewards', announcements: '/me/news', holidays: '/me/holidays', reviews: '/me/reviews', development: '/me/development', tasks: '/me/tasks', kpis: '/me/tasks?tab=kpis' } as Record<string, string>)[link] ?? null
+export const employeeLink = (link: string) => link.startsWith('policy:') ? `/me/policies?doc=${link.slice(7)}` : link.startsWith('space:') ? `/me/space/p/${link.slice(6)}` : ({ space: '/me/space',  docs: '/me/documents', requests: '/me/requests', approvals: '/me/approvals', attendance: '/me/attendance', payslip: '/me/payslip', services: '/me/services', discipline: '/me/discipline', complaints: '/me/discipline', resignation: '/me/resignation', handover: '/me/resignation', profile: '/me/profile', rewards: '/me/rewards', internal: '/me/rewards', announcements: '/me/news', holidays: '/me/holidays', reviews: '/me/reviews', development: '/me/development', contracts: '/me/contracts', 'contract-eval': '/me/contracts', tasks: '/me/tasks', kpis: '/me/tasks?tab=kpis' } as Record<string, string>)[link] ?? null
 
 /**
  * بوابة الموظف M14 (PortalShell في الديمو): تبويبات علوية على الحاسب وشريط سفلي بخمسة أزرار على الجوال،
@@ -45,6 +48,8 @@ export function EmployeeApp({ user }: { user: SessionUser }) {
   const issues = useMyAttendance().data?.issues.filter(i => i.open && !i.justification) ?? []
   const approver = !!inbox && (inbox.team.length > 0 || inbox.data.length > 0)
   const disc = useMyDiscipline().data
+  const mc = useMyContracts().data
+  const contractTodo = mc ? mc.contracts.filter(c => c.signatures.some(x => x.role === 'employee' && x.can)).length + mc.evaluations.filter(c => c.can?.sign).length + mc.team.length : 0
   const toSign = disc?.data.filter(c => c.status === 'decided' && !c.acknowledged_at) ?? []
   const toAnswer = disc?.data.filter(c => (c.status === 'open' || c.status === 'investigated') && !c.has_defense) ?? []
   const ex = useMyExit().data
@@ -60,6 +65,7 @@ export function EmployeeApp({ user }: { user: SessionUser }) {
     { to: '/me/rewards', icon: <Trophy size={17} />, label: L('المكافآت', 'Rewards') },
     { to: '/me/space', icon: <MessagesSquare size={17} />, label: L('الساحة', 'Space') }]
   const more: PortalTab[] = [{ to: '/me/services', icon: <ClipboardList size={17} />, label: L('خدماتي', 'My services') },
+    { to: '/me/contracts', icon: <FileSignature size={17} />, label: L('عقدي', 'My contract'), badge: contractTodo || undefined },
     { to: '/me/reviews', icon: <ClipboardCheck size={17} />, label: L('تقييماتي', 'My reviews'), badge: reviews.length || undefined },
     { to: '/me/tasks', icon: <ListChecks size={17} />, label: L('مهامي ومؤشراتي', 'My tasks & KPIs') },
     { to: '/me/development', icon: <Sprout size={17} />, label: L('خطة تطويري', 'My development') },
@@ -72,6 +78,7 @@ export function EmployeeApp({ user }: { user: SessionUser }) {
   const sec = route.parts[0] === 'me' ? route.parts[1] : undefined
   const Next = lang === 'ar' ? ChevronLeft : ChevronRight
   const todoList = <>
+    {contractTodo > 0 && <Todo to="/me/contracts" text={L(`${contractTodo} إجراء على العقود بانتظارك (توقيع أو تقييم)`, `${contractTodo} contract action(s) waiting for you (signature or evaluation)`)} icon={<Next size={16} />} />}
     {reviews.length > 0 && <Todo to="/me/reviews" text={L(`${reviews.length} نموذج تقييم بانتظارك`, `${reviews.length} review form(s) waiting for you`)} icon={<Next size={16} />} />}
     {inbox && inbox.data.length > 0 && <Todo to="/me/approvals" text={L(`${inbox.data.length} طلب بانتظار اعتمادك`, `${inbox.data.length} request(s) awaiting your approval`)} icon={<Next size={16} />} />}
     {toAnswer.map(c => <Todo key={'a' + c.id} to="/me/discipline" text={L(`إبلاغ بمخالفة ${c.ref_no} — اكتب أقوالك قبل ${c.deadline}`, `Violation notice ${c.ref_no} — reply before ${c.deadline}`)} icon={<Next size={16} />} />)}
@@ -79,7 +86,7 @@ export function EmployeeApp({ user }: { user: SessionUser }) {
     {toSign.map(c => <Todo key={'s' + c.id} to="/me/discipline" text={L(`قرار الحالة ${c.ref_no} — وقّع بالاستلام`, `Decision on ${c.ref_no} — sign the acknowledgement`)} icon={<Next size={16} />} />)}
     {issues.map(i => <Todo key={i.date} to="/me/attendance" text={L(`تبرير ${i.status === 'absent' ? 'غياب' : i.status === 'incomplete' ? 'يوم ناقص' : 'تأخير'} يوم ${i.date}`, `Justify ${i.status === 'absent' ? 'absence' : i.status === 'incomplete' ? 'incomplete day' : 'lateness'} on ${i.date}`)} icon={<Next size={16} />} />)}
   </>
-  const hasTodos = reviews.length + (inbox?.data.length ?? 0) + toAnswer.length + toReceive.length + toSign.length + issues.length > 0
+  const hasTodos = contractTodo + reviews.length + (inbox?.data.length ?? 0) + toAnswer.length + toReceive.length + toSign.length + issues.length > 0
   const todos = hasTodos ? <Panel title={L('بانتظارك', 'Waiting for you')} pad={false}><ul className="divide-y divide-line-2">{todoList}</ul></Panel> : null
   const page = (): ReactNode => {
     switch (sec) {
@@ -89,6 +96,7 @@ export function EmployeeApp({ user }: { user: SessionUser }) {
       case 'approvals': return approver ? <TeamApprovals /> : <PortalHome toSign={n} todos={todos} />
       case 'payslip': return <MyPayslip />
       case 'discipline': return <MyDiscipline />
+      case 'contracts': return route.parts[2] === 'print' && route.parts[3] && /^\d+$/.test(route.parts[4] ?? '') ? <ContractPrint me kind={route.parts[3]} id={Number(route.parts[4])} /> : <MyContracts base="/me/contracts" />
       case 'rewards': return <MyRewards />
       case 'reviews': return <MyReviews />
       case 'tasks': return <Work />

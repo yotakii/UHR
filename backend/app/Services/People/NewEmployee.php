@@ -139,6 +139,7 @@ class NewEmployee
             if ($assets->count() !== count(array_unique($assetIds)) || $assets->contains(fn ($a) => $a->status !== 'available')) throw ApiException::field('asset_ids', L::t('بعض العهد المختارة لم تعد متاحة — حدّث القائمة.', 'Some selected assets are no longer available — refresh the list.'), 'asset_unavailable');
             $e = $this->make($v, 'onboarding', Counters::employeeCode(self::codeCtx($v)), Employee::newNfcUid());
             Onboarding::create(['employee_id' => $e->id, 'checklist' => F19::blank(0, 13)]);
+            \App\Services\Contracts\Contracts::forNewEmployee($e, $by);   // عقد بانتظار التواقيع (الجزء D)
             $e->log("إنشاء ملف موظف مباشرة (معالج إضافة موظف) — {$e->code} ({$by->displayName('ar')})", "Employee file created via the wizard — {$e->code} ({$by->displayName('en')})", 'ok');
             foreach ($assets as $a) {
                 $a->update(['employee_id' => $e->id, 'status' => 'pending_ack', 'assigned_at' => now()]);
@@ -159,6 +160,7 @@ class NewEmployee
         $e = $this->make($v, 'active', $code, $v['nfc_uid']);
         $e->log("استيراد ملف الموظف من Excel — {$e->code} ({$by->displayName('ar')})", "Employee imported from Excel — {$e->code} ({$by->displayName('en')})", 'ok');
         $this->account($e, $invite);
+        \App\Services\Contracts\Contracts::forNewEmployee($e, $by, true);
         $codes[$code] = $e->id;
         if (preg_match('/^'.preg_quote(Settings::prefix('employee'), '/').'-(\d+)$/', $code, $m)) Counters::atLeast('employee', (int) $m[1]);
         return $e;

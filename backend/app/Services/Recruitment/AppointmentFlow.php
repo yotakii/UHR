@@ -94,10 +94,12 @@ class AppointmentFlow
             'title_ar' => $o?->title ?: $job->title_ar, 'title_en' => $job->title_en, 'department_id' => $job->department_id, 'location_id' => $job->location_id,
             'email' => $c->email, 'phone' => $c->mobile, 'hire_date' => $o?->start_date ?? now()->toDateString(), 'dob' => $c->dob, 'national_id' => $c->national_id,
             'salary' => $o?->total() ?? 0, 'currency' => $o?->currency ?? 'USD', 'contract' => $o?->contract, 'pay' => $o ? ['basic' => $o->basic, 'housing' => $o->housing, 'transport' => $o->transport, 'fuel' => $o->fuel] : null, 'status' => 'onboarding', 'nfc_uid' => Employee::newNfcUid(), 'manager_id' => $mgr, 'candidate_id' => $c->id,
+            'contract_type_id' => \App\Services\Codes\Codes::resolve('contract_types', $o?->contract)?->id, 'worker_category_id' => \App\Services\Codes\Codes::resolve('worker_categories', 'EMP')?->id,
         ]);
         foreach ($c->logs()->orderBy('at')->get() as $l) $emp->log($l->text_ar, $l->text_en, $l->kind, $l->form, $l->at);
         $emp->log("صدور قرار التعيين {$ap->decision_no} ومنح الرقم الوظيفي {$emp->code}", "Decision {$ap->decision_no} issued, employee ID {$emp->code}", 'ok', 'F-31');
         Onboarding::create(['employee_id' => $emp->id, 'checklist' => F19::blank(0, 8)]);
+        if ($by = auth()->user()) \App\Services\Contracts\Contracts::forNewEmployee($emp, $by);   // عقد العمل بانتظار التواقيع (الجزء D)
         $ap->update(['employee_id' => $emp->id]);
         $c->update(['stage' => 'hired', 'stage_at' => now()->toDateString()]);
         $c->log("تم التعيين — الرقم الوظيفي {$emp->code}", "Hired — employee ID {$emp->code}", 'ok');

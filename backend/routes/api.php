@@ -718,3 +718,34 @@ Route::middleware(['auth', 'fresh', 'portal:hr', 'perm:codes,view'])->prefix('cs
     Route::get('/generate/{tpl}', 'generate');
     Route::put('/settings', 'saveSettings')->middleware('perm:settings,edit');
 });
+
+// الدفعة 19 — العقود والتجديد وتقييم فترة التجربة (SRS الأنظمة الأساسية، الجزء D)
+Route::middleware(['auth', 'fresh', 'portal:hr', 'perm:contracts,view'])->prefix('hr/contracts')->controller(\App\Http\Controllers\Api\Hr\ContractController::class)->group(function () {
+    Route::get('/', 'index');
+    Route::get('/cases', 'cases');
+    Route::get('/cases/{id}', 'showCase')->whereNumber('id');
+    Route::post('/cases', 'openCase')->middleware('perm:contracts,create');
+    Route::post('/cases/bulk', 'bulk')->middleware('perm:contracts,decide');
+    Route::post('/cases/{id}/evaluate', 'evaluate');
+    Route::post('/cases/{id}/review', 'review')->middleware('perm:contracts,edit');
+    Route::post('/cases/{id}/decide', 'decide')->middleware('perm:contracts,decide');
+    Route::get('/list', 'contracts');
+    Route::get('/reports', 'reports');
+    Route::get('/settings', 'settings');
+    Route::put('/settings', 'saveSettings')->middleware('perm:settings,edit');
+    Route::get('/print/{kind}/{id}', 'print')->whereIn('kind', ['contract', 'evaluation', 'letter', 'annex'])->middleware('perm:contracts,print');
+    Route::post('/', 'store')->middleware('perm:contracts,create');
+    Route::get('/{id}', 'show')->whereNumber('id');
+    Route::post('/{id}/sign', 'sign');
+    Route::post('/{id}/upload', 'upload')->middleware('perm:contracts,edit');
+    Route::post('/{id}/copies', 'copy')->middleware('perm:contracts,edit');
+    Route::post('/{id}/cancel', 'cancel')->middleware('perm:contracts,edit');
+    Route::post('/{id}/annexes', 'annex')->middleware('perm:contracts,edit');
+});
+Route::middleware(['auth', 'fresh'])->prefix('me/contracts')->controller(\App\Http\Controllers\Api\Employee\MyContractsController::class)->group(function () {
+    Route::get('/', 'index');
+    Route::post('/{id}/sign', 'sign');
+    Route::post('/cases/{id}/evaluate', 'evaluate');
+    Route::post('/cases/{id}/sign', 'signEval');
+    Route::get('/print/{kind}/{id}', 'print')->whereIn('kind', ['contract', 'evaluation', 'letter']);
+});

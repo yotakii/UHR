@@ -33,6 +33,7 @@ export function Period({ r }: { r: ReqRow }) {
   if (r.kind === 'internal') return <span>{r.job ? <b>{bi(r.job.title, lang)}</b> : null} <span className="ltr inline-block num text-[12px] text-ink-3">{r.job?.code}</span><span className="block text-[12px] text-ink-3 num">{fmtDate(r.created_at, lang)}</span></span>
   if (r.kind === 'salary') return <span>{r.scope === 'all' ? L('رواتب كل الشركة', 'Whole company salaries') : <>{L('رواتب إدارة', 'Department salaries')}: <b>{r.department ? bi(r.department, lang) : ''}</b></>}
     <span className="block text-[12px] text-ink-3 num">{L(`لمدة ${r.hours} ساعات بعد الموافقة`, `for ${r.hours} hours after approval`)}</span></span>
+  if (r.kind === 'contract_exception') return <span className="num">{L('الاستحقاق', 'Due')}: {fmtDate(r.from, lang)}</span>
   if (r.kind === 'penalty') return <span className="num">{L('تاريخ المخالفة', 'Violation date')}: {fmtDate(r.from, lang)}</span>
   if (r.kind === 'overtime') return <span className="num">{fmtDate(r.from, lang)} — {minsLabel(r.minutes ?? 0, lang)}</span>
   if (r.kind === 'justify') return <span className="num">{fmtDate(r.ref_date ?? r.from, lang)}{r.minutes ? <> — {minsLabel(r.minutes, lang)}</> : <> — {r.warnings.issue === 'incomplete' ? L('بلا خروج', 'no out') : L('غياب', 'absent')}</>}</span>

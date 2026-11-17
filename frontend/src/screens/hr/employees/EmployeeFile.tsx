@@ -63,6 +63,7 @@ export function EmployeeFile({ id }: { id: number }) {
         <Panel title={L('البيانات الوظيفية', 'Employment')}>
           <KV k={L('تاريخ المباشرة', 'Start date')} v={fmtDate(e.hire_date, lang)} /><KV k={L('مقر العمل', 'Location')} v={bi(e.city, lang)} />
           <KV k={L('الدوام', 'Shift')} v={<span className="num ltr inline-block">{e.shift}</span>} />
+          {e.contract && <KV k={L('العقد', 'Contract')} v={<a className="text-brand" href={`/hr/contracts?contract=${e.contract.id}`}>{e.contract.type ? bi(e.contract.type, lang) : e.contract.ref_no} · <span className="num">{e.contract.ends_on ? L(`حتى ${fmtDate(e.contract.ends_on, lang)}`, `until ${fmtDate(e.contract.ends_on, lang)}`) : L('غير محدد المدة', 'open-ended')}</span></a>} />}
           {e.codes && ([['job', L('رمز المسمى', 'Job code')], ['grade', L('الدرجة', 'Grade')], ['contract_type', L('نوع العقد', 'Contract type')], ['worker_category', L('فئة العامل', 'Worker category')], ['cost_center', L('مركز الكلفة', 'Cost centre')]] as const)
             .filter(([k]) => e.codes![k]).map(([k, label]) => <KV key={k} k={label} v={<span><span className="ltr inline-block num">{e.codes![k]!.code}</span> · {bi(e.codes![k]!, lang)}</span>} />)}
           {e.can.salary && <KV k={L('الراتب الشامل', 'Total pay')} v={<Masked others value={e.salary}><span className="num font-semibold">{e.salary && money(e.salary.amount, e.salary.currency, lang)}</span>

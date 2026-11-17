@@ -181,6 +181,9 @@ class TestDataSeeder extends Seeder
             // دليل الترميز (الدفعة 18): المسميات من عناوين الموظفين، ودليل معتمد 1.0 — التعديلات بعده بطلبات تغيير
             \App\Services\Codes\CodeCatalog::seedCompany();
             \App\Services\Codes\CodeCatalog::backfillEmployees();
+            // سجل العقود (الدفعة 19): عقد نافذ لكل موظف من تاريخ تعيينه، ثم فتح حالات التجديد والتجربة المستحقة
+            \App\Services\Contracts\Contracts::backfill();
+            app(\App\Services\Contracts\ContractCases::class)->sweep();
             if (! \App\Models\CodebookVersion::exists()) \App\Services\Codes\Codebook::snapshotVersion(\App\Models\User::where('email', 'admin@uniqueness.sy')->first(), 'اعتماد دليل الترميز', 'Codebook approved', true);
     }
 

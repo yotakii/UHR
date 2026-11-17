@@ -60,6 +60,8 @@ class CompanyDefaults
         ApprovalChain::firstOrCreate(['type' => 'salary_access'], ['levels' => [$gm]]);
         // عرض عمل يتجاوز ميزانية الشاغر (ملاحظتا 56 و70) ← المدير العام
         ApprovalChain::firstOrCreate(['type' => 'offer_budget'], ['levels' => [$gm]]);
+        // قرار عقد مخالف للسياسة (الجزء D، POL-CR-06/07) ← الرئيس التنفيذي
+        ApprovalChain::firstOrCreate(['type' => 'contract_exception'], ['levels' => [['role_ar' => 'الرئيس التنفيذي', 'role_en' => 'CEO', 'role_key' => 'ceo']]]);
         \App\Support\ViolationCatalog::seed();
         \App\Services\Codes\CodeCatalog::seedCompany();
         ApprovalChain::firstOrCreate(['type' => 'appointment'], ['levels' => [

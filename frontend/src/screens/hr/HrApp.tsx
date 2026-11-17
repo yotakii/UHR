@@ -60,6 +60,10 @@ import { MyRewards } from '../rewards/MyRewards'
 import { AnnouncementsHR, MyAnnouncements } from '../rewards/Announcements'
 import { CompanySettings } from './admin/CompanySettings'
 import { Codebook } from './admin/Codebook'
+import { ContractsHR } from '../contracts/Contracts'
+import { MyContracts } from '../contracts/MyContracts'
+import { ContractPrint } from '../contracts/ContractPrint'
+import { ContractSettings } from './ContractSettings'
 import { CodebookPrint } from './admin/CodebookPrint'
 import { Departments } from './admin/Departments'
 import { Chains } from './admin/Chains'
@@ -111,6 +115,8 @@ export function HrApp({ user }: { user: SessionUser }) {
     { item: { to: '/hr/leaves', icon: <CalendarCheck size={18} />, label: L('الإجازات والتبريرات', 'Leave & justifications'), count: count('leave', 'service'), group: g2 }, module: 'leaves',
       view: () => route.parts[2] === 'cert' && /^\d+$/.test(route.parts[3] ?? '') ? <CertificatePage id={Number(route.parts[3])} hr back="/hr/leaves?tab=services" /> : <Leaves /> },
     { item: { to: '/hr/payroll', icon: <Wallet size={18} />, label: L('الكشف الشهري', 'Monthly sheet'), group: g2 }, module: 'payroll', view: () => <Payroll /> },
+    { item: { to: '/hr/contracts', icon: <FileSignature size={18} />, label: L('العقود والتجديد', 'Contracts & renewals'), group: g2 }, module: 'contracts',
+      view: () => route.parts[2] === 'print' && route.parts[3] && /^\d+$/.test(route.parts[4] ?? '') ? <ContractPrint me={false} kind={route.parts[3]} id={Number(route.parts[4])} /> : <ContractsHR /> },
     { item: { to: '/hr/custody', icon: <Package size={18} />, label: L('العهد', 'Custody'), group: g2 }, module: 'assets', view: () => <Custody /> },
     { item: { to: '/hr/discipline', icon: <Gavel size={18} />, label: L('المخالفات والجزاءات', 'Violations & penalties'), count: count('discipline'), group: g2 }, module: 'discipline', view: () => <Discipline /> },
     { item: { to: '/hr/offboarding', icon: <DoorOpen size={18} />, label: L('الاستقالات وإنهاء الخدمة', 'Resignations & exits'), count: count('resignation'), group: g2 }, module: 'employees', view: () => <Offboarding /> },
@@ -122,6 +128,8 @@ export function HrApp({ user }: { user: SessionUser }) {
     { item: { to: '/hr/my-services', icon: <ClipboardList size={17} />, label: L('خدماتي', 'My services'), group: g2 }, module: u => !!u.employee,
       view: () => route.parts[2] && /^\d+$/.test(route.parts[2]) ? <CertificatePage id={Number(route.parts[2])} hr={false} back="/hr/my-services" /> : <MyServices base="/hr/my-services" /> },
     { item: { to: '/hr/my-payslip', icon: <Receipt size={17} />, label: L('كشفي الشهري', 'My monthly sheet'), group: g2 }, module: u => !!u.employee, view: () => <MyPayslip /> },
+    { item: { to: '/hr/my-contracts', icon: <FileSignature size={17} />, label: L('عقدي', 'My contract'), group: g2 }, module: u => !!u.employee,
+      view: () => route.parts[2] === 'print' && route.parts[3] && /^\d+$/.test(route.parts[4] ?? '') ? <ContractPrint me kind={route.parts[3]} id={Number(route.parts[4])} /> : <MyContracts base="/hr/my-contracts" /> },
     { item: { to: '/hr/my-discipline', icon: <ShieldAlert size={17} />, label: L('إنذاراتي وشكاواي', 'Warnings & complaints'), group: g2 }, module: u => !!u.employee, view: () => <MyDiscipline /> },
     { item: { to: '/hr/my-resignation', icon: <LogOut size={17} />, label: L('الاستقالة', 'Resignation'), group: g2 }, module: u => !!u.employee, view: () => <MyResignation base="/hr/my-resignation" /> },
     { item: { to: '/hr/my-reviews', icon: <ClipboardCheck size={17} />, label: L('تقييماتي', 'My reviews'), group: g2 }, module: u => !!u.employee, view: () => <MyReviews /> },
@@ -157,6 +165,7 @@ export function HrApp({ user }: { user: SessionUser }) {
     { item: { to: '/hr/settings/backups', icon: <DatabaseBackup size={18} />, label: L('النسخ الاحتياطي', 'Backups'), group: g4, hidden: true }, section: 'system', module: 'settings', view: () => <Backups /> },
     { item: { to: '/hr/settings/codes', icon: <Binary size={18} />, label: L('دليل الترميز', 'Codebook'), group: g4, hidden: true }, section: 'org', module: 'codes',
       view: () => route.parts[3] === 'print' ? <CodebookPrint /> : <Codebook /> },
+    { item: { to: '/hr/settings/contracts', icon: <FileSignature size={18} />, label: L('إعدادات العقود والتجديد', 'Contracts settings'), group: g4, hidden: true }, section: 'rules', module: u => can(u, 'settings', 'edit') && can(u, 'contracts'), view: () => <ContractSettings /> },
     { item: { to: '/hr/settings/forms', icon: <FileText size={18} />, label: L('النماذج وقالب الطباعة', 'Forms & print template'), group: g4, hidden: true }, section: 'system', module: 'settings', view: () => <Forms /> },
   ]
   const allowed = pages.filter(p => typeof p.module === 'function' ? p.module(user) : can(user, p.module))

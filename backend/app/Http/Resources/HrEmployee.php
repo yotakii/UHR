@@ -36,6 +36,10 @@ class HrEmployee
         $hm = fn (int $m) => sprintf('%02d:%02d', intdiv($m, 60), $m % 60);
         $code = fn ($i) => $i ? ['id' => $i->id, 'code' => $i->code, 'ar' => $i->name_ar, 'en' => $i->name_en] : null;
         return array_merge(self::row($e), [
+            // العقد النافذ (الدفعة 19)
+            'contract' => ($k = \App\Models\Contract::with('type')->where('employee_id', $e->id)->whereIn('status', ['active', 'signed', 'pending_signatures', 'expired_no_action'])->orderByDesc('starts_on')->first())
+                ? ['id' => $k->id, 'ref_no' => $k->ref_no, 'status' => $k->status, 'starts_on' => $k->starts_on->toDateString(), 'ends_on' => $k->ends_on?->toDateString(), 'probation_ends_on' => $k->probation_ends_on?->toDateString(),
+                    'type' => $k->type ? ['ar' => $k->type->name_ar, 'en' => $k->type->name_en] : null] : null,
             // رموز دليل الترميز (الدفعة 18)
             'codes' => ['grade' => $code($e->grade), 'job' => $code($e->job), 'worker_category' => $code($e->workerCategory), 'contract_type' => $code($e->contractType), 'cost_center' => $code($e->costCenter)],
             'department_id' => $e->department_id, 'location_id' => $e->location_id, 'manager_id' => $e->manager_id,

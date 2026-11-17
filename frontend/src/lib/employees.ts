@@ -29,6 +29,7 @@ export interface EmpFile extends EmpRow {
   department_id: number; location_id: number; manager_id: number | null; title_ar: string; title_en: string; name_ar: string; name_en: string
   manager: (Bi & { id: number }) | null; national_id: string | null; bank_name?: string | null; bank_account?: string | null; dob: string | null; phone: string | null; nfc_uid: string | null
   end_date: string | null; shift: string; tenure_days: number
+  contract?: { id: number; ref_no: string; status: string; starts_on: string; ends_on: string | null; probation_ends_on: string | null; type: Bi | null } | null
   codes?: Record<'grade' | 'job' | 'worker_category' | 'contract_type' | 'cost_center', { id: number; code: string; ar: string; en: string } | null>
   leave: { entitlement: number; used: number; remaining: number; sick: number }
   onboarding: boolean; resigned: boolean

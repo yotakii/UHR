@@ -57,7 +57,7 @@ class EmployeeDocs
     }
 
     /** أنواع ثابتة يضيفها النظام نفسه (لا تُحذف من الإعدادات) */
-    public const SYSTEM_TYPES = ['onboarding' => ['وثيقة مباشرة', 'Onboarding document'], 'linked' => ['ملف من النظام', 'File from the system']];
+    public const SYSTEM_TYPES = ['onboarding' => ['وثيقة مباشرة', 'Onboarding document'], 'linked' => ['ملف من النظام', 'File from the system'], 'contract' => ['عقد عمل موقّع', 'Signed employment contract']];
 
     private function make(Employee $e, int $fileId, array $d, User $by, string $source): EmployeeDocument
     {

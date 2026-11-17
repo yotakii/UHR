@@ -138,3 +138,13 @@ Artisan::command('codes:apply', function () {
     $this->info("applied {$n}");
 })->purpose('Apply approved codebook changes whose effective date has come');
 Schedule::command('codes:apply')->dailyAt('00:20');
+
+// العقود: تفعيل الموقّعة، الملاحق، فتح حالات التجديد والتجربة، التذكير والتصعيد، المنتهية دون إجراء (الجزء D)
+Artisan::command('contracts:sweep', function () {
+    $out = [];
+    foreach (\App\Models\Company::pluck('id') as $id) \App\Support\Tenant::run($id, function () use (&$out) {
+        foreach (app(\App\Services\Contracts\Contracts::class)->sweep() as $k => $v) $out[$k] = ($out[$k] ?? 0) + $v;
+    });
+    $this->info(json_encode($out));
+})->purpose('Daily contracts sweep');
+Schedule::command('contracts:sweep')->dailyAt('06:40');

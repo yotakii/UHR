@@ -181,6 +181,31 @@ class Settings
         // دليل الترميز (الدفعة 18): بوابة التأسيس، طلبات التغيير بعد الاعتماد، من يعتمد، قوالب الرموز المركّبة
         'codes' => ['gate' => false, 'change_requests' => true, 'self_approve' => false, 'admin_approves' => true, 'approver_roles' => ['ceo', 'admin'],
             'restructure_role' => 'ceo', 'unused_months' => 12, 'company_code' => '', 'templates' => []],
+        // العقود والتجديد وتقييم التجربة (الدفعة 19 — الجزء D): كل المهل والعتبات والقوالب قابلة للتعديل
+        'contracts' => [
+            'renewal_open_days' => 30, 'probation_open_days' => 15, 'manager_days' => 7, 'hr_days' => 7, 'radar_days' => [90, 60, 30, 15],
+            'default_months' => 12, 'probation_months' => 3, 'open_after_years' => 5, 'min_rating_renew' => 'good',
+            'fixed_type' => 'FT-D', 'open_type' => 'FT-U', 'allow_extension' => true, 'extension_max_months' => 3,
+            'exit_cause_not_renewed' => 'contract_end', 'exit_cause_probation' => 'probation', 'fail_last_day' => 'decision',
+            'signers' => ['employee', 'hr_director', 'executive'], 'copies' => ['employee', 'file', 'insurance'], 'sign_mode' => 'both',
+            'review_checks' => [['key' => 'complete', 'ar' => 'اكتمال بنود التقييم', 'en' => 'Evaluation complete'], ['key' => 'signatures', 'ar' => 'اكتمال التواقيع', 'en' => 'Signatures complete'],
+                ['key' => 'policy', 'ar' => 'مطابقة التوصية للسياسة', 'en' => 'Recommendation matches the policy']],
+            'scale' => [['key' => 'excellent', 'ar' => 'ممتاز', 'en' => 'Excellent', 'score' => 5], ['key' => 'very_good', 'ar' => 'جيد جداً', 'en' => 'Very good', 'score' => 4],
+                ['key' => 'good', 'ar' => 'جيد', 'en' => 'Good', 'score' => 3], ['key' => 'average', 'ar' => 'متوسط', 'en' => 'Average', 'score' => 2],
+                ['key' => 'weak', 'ar' => 'ضعيف', 'en' => 'Weak', 'score' => 1], ['key' => 'poor', 'ar' => 'رديء', 'en' => 'Poor', 'score' => 0]],
+            'justify_other_than' => 'good',
+            'items' => [['key' => 'i01', 'ar' => 'استيعاب قواعد وأساليب العمل', 'en' => 'Grasp of work rules and methods'], ['key' => 'i02', 'ar' => 'الالتزام بالسياسات والإجراءات', 'en' => 'Commitment to policies and procedures'], ['key' => 'i03', 'ar' => 'إنجاز العمل بالمستوى المطلوب', 'en' => 'Work done to the required standard'], ['key' => 'i04', 'ar' => 'إنجاز العمل في الموعد', 'en' => 'Work done on time'], ['key' => 'i05', 'ar' => 'الاجتهاد والتجاوب مع ضغط العمل', 'en' => 'Diligence under pressure'], ['key' => 'i06', 'ar' => 'الترتيب والنظام', 'en' => 'Order and organisation'], ['key' => 'i07', 'ar' => 'المبادرة والابتكار', 'en' => 'Initiative and innovation'], ['key' => 'i08', 'ar' => 'العمل دون مراقبة', 'en' => 'Working without supervision'], ['key' => 'i09', 'ar' => 'الاهتمام بتطوير العمل', 'en' => 'Interest in improving the work'], ['key' => 'i10', 'ar' => 'تقبل التوجيهات والانتقادات', 'en' => 'Accepting guidance and criticism'], ['key' => 'i11', 'ar' => 'التعاون ومساعدة الزملاء', 'en' => 'Cooperation with colleagues'], ['key' => 'i12', 'ar' => 'تحمل مسؤولية أكبر', 'en' => 'Taking on more responsibility'], ['key' => 'i13', 'ar' => 'اتخاذ القرارات', 'en' => 'Decision making'], ['key' => 'i14', 'ar' => 'المرونة والتكيف', 'en' => 'Flexibility and adaptation'], ['key' => 'i15', 'ar' => 'الإخلاص والمحافظة على مصالح العمل', 'en' => 'Loyalty to the work'], ['key' => 'i16', 'ar' => 'تحديد الأولويات', 'en' => 'Setting priorities'], ['key' => 'i17', 'ar' => 'المحافظة على السرية', 'en' => 'Confidentiality'], ['key' => 'i18', 'ar' => 'احترام الغير', 'en' => 'Respect for others'], ['key' => 'i19', 'ar' => 'المظهر اللائق', 'en' => 'Appropriate appearance'], ['key' => 'i20', 'ar' => 'السلوك الشخصي', 'en' => 'Personal conduct']],
+            'bands' => [['from' => 90, 'grade' => 'excellent', 'decision' => 'confirm'], ['from' => 75, 'grade' => 'very_good', 'decision' => 'confirm'], ['from' => 55, 'grade' => 'good', 'decision' => 'confirm'],
+                ['from' => 40, 'grade' => 'average', 'decision' => 'decide'], ['from' => 25, 'grade' => 'weak', 'decision' => 'terminate'], ['from' => 0, 'grade' => 'poor', 'decision' => 'terminate']],
+            'template_ar' => "عقد عمل :type\n\nبين :company (الطرف الأول) و:name، الرقم الوطني :national_id (الطرف الثاني).\n\n1. يعمل الطرف الثاني بوظيفة :title في :department — :branch.\n2. مدة العقد :duration تبدأ في :start:end_text.\n3. فترة التجربة :probation.\n4. يلتزم الطرف الثاني بالأنظمة واللوائح الداخلية للشركة ومدونة السلوك المهني.\n5. يُحرَّر هذا العقد على ثلاث نسخ: للموظف، ولملفه، وللتأمينات الاجتماعية.",
+            'template_en' => "Employment contract :type\n\nBetween :company (first party) and :name, national ID :national_id (second party).\n\n1. The second party works as :title in :department — :branch.\n2. The contract runs :duration from :start:end_text.\n3. Probation: :probation.\n4. The second party follows the company rules and the code of conduct.\n5. This contract is made in three copies: the employee, the file and social insurance.",
+            'letters' => [
+                'renewed' => ['ar' => 'نحيطكم علماً بأنه تقرر تجديد عقد عملكم :type اعتباراً من :start:end_text. نتمنى لكم دوام التوفيق.', 'en' => 'We are pleased to inform you that your contract has been renewed (:type) from :start:end_text.'],
+                'not_renewed' => ['ar' => 'نحيطكم علماً بأنه تقرر عدم تجديد عقد عملكم الذي ينتهي في :end، وستتواصل معكم الموارد البشرية لاستكمال إجراءات إنهاء الخدمة.', 'en' => 'We inform you that your contract ending on :end will not be renewed. Human Resources will contact you to complete the exit procedure.'],
+                'confirmed' => ['ar' => 'يسرنا إبلاغكم باجتيازكم فترة التجربة بنجاح وتثبيتكم في وظيفة :title اعتباراً من :date.', 'en' => 'We are pleased to inform you that you passed probation and are confirmed as :title from :date.'],
+                'terminated' => ['ar' => 'نحيطكم علماً بأنه تقرر إنهاء عقد عملكم خلال فترة التجربة بناءً على نتيجة التقييم، ويكون آخر يوم عمل :last_day.', 'en' => 'We inform you that your contract is ended during probation based on the evaluation result. Your last working day is :last_day.'],
+            ],
+        ],
     ];
 
     /** إعدادات المنصة (بلا شركة): نصوص بوابة فرص العمل العامة — SRS §10.15 */

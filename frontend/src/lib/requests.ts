@@ -9,12 +9,12 @@ export type ReqStatus = 'pending_manager' | 'pending_hr' | 'pending_exec' | 'app
 export interface Step { id: number; level: number; role: Bi; status: 'waiting' | 'pending' | 'approved' | 'rejected' | 'skipped' | 'cancelled'; by: Bi | null; owner: Bi | null; delegate_for: Bi | null; note: string | null; at: string | null; overdue: boolean }
 export interface Person { id: number; code: string; name: Bi; title: Bi }
 export interface ReqRow {
-  kind: 'leave' | 'justify' | 'overtime' | 'service' | 'penalty' | 'exit' | 'internal' | 'salary' | 'offer_budget'; id: number; type: string; type_name: Bi; employee: Person | null; from: string; to: string; hours?: number | null; minutes?: number | null
+  kind: 'leave' | 'justify' | 'overtime' | 'service' | 'penalty' | 'exit' | 'internal' | 'salary' | 'offer_budget' | 'contract_exception'; id: number; type: string; type_name: Bi; employee: Person | null; from: string; to: string; hours?: number | null; minutes?: number | null
   ref_date?: string | null; days?: number | null; reason: string; status: ReqStatus
   warnings: { over_balance?: { days: number; remaining: number }; over_sick?: { days: number; used: number; limit: number }; conflict?: (Bi & { from: string; to: string })[]; issue?: string }
   substitute?: Bi | null; doc?: { id: number; name: string } | null; doc_required?: boolean; paid?: number | null; requested_by?: Bi | null
   amount?: number | null; currency?: 'USD' | 'SYP'; addressee?: { name?: string; cr_no?: string; email?: string; phone?: string } | null; notify_consent?: boolean; data?: { phone?: string } | null; ref_no?: string | null; issued_at?: string | null
-  penalty?: { kind: string; days?: number; label: Bi }; last_day?: string; notice_short?: boolean; interview_needed?: boolean; case?: { id: number; ref_no: string; occurrence: number; description: string; type: Bi | null } | null
+  penalty?: { kind: string; days?: number; label: Bi }; contract_decision?: { ref_no: string; case_id: number; decision: Bi; suggested: Bi | null; months: number | null; type: Bi | null }; last_day?: string; notice_short?: boolean; interview_needed?: boolean; case?: { id: number; ref_no: string; occurrence: number; description: string; type: Bi | null } | null
   job?: { id: number; code: string; title: Bi } | null; candidate_stage?: string | null
   scope?: 'all' | 'department'; department?: Bi | null; expires_at?: string | null; user?: { id: number; ar: string; en: string; email: string } | null
   candidate?: { id: number; ref: string; name: Bi; job: Bi | null } | null

@@ -42,6 +42,12 @@ class Forms
         'ORG' => ['الهيكل التنظيمي', 'Organization chart', 'org', false],
         // دليل الترميز (الدفعة 18 — FR-CS-015)
         'CDB' => ['دليل الترميز', 'Codebook', 'codes', false],
+        // العقود (الدفعة 19): العقد، تقييم فترة التجربة HR-05-F-03، خطابات الإخطار، ملحق العقد
+        'CTR' => ['عقد عمل', 'Employment contract', 'contracts', false],
+        'PRB' => ['تقييم موظف / فترة تجريبية', 'Employee evaluation / probation', 'contracts', false],
+        'RNE' => ['تقييم تجديد العقد', 'Contract renewal evaluation', 'contracts', false],
+        'CRL' => ['خطاب إخطار', 'Notification letter', 'contracts', false],
+        'ANX' => ['ملحق عقد', 'Contract annex', 'contracts', false],
     ];
 
     public const ISSUED_ON = '2025-04-01';

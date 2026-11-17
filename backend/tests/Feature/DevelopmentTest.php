@@ -42,7 +42,8 @@ class DevelopmentTest extends TestCase
     {
         $samer = $this->emp('UHR-1007');
         $mgr = Employee::allCompanies()->findOrFail($samer->manager_id);
-        $outsider = Employee::allCompanies()->where('company_id', $samer->company_id)->where('manager_id', '!=', $mgr->id)->where('id', '!=', $mgr->id)->whereNotNull('manager_id')->firstOrFail();
+        $outsider = Employee::allCompanies()->where('company_id', $samer->company_id)->where('manager_id', '!=', $mgr->id)->where('id', '!=', $mgr->id)->whereNotNull('manager_id')
+            ->whereDoesntHave('user.roles', fn ($r) => $r->whereIn('key', ['hr_director', 'hr_officer', 'admin', 'manager']))->orderBy('code')->firstOrFail();   // موظف عادي خارج الفريق (ترتيب ثابت)
         $this->login($this->mail($mgr));
         $base = ['title' => 'تطوير مهارات التحليل', 'gaps' => 'تحليل البيانات', 'goals' => [['text' => 'إتقان الجداول المحورية']]];
         $this->postJson('/api/development/plans', $base + ['employee_id' => $outsider->id])->assertUnprocessable()->assertJsonPath('code', 'out_of_scope');
