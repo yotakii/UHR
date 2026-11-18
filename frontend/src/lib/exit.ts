@@ -19,7 +19,7 @@ export interface ClearanceItem extends Item {
 export interface ClearanceSection extends Item { role: string; items: ClearanceItem[]; signed: Signed | null; ready: boolean; can_sign: boolean }
 export interface Settlement {
   daily: number; days: number; pro_rata: number; leave_days: number; leave_pay: number; death_grant: number; assets: number; advances: number; finance: number
-  notice_short: boolean; notice_pay: number; total: number; currency: 'USD' | 'SYP'
+  notice_short: boolean; notice_pay: number; training?: number; total: number; currency: 'USD' | 'SYP'
 }
 export interface ExitCard {
   id: number; ref_no: string | null; kind: 'resignation' | 'termination'; status: ExitStatus

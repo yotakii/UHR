@@ -1,3 +1,4 @@
+import { TdCheckin } from './screens/training/TdPublic'
 import { useEffect } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
@@ -47,6 +48,7 @@ function Root() {
   if (route.page === 'approve' && route.parts[1]) return <ApproveLink token={route.parts[1]} user={user} />
   // الحضور بمسح ملصق الفرع (الدفعة 21)
   if (route.page === 'checkin' && route.parts[1]) return <BranchCheckin token={route.parts[1]} user={user} />
+  if (route.page === 'td-checkin' && route.parts[1]) return <TdCheckin token={route.parts[1]} user={user} />
   // صفحات البوابة العامة متاحة للجميع؛ الصفحة الرئيسية لكل حساب = واجهته
   if (route.page && PUBLIC_PAGES.includes(route.page) && route.page !== 'login') return <Public />
   if (user.portal === 'platform') return <PlatformApp user={user} />

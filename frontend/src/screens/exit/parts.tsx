@@ -140,6 +140,7 @@ export function SettlementTable({ s }: { s: NonNullable<ExitFull['settlement']> 
   if (s.assets) rows.push([L('اقتطاع عهد غير مسترجعة', 'Unreturned assets'), `− ${money(s.assets, 'USD', lang)}`])
   if (s.advances) rows.push([L('سلف مفتوحة', 'Open advances'), `− ${m(s.advances)}`])
   if (s.finance) rows.push([L('ذمم المالية (F-07)', 'Finance dues (F-07)'), `− ${m(s.finance)}`])
+  if (s.training) rows.push([L('استرداد تكلفة تدريب (تعهد معتمد)', 'Training cost recovery (approved commitment)'), `− ${m(s.training)}`])
   if (s.notice_pay) rows.push([L('بدل الإشعار (مخالفة فترة الإخطار)', 'Notice pay (notice not served)'), `− ${m(s.notice_pay)}`])
   return <table className="w-full border border-line text-[14px]"><tbody>
     {rows.map(([k, v]) => <tr key={k}><td className="border border-line px-3 py-2 bg-sub">{k}</td><td className="border border-line px-3 py-2 num">{v}</td></tr>)}

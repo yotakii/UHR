@@ -11,7 +11,7 @@ export interface Activity { id: number; title: string; kind: ActKind; due_on: st
 export interface Plan {
   id: number; title: string; gaps: string | null; goals: { text: string; done: boolean }[]; status: 'draft' | 'active' | 'done'; source: string
   employee: { id: number; code: string; name: Bi; title: Bi } | null; scope?: 'employee' | 'department' | 'company'; department?: (Bi & { id: number }) | null; next_review: string | null; review_due: boolean; reviews: { at: string; by: string; by_en: string; note: string; rating: number }[]
-  progress: number; activities: Activity[]; can: { edit: boolean }
+  progress: number; activities: Activity[]; can: { edit: boolean }; mix?: { '70': number; '20': number; '10': number }
 }
 export interface Candidate { id: number; readiness: Readiness; note: string | null; gaps: string | null; employee: { id: number; code: string; name: Bi; title: Bi }; plan: { id: number; status: string; title: string } | null; nominated_by: string | null; mine: boolean }
 export interface SPlan {

@@ -54,6 +54,7 @@ class ExitFlow
             $e->update(['status' => 'resigning']);
             $e->log("تقديم طلب استقالة {$r->ref_no} — آخر يوم {$r->last_day->toDateString()}", "Resignation {$r->ref_no} submitted — last day {$r->last_day->toDateString()}", 'warn', 'F-02');
             $this->flow->start($r, $e, Workflow::chain('resignation'), $by);
+            \App\Services\Training\Records::onResignation($e, $r->id);   // POL-11: التزامات التدريب السارية
             return $r->refresh();
         });
     }
@@ -135,6 +136,7 @@ class ExitFlow
         $e = Employee::find($r->employee_id);
         if ($e && $e->status === 'resigning') $e->update(['status' => $r->prev_status && $r->prev_status !== 'resigning' ? $r->prev_status : 'active']);
         $e?->log("{$ar} ({$r->ref_no}) — يعود الموظف لحالته", "{$en} ({$r->ref_no}) — the employee is back to their status", 'info');
+        \App\Services\Training\Records::onWithdrawal($r->id);
     }
 
     /** مقابلة الاستقالة (HR): تأكيد الأسباب والتوصية */
@@ -372,8 +374,9 @@ class ExitFlow
         $noticePay = $short ? $salary * (float) $p['notice_pay_months'] : 0.0;
         $death = ($r->termination['cause'] ?? null) === 'death' ? $salary * (float) $p['death_grant_months'] + max(0, $salary - $days * $daily) : 0.0;
         $m = ['daily' => $daily, 'days' => $days, 'pro_rata' => $days * $daily, 'leave_days' => $remaining, 'leave_pay' => $remaining * $daily, 'death_grant' => $death,
-            'assets' => (float) $assets, 'advances' => $advances, 'finance' => $finance, 'notice_short' => $short, 'notice_pay' => $noticePay];
-        $m['total'] = $m['pro_rata'] + $m['leave_pay'] + $m['death_grant'] - $m['assets'] - $m['advances'] - $m['finance'] - $m['notice_pay'];
+            'assets' => (float) $assets, 'advances' => $advances, 'finance' => $finance, 'notice_short' => $short, 'notice_pay' => $noticePay,
+            'training' => \App\Services\Training\Records::settlementDeduction($r->id)];   // استرداد تكلفة تدريب معتمد (BR-13)
+        $m['total'] = $m['pro_rata'] + $m['leave_pay'] + $m['death_grant'] - $m['assets'] - $m['advances'] - $m['finance'] - $m['notice_pay'] - $m['training'];
         return array_map(fn ($v) => is_float($v) ? round($v, 2) : $v, $m) + ['currency' => $e->currency];
     }
 

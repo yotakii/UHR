@@ -50,6 +50,7 @@ class ApprovalInboxController extends Controller
                 $x instanceof \App\Models\Bonus => \App\Services\Missions\Bonuses::row($x, $u),
                 $x instanceof \App\Models\ContractException => \App\Services\Contracts\ContractCases::exceptionRow($x, $u),
                 $x instanceof \App\Models\Engagement => \App\Services\Externals\Externals::inboxRow($x, $u),
+                $x instanceof \App\Models\TdPlan => \App\Services\Training\Plans::inboxRow($x, $u),
                 default => RequestRow::overtime($x->load(RequestRow::SERVICE_WITH), $u),
             };
         })->values();
@@ -83,6 +84,7 @@ class ApprovalInboxController extends Controller
         elseif ($x instanceof \App\Models\Mission) app(\App\Services\Missions\Missions::class)->decide($x, $u, $ok, $d['note'] ?? null);
         elseif ($x instanceof \App\Models\Bonus) app(\App\Services\Missions\Bonuses::class)->decide($x, $u, $ok, $d['note'] ?? null);
         elseif ($x instanceof \App\Models\Engagement) app(\App\Services\Externals\Externals::class)->decide($x, $u, $ok, $d['note'] ?? null);
+        elseif ($x instanceof \App\Models\TdPlan) app(\App\Services\Training\Plans::class)->decide($x, $u, $ok, $d['note'] ?? null);
         elseif ($x instanceof \App\Models\ContractException) app(\App\Services\Contracts\ContractCases::class)->decideException($x, $u, $ok, $d['note'] ?? null);
         else abort(404);
         return $this->index($request);

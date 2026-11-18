@@ -71,6 +71,11 @@ class DevelopmentPlans
         $p->update(['status' => 'active', 'activated_at' => now(), 'next_review' => now()->addMonthsNoOverflow((int) Settings::development()['review_months'])->toDateString()]);
         $p->loadMissing(['employee', 'department']);
         $p->employee?->log("فُعّلت خطة التطوير «{$p->title}»", "Development plan «{$p->title}» activated", 'info', 'IDP');
+        // FR-TD-132: بنود «برنامج رسمي» ← احتياجات بمسار «تطوير» وأولوية مرتفعة تدخل الخطة السنوية
+        if ($p->employee_id) foreach ($p->activities()->where('kind', 'course')->get() as $a)
+            if (! \App\Models\TdNeed::where('source', 'idp')->where('source_ref', 'activity:'.$a->id)->exists())
+                \App\Models\TdNeed::create(['ref' => 'TN-'.now()->year.'-'.str_pad((string) \App\Support\Counters::next('td-need-'.now()->year), 4, '0', STR_PAD_LEFT), 'employee_id' => $p->employee_id, 'department_id' => $p->employee?->department_id,
+                    'title' => $a->title, 'path' => 'development', 'level' => 'individual', 'source' => 'idp', 'source_ref' => 'activity:'.$a->id, 'status' => 'submitted', 'priority' => 'high', 'score' => 100, 'created_by' => $by->id]);
         [$ar, $en] = self::subject($p);
         foreach ($this->people($p) as $uid) Notify::user($uid, "خطة تطوير «{$p->title}» {$ar} أصبحت جارية", "Development plan «{$p->title}» {$en} is active", 'development');
         return $p;
@@ -183,6 +188,16 @@ class DevelopmentPlans
                 'overdue' => in_array($a->status, ['planned', 'in_progress'], true) && $a->due_on->toDateString() < $today,
                 'owner' => $a->owner ? ['id' => $a->owner->id, 'name' => ['ar' => $a->owner->name, 'en' => $a->owner->name_en]] : null,
                 'can_update' => $viewer && $p->status === 'active' && (in_array($viewer->employee_id, array_filter([$p->employee_id, $a->owner_employee_id]), true) || $edit)])->values(),
-            'can' => ['edit' => $edit]];
+            'can' => ['edit' => $edit], 'mix' => self::mix($acts)];
+    }
+
+    /** FR-TD-131: نموذج 70-20-10 — ممارسة (مشروع، تدوير، أخرى) / تعلم من الآخرين (إرشاد) / تدريب رسمي (دورة، قراءة) */
+    public static function mix($acts): array
+    {
+        $live = $acts->where('status', '!=', 'cancelled'); $n = max(1, $live->count());
+        $c = fn (array $k) => $live->whereIn('kind', $k)->count();
+        $out = ['70' => (int) round($c(['project', 'rotation', 'other']) * 100 / $n), '20' => (int) round($c(['mentoring']) * 100 / $n), '10' => (int) round($c(['course', 'reading']) * 100 / $n)];
+        $out['formal_heavy'] = $live->count() >= 3 && $out['10'] > 40;   // اعتماد مفرط على الدورات
+        return $out;
     }
 }

@@ -54,6 +54,15 @@ class Forms
         'VLA' => ['اتفاقية تطوع مؤقتة', 'Temporary volunteer agreement', 'externals', false],
         'VLC' => ['شهادة تطوع', 'Volunteering certificate', 'externals', false],
         'TOR' => ['الشروط المرجعية لتكليف خبير', 'Expert assignment terms of reference', 'externals', true],
+        // التأهيل والتدريب والتطوير (الدفعة 23): نماذج HR-TD-F-01…14
+        'TD1' => ['برنامج تدريب موظف جديد', 'New employee training programme', 'training', false],
+        'TD2' => ['تحديد الاحتياجات التدريبية', 'Training needs identification', 'training', false],
+        'TD3' => ['تعهد الالتزام بالتدريب والعمل', 'Training & service commitment', 'training', true],
+        'TD4' => ['الخطة السنوية للتدريب والتطوير', 'Annual training & development plan', 'training', false],
+        'TD5' => ['قياس أثر التدريب', 'Training impact assessment', 'training', false],
+        'TD6' => ['سجل تدريب موظف', 'Employee training record', 'training', false],
+        'TD8' => ['حضور دورة تدريبية', 'Course attendance sheet', 'training', false],
+        'TDC' => ['شهادة تدريب', 'Training certificate', 'training', false],
     ];
 
     public const ISSUED_ON = '2025-04-01';

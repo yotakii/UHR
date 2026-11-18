@@ -4,7 +4,7 @@ import { queryClient } from './session'
 import type { Bi } from './types'
 
 /** M08 — الحضور، سياسات الدوام بتاريخ نفاذ، العطل، أجهزة الحضور */
-export type AttStatus = 'before_start' | 'mission' | 'leave' | 'holiday' | 'weekend' | 'not_in' | 'absent' | 'incomplete' | 'justified' | 'late' | 'present'
+export type AttStatus = 'before_start' | 'mission' | 'training' | 'leave' | 'holiday' | 'weekend' | 'not_in' | 'absent' | 'incomplete' | 'justified' | 'late' | 'present'
 export interface Person { id: number; code: string; name: Bi; title: Bi; dept: (Bi & { id: number }) | null }
 export interface AttRow { date: string; in: string | null; out: string | null; on_shift: boolean; worked: number; late: number; early: number; ot: number; ot_rate: number; deduct: number; status: AttStatus; source: string | null; corrected: boolean; note: string | null }
 export interface Meta { depts: (Bi & { id: number })[]; branches?: (Bi & { id: number })[]; can: { edit: boolean; export: boolean; devices: boolean; policies: boolean } }

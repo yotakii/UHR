@@ -63,6 +63,7 @@ class CompanyDefaults
         // المهمات والمكافآت (الجزء B): المدير ← HR ← المالية ← الرئيس التنفيذي، والمكافآت ← HR (+ الإدارة العليا فوق السقف)
         ApprovalChain::firstOrCreate(['type' => 'mission'], ['levels' => \App\Services\Missions\Missions::DEFAULT_CHAIN]);
         \App\Services\Externals\Externals::seedChains();
+        ApprovalChain::firstOrCreate(['type' => 'td_plan'], ['levels' => \App\Services\Training\Plans::DEFAULT_CHAIN]);
         ApprovalChain::firstOrCreate(['type' => 'bonus'], ['levels' => [$hr]]);
         // قرار عقد مخالف للسياسة (الجزء D، POL-CR-06/07) ← الرئيس التنفيذي
         ApprovalChain::firstOrCreate(['type' => 'contract_exception'], ['levels' => [['role_ar' => 'الرئيس التنفيذي', 'role_en' => 'CEO', 'role_key' => 'ceo']]]);

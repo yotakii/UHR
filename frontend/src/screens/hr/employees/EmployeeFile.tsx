@@ -1,3 +1,4 @@
+import { TrainingRecord } from '../../training/TdLibrary'
 import { useState } from 'react'
 import { ArrowRight, ArrowLeft, Loader2, Pencil, CreditCard, ClipboardList } from 'lucide-react'
 import { useL, useLang, bi, fmtDate, fmtDateTime, money } from '../../../lib/store'
@@ -12,8 +13,8 @@ import { BiometricsPanel } from './EmployeeFiles'
 import { DocumentsTab } from './DocumentsTab'
 import { Masked } from '../../../ui/vault'
 
-type Tab = 'overview' | 'attendance' | 'leaves' | 'assets' | 'docs' | 'log'
-const TABS: Tab[] = ['overview', 'attendance', 'leaves', 'assets', 'docs', 'log']
+type Tab = 'overview' | 'attendance' | 'leaves' | 'assets' | 'training' | 'docs' | 'log'
+const TABS: Tab[] = ['overview', 'attendance', 'leaves', 'assets', 'training', 'docs', 'log']
 
 /** M07 — الملف الوظيفي (EmployeeFile في الديمو) + تبويب «الملفات الإضافية» (SRS §10.11) */
 export function EmployeeFile({ id }: { id: number }) {
@@ -50,7 +51,7 @@ export function EmployeeFile({ id }: { id: number }) {
     </div>
     <Tabs value={tab} onChange={v => setQuery({ tab: v === 'overview' ? undefined : v })} tabs={[
       { v: 'overview', label: L('البيانات', 'Details') }, { v: 'attendance', label: L('الحضور', 'Attendance') },
-      { v: 'leaves', label: L('الإجازات والطلبات', 'Leave & requests'), count: e.leaves.length + e.services.length }, { v: 'assets', label: L('العهد', 'Custody'), count: e.assets.length },
+      { v: 'leaves', label: L('الإجازات والطلبات', 'Leave & requests'), count: e.leaves.length + e.services.length }, { v: 'assets', label: L('العهد', 'Custody'), count: e.assets.length }, { v: 'training', label: L('التدريب', 'Training') },
       { v: 'docs', label: L('الملفات الإضافية', 'Documents'), count: docs.length }, { v: 'log', label: L('السجل الوظيفي', 'Career history'), count: e.logs.length }]} />
     <div className="mt-4">
       {tab === 'overview' && <div className="grid lg:grid-cols-3 gap-4">
@@ -83,6 +84,7 @@ export function EmployeeFile({ id }: { id: number }) {
       {tab === 'assets' && <Panel pad={false}>{e.assets.length === 0 ? <Empty title={L('لا توجد عهد', 'No assets')} /> : <table className="tbl"><thead><tr><th>{L('الأصل', 'Asset')}</th><th>{L('الرمز', 'Tag')}</th><th className="hidden sm:table-cell">{L('القيمة', 'Value')}</th><th>{L('الحالة', 'Status')}</th></tr></thead><tbody>
         {e.assets.map(a => <tr key={a.id}><td>{bi(a.name, lang)}<div className="text-[12px] text-ink-3">{bi(a.category, lang)}</div></td><td className="ltr num">{a.tag}</td><td className="num hidden sm:table-cell">${a.value}</td>
           <td>{a.status === 'assigned' ? <Badge tone="brand">{L('موقّع', 'Signed')}</Badge> : <Badge tone="brass">{L('بانتظار التوقيع', 'Awaiting signature')}</Badge>}</td></tr>)}</tbody></table>}</Panel>}
+      {tab === 'training' && <TrainingRecord id={e.id} />}
       {tab === 'docs' && <DocumentsTab e={e} />}
       {tab === 'log' && <Panel><Timeline items={e.logs.map(l => ({ ...l, form: l.form ?? undefined }))} /></Panel>}
     </div>
@@ -95,7 +97,7 @@ export function EmployeeFile({ id }: { id: number }) {
 export function AttendanceTable({ rows }: { rows: DayRow[] }) {
   const L = useL(); const lang = useLang(); const P = lang === 'ar' ? '٪' : '%'
   const badge = (r: DayRow) => ({
-    before_start: <span className="text-ink-3 text-[12px]">{L('قبل المباشرة', 'Before start')}</span>, mission: <Badge tone="info">{L('في مهمة', 'On mission')}</Badge>, leave: <Badge>{L('إجازة', 'Leave')}</Badge>, holiday: <Badge>{L('عطلة رسمية', 'Holiday')}</Badge>,
+    before_start: <span className="text-ink-3 text-[12px]">{L('قبل المباشرة', 'Before start')}</span>, mission: <Badge tone="info">{L('في مهمة', 'On mission')}</Badge>, training: <Badge tone="info">{L('في تدريب', 'In training')}</Badge>, leave: <Badge>{L('إجازة', 'Leave')}</Badge>, holiday: <Badge>{L('عطلة رسمية', 'Holiday')}</Badge>,
     not_in: <Badge tone="warn">{L('لم يسجل بعد', 'Not in yet')}</Badge>, weekend: <Badge>{L('عطلة', 'Weekend')}</Badge>, absent: <Badge tone="danger">{L('غياب', 'Absent')}</Badge>, incomplete: <Badge tone="danger">{L('ناقص — بلا خروج', 'Incomplete — no out')}</Badge>,
     justified: <Badge tone="brand">{L('مبرر', 'Justified')}</Badge>, late: <Badge tone="warn">{L('متأخر', 'Late')}</Badge>, present: <Badge tone="brand">{L('حاضر', 'Present')}</Badge>,
   }[r.status])

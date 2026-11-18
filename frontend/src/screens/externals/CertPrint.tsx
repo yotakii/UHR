@@ -11,13 +11,14 @@ export function CertPrint({ id, portal = false }: { id: number; portal?: boolean
   const { data: c } = useCertificate(id, portal)
   if (!c) return <div className="grid place-items-center py-24"><Loader2 className="animate-spin text-brand" /></div>
   const url = `${location.origin}/verify/${c.code}`
+  const intern = c.kind === 'intern'
   return <div className="max-w-[860px] mx-auto">
     <div className="mb-3" data-noprint><Btn kind="ghost" onClick={() => navigate(portal ? '/ext' : '/hr/externals')}>{L('رجوع', 'Back')}</Btn></div>
-    <Paper code="VLC" title={L('شهادة تطوع', 'Volunteering certificate')} sub={c.no}>
+    <Paper code="VLC" title={intern ? L('شهادة تدريب عملي (ستاج)', 'Internship certificate') : L('شهادة تطوع', 'Volunteering certificate')} sub={c.no}>
       <div className="text-center space-y-4 py-6 text-[15px] leading-8">
         <p>{L('تشهد', 'This is to certify that')} <b>{bi(c.company, lang)}</b> {L('بأن', '')}</p>
         <p className="text-[22px] font-black">{bi(c.name, lang)}</p>
-        <p>{L('قد تطوّع لدينا في', 'volunteered with us on')} «{c.title}» {L('خلال الفترة من', 'from')} <span className="num">{fmtDate(c.from, lang)}</span> {L('إلى', 'to')} <span className="num">{fmtDate(c.to, lang)}</span>،
+        <p>{intern ? L('قد أتمّ لدينا تدريباً عملياً في', 'completed an internship with us on') : L('قد تطوّع لدينا في', 'volunteered with us on')} «{c.title}» {L('خلال الفترة من', 'from')} <span className="num">{fmtDate(c.from, lang)}</span> {L('إلى', 'to')} <span className="num">{fmtDate(c.to, lang)}</span>،
           {L(' بمجموع ساعات معتمدة', ' with a total of')} <b className="num">{c.hours}</b> {L('ساعة', 'approved hours')}.</p>
         {c.tasks && <p className="text-ink-2 text-[14px]">{L('المهام', 'Tasks')}: {c.tasks}</p>}
         <p className="text-ink-2 text-[14px]">{L('مُنحت هذه الشهادة تقديراً لجهوده دون أن تنشئ علاقة عمل.', 'This certificate is given in appreciation and does not create an employment relationship.')}</p>

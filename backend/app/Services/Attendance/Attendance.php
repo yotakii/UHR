@@ -42,6 +42,7 @@ class Attendance
         if ($hire && $hire > $date) return 'before_start';
         if ($onLeave || $r?->status === 'leave') return 'leave';
         if ($r?->status === 'mission') return 'mission';   // أيام مهمة سفر معتمدة (BR-TM-12): لا غياب ولا تأخر
+        if ($r?->status === 'training' && ! $r->in_at) return 'training';   // أيام دورة مؤكدة (FR-TD-084)
         if ($r?->justified && ! $c['rest'] && (! $r->in_at || ! $r->out_at)) return 'justified';   // غياب أو يوم ناقص مبرر
         if (! $r?->in_at) return $c['rest'] ? ($c['holiday'] ? 'holiday' : 'weekend') : ($date === $today ? 'not_in' : ($date > $today ? 'not_in' : 'absent'));
         if (! $r->out_at) {

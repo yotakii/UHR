@@ -119,7 +119,7 @@ class ExternalController extends Controller
             'relation' => $g->relation, 'relation_score' => $g->relation_score, 'relation_test' => $g->relation_test, 'justification' => $g->justification, 'replaces_position' => $g->replaces_position, 'replaces_employee_id' => $g->replaces_employee_id,
             'high' => Externals::high($g), 'fee_model' => $g->fee_model, 'amount' => Externals::canFees($u) ? $g->amount : null, 'currency' => $g->currency, 'expense_cap' => $g->expense_cap, 'tax_treatment' => $g->tax_treatment,
             'status' => $g->status, 'body' => $g->body, 'pledges' => $g->pledges, 'signed_at' => $g->signed_at?->toIso8601String(), 'onboarding' => $g->onboarding ?? [], 'evaluation' => $g->evaluation,
-            'certificate_no' => $g->certificate_no, 'verify_code' => $g->verify_code, 'supervisor' => $g->supervisor ? ['id' => $g->supervisor->id, 'ar' => $g->supervisor->name, 'en' => $g->supervisor->name_en] : null,
+            'certificate_no' => $g->certificate_no, 'verify_code' => $g->verify_code, 'stage_type' => $g->stage_type, 'required_hours' => $g->required_hours, 'stations' => $g->stations, 'stage_eval' => $g->stage_eval, 'supervisor' => $g->supervisor ? ['id' => $g->supervisor->id, 'ar' => $g->supervisor->name, 'en' => $g->supervisor->name_en] : null,
             'supervisor_id' => $g->supervisor_id, 'department_id' => $g->department_id, 'location_id' => $g->location_id, 'days' => $g->days,
             'hours' => Externals::hours($g), 'pending_hours' => (float) $logs->where('status', 'pending')->sum('hours'),
             'logs' => $logs->map(fn ($l) => ['id' => $l->id, 'date' => $l->date->toDateString(), 'hours' => $l->hours, 'activity' => $l->activity, 'via' => $l->via, 'status' => $l->status, 'note' => $l->note]),
@@ -201,7 +201,8 @@ class ExternalController extends Controller
             'supervisor_id' => ['required', 'integer'], 'starts_on' => ['required', 'date'], 'ends_on' => ['required', 'date'], 'weekly_hours' => ['required', 'integer', 'between:1,60'], 'days' => ['nullable', 'array'],
             'relation' => ['required', 'in:replaces,alongside,independent'], 'replaces_employee_id' => ['nullable', 'integer'], 'replaces_position' => ['nullable', 'string', 'max:160'],
             'relation_test' => ['nullable', 'array'], 'justification' => ['nullable', 'string', 'max:2000'], 'fee_model' => ['nullable', 'in:none,lump,daily,monthly,expenses'],
-            'amount' => ['nullable', 'numeric', 'min:0'], 'currency' => ['nullable', 'string', 'size:3'], 'expense_cap' => ['nullable', 'numeric', 'min:0'], 'tax_treatment' => ['nullable', 'string', 'max:255']],
+            'amount' => ['nullable', 'numeric', 'min:0'], 'currency' => ['nullable', 'string', 'size:3'], 'expense_cap' => ['nullable', 'numeric', 'min:0'], 'tax_treatment' => ['nullable', 'string', 'max:255'],
+            'stage_type' => ['nullable', 'in:paid,free,fee'], 'required_hours' => ['nullable', 'integer', 'between:1,3000'], 'stations' => ['nullable', 'array', 'max:12']],
             ['supervisor_id.required' => L::t('المشرف إلزامي.', 'A supervisor is required.')]);
     }
 
@@ -273,7 +274,7 @@ class ExternalController extends Controller
 
     public function end(Request $r, int $id): JsonResponse
     {
-        $v = $r->validate(['rating' => ['required', 'integer', 'between:1,5'], 'note' => ['nullable', 'string', 'max:1000'], 'early' => ['nullable', 'boolean']]);
+        $v = $r->validate(['rating' => ['required', 'integer', 'between:1,5'], 'note' => ['nullable', 'string', 'max:1000'], 'early' => ['nullable', 'boolean'], 'skills' => ['nullable', 'array'], 'recommend_hire' => ['nullable', 'boolean']]);
         return response()->json(['data' => self::engagement($this->ext->end(Engagement::findOrFail($id), $r->user(), $v, (bool) ($v['early'] ?? false)), $r->user())]);
     }
 

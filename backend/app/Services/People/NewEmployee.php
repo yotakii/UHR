@@ -139,6 +139,7 @@ class NewEmployee
             if ($assets->count() !== count(array_unique($assetIds)) || $assets->contains(fn ($a) => $a->status !== 'available')) throw ApiException::field('asset_ids', L::t('بعض العهد المختارة لم تعد متاحة — حدّث القائمة.', 'Some selected assets are no longer available — refresh the list.'), 'asset_unavailable');
             $e = $this->make($v, 'onboarding', Counters::employeeCode(self::codeCtx($v)), Employee::newNfcUid());
             Onboarding::create(['employee_id' => $e->id, 'checklist' => F19::blank(0, 13)]);
+            \App\Services\Training\Records::qualify($e);   // WF-05: برنامج تأهيل الموظف الجديد F-01
             \App\Services\Contracts\Contracts::forNewEmployee($e, $by);   // عقد بانتظار التواقيع (الجزء D)
             $e->log("إنشاء ملف موظف مباشرة (معالج إضافة موظف) — {$e->code} ({$by->displayName('ar')})", "Employee file created via the wizard — {$e->code} ({$by->displayName('en')})", 'ok');
             foreach ($assets as $a) {

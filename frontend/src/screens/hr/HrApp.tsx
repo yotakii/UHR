@@ -1,5 +1,8 @@
+import { TrainingApp } from '../training/Training'
+import { MyTraining } from '../training/MyTraining'
+import { TrainingSettings } from './TrainingSettings'
 import { useEffect, type ReactNode } from 'react'
-import { Sparkles, ListChecks, LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed, Megaphone, Gift, ClipboardCheck, SlidersHorizontal, Sprout, KeyRound, Building, UserCog, GitBranch, BellRing, Library, History, DatabaseBackup, ScanText, MessagesSquare, ArrowRight, ArrowLeft, X, CalendarDays, CalendarClock, MapPin, UserRound, Binary, Plane, HandHeart } from 'lucide-react'
+import { GraduationCap, Sparkles, ListChecks, LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed, Megaphone, Gift, ClipboardCheck, SlidersHorizontal, Sprout, KeyRound, Building, UserCog, GitBranch, BellRing, Library, History, DatabaseBackup, ScanText, MessagesSquare, ArrowRight, ArrowLeft, X, CalendarDays, CalendarClock, MapPin, UserRound, Binary, Plane, HandHeart } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { navigate, useRoute } from '../../lib/router'
 import { can, type SessionUser } from '../../lib/session'
@@ -149,6 +152,8 @@ export function HrApp({ user }: { user: SessionUser }) {
     { item: { to: '/hr/my-news', icon: <Megaphone size={17} />, label: L('إعلانات الشركة', 'Company news'), group: g2 }, module: u => !!u.employee && !can(u, 'announcements'), view: () => <MyAnnouncements /> },
     { item: { to: '/hr/my-documents', icon: <FileSignature size={17} />, label: L('وثائقي للتوقيع', 'My documents'), group: g2 }, module: u => !!u.employee, view: () => <MyDocuments /> },
     { item: { to: '/hr/performance', icon: <Target size={17} />, label: L('الأداء وتقييم 360', 'Performance & 360'), group: g3 }, module: 'performance', view: () => <Performance /> },
+    { item: { to: '/hr/training', icon: <GraduationCap size={17} />, label: L('التأهيل والتدريب والتطوير', 'Training & development'), group: g3 }, module: 'training', view: () => <TrainingApp /> },
+    { item: { to: '/hr/my-training', icon: <GraduationCap size={17} />, label: L('تدريبي', 'My training'), group: g2 }, module: u => !!u.employee, view: () => <MyTraining /> },
     { item: { to: '/hr/development', icon: <Sprout size={17} />, label: L('التعاقب وخطط التطوير', 'Succession & development'), group: g3 }, module: 'succession', view: () => <Development /> },
     { item: { to: '/hr/tasks', icon: <ListChecks size={17} />, label: L('المهام ومؤشرات الأداء', 'Tasks & KPIs'), group: g3 }, module: 'tasks', view: () => <Work /> },
     { item: { to: '/hr/analytics', icon: <BarChart3 size={17} />, label: L('التحليلات', 'Analytics'), group: g3 }, module: u => can(u, 'employees', 'export'), view: () => <Analytics /> },
@@ -164,6 +169,7 @@ export function HrApp({ user }: { user: SessionUser }) {
     { item: { to: '/hr/settings/schedules', icon: <CalendarClock size={18} />, label: L('جداول الدوام والورديات', 'Work schedules & shifts'), group: g4, hidden: true }, section: 'rules', module: 'attendance', view: () => <Schedules /> },
     { item: { to: '/hr/settings/branches', icon: <MapPin size={18} />, label: L('الفروع والمناطق الزمنية', 'Branches & time zones'), group: g4, hidden: true }, section: 'org', module: 'attendance', view: () => <Branches /> },
     { item: { to: '/hr/settings/devices', icon: <Nfc size={18} />, label: L('أجهزة الحضور', 'Attendance devices'), group: g4, hidden: true }, section: 'system', module: u => can(u, 'attendance', 'edit'), view: () => <Devices /> },
+    { item: { to: '/hr/settings/training', icon: <GraduationCap size={18} />, label: L('إعدادات التدريب والتطوير', 'Training settings'), group: g4, hidden: true }, section: 'rules', module: u => can(u, 'training'), view: () => <TrainingSettings /> },
     { item: { to: '/hr/settings/externals', icon: <HandHeart size={18} />, label: L('إعدادات غير الموظفين والخبراء', 'Non-employee & expert settings'), group: g4, hidden: true }, section: 'rules', module: u => can(u, 'externals'), view: () => <ExternalSettings /> },
     { item: { to: '/hr/settings/nfc', icon: <Nfc size={18} />, label: L('إعدادات بوابة الحضور', 'Attendance gate settings'), group: g4, hidden: true }, section: 'system', module: u => can(u, 'attendance'), view: () => <NfcSettings /> },
     { item: { to: '/hr/settings/assistant', icon: <Sparkles size={18} />, label: L('إعدادات المساعد', 'Assistant settings'), group: g4, hidden: true }, section: 'system', module: u => can(u, 'settings'), view: () => <AssistantSettings /> },

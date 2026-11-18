@@ -127,6 +127,13 @@ class Externals
             'relation_test' => $test, 'relation_score' => count(array_filter($test)), 'justification' => $v['justification'] ?? null, 'fee_model' => $fee,
             'amount' => $fee === 'none' || $fee === 'expenses' ? null : ($v['amount'] ?? null), 'currency' => $v['currency'] ?? $c['expense_currency'],
             'expense_cap' => $fee === 'expenses' ? ($v['expense_cap'] ?? $c['expense_cap']) : null, 'tax_treatment' => $v['tax_treatment'] ?? null];
+        if ($x->kind === 'intern') {   // الستاج (SRS التدريب WF-06 / POL-22): النوع، الساعات المطلوبة، محطات التدوير
+            $type = in_array($v['stage_type'] ?? 'free', ['paid', 'free', 'fee'], true) ? ($v['stage_type'] ?? 'free') : 'free';
+            $max = (int) \App\Services\Training\Td::cfg()['stage_free_max_months'];
+            if ($type === 'free' && $months > $max) throw ApiException::field('ends_on', L::t("الستاج المجاني لا يتجاوز {$max} أشهر.", "A free internship cannot exceed {$max} months."), 'too_long');
+            $data += ['stage_type' => $type, 'required_hours' => (int) ($v['required_hours'] ?? 0) ?: null, 'stations' => $v['stations'] ?? null];
+            $data['fee_model'] = $type === 'paid' ? 'monthly' : ($type === 'fee' ? 'lump' : 'none');
+        }
         if (! Employee::whereKey($data['supervisor_id'])->exists()) throw ApiException::field('supervisor_id', L::t('المشرف إلزامي (POL-VL-06).', 'A supervisor is required (POL-VL-06).'), 'required');
         if ($g) { $g->update($data + ['status' => 'draft']); return $g->fresh(); }
         $g = Engagement::create($data + ['ref' => 'ENG-'.now()->year.'-'.str_pad((string) Counters::next('engagement-'.now()->year), 4, '0', STR_PAD_LEFT), 'external_id' => $x->id, 'status' => 'draft', 'requested_by' => $u->id]);
@@ -282,9 +289,18 @@ class Externals
         if ($g->status !== 'active') throw new ApiException(L::t('التكليف غير فعّال.', 'Not active.'), 'not_active', 409);
         $rating = (int) ($v['rating'] ?? 0);
         if ($rating < 1 || $rating > 5) throw ApiException::field('rating', L::t('تقييم المشرف من 1 إلى 5.', 'Supervisor rating 1 to 5.'), 'required');
-        DB::transaction(function () use ($g, $u, $v, $rating, $early) {
-            $g->update(['status' => $early ? 'terminated' : 'ended', 'ended_at' => now(), 'evaluation' => ['rating' => $rating, 'note' => $v['note'] ?? null, 'at' => now()->toIso8601String(), 'by' => $u->displayName('ar')],
-                'certificate_no' => 'VOL-'.now()->year.'-'.str_pad((string) Counters::next('vol-cert-'.now()->year), 4, '0', STR_PAD_LEFT), 'verify_code' => strtoupper(Str::random(10))]);
+        // BR-15: شهادة الستاج تتطلب ساعات منجزة ≥ نسبة من المطلوبة وتقييم مشرف ≥ الحد الأدنى
+        $x = External::find($g->external_id); $cert = true; $why = null;
+        if ($x->kind === 'intern' && $g->required_hours) {
+            $td = \App\Services\Training\Td::cfg();
+            if (self::hours($g) < $g->required_hours * (int) $td['stage_hours_pct'] / 100) { $cert = false; $why = 'hours'; }
+            elseif ($rating < (int) $td['stage_min_rating']) { $cert = false; $why = 'rating'; }
+        }
+        DB::transaction(function () use ($g, $u, $v, $rating, $early, $x, $cert, $why) {
+            $g->update(['status' => $early ? 'terminated' : 'ended', 'ended_at' => now(), 'evaluation' => ['rating' => $rating, 'note' => $v['note'] ?? null, 'at' => now()->toIso8601String(), 'by' => $u->displayName('ar'), 'no_certificate' => $why],
+                'stage_eval' => $x->kind === 'intern' ? ['skills' => $v['skills'] ?? [], 'recommend_hire' => (bool) ($v['recommend_hire'] ?? false)] : null,
+                'certificate_no' => $cert ? ($x->kind === 'intern' ? 'STG-' : 'VOL-').now()->year.'-'.str_pad((string) Counters::next(($x->kind === 'intern' ? 'stg' : 'vol').'-cert-'.now()->year), 4, '0', STR_PAD_LEFT) : null,
+                'verify_code' => $cert ? strtoupper(Str::random(10)) : null]);
             VolunteerLog::where('engagement_id', $g->id)->where('status', 'pending')->update(['status' => 'rejected', 'note' => 'closed']);
             $this->close(External::find($g->external_id));
         });
@@ -304,7 +320,7 @@ class Externals
     public static function certificate(Engagement $g): array
     {
         $x = External::find($g->external_id); $c = \App\Models\Company::find($g->company_id);
-        return ['no' => $g->certificate_no, 'code' => $g->verify_code, 'name' => ['ar' => $x->name, 'en' => $x->name_en ?: $x->name], 'title' => $g->title, 'tasks' => $g->tasks,
+        return ['no' => $g->certificate_no, 'code' => $g->verify_code, 'kind' => $x->kind, 'stations' => $g->stations, 'name' => ['ar' => $x->name, 'en' => $x->name_en ?: $x->name], 'title' => $g->title, 'tasks' => $g->tasks,
             'from' => $g->starts_on->toDateString(), 'to' => ($g->ended_at ?? $g->ends_on)->toDateString(), 'hours' => self::hours($g), 'company' => ['ar' => $c->name_ar, 'en' => $c->name_en]];
     }
 

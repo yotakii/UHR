@@ -178,3 +178,11 @@ Artisan::command('externals:sweep', function () {
     $this->info("handled {$n}");
 })->purpose('End expired non-employee engagements and review the expert roster');
 Schedule::command('externals:sweep')->dailyAt('07:20');
+
+// الدفعة 23: متابعة قياس الأثر (التذكير ثم التصعيد)، صلاحية الشهادات واحتياج التجديد، انتهاء التعهدات
+Artisan::command('training:sweep', function () {
+    $n = 0;
+    foreach (\App\Models\Company::where('status', 'active')->pluck('id') as $id) \App\Support\Tenant::run($id, function () use (&$n) { $n += app(\App\Services\Training\Sessions::class)->sweep(); });
+    $this->info("handled {$n}");
+})->purpose('Training follow-ups, certificate expiry and commitment ends');
+Schedule::command('training:sweep')->dailyAt('07:35');

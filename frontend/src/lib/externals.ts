@@ -16,7 +16,7 @@ export interface ExtRow {
 export interface LogRow { id: number; date: string; hours: number; activity: string; via: string; status: 'pending' | 'approved' | 'rejected'; note: string | null }
 export interface EngagementRow {
   id: number; ref: string; title: string; tasks: string | null; starts_on: string; ends_on: string; weekly_hours: number; relation: 'replaces' | 'alongside' | 'independent'; relation_score: number
-  relation_test: Record<string, boolean> | null; justification: string | null; replaces_position: string | null; replaces_employee_id: number | null; high: boolean; fee_model: string; amount: number | null; currency: string | null
+  relation_test: Record<string, boolean> | null; stage_type?: string | null; required_hours?: number | null; justification: string | null; replaces_position: string | null; replaces_employee_id: number | null; high: boolean; fee_model: string; amount: number | null; currency: string | null
   expense_cap: number | null; tax_treatment: string | null; status: string; body: string | null; pledges: Record<string, string> | null; signed_at: string | null; onboarding: (Bi & { done: boolean })[]
   evaluation: { rating: number; note: string | null; at: string; by: string } | null; certificate_no: string | null; verify_code: string | null; supervisor: (Bi & { id: number }) | null; supervisor_id: number | null
   department_id: number | null; location_id: number | null; days: string[] | null; hours: number; pending_hours: number; logs: LogRow[]; steps: Step[]; step_id: number | null; can_act: boolean
@@ -68,7 +68,7 @@ export const useSaveExtSettings = () => useMutation({ mutationFn: (v: Record<str
 export const useVolunteerHours = () => useQuery({ queryKey: ['externals', 'my-hours'], queryFn: () => api<{ data: { id: number; date: string; hours: number; activity: string; external: Bi & { id: number }; ref: string }[] }>('/me/volunteer-hours') })
 export const useDecideHours = () => useMutation({ mutationFn: (v: { ids: number[]; approve: boolean; note?: string }) => api<{ count: number }>('/me/volunteer-hours', { json: v }), onSuccess: changed })
 export const useCertificate = (id: number, portal = false) => useQuery({ queryKey: ['externals', 'cert', id, portal], queryFn: () => api<{ data: Certificate }>(portal ? `/ext/engagements/${id}/certificate` : `/hr/externals/engagements/${id}/certificate`).then(r => r.data) })
-export type Certificate = { no: string; code: string; name: Bi; title: string; tasks: string | null; from: string; to: string; hours: number; company: Bi }
+export type Certificate = { kind?: string; no: string; code: string; name: Bi; title: string; tasks: string | null; from: string; to: string; hours: number; company: Bi }
 
 // بوابة المتطوع / الخبير
 export interface ExtHome {

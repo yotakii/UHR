@@ -219,6 +219,39 @@ class Settings
             'trainer_rates' => ['beginner' => 15000, 'intermediate' => 25000, 'advanced' => 40000], 'trainer_currency' => 'SYP',
             'attendance_bonus' => 0, 'attendance_bonus_currency' => 'SYP', 'bonus_over_cap_role' => 'ceo', 'bonus_monthly_cap' => 0,
         ],
+        // التأهيل والتدريب والتطوير (الدفعة 23 — SRS التدريب): قواعد BR-01…18 وكل قيمة مفتوحة في القسم 15 بقيمة افتراضية
+        'training' => [
+            'mode' => 'hr_only',                    // FR-TD-010: hr_only | self_service (المدراء والموظفون يقترحون)
+            'probation_block' => true,              // BR-01
+            'pass_mark' => 75, 'attendance_min' => 85, 'excellence' => 90,   // BR-02 / BR-14
+            'ban_threshold' => 70,                  // BR-03: نتائج المتدربين دون هذه النسبة ← توصية حظر
+            'capacity' => ['general' => [8, 20], 'workshop' => [10, 20], 'lecture' => [0, 20], 'group' => [15, 20]],   // BR-04
+            'min_quotes' => 3,                      // BR-05: عروض التدريب الخارجي
+            'commitment_pct' => 30,                 // BR-06: التكلفة للفرد ≥ نسبة من الراتب الشهري
+            'commitment_on_request' => true,        // أو البرنامج بطلب من الموظف
+            'commitment_tiers' => [['from' => 0, 'to' => 300, 'months' => 3], ['from' => 300, 'to' => 1000, 'months' => 6], ['from' => 1000, 'to' => 3000, 'months' => 12], ['from' => 3000, 'to' => 0, 'months' => 24]],
+            'commitment_currency' => 'USD',
+            'recovery' => 'prorata',                // BR-13: full | prorata
+            'min_evidence' => 2,                    // BR-08
+            'tna_from_month' => 10, 'tna_to_month' => 11,   // BR-11
+            'impact_points' => [30, 60, 90],        // BR-12
+            'impact_form_point' => 60,              // نقطة F-05 (قائمة السلوك)
+            'impact_pass' => 60,                    // متوسط F-05 الذي يُحدّث مستوى الكفاءة
+            'remind_days' => 3, 'escalate_days' => 7,   // BR-17
+            'survey_min' => 60,                     // BR-16: نسبة استجابة الاستبيان قبل الإغلاق
+            'gap_threshold' => 1,                   // 10.1: فجوة ≥ مستوى واحد ← احتياج مقترح
+            'weights' => ['impact' => 1, 'gap' => 1, 'affected' => 1, 'urgency' => 1],   // FR-TD-029
+            'cert_alerts' => [90, 60, 30],          // FR-TD-103
+            'stage_hours_pct' => 85, 'stage_min_rating' => 3, 'stage_free_max_months' => 6,   // BR-15 / POL-22
+            'peak_seasons' => [],                   // [{from: MM-DD, to: MM-DD, name}]
+            'cost_types' => ['trainer', 'center', 'room', 'materials', 'hospitality', 'travel', 'certificates'],
+            'logistics' => ['القاعة والتهوية والإضاءة', 'أنظمة العرض والصوت والإنترنت', 'المواد والأدوات', 'الضيافة', 'الإسعافات والسلامة', 'السفر والإقامة عند الحاجة'],
+            'survey_items' => ['وضوح مواضيع الدورة والأمثلة', 'تمكن المحاضر من المعلومات', 'ارتباط الموضوع بطبيعة العمل', 'قدرة المحاضر على الربط بأمثلة حقيقية', 'قدرة المحاضر على الجذب والحث على المشاركة', 'تنظيم الوقت', 'ملاءمة القاعة والتجهيزات'],
+            'impact_items' => ['تعزيز التفاعل والتعاون في الفريق', 'تطوير مهارات الاتصال ضمن بيئة العمل', 'المبادرة بطرح أفكار لآلية عمل جديدة', 'مدى تطبيق المعلومات ضمن بيئة العمل', 'انخفاض الأخطاء عقب التدريب', 'سرعة الإنجاز', 'جودة المخرجات', 'الالتزام بالإجراءات', 'نقل المعرفة للزملاء'],
+            'qualification_templates' => [],        // [{key, ar, en, job_ids[], department_ids[], stations: [{department_id, days, topics}]}]
+            'commitment_ar' => "تعهد الالتزام بالتدريب والعمل\n\nأنا الموقّع أدناه :name، أتعهد بحضور دورة «:course» من :from إلى :to، وبالعمل لدى :company مدة :months شهراً من تاريخ انتهاء الدورة مقابل تكلفتها البالغة :cost.\nأتعهد بتنفيذ المهام بكفاءة خلال فترة التدريب، والامتثال للسياسات والأخلاقيات المهنية وحماية سرية المعلومات.\nفي حال انتهاء خدمتي بطلبي قبل انقضاء مدة الالتزام، أسدد قيمة التدريب :mode.",
+            'commitment_en' => "Training & service commitment\n\nI, the undersigned :name, commit to attending «:course» from :from to :to, and to working for :company for :months months after the course ends, in return for its cost of :cost.\nI commit to performing my duties well during the training, complying with the policies and professional ethics and protecting confidential information.\nIf my service ends at my request before the commitment period ends, I will repay the training cost :mode.",
+        ],
         // العاملون من غير الموظفين (الدفعة 22 — الجزء E): حدود التطوع، فحص طبيعة العلاقة، الاعتماد، الشهادة، قائمة الخبراء، سرية الأتعاب
         'externals' => [
             'max_months' => 6,                      // POL-VL-04: المدة القصوى لاتفاقية التطوع

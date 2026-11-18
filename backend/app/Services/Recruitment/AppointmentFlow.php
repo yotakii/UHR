@@ -99,6 +99,7 @@ class AppointmentFlow
         foreach ($c->logs()->orderBy('at')->get() as $l) $emp->log($l->text_ar, $l->text_en, $l->kind, $l->form, $l->at);
         $emp->log("صدور قرار التعيين {$ap->decision_no} ومنح الرقم الوظيفي {$emp->code}", "Decision {$ap->decision_no} issued, employee ID {$emp->code}", 'ok', 'F-31');
         Onboarding::create(['employee_id' => $emp->id, 'checklist' => F19::blank(0, 8)]);
+        \App\Services\Training\Records::qualify($emp);   // WF-05: برنامج تأهيل الموظف الجديد F-01
         if ($by = auth()->user()) \App\Services\Contracts\Contracts::forNewEmployee($emp, $by);   // عقد العمل بانتظار التواقيع (الجزء D)
         $ap->update(['employee_id' => $emp->id]);
         $c->update(['stage' => 'hired', 'stage_at' => now()->toDateString()]);
