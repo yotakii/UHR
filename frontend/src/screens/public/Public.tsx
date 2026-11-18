@@ -13,10 +13,11 @@ import { JobPage } from './JobPage'
 import { Activate, CompanyLogin, Forgot, Login, Reset } from './Auth'
 import { usePortalContext } from '../../lib/public'
 import { CompanyLogo } from './parts'
+import { VolunteerSignup, ExpertSignup, VerifyCertificate } from './ExternalsPublic'
 import { Track } from './Track'
 
 /** صفحات الزائر: البوابة، فرص العمل، صفحة الشركة، صفحة الشاغر، التقديم، الدخول */
-export const PUBLIC_PAGES = ['', 'jobs', 'c', 'apply', 'applied', 'login', 'forgot', 'reset', 'activate', 'test', 'track']
+export const PUBLIC_PAGES = ['', 'jobs', 'c', 'apply', 'applied', 'login', 'forgot', 'reset', 'activate', 'test', 'track', 'volunteer', 'experts', 'verify']
 
 export function Public() {
   const L = useL(); const route = useRoute(); const { page, parts, query } = route
@@ -37,6 +38,9 @@ export function Public() {
         : page === 'checkin' && parts[1] ? <Login after={`/checkin/${parts[1]}`} />
         : page === 'forgot' ? <Forgot />
         : page === 'track' ? <Track />
+        : page === 'volunteer' && parts[1] ? <VolunteerSignup token={parts[1]} />
+        : page === 'experts' && parts[1] === 'join' && parts[2] ? <ExpertSignup slug={parts[2]} />
+        : page === 'verify' ? <VerifyCertificate code={parts[1]} />
         : page === 'test' && parts[1] ? <TakeTest token={parts[1]} />
         : page === 'reset' ? <Reset token={query.token ?? ''} email={query.email ?? ''} />
         : page === 'activate' ? <Activate token={route.parts[1] ?? ''} />

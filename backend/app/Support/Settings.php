@@ -219,6 +219,28 @@ class Settings
             'trainer_rates' => ['beginner' => 15000, 'intermediate' => 25000, 'advanced' => 40000], 'trainer_currency' => 'SYP',
             'attendance_bonus' => 0, 'attendance_bonus_currency' => 'SYP', 'bonus_over_cap_role' => 'ceo', 'bonus_monthly_cap' => 0,
         ],
+        // العاملون من غير الموظفين (الدفعة 22 — الجزء E): حدود التطوع، فحص طبيعة العلاقة، الاعتماد، الشهادة، قائمة الخبراء، سرية الأتعاب
+        'externals' => [
+            'max_months' => 6,                      // POL-VL-04: المدة القصوى لاتفاقية التطوع
+            'max_weekly_hours' => 20,               // POL-VL-04: الحد الأعلى للساعات الأسبوعية
+            'warn_pct' => 80,                       // تنبيه عند بلوغ هذه النسبة من الحد
+            'relation_threshold' => 3,              // E.2: عدد الإجابات «نعم» التي تحيل التكليف لاعتماد أعلى
+            'replaces_max_months' => 3,             // حالة «يحل محل موظف»: مدة قصوى ومبرر واعتماد الإدارة العليا
+            'default_relation' => 'alongside',      // replaces | alongside | independent
+            'approver' => 'hr_director', 'high_approver' => 'ceo',
+            'pledges' => ['agreement', 'confidentiality', 'conduct', 'safety'],   // POL-VL-05: وثائق إلزامية قبل التفعيل
+            'onboarding' => [['ar' => 'التعريف بالمنشأة وأنظمتها', 'en' => 'Introduction to the organisation'], ['ar' => 'إجراءات السلامة والحماية', 'en' => 'Safety & safeguarding'], ['ar' => 'التعريف بالمشرف والفريق', 'en' => 'Meet the supervisor and team']],
+            'expense_cap' => 50000, 'expense_currency' => 'SYP',   // POL-VL-03: حد تعويض المصاريف لكل طلب
+            'hour_value' => 0, 'hour_currency' => 'SYP',          // القيمة التقديرية لساعة التطوع في التقارير
+            'end_warn_days' => 14,                  // FR-VL-015: تنبيه قبل انتهاء الاتفاقية
+            'roster_review_months' => 12,           // POL-RS-08: طلب تحديث بيانات الخبير
+            'roster_inactive_days' => 30,           // تعطيل من لا يستجيب لطلب التحديث
+            'shortlist_min' => 2,                   // POL-RS-09: أكثر من خبير في القائمة المختصرة
+            'doc_alert_days' => 30,                 // FR-RS-003: تنبيه قبل انتهاء صلاحية الشهادات
+            'fee_roles' => ['hr_director', 'finance', 'ceo'],     // POL-RS-07: من يرى الأتعاب والتقييمات والملاحظات
+            'agreement_ar' => "اتفاقية تطوع مؤقتة\n\nبين :company (الجهة المستضيفة) والسيد/ة :name (المتطوع)، رقم الهوية :national_id.\n\nالجهة المستضيفة: فرع :branch، :department، والمشرف :supervisor.\nالمدة: من :from إلى :to، بمعدل :hours ساعة أسبوعياً.\nالعلاقة التشغيلية: :relation.\n\n1. التطوع دون أجر، ولا تنشئ هذه الاتفاقية علاقة عمل.\n2. المهام المحددة والمخرجات المتوقعة: :tasks\n3. يلتزم المتطوع بالحضور المتفق عليه، والسرية، ومدونة السلوك، وإجراءات السلامة والحماية، والمحافظة على الممتلكات.\n4. تلتزم الجهة بالتوجيه والتدريب الأولي، وبيئة آمنة، ومشرف مسؤول، وتعويض المصاريف المتفق عليها، وشهادة تطوع.\n5. التعويضات إن وُجدت: مصاريف فعلية موثقة بحد أعلى :cap لكل طلب.\n6. يجوز لأي طرف إنهاء الاتفاقية، مع إعادة أي عهدة.\n7. حماية البيانات، والملكية الفكرية للمخرجات للجهة المستضيفة.",
+            'agreement_en' => "Temporary volunteer agreement\n\nBetween :company (the host) and :name (the volunteer), ID :national_id.\n\nHost: :branch branch, :department, supervisor :supervisor.\nPeriod: :from to :to, :hours hours a week.\nOperational relation: :relation.\n\n1. Volunteering is unpaid and this agreement does not create an employment relationship.\n2. Tasks and expected outputs: :tasks\n3. The volunteer commits to the agreed attendance, confidentiality, the code of conduct, safety and safeguarding procedures and care of property.\n4. The host provides orientation and initial training, a safe environment, a responsible supervisor, the agreed expense reimbursement and a volunteering certificate.\n5. Reimbursement, if any: documented actual expenses up to :cap per claim.\n6. Either party may end the agreement; any custody is returned.\n7. Data protection; intellectual property of outputs belongs to the host.",
+        ],
         // NFC وتعدد الفروع (الدفعة 21 — الجزء C): قرار البصم خارج الفرع، نوافذ التكرار، تنبيهات الأمان، الحضور بملصق الفرع
         'nfc' => [
             'off_branch' => 'flag',                 // reject | flag (قبول مع تعليم للمراجعة)

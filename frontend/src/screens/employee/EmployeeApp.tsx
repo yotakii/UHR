@@ -48,7 +48,7 @@ export function EmployeeApp({ user }: { user: SessionUser }) {
   const n = pendingDocs(docs)
   const inbox = useInbox().data
   const issues = useMyAttendance().data?.issues.filter(i => i.open && !i.justification) ?? []
-  const approver = !!inbox && (inbox.team.length > 0 || inbox.data.length > 0)
+  const approver = !!inbox && (inbox.team.length > 0 || inbox.data.length > 0 || (inbox.volunteer_hours ?? 0) > 0)
   const disc = useMyDiscipline().data
   const mc = useMyContracts().data
   const contractTodo = mc ? mc.contracts.filter(c => c.signatures.some(x => x.role === 'employee' && x.can)).length + mc.evaluations.filter(c => c.can?.sign).length + mc.team.length : 0

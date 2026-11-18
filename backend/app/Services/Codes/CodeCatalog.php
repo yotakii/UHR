@@ -64,6 +64,7 @@ class CodeCatalog
                 $bool('travel', 'سفر (بدل سفر)', 'Travel (allowance)'), $bool('financial', 'له أثر مالي', 'Has a pay effect'),
             ]],
             'mission_categories' => ['تصنيفات المهمات', 'Mission categories', 'ops', 'hr_director', '^[A-Z]{2,4}-[0-9]{2}$', 'SAL-01', false, false, 'mission_types', null, null],
+            'specialties' => ['تخصصات الخبراء', 'Expert specialties', 'people', 'hr_director', '^[A-Z]{3}(-[0-9]{2})?$', 'HRM-01', false, true, 'specialties', null, null],
             'bonus_types' => ['أنواع المكافآت', 'Bonus types', 'ops', 'hr_director', '^BN-[0-9]{2}$', 'BN-10', false, false, null, null, [
                 ['key' => 'element', 'ar' => 'عنصر الراتب', 'en' => 'Pay element', 'type' => 'list', 'list' => 'pay_elements'],
                 ['key' => 'method', 'ar' => 'طريقة الحساب', 'en' => 'Calculation', 'type' => 'select', 'options' => ['fixed', 'percent', 'free', 'hours', 'formula']],
@@ -120,6 +121,11 @@ class CodeCatalog
                 ['MT-50', 'مهمة تدريبية', 'Training mission', ['travel' => true, 'financial' => true]], ['MT-60', 'تدريب كمحاضر داخلي', 'Internal trainer', ['travel' => false, 'financial' => true]],
                 ['MT-70', 'مهمة فريق أو فرع', 'Team / branch mission', ['travel' => false, 'financial' => false]],
             ],
+            'specialties' => [['HRM', 'الموارد البشرية', 'Human resources'], ['FIN', 'المالية والمحاسبة', 'Finance & accounting'], ['TEC', 'التقنية والمعلومات', 'Technology'], ['ENG', 'الهندسة', 'Engineering'],
+                ['LEG', 'القانون', 'Law'], ['TRN', 'التدريب والتطوير', 'Training & development'], ['MKT', 'التسويق والمبيعات', 'Marketing & sales'], ['MGT', 'الإدارة والاستراتيجية', 'Management & strategy'],
+                ['HRM-01', 'تقييم الوظائف', 'Job evaluation', null, 'HRM'], ['HRM-02', 'التطوير التنظيمي', 'Organisational development', null, 'HRM'], ['HRM-03', 'التوظيف واختيار الكفاءات', 'Recruitment & selection', null, 'HRM'],
+                ['FIN-01', 'التدقيق', 'Audit', null, 'FIN'], ['FIN-02', 'الضرائب', 'Tax', null, 'FIN'], ['TEC-01', 'أمن المعلومات', 'Information security', null, 'TEC'], ['TEC-02', 'تطوير البرمجيات', 'Software development', null, 'TEC'],
+                ['TRN-01', 'تدريب المدربين', 'Training of trainers', null, 'TRN'], ['MGT-01', 'إدارة المشاريع', 'Project management', null, 'MGT'], ['LEG-01', 'قانون العمل', 'Labour law', null, 'LEG']],
             'mission_categories' => [['SAL-01', 'مبيعات', 'Sales', null, 'MT-20'], ['AUD-01', 'تدقيق', 'Audit', null, 'MT-20'], ['MNT-01', 'صيانة', 'Maintenance', null, 'MT-20'],
                 ['REP-01', 'تمثيل رسمي', 'Official representation', null, 'MT-30'], ['BR-01', 'افتتاح فرع', 'Branch opening', null, 'MT-30']],
             'bonus_types' => [

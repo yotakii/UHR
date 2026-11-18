@@ -49,12 +49,14 @@ class ApprovalInboxController extends Controller
                 $x instanceof \App\Models\Mission => \App\Services\Missions\Missions::inboxRow($x, $u),
                 $x instanceof \App\Models\Bonus => \App\Services\Missions\Bonuses::row($x, $u),
                 $x instanceof \App\Models\ContractException => \App\Services\Contracts\ContractCases::exceptionRow($x, $u),
+                $x instanceof \App\Models\Engagement => \App\Services\Externals\Externals::inboxRow($x, $u),
                 default => RequestRow::overtime($x->load(RequestRow::SERVICE_WITH), $u),
             };
         })->values();
         $me = $u->employee_id ? Employee::with('delegate')->find($u->employee_id) : null;
         $team = $me ? Employee::current()->where('manager_id', $me->id)->orderBy('name')->get() : collect();
         return response()->json(['data' => $rows, 'reject_min' => (int) LeaveService::rules()['reject_min'],
+            'volunteer_hours' => $u->employee_id ? \App\Models\VolunteerLog::where('status', 'pending')->whereHas('engagement', fn ($g) => $g->where('supervisor_id', $u->employee_id))->count() : 0,
             'team' => $team->map(fn ($e) => ['id' => $e->id, 'code' => $e->code, 'ar' => $e->name, 'en' => $e->name_en])->values(),
             'delegate' => $me?->delegate ? ['id' => $me->delegate->id, 'ar' => $me->delegate->name, 'en' => $me->delegate->name_en] : null,
             'delegates' => $me ? Employee::current()->where('department_id', $me->department_id)->where('id', '!=', $me->id)->orderBy('name')->get()->map(fn ($e) => ['id' => $e->id, 'ar' => $e->name, 'en' => $e->name_en])->values() : [],
@@ -80,6 +82,7 @@ class ApprovalInboxController extends Controller
         elseif ($x instanceof \App\Models\SalaryGrant) app(\App\Services\Security\SalaryGrants::class)->decide($x, $u, $ok, $d['note'] ?? null);
         elseif ($x instanceof \App\Models\Mission) app(\App\Services\Missions\Missions::class)->decide($x, $u, $ok, $d['note'] ?? null);
         elseif ($x instanceof \App\Models\Bonus) app(\App\Services\Missions\Bonuses::class)->decide($x, $u, $ok, $d['note'] ?? null);
+        elseif ($x instanceof \App\Models\Engagement) app(\App\Services\Externals\Externals::class)->decide($x, $u, $ok, $d['note'] ?? null);
         elseif ($x instanceof \App\Models\ContractException) app(\App\Services\Contracts\ContractCases::class)->decideException($x, $u, $ok, $d['note'] ?? null);
         else abort(404);
         return $this->index($request);

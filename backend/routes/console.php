@@ -170,3 +170,11 @@ Artisan::command('nfc:monitor', function () {
     $this->info("offline {$n}");
 })->purpose('Alert HR about attendance devices that stopped sending heartbeats');
 Schedule::command('nfc:monitor')->everyFiveMinutes();
+
+// الدفعة 22: تذكير انتهاء اتفاقيات غير الموظفين وإنهاؤها، المراجعة الدورية لقائمة الخبراء، صلاحية الشهادات
+Artisan::command('externals:sweep', function () {
+    $n = 0;
+    foreach (\App\Models\Company::where('status', 'active')->pluck('id') as $id) \App\Support\Tenant::run($id, function () use (&$n) { $n += app(\App\Services\Externals\Externals::class)->sweep(); });
+    $this->info("handled {$n}");
+})->purpose('End expired non-employee engagements and review the expert roster');
+Schedule::command('externals:sweep')->dailyAt('07:20');

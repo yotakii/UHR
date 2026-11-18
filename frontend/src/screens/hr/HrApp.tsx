@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react'
-import { Sparkles, ListChecks, LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed, Megaphone, Gift, ClipboardCheck, SlidersHorizontal, Sprout, KeyRound, Building, UserCog, GitBranch, BellRing, Library, History, DatabaseBackup, ScanText, MessagesSquare, ArrowRight, ArrowLeft, X, CalendarDays, CalendarClock, MapPin, UserRound, Binary, Plane } from 'lucide-react'
+import { Sparkles, ListChecks, LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed, Megaphone, Gift, ClipboardCheck, SlidersHorizontal, Sprout, KeyRound, Building, UserCog, GitBranch, BellRing, Library, History, DatabaseBackup, ScanText, MessagesSquare, ArrowRight, ArrowLeft, X, CalendarDays, CalendarClock, MapPin, UserRound, Binary, Plane, HandHeart } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { navigate, useRoute } from '../../lib/router'
 import { can, type SessionUser } from '../../lib/session'
@@ -68,6 +68,9 @@ import { MissionsApp } from '../missions/Missions'
 import { MissionPrint } from '../missions/MissionPrint'
 import { MissionSettings } from './MissionSettings'
 import { NfcSettings } from './NfcSettings'
+import { ExternalSettings } from './ExternalSettings'
+import { ExternalsApp } from '../externals/Externals'
+import { CertPrint } from '../externals/CertPrint'
 import { CodebookPrint } from './admin/CodebookPrint'
 import { Departments } from './admin/Departments'
 import { Chains } from './admin/Chains'
@@ -123,6 +126,8 @@ export function HrApp({ user }: { user: SessionUser }) {
       view: () => route.parts[2] === 'print' && route.parts[3] && /^\d+$/.test(route.parts[4] ?? '') ? <ContractPrint me={false} kind={route.parts[3]} id={Number(route.parts[4])} /> : <ContractsHR /> },
     { item: { to: '/hr/missions', icon: <Plane size={18} />, label: L('المهمات والسفر', 'Missions & travel'), group: g2 }, module: u => can(u, 'missions') || !!u.employee,
       view: () => route.parts[2] === 'print' && /^\d+$/.test(route.parts[3] ?? '') ? <MissionPrint id={Number(route.parts[3])} /> : <MissionsApp base="/hr/missions" /> },
+    { item: { to: '/hr/externals', icon: <HandHeart size={18} />, label: L('غير الموظفين والخبراء', 'Non-employees & experts'), group: g2 }, module: 'externals',
+      view: () => route.parts[2] === 'cert' && /^\d+$/.test(route.parts[3] ?? '') ? <CertPrint id={Number(route.parts[3])} /> : <ExternalsApp /> },
     { item: { to: '/hr/custody', icon: <Package size={18} />, label: L('العهد', 'Custody'), group: g2 }, module: 'assets', view: () => <Custody /> },
     { item: { to: '/hr/discipline', icon: <Gavel size={18} />, label: L('المخالفات والجزاءات', 'Violations & penalties'), count: count('discipline'), group: g2 }, module: 'discipline', view: () => <Discipline /> },
     { item: { to: '/hr/offboarding', icon: <DoorOpen size={18} />, label: L('الاستقالات وإنهاء الخدمة', 'Resignations & exits'), count: count('resignation'), group: g2 }, module: 'employees', view: () => <Offboarding /> },
@@ -159,6 +164,7 @@ export function HrApp({ user }: { user: SessionUser }) {
     { item: { to: '/hr/settings/schedules', icon: <CalendarClock size={18} />, label: L('جداول الدوام والورديات', 'Work schedules & shifts'), group: g4, hidden: true }, section: 'rules', module: 'attendance', view: () => <Schedules /> },
     { item: { to: '/hr/settings/branches', icon: <MapPin size={18} />, label: L('الفروع والمناطق الزمنية', 'Branches & time zones'), group: g4, hidden: true }, section: 'org', module: 'attendance', view: () => <Branches /> },
     { item: { to: '/hr/settings/devices', icon: <Nfc size={18} />, label: L('أجهزة الحضور', 'Attendance devices'), group: g4, hidden: true }, section: 'system', module: u => can(u, 'attendance', 'edit'), view: () => <Devices /> },
+    { item: { to: '/hr/settings/externals', icon: <HandHeart size={18} />, label: L('إعدادات غير الموظفين والخبراء', 'Non-employee & expert settings'), group: g4, hidden: true }, section: 'rules', module: u => can(u, 'externals'), view: () => <ExternalSettings /> },
     { item: { to: '/hr/settings/nfc', icon: <Nfc size={18} />, label: L('إعدادات بوابة الحضور', 'Attendance gate settings'), group: g4, hidden: true }, section: 'system', module: u => can(u, 'attendance'), view: () => <NfcSettings /> },
     { item: { to: '/hr/settings/assistant', icon: <Sparkles size={18} />, label: L('إعدادات المساعد', 'Assistant settings'), group: g4, hidden: true }, section: 'system', module: u => can(u, 'settings'), view: () => <AssistantSettings /> },
     { item: { to: '/hr/settings/space', icon: <MessagesSquare size={18} />, label: L('إعدادات الساحة', 'Space settings'), group: g4, hidden: true }, section: 'system', module: u => can(u, 'settings', 'edit'), view: () => <SpaceSettings /> },

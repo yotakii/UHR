@@ -4,7 +4,7 @@ import { navigate } from './router'
 import type { Bi } from './types'
 import { onPrefsChange, setLang, setTheme } from './store'
 
-export type Portal = 'platform' | 'hr' | 'employee' | 'candidate'
+export type Portal = 'platform' | 'hr' | 'employee' | 'candidate' | 'external'
 export interface CompanyCard { slug: string; name: Bi; short: Bi; brand_latin: string | null; logo: string | null; brand_color?: string | null }
 export interface SessionUser {
   id: number; email: string; name: Bi; roles: string[]; portal: Portal; must_change_password: boolean; password_policy?: { min: number; upper: boolean; symbol: boolean }

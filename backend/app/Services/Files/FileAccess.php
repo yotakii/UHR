@@ -60,6 +60,12 @@ class FileAccess
         $m = \App\Models\Mission::whereJsonContains('attachments', $f->id)->orWhereRaw("settlement->'expenses' @> ?::jsonb", [json_encode([['file_id' => $f->id]])])->first()
             ?? (($mc = \App\Models\MissionComment::whereJsonContains('files', $f->id)->first()) ? \App\Models\Mission::find($mc->mission_id) : null);
         if ($m) return ['module' => 'missions', 'owner' => $f->uploaded_by, 'label' => 'mission:'.$m->ref_no, 'mission_id' => $m->id] + ($m->employee_id ? ['employee_id' => $m->employee_id] : []);
+        // غير الموظفين (الدفعة 22): السيرة والشهادات والتوقيع والمخرجات وفواتير المصاريف — لصاحبها ولمن يرى الوحدة
+        $x = \App\Models\External::where('cv_file_id', $f->id)->orWhereRaw("documents @> ?::jsonb", [json_encode([['file_id' => $f->id]])])->first()
+            ?? (($g = \App\Models\Engagement::where('signature_file_id', $f->id)->first()) ? \App\Models\External::find($g->external_id) : null)
+            ?? (($p = \App\Models\PaymentRequest::where('file_id', $f->id)->first()) ? \App\Models\External::find($p->external_id) : null)
+            ?? (($dl = \App\Models\Deliverable::where('file_id', $f->id)->first()) ? \App\Models\External::find(\App\Models\Assignment::whereKey($dl->assignment_id)->value('external_id')) : null);
+        if ($x) return ['module' => 'externals', 'owner' => $x->user_id ?: $f->uploaded_by, 'label' => 'external:'.$x->ref];
         return null;
     }
 

@@ -800,3 +800,79 @@ Route::middleware(['auth', 'fresh'])->prefix('missions')->controller(\App\Http\C
     foreach (['submit', 'progress', 'request-close' => 'requestClose', 'review', 'pay-advance' => 'payAdvance', 'settlement', 'audit', 'cancel', 'amend', 'comments' => 'comment'] as $path => $action)
         Route::post('/{id}/'.(is_int($path) ? $action : $path), $action)->whereNumber('id');
 });
+
+// الدفعة 22 — غير الموظفين: المتطوعون والعقود القصيرة والاستشاريون وقائمة الخبراء (الجزء E)
+Route::middleware(['auth', 'fresh', 'portal:hr', 'perm:externals,view'])->prefix('hr/externals')->controller(\App\Http\Controllers\Api\Hr\ExternalController::class)->group(function () {
+    Route::get('/', 'index');
+    Route::get('/logs', 'pendingLogs');
+    Route::post('/logs/decide', 'approveLogs');
+    Route::get('/assignments', 'assignments');
+    Route::get('/assignments/{id}', 'assignment_show')->whereNumber('id');
+    Route::get('/payments', 'payments');
+    Route::get('/opportunities', 'opportunities');
+    Route::get('/reports', 'reports');
+    Route::get('/settings', 'settings');
+    Route::get('/expert-link', 'expertLink');
+    Route::get('/engagements/{id}/certificate', 'certificate')->whereNumber('id');
+    Route::get('/engagements/{id}/agreement', 'agreement')->whereNumber('id');
+    Route::post('/files', 'upload')->middleware('throttle:60,1');
+    Route::get('/{id}', 'show')->whereNumber('id');
+    // المشرف يسجّل ويصادق ساعات من يشرف عليهم وينهي تكليفهم (يُفحص في الخدمة)
+    Route::post('/engagements/{id}/logs', 'log')->whereNumber('id');
+    Route::post('/engagements/{id}/end', 'end')->whereNumber('id');
+    Route::post('/engagements/{id}/checklist', 'checklist')->whereNumber('id');
+    Route::post('/engagements/{id}/expense', 'expense')->whereNumber('id');
+    Route::post('/engagements/{id}/decide', 'decide')->whereNumber('id');
+    Route::post('/payments/{id}', 'decidePayment')->whereNumber('id');
+    Route::middleware('perm:externals,create')->group(function () {
+        Route::post('/', 'store');
+        Route::post('/assignments', 'storeAssignment');
+        Route::post('/opportunities', 'saveOpportunity');
+    });
+    Route::middleware('perm:externals,edit')->group(function () {
+        Route::put('/{id}', 'update')->whereNumber('id');
+        Route::post('/{id}/status', 'status')->whereNumber('id');
+        Route::post('/{id}/account', 'account')->whereNumber('id');
+        Route::post('/{id}/engagements', 'engage')->whereNumber('id');
+        Route::post('/{id}/convert', 'convert')->whereNumber('id');
+        Route::put('/engagements/{id}', 'updateEngagement')->whereNumber('id');
+        Route::post('/engagements/{id}/submit', 'submit')->whereNumber('id');
+        Route::post('/engagements/{id}/sign', 'sign')->whereNumber('id');
+        Route::put('/assignments/{id}', 'updateAssignment')->whereNumber('id');
+        Route::post('/assignments/{id}/shortlist', 'shortlist')->whereNumber('id');
+        Route::post('/assignments/{id}/select', 'select')->whereNumber('id');
+        Route::post('/assignments/{id}/contract', 'contract')->whereNumber('id');
+        Route::post('/assignments/{id}/pledge', 'pledge')->whereNumber('id');
+        Route::post('/assignments/{id}/cancel', 'cancelAssignment')->whereNumber('id');
+        Route::post('/deliverables/{id}/submit', 'deliver')->whereNumber('id');
+        Route::post('/deliverables/{id}/review', 'reviewDeliverable')->whereNumber('id');
+        Route::post('/assignments/{id}/rate', 'rate')->whereNumber('id');
+        Route::put('/opportunities/{id}', 'saveOpportunity')->whereNumber('id');
+    });
+    Route::put('/settings', 'saveSettings')->middleware('perm:settings,edit');
+});
+// المشرف (موظف من أي بوابة) يصادق ساعات المتطوعين تحت إشرافه
+Route::middleware(['auth', 'fresh'])->prefix('me/volunteer-hours')->controller(\App\Http\Controllers\Api\Hr\ExternalController::class)->group(function () {
+    Route::get('/', 'pendingLogs');
+    Route::post('/', 'approveLogs');
+});
+// بوابة المتطوع والخبير
+Route::middleware(['auth', 'fresh', 'portal:external'])->prefix('ext')->controller(\App\Http\Controllers\Api\ExternalPortalController::class)->group(function () {
+    Route::get('/', 'home');
+    Route::post('/engagements/{id}/sign', 'sign')->whereNumber('id');
+    Route::post('/engagements/{id}/logs', 'log')->whereNumber('id')->middleware('throttle:30,1');
+    Route::post('/engagements/{id}/expense', 'expense')->whereNumber('id');
+    Route::get('/engagements/{id}/certificate', 'certificate')->whereNumber('id');
+    Route::post('/assignments/{id}/pledge', 'pledge')->whereNumber('id');
+    Route::post('/deliverables/{id}', 'deliver')->whereNumber('id');
+    Route::put('/profile', 'profile');
+    Route::post('/files', 'upload')->middleware('throttle:30,1');
+});
+// عام: فرصة تطوع وتسجيل، تسجيل خبير، التحقق من شهادة تطوع
+Route::prefix('public')->controller(\App\Http\Controllers\Api\ExternalPortalController::class)->group(function () {
+    Route::get('/volunteer/{token}', 'opportunity');
+    Route::post('/volunteer/{token}', 'volunteer')->middleware('throttle:10,1');
+    Route::get('/experts/{slug}', 'expertForm');
+    Route::post('/experts/{slug}', 'expert')->middleware('throttle:6,1');
+    Route::get('/verify/{code}', 'verify')->middleware('throttle:30,1');
+});

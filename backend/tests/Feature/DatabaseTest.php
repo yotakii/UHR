@@ -37,7 +37,7 @@ class DatabaseTest extends TestCase
     {
         $this->seed();
         $this->seed();
-        $this->assertSame(11, Role::count());
+        $this->assertSame(13, Role::count());   // + volunteer, expert (22)
         $this->assertSame(6, Location::count());
         $this->assertSame(0, ApprovalChain::count(), 'company defaults are seeded per company');
         $this->assertSame(0, Employee::count(), 'no sample people in a production seed');
@@ -48,16 +48,16 @@ class DatabaseTest extends TestCase
         // قيم الشركة تُبذر عند إنشائها، وتبقى معزولة عن الشركات الأخرى
         $a = $this->makeCompany('acme');
         \App\Services\Platform\CompanyDefaults::seed($a);
-        $this->assertSame(15, ApprovalChain::count());   // + justification, overtime (07c), service, advance (07d), penalty (08b), termination (08c), internal (09a), salary_access (10b), offer_budget (15b), contract_exception (19)
+        $this->assertSame(17, ApprovalChain::count());   // + engagement, engagement_high (22), justification, overtime (07c), service, advance (07d), penalty (08b), termination (08c), internal (09a), salary_access (10b), offer_budget (15b), contract_exception (19)
         $this->assertSame(41, \App\Models\ViolationType::count());   // دليل المخالفات (08b)
         $this->assertSame(4, count(ApprovalChain::where('type', 'appointment')->first()->levels));
         $this->assertSame('UHR', Settings::prefix('employee'));
         $this->assertNotNull(Settings::policy('annual_leave'));
         $this->assertSame('شركة acme', Settings::company('name_ar'));
         $this->makeCompany('beta');
-        $this->assertSame(15, ApprovalChain::count());   // + … salary_access, offer_budget
+        $this->assertSame(17, ApprovalChain::count());   // + … salary_access, offer_budget, engagement
         $this->assertSame(41, \App\Models\ViolationType::count());   // دليل المخالفات (08b)
-        $this->assertSame(30, ApprovalChain::allCompanies()->count());
+        $this->assertSame(34, ApprovalChain::allCompanies()->count());
     }
 
     public function test_install_creates_admin_with_temporary_password(): void

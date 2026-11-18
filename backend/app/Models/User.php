@@ -61,6 +61,7 @@ class User extends Authenticatable
         if ($this->hasRole('platform_admin')) return 'platform';
         if ($this->hasRole(...self::ADMIN_ROLES)) return 'hr';
         if ($this->employee_id) return 'employee';
+        if ($this->company_id && $this->hasRole('volunteer', 'expert')) return 'external';   // بوابة غير الموظفين (الدفعة 22)
         return 'candidate';
     }
 

@@ -50,6 +50,10 @@ class Forms
         'ANX' => ['ملحق عقد', 'Contract annex', 'contracts', false],
         // المهمات (الدفعة 20): نموذج مهمة السفر HR-11-F-05
         'MSN' => ['نموذج مهمة سفر', 'Travel mission form', 'missions', false],
+        // غير الموظفين (الدفعة 22): اتفاقية التطوع HR-20-CT-01، شهادة التطوع، الشروط المرجعية لتكليف خبير
+        'VLA' => ['اتفاقية تطوع مؤقتة', 'Temporary volunteer agreement', 'externals', false],
+        'VLC' => ['شهادة تطوع', 'Volunteering certificate', 'externals', false],
+        'TOR' => ['الشروط المرجعية لتكليف خبير', 'Expert assignment terms of reference', 'externals', true],
     ];
 
     public const ISSUED_ON = '2025-04-01';

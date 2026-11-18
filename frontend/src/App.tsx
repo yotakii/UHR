@@ -15,6 +15,7 @@ import { DevKit } from './screens/DevKit'
 import { CandidateHome } from './screens/candidate/CandidateHome'
 import { EmployeeApp } from './screens/employee/EmployeeApp'
 import { Terminal } from './screens/kiosk/Terminal'
+import { ExternalApp } from './screens/external/ExternalApp'
 import { BranchCheckin } from './screens/public/BranchCheckin'
 import { ApproveLink } from './screens/public/ApproveLink'
 import { startRealtime, stopRealtime } from './lib/realtime'
@@ -50,6 +51,7 @@ function Root() {
   if (route.page && PUBLIC_PAGES.includes(route.page) && route.page !== 'login') return <Public />
   if (user.portal === 'platform') return <PlatformApp user={user} />
   if (user.portal === 'hr') return <HrApp user={user} />
+  if (user.portal === 'external') return <ExternalApp user={user} />
   if (user.portal === 'candidate') return <CandidateHome user={user} />
   if (user.portal === 'employee') return <EmployeeApp user={user} />
   return <PortalHome user={user} />

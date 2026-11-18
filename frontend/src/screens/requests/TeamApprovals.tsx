@@ -8,6 +8,7 @@ import { ConfirmSend } from '../../ui/decision'
 import type { Bi } from '../../lib/types'
 import { Btn, Empty, Field, PageHead, Panel, toast } from '../../ui/kit'
 import { DecideButtons, DocLink, LeaveStatus, Period, StepsPath, Warnings } from './parts'
+import { VolunteerHours } from '../externals/VolunteerHours'
 
 /** جدول طلبات المسار الموحد (Leaves في الديمو): الموظف، النوع، الفترة، السبب، المسار، الحالة، القرار */
 export function RequestTable({ rows, rejectMin, empty, certHref }: { rows: ReqRow[]; rejectMin: number; empty: string; certHref?: (id: number) => string }) {
@@ -26,6 +27,8 @@ export function RequestTable({ rows, rejectMin, empty, certHref }: { rows: ReqRo
           {r.case.type && <div className="text-[12px] text-ink-3 max-w-[300px]">{bi(r.case.type, lang)}</div>}{r.requested_by && <div className="text-[12px] text-ink-3">{L('اقتراح', 'Proposed by')}: {bi(r.requested_by, lang)}</div>}</div>}
         {r.kind === 'mission' && r.mission && <div className="text-[12.5px]"><a className="text-brand font-semibold ltr inline-block" href={`/hr/missions?view=all&m=${r.mission.id}`}>{r.mission.ref_no}</a>{r.mission.destination ? ` · ${r.mission.destination}` : ''}{r.mission.days ? ` · ${r.mission.days} ${L('يوم', 'd')}` : ''}
           <div><Masked value={r.mission.masked ? null : r.mission.totals}>{Object.entries(r.mission.totals ?? {}).map(([c, v]) => money(v, c, lang)).join(' + ') || '—'}{r.mission.advance ? <span className="text-ink-3"> · {L('سلفة', 'advance')} {money(r.mission.advance, r.mission.advance_currency ?? 'SYP', lang)}</span> : null}</Masked></div></div>}
+        {r.kind === 'engagement' && r.engagement && <div className="text-[12.5px]"><a className="text-brand font-semibold ltr inline-block" href={`/hr/externals?id=${r.engagement.external_id}`}>{r.engagement.ref}</a> · {bi(r.engagement.relation, lang)} · <span className="num">{r.engagement.weekly_hours}</span> {L('ساعة/أسبوع', 'h/week')}
+          {r.engagement.high && <div className="text-warn">{L('العلاقة أقرب إلى علاقة عمل — تُعرض للاعتماد الأعلى', 'Looks like employment — needs the higher approval')} ({r.engagement.score}/6)</div>}</div>}
         {r.kind === 'bonus' && r.bonus_type && <div className="text-[12.5px]"><b>{bi(r.bonus_type, lang)}</b> · <Masked value={r.amount}>{money(r.amount ?? 0, r.currency ?? 'USD', lang)}</Masked></div>}
         {r.kind === 'contract_exception' && r.contract_decision && <div className="text-[12.5px]"><b>{bi(r.contract_decision.decision, lang)}</b>{r.contract_decision.type ? <> · {bi(r.contract_decision.type, lang)}</> : null}{r.contract_decision.months ? <> · <span className="num">{r.contract_decision.months}</span> {L('شهراً', 'months')}</> : null}
           {r.contract_decision.suggested && <div className="text-[12px] text-ink-3">{L('اقتراح السياسة', 'Policy suggestion')}: {bi(r.contract_decision.suggested, lang)}</div>}
@@ -63,6 +66,7 @@ export function TeamApprovals({ head = true }: { head?: boolean }) {
     <Panel title={L('بانتظار قرارك', 'Waiting for you')} pad={false}>
       {d ? <RequestTable rows={d.data} rejectMin={d.reject_min} empty={L('لا شيء بانتظار قرارك', 'Nothing waiting for your decision')} /> : <Empty title={L('جارٍ التحميل…', 'Loading…')} />}
     </Panel>
+    {d && (d.volunteer_hours ?? 0) > 0 && <VolunteerHours />}
     {d && d.team.length > 0 && <div className="grid lg:grid-cols-[380px_1fr] gap-4 items-start">
       <div className="space-y-4">
         <Panel title={L('نائبي أثناء إجازتي', 'My deputy while on leave')} sub={L('يستلم طلبات فريقك حين تكون في إجازة', 'Receives your team’s requests while you are on leave')}>
