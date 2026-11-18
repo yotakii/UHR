@@ -64,7 +64,7 @@ class CoreGapsTest extends TestCase
         $this->login('samer.halabi@uniqueness.sy');
         $type = $this->uq(fn () => Codes::resolve('mission_types', 'MT-30')->id);
         $m = $this->postJson('/api/missions', ['type_id' => $type, 'title' => 'زيارة فرع الحسكة', 'travel' => ['scope' => 'local', 'governorate' => 'HAS', 'city' => 'الحسكة', 'purpose' => 'تدقيق', 'depart_on' => '2026-10-20', 'return_on' => '2026-10-22', 'transport' => 'road']])->assertCreated()->json('data');
-        $line = collect($m['estimate']['lines'])->firstWhere('code', 'E-110');
+        $line = collect(Mission::allCompanies()->find($m['id'])->estimate['lines'])->firstWhere('code', 'E-110');   // المبالغ مخفية عن المنفّذ قبل التحقق
         $this->assertSame('NE', $line['zone'] ?? null);   // FR-TM-009: معامل المنطقة على البدل
         $this->assertEquals(150000.0, (float) $line['rate']);   // 100000 × 1.5
         $this->postJson("/api/missions/{$m['id']}/submit")->assertOk();
@@ -113,7 +113,7 @@ class CoreGapsTest extends TestCase
         // FR-NF-016: ساعة الجهاز متقدمة 10 دقائق ← يُصحَّح وقت الحدث
         Device::allCompanies()->whereKey($id)->update(['clock_drift' => 600]);
         $send([['card' => '04A1B2C3D4', 'at' => '2026-10-12T05:10:00Z', 'seq' => 1]])->assertOk();
-        $this->assertSame('2026-10-12 05:00:00', NfEvent::allCompanies()->where('seq', 1)->first()->occurred_at->utc()->format('Y-m-d H:i:s'));
+        $this->assertStringStartsWith('2026-10-12 05:00:00', NfEvent::allCompanies()->where('seq', 1)->first()->getRawOriginal('occurred_at'));   // يُحفظ بالتوقيت العالمي
         Device::allCompanies()->whereKey($id)->update(['clock_drift' => 0]);
 
         // FR-NF-018: رمز الذاكرة مطلوب حين يكون الأمان «ذاكرة»
@@ -121,14 +121,15 @@ class CoreGapsTest extends TestCase
         $tok = $this->postJson("/api/hr/credentials/{$cred->id}/token")->assertOk()->json('token');
         $this->assertSame(15, strlen($tok));
         $this->uq(fn () => Settings::put('nfc', array_merge(NfcGate::cfg(), ['card_security' => 'memory'])));
-        $r = $send([['card' => '04A1B2C3D4', 'at' => '2026-10-12T14:00:00Z', 'seq' => 2]])->assertOk();
-        $this->assertSame('token_mismatch', $r->json('results.0.reason'));
-        $r = $send([['card' => '04A1B2C3D4', 'at' => '2026-10-12T14:00:00Z', 'seq' => 3, 'token' => $tok]])->assertOk();
+        $r = $send([['card' => '04A1B2C3D4', 'at' => '2026-10-12T07:00:00Z', 'seq' => 2]])->assertOk();
+        $this->assertSame('token_mismatch', $r->json('results.0.reason'), json_encode($r->json()));
+        $r = $send([['card' => '04A1B2C3D4', 'at' => '2026-10-12T07:20:00Z', 'seq' => 3, 'token' => $tok]])->assertOk();
         $this->assertSame('accepted', $r->json('results.0.decision'));
         $this->uq(fn () => Settings::put('nfc', array_merge(NfcGate::cfg(), ['card_security' => 'uid', 'sticker_device' => 'bind_first', 'sticker_geo' => false])));
 
         // FR-NF-017: الهاتف المسجّل — أول جهاز يُربط، والجهاز الآخر يُرفض
-        $sticker = basename($this->getJson("/api/hr/branches/{$dam}/sticker")->assertOk()->json('url'));
+        $br = $this->uq(fn () => Location::create(['company_id' => $this->cid, 'code' => 'HQ9', 'name_ar' => 'المقر', 'name_en' => 'HQ', 'timezone' => 'Asia/Damascus', 'active' => true]));
+        $sticker = basename($this->getJson("/api/hr/branches/{$br->id}/sticker")->assertOk()->json('url'));
         $this->login('samer.halabi@uniqueness.sy');
         Carbon::setTestNow(Carbon::parse('2026-10-13 09:00:00', 'Asia/Damascus'));
         $this->postJson("/api/me/checkin/branch/{$sticker}", ['device_token' => str_repeat('a', 32)])->assertOk();
@@ -142,6 +143,7 @@ class CoreGapsTest extends TestCase
             return [$x, $g];
         });
         $this->postJson("/api/hr/externals/{$x->id}/card", ['identifier' => '04:55:66:77:88'])->assertOk();
+        Carbon::setTestNow(Carbon::parse('2026-10-13 15:00:00', 'Asia/Damascus'));
         $send([['card' => '0455667788', 'at' => '2026-10-13T06:00:00Z', 'seq' => 10], ['card' => '0455667788', 'at' => '2026-10-13T09:30:00Z', 'seq' => 11]])->assertOk();
         $log = VolunteerLog::allCompanies()->where('engagement_id', $g->id)->first();
         $this->assertSame([3.5, 'pending', 'nfc'], [(float) $log->hours, $log->status, $log->via]);
