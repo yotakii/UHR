@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, ExternalLink, Globe, Building2, Lock, Lock as LockIcon, Unlock, Link2, ClipboardCheck, Users, Send, X } from 'lucide-react'
+import { Plus, ExternalLink, Globe, Building2, Lock, Lock as LockIcon, Unlock, Link2, ClipboardCheck, Users, Send, X, Code2 } from 'lucide-react'
 import { useL, useLang, bi, fmtDate } from '../../lib/store'
 import { navigate, setQuery, useRoute } from '../../lib/router'
 import { useCvMatches, useHrJobs, useInviteCv, useJobStatus, type HrJob } from '../../lib/hr'
@@ -9,6 +9,7 @@ import { DEGREES, STAGES, type Stage } from '../../lib/recruitment'
 import { Badge, Btn, Drawer, Empty, PageHead, Panel, toast } from '../../ui/kit'
 import { DecisionDialog } from '../../ui/decision'
 import { JobForm } from './JobForm'
+import { JobsEmbed } from './JobsEmbed'
 
 const FIVE: Stage[] = ['new', 'screening', 'interview', 'technical', 'offer']
 
@@ -22,6 +23,7 @@ export function Jobs() {
   const canCreate = can(me, 'jobs', 'create'), canEdit = can(me, 'jobs', 'edit')
   const [edit, setEdit] = useState<{ open: boolean; id: number | null }>({ open: false, id: null })
   const [toggle, setToggle] = useState<HrJob | null>(null)
+  const [embed, setEmbed] = useState(false)
   const company = data?.company
   const route = useRoute()
   const matches = route.query.matches ? Number(route.query.matches) : null
@@ -30,7 +32,8 @@ export function Jobs() {
   const copy = (j: HrJob) => navigator.clipboard?.writeText(location.origin + publicUrl(j)).then(() => toast(L('تم نسخ رابط الوظيفة', 'Job link copied')), () => {})
   return <div className="max-w-[1280px] mx-auto">
     <PageHead title={L('الوظائف الشاغرة', 'Job openings')} sub={L('الوظائف المنشورة على بوابة التوظيف وعدد المتقدمين في كل مرحلة.', 'Roles published on the careers portal and applicants per stage.')}
-      actions={canCreate && <Btn kind="primary" icon={<Plus size={16} />} onClick={() => setEdit({ open: true, id: null })}>{L('شاغر جديد', 'New position')}</Btn>} />
+      actions={<><Btn icon={<Code2 size={16} />} onClick={() => setEmbed(true)}>{L('التضمين في موقع الشركة', 'Embed on website')}</Btn>{canCreate && <Btn kind="primary" icon={<Plus size={16} />} onClick={() => setEdit({ open: true, id: null })}>{L('شاغر جديد', 'New position')}</Btn>}</>} />
+    {embed && <JobsEmbed onClose={() => setEmbed(false)} />}
     {company && <div className={`mb-4 flex flex-wrap items-center gap-2 rounded-xl border px-4 py-2.5 text-[13px] ${company.portal_enabled ? 'border-brand/30 bg-brand-soft text-brand-2' : 'border-line bg-sub text-ink-2'}`}>
       <Globe size={16} />
       {company.portal_enabled

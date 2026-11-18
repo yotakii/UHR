@@ -220,6 +220,8 @@ class Settings
             'attendance_bonus' => 0, 'attendance_bonus_currency' => 'SYP', 'bonus_over_cap_role' => 'ceo', 'bonus_monthly_cap' => 0,
         ],
         // التأهيل والتدريب والتطوير (الدفعة 23 — SRS التدريب): قواعد BR-01…18 وكل قيمة مفتوحة في القسم 15 بقيمة افتراضية
+        // كود تضمين شواغر الشركة في موقعها (FEATURES 05b): إطار مستقل يُحدَّث تلقائياً، والمواقع المسموح لها بتضمينه
+        'embed' => ['enabled' => true, 'sites' => [], 'limit' => 20, 'theme' => 'light', 'show_logo' => true, 'show_filters' => true, 'color' => ''],
         'training' => [
             'mode' => 'hr_only',                    // FR-TD-010: hr_only | self_service (المدراء والموظفون يقترحون)
             'probation_block' => true,              // BR-01

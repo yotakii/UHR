@@ -64,6 +64,9 @@ Route::get('/realtime', \App\Http\Controllers\Api\RealtimeController::class)->mi
 
 // بوابة فرص العمل العامة (SRS §10.15) + صفحات الشركات والشواغر + التقديم F-28
 Route::prefix('public')->group(function () {
+    // كود التضمين: صفحة شواغر الشركة داخل إطار في موقعها + سكربت الإدراج وتغيير الارتفاع تلقائياً
+    Route::get('/embed.js', [\App\Http\Controllers\Api\EmbedController::class, 'script']);
+    Route::get('/embed/{slug}', [\App\Http\Controllers\Api\EmbedController::class, 'page'])->middleware('throttle:120,1');
     Route::get('/portal', [PublicController::class, 'portal']);
     Route::get('/jobs', [PublicController::class, 'jobs']);
     Route::get('/sitemap.xml', [PublicController::class, 'sitemap']);
@@ -225,10 +228,12 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
 
     Route::middleware('perm:jobs,view')->group(function () {
         Route::get('/jobs', [JobController::class, 'index']);
+        Route::get('/jobs/embed', [\App\Http\Controllers\Api\EmbedController::class, 'settings']);
         Route::get('/jobs/lookups', [JobController::class, 'lookups']);
         Route::get('/jobs/{id}', [JobController::class, 'show'])->whereNumber('id');
         Route::get('/jobs/{id}/test', [JobTestController::class, 'show'])->whereNumber('id');
     });
+    Route::put('/jobs/embed', [\App\Http\Controllers\Api\EmbedController::class, 'save'])->middleware('perm:settings,edit');
     // مطابقة بنك السير مع الشاغر ودعوة أصحابها للتقديم (ملاحظة 46)
     Route::get('/jobs/{id}/cv-matches', [JobController::class, 'cvMatches'])->whereNumber('id')->middleware('perm:candidates,view');
     Route::post('/jobs/{id}/cv-matches/{candidateId}/invite', [JobController::class, 'invite'])->whereNumber('id')->whereNumber('candidateId')->middleware(['perm:candidates,edit', 'throttle:60,1']);
