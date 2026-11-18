@@ -1,10 +1,10 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { KeyRound, Nfc, MailCheck, Eye, EyeOff, Loader2, Link2Off } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { api, ApiError } from '../../lib/api'
 import { go, href, navigate, useRoute } from '../../lib/router'
-import { useActivate, useLogin } from '../../lib/session'
+import { useActivate, useHandoff, useLogin } from '../../lib/session'
 import { Btn, Field } from '../../ui/kit'
 import { PasswordFields, passwordOk } from '../../ui/password'
 import { AuthCard } from './parts'
@@ -21,7 +21,7 @@ export function LoginCard({ sticky = true, after, company, sub }: { sticky?: boo
   const login = useLogin()
   const err = login.error instanceof ApiError ? (login.error.field('email') ?? login.error.field('password') ?? login.error.message) : login.error ? L('تعذّر الاتصال بالخادم. تحقق من الشبكة وحاول مجدداً.', 'Could not reach the server. Check your connection and try again.') : ''
   const locked = login.error instanceof ApiError && login.error.code === 'locked'
-  const submit = (e: FormEvent) => { e.preventDefault(); if (!login.isPending) login.mutate({ email: email.trim(), password: pw, company }, { onSuccess: () => after ? navigate(after) : go('') }) }
+  const submit = (e: FormEvent) => { e.preventDefault(); if (!login.isPending) login.mutate({ email: email.trim(), password: pw, company, handoff: !after && !company }, { onSuccess: r => { if (!r.redirect) after ? navigate(after) : go('') } }) }
   const edit = (f: (v: string) => void) => (e: React.ChangeEvent<HTMLInputElement>) => { f(e.target.value); if (login.error && !locked) login.reset() }
   return <section className={`bg-surface border border-line rounded-2xl ${sticky ? 'lg:sticky lg:top-24' : ''}`}>
     <div className="p-6 border-b border-line-2">
@@ -134,4 +134,15 @@ export function Activate({ token }: { token: string }) {
       <Btn kind="primary" size="lg" className="w-full" type="submit" disabled={m.isPending || !passwordOk(v, d.password)}>{reset ? L('حفظ والدخول', 'Save and sign in') : L('تفعيل الحساب والدخول', 'Activate and sign in')}</Btn>
     </form>
   </AuthCard>
+}
+
+/** رابط التسليم: يفتح الجلسة على عنوان بوابة الشركة بعد الدخول من البوابة العامة، ثم يذهب للصفحة الرئيسية */
+export function Handoff({ token }: { token: string }) {
+  const L = useL()
+  const h = useHandoff()
+  useEffect(() => { h.mutate(token, { onSuccess: () => { window.history.replaceState(null, '', '/'); go('') } }) }, [token])   // eslint-disable-line react-hooks/exhaustive-deps
+  if (h.isError) return <div className="max-w-md mx-auto px-5 py-10">
+    <div role="alert" className="mb-4 rounded-lg bg-danger-soft text-danger text-[13px] px-3 py-2">{h.error instanceof ApiError ? h.error.message : L('تعذّر الاتصال بالخادم.', 'Could not reach the server.')}</div>
+    <LoginCard sticky={false} /></div>
+  return <div className="py-24 grid place-items-center text-ink-3 text-[14px] gap-3"><Loader2 className="animate-spin text-brand" />{L('جارٍ فتح بوابة شركتك…', 'Opening your company portal…')}</div>
 }

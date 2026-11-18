@@ -45,8 +45,11 @@ function HostsPanel() {
     <div className="flex flex-wrap items-end gap-3">
       <div className="flex-1 min-w-[240px]"><Field label={L('النطاق الأساسي', 'Base domain')} error={e?.field('base_domain')} hint={L('يحتاج سجل DNS عاماً (*.النطاق) يشير إلى الخادم وشهادة له.', 'Needs a wildcard DNS record (*.domain) pointing to the server and a certificate.')}>
         <input className="field ltr text-start" value={val} placeholder="uhr.atmata-group.com" onChange={x => { setV(x.target.value.toLowerCase().trim()); save.reset() }} /></Field></div>
-      <Btn kind="primary" disabled={save.isPending || v === null} onClick={() => save.mutate({ base_domain: val }, { onSuccess: () => { setV(null); toast(L('حُفظ', 'Saved')) } })}>{L('حفظ', 'Save')}</Btn>
+      <Btn kind="primary" disabled={save.isPending || v === null} onClick={() => save.mutate({ base_domain: val, redirect_employees: data?.redirect_employees }, { onSuccess: () => { setV(null); toast(L('حُفظ', 'Saved')) } })}>{L('حفظ', 'Save')}</Btn>
     </div>
     {val && <p className="text-[12.5px] text-ink-3 mt-2">{L('مثال:', 'Example:')} <span className="ltr inline-block">https://uniqueness.{val}</span></p>}
+    {data && <label className="flex items-start gap-2 text-[13.5px] mt-3"><input type="checkbox" className="mt-1" checked={data.redirect_employees} disabled={save.isPending}
+      onChange={x => save.mutate({ base_domain: data.base_domain, redirect_employees: x.target.checked }, { onSuccess: () => toast(L('حُفظ', 'Saved')) })} />
+      <span>{L('نقل الموظف إلى بوابة شركته عند دخوله من البوابة العامة', 'Move employees to their company portal when they sign in from the general portal')}<span className="block text-[12px] text-ink-3">{L('للشركات التي لها نطاق خاص أو عند ضبط النطاق الأساسي؛ يدخل مرة واحدة ويُنقل تلقائياً. المتقدمون يبقون في البوابة العامة.', 'For companies with their own domain or when a base domain is set; one sign-in, then moved automatically. Applicants stay on the general portal.')}</span></span></label>}
   </Panel>
 }

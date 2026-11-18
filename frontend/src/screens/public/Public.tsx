@@ -11,14 +11,14 @@ import { PortalHome } from './Portal'
 import { JobsBoard } from './JobsBoard'
 import { CompanyPage } from './CompanyPage'
 import { JobPage } from './JobPage'
-import { Activate, CompanyLogin, Forgot, Login, Reset } from './Auth'
+import { Activate, CompanyLogin, Forgot, Handoff, Login, Reset } from './Auth'
 import { usePortalContext } from '../../lib/public'
 import { CompanyLogo } from './parts'
 import { VolunteerSignup, ExpertSignup, VerifyCertificate } from './ExternalsPublic'
 import { Track } from './Track'
 
 /** صفحات الزائر: البوابة، فرص العمل، صفحة الشركة، صفحة الشاغر، التقديم، الدخول */
-export const PUBLIC_PAGES = ['', 'jobs', 'c', 'apply', 'applied', 'login', 'forgot', 'reset', 'activate', 'test', 'track', 'volunteer', 'experts', 'verify', 'td-survey', 'td-verify']
+export const PUBLIC_PAGES = ['', 'jobs', 'c', 'apply', 'applied', 'login', 'forgot', 'reset', 'activate', 'test', 'track', 'volunteer', 'experts', 'verify', 'td-survey', 'td-verify', 'handoff']
 
 export function Public() {
   const L = useL(); const route = useRoute(); const { page, parts, query } = route
@@ -37,6 +37,7 @@ export function Public() {
         : page === 'login' ? <Login />
         : page === 'approve' && parts[1] ? <Login after={`/approve/${parts[1]}`} />
         : page === 'checkin' && parts[1] ? <Login after={`/checkin/${parts[1]}`} />
+        : page === 'handoff' && parts[1] ? <Handoff token={parts[1]} />
         : page === 'td-checkin' && parts[1] ? <Login after={`/td-checkin/${parts[1]}`} />
         : page === 'td-survey' && parts[1] ? <TdSurvey token={parts[1]} />
         : page === 'td-verify' ? <TdVerify code={parts[1]} />

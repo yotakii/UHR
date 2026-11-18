@@ -109,10 +109,10 @@ class PlatformController extends Controller
     /** النطاق الأساسي لبوابات الشركات (86): {slug}.النطاق — يحتاج سجل DNS عاماً (*.النطاق) وشهادة له */
     public function updateHosts(Request $request): JsonResponse
     {
-        $d = $request->validate(['base_domain' => ['nullable', 'string', 'max:150', 'regex:/^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/']],
+        $d = $request->validate(['base_domain' => ['nullable', 'string', 'max:150', 'regex:/^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/'], 'redirect_employees' => ['nullable', 'boolean']],
             ['base_domain.regex' => L::t('نطاق غير صالح (مثال: uhr.atmata-group.com).', 'Invalid domain (e.g. uhr.atmata-group.com).')]);
         $before = Settings::platformMerged('portal_hosts');
-        Settings::putPlatform('portal_hosts', ['base_domain' => strtolower(trim((string) ($d['base_domain'] ?? '')))]);
+        Settings::putPlatform('portal_hosts', ['base_domain' => strtolower(trim((string) ($d['base_domain'] ?? ''))), 'redirect_employees' => (bool) ($d['redirect_employees'] ?? $before['redirect_employees'])]);
         Audit::record('platform.portal_hosts', null, $before, Settings::platformMerged('portal_hosts'));
         return response()->json(['hosts' => Settings::platformMerged('portal_hosts')]);
     }

@@ -28,6 +28,13 @@ class HostCompany
         return Company::where('slug', $slug)->where('status', 'active')->first();
     }
 
+    /** العنوان الأساسي لبوابة الشركة (نطاقها الخاص، ثم {slug}.{base}) أو null إن لم يكن لها عنوان مستقل */
+    public static function home(Company $c): ?string
+    {
+        $base = self::host(Settings::platformMerged('portal_hosts')['base_domain']);
+        return $c->domain ? 'https://'.self::host($c->domain) : ($base ? "https://{$c->slug}.{$base}" : null);
+    }
+
     /** عناوين بوابة الشركة للعرض */
     public static function urls(Company $c): array
     {

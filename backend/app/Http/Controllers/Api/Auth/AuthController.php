@@ -32,7 +32,7 @@ class AuthController extends Controller
 
     public function login(Request $request): JsonResponse
     {
-        $data = $request->validate(['email' => ['required', 'email'], 'password' => ['required', 'string'], 'company' => ['nullable', 'string', 'max:40'], 'remember' => ['nullable', 'boolean']], [
+        $data = $request->validate(['email' => ['required', 'email'], 'password' => ['required', 'string'], 'company' => ['nullable', 'string', 'max:40'], 'remember' => ['nullable', 'boolean'], 'handoff' => ['nullable', 'boolean']], [
             'email.required' => L::t('أدخل البريد الإلكتروني.', 'Enter your email.'), 'email.email' => L::t('صيغة البريد غير صحيحة.', 'Invalid email format.'), 'password.required' => L::t('أدخل كلمة المرور.', 'Enter your password.'),
         ]);
         $email = strtolower(trim($data['email']));
@@ -76,6 +76,37 @@ class AuthController extends Controller
         Auth::login($user, (bool) ($data['remember'] ?? false));   // تطبيق الجوال: يبقى مسجّلاً حتى يخرج بنفسه
         $request->session()->regenerate();
         Audit::record('auth.login', $user);
+        return response()->json(['user' => $user->sessionPayload()] + (! $ctx && ! empty($data['handoff']) ? self::handoffFor($user, $request) : []));
+    }
+
+    /**
+     * الموظف الذي يدخل من البوابة العامة وشركته لها عنوان بوابة مستقل يُنقل إليه (FEATURES 05b):
+     * الجلسة مرتبطة بالعنوان، فنصدر رابط تسليم لمرة واحدة صالحاً دقيقة يفتح الجلسة على عنوان الشركة دون دخول ثانٍ.
+     */
+    private static function handoffFor(User $user, Request $request): array
+    {
+        if (! $user->company_id || ! \App\Support\Settings::platformMerged('portal_hosts')['redirect_employees']) return [];
+        $c = \App\Models\Company::find($user->company_id);
+        $home = $c ? \App\Support\HostCompany::home($c) : null;
+        if (! $home || \App\Support\HostCompany::host(parse_url($home, PHP_URL_HOST)) === \App\Support\HostCompany::host($request->getHost())) return [];
+        $token = \Illuminate\Support\Str::random(48);
+        \Illuminate\Support\Facades\Cache::put('handoff:'.hash('sha256', $token), ['user' => $user->id, 'company' => $c->id], 60);
+        return ['redirect' => "{$home}/handoff/{$token}"];
+    }
+
+    /** يستهلك رابط التسليم على عنوان بوابة الشركة: لمرة واحدة، لنفس الشركة فقط، ولحساب غير موقوف */
+    public function handoff(Request $request): JsonResponse
+    {
+        $token = (string) $request->validate(['token' => ['required', 'string', 'max:100']])['token'];
+        $d = \Illuminate\Support\Facades\Cache::pull('handoff:'.hash('sha256', $token));
+        $host = \App\Support\HostCompany::resolve($request->getHost());
+        $user = $d ? User::find($d['user']) : null;
+        if (! $user || ! $host || $host->id !== $d['company'] || $user->company_id !== $host->id || $user->blocked()) {
+            return response()->json(['message' => L::t('انتهت صلاحية رابط الدخول. سجّل الدخول من جديد.', 'This sign-in link has expired. Please sign in again.'), 'code' => 'handoff_invalid'], 410);
+        }
+        Auth::login($user);
+        $request->session()->regenerate();
+        Audit::record('auth.handoff', $user, null, ['host' => $request->getHost()]);
         return response()->json(['user' => $user->sessionPayload()]);
     }
 

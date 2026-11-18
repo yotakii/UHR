@@ -28,8 +28,8 @@ export const useAccountAction = (id: number) => useMutation({
   mutationFn: (v: { user: number; action: 'reset-password' | 'unlock' | 'deactivate' | 'activate' }) => api<{ data: CompanyAccount; sent: boolean }>(`/platform/companies/${id}/users/${v.user}/${v.action}`, { json: {} }),
   onSuccess: () => queryClient.invalidateQueries({ queryKey: ['platform', 'company', id] }),
 })
-export const usePortalHosts = () => useQuery({ queryKey: ['platform', 'portal-hosts'], queryFn: () => api<{ hosts: { base_domain: string } }>('/platform/portal').then(r => r.hosts) })
-export const useSaveHosts = () => useMutation({ mutationFn: (v: { base_domain: string }) => api('/platform/portal/hosts', { method: 'PUT', json: v }), onSuccess: refresh })
+export const usePortalHosts = () => useQuery({ queryKey: ['platform', 'portal-hosts'], queryFn: () => api<{ hosts: { base_domain: string; redirect_employees: boolean } }>('/platform/portal').then(r => r.hosts) })
+export const useSaveHosts = () => useMutation({ mutationFn: (v: { base_domain: string; redirect_employees?: boolean }) => api('/platform/portal/hosts', { method: 'PUT', json: v }), onSuccess: refresh })
 export interface Overview {
   companies: number; active: number; portal_jobs: number; pending: number; applications: number; applications_30d: number
   by_company: (CompanyCard & { applications: number; applications_30d: number; jobs: number })[]

@@ -93,6 +93,7 @@ Route::prefix('public')->group(function () {
 Route::prefix('auth')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
+    Route::post('/handoff', [AuthController::class, 'handoff'])->middleware('throttle:20,1');
     Route::post('/forgot', [AuthController::class, 'forgot'])->middleware('throttle:password-email');
     Route::post('/reset', [AuthController::class, 'reset'])->middleware('throttle:login');
     // 11e: رابط تفعيل الحساب / تعيين كلمة المرور

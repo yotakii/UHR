@@ -35,7 +35,13 @@ onPrefsChange(p => {
   api('/me/account', { method: 'PUT', json: { locale: p.lang, theme: p.theme } }).catch(() => { /* يكفي المحلي */ })
 })
 export function useLogin() {
-  return useMutation({ mutationFn: (v: { email: string; password: string; company?: string; remember?: boolean }) => api<{ user: SessionUser }>('/auth/login', { json: v }), onSuccess: r => { setMe(r); applyPrefs(r.user) } })
+  // الموظف الداخل من البوابة العامة وشركته لها عنوان بوابة مستقل يُنقل إليه برابط تسليم لمرة واحدة
+  return useMutation({ mutationFn: (v: { email: string; password: string; company?: string; remember?: boolean; handoff?: boolean }) => api<{ user: SessionUser; redirect?: string }>('/auth/login', { json: v }),
+    onSuccess: r => { if (r.redirect) { window.location.assign(r.redirect); return } setMe(r); applyPrefs(r.user) } })
+}
+/** يفتح الجلسة على عنوان بوابة الشركة من رابط التسليم */
+export function useHandoff() {
+  return useMutation({ mutationFn: (token: string) => api<{ user: SessionUser }>('/auth/handoff', { json: { token } }), onSuccess: r => { setMe(r); applyPrefs(r.user) } })
 }
 /** رابط تفعيل الحساب / تعيين كلمة المرور (11e): يختار كلمة المرور ثم يدخل مباشرة */
 export function useActivate(token: string) {
