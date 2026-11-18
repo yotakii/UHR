@@ -1,5 +1,8 @@
+import { useQuery } from '@tanstack/react-query'
+import { api } from '../../lib/api'
+import { AmendsList, InvitesPanel, MentionPicker, MissionCalendar, commentText, type MissionExtra } from './MissionMore'
 import { useState } from 'react'
-import { AlertTriangle, Check, FileSpreadsheet, LayoutGrid, List, Loader2, Paperclip, Plus, Printer, Send, Trash2 } from 'lucide-react'
+import { AlertTriangle, Check, FileSpreadsheet, LayoutGrid, List, Loader2, Paperclip, Plus, Printer, Send, Trash2 , CalendarDays } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { fmtDate, fmtDateTime, money } from '../../lib/dates'
 import { ApiError } from '../../lib/api'
@@ -49,7 +52,7 @@ export function MissionsApp({ base }: { base: string }) {
 
 function MissionList({ d, staff }: { d: Data; staff: boolean }) {
   const L = useL(); const lang = useLang(); const route = useRoute()
-  const [mode, setMode] = useState<'list' | 'board'>('list')
+  const [mode, setMode] = useState<'list' | 'board' | 'cal'>('list')
   const db = d.dashboard
   const card = (label: string, n: number, tone = '') => <div className="rounded-2xl border border-line bg-surface p-3"><div className="text-[12px] text-ink-3">{label}</div><div className={`text-[24px] font-bold num ${tone}`}>{n}</div></div>
   const pend = (s: string) => s.startsWith('pending') ? 'pending' : s
@@ -61,9 +64,9 @@ function MissionList({ d, staff }: { d: Data; staff: boolean }) {
       {staff && <Seg value={route.query.view || 'mine'} onChange={v => setQuery({ view: v === 'mine' ? undefined : v })} options={[{ v: 'mine', label: L('مهماتي', 'Mine') }, { v: 'owned', label: L('أنا مسؤولها', 'I own') }, { v: 'all', label: L('كل نطاقي', 'My scope') }]} />}
       <Seg value={route.query.status || 'open'} onChange={v => setQuery({ status: v === 'open' ? undefined : v })} options={[{ v: 'open', label: L('المفتوحة', 'Open') }, { v: 'settling', label: L('للتسوية', 'To settle') }, { v: 'closed', label: L('المغلقة', 'Closed') }, { v: 'all', label: L('الكل', 'All') }]} />
       <select className="field max-w-[220px]" value={route.query.type ?? ''} onChange={e => setQuery({ type: e.target.value || undefined })} aria-label={L('النوع', 'Type')}><option value="">{L('كل الأنواع', 'All types')}</option>{d.lookups.types.map(t => <option key={t.id} value={t.id}>{t.code} · {bi(t, lang)}</option>)}</select>
-      <span className="flex-1" /><Seg value={mode} onChange={setMode} options={[{ v: 'list', label: <List size={15} /> }, { v: 'board', label: <LayoutGrid size={15} /> }]} />
+      <span className="flex-1" /><Seg value={mode} onChange={setMode} options={[{ v: 'list', label: <List size={15} aria-label={L('قائمة', 'List')} /> }, { v: 'board', label: <LayoutGrid size={15} aria-label={L('لوحة', 'Board')} /> }, { v: 'cal', label: <CalendarDays size={15} aria-label={L('تقويم', 'Calendar')} /> }]} />
     </div>
-    {d.data.length === 0 ? <Panel><Empty title={L('لا مهمات', 'No missions')} /></Panel> : mode === 'list' ?
+    {mode === 'cal' ? <MissionCalendar view={route.query.view || 'mine'} /> : d.data.length === 0 ? <Panel><Empty title={L('لا مهمات', 'No missions')} /></Panel> : mode === 'list' ?
       <Panel pad={false}><table className="tbl"><thead><tr><th>{L('المهمة', 'Mission')}</th><th className="hidden md:table-cell">{L('المنفّذ', 'Executor')}</th><th className="hidden lg:table-cell">{L('الموعد', 'Due')}</th><th>{L('الحالة', 'Status')}</th></tr></thead>
         <tbody>{d.data.map(m => <tr key={m.id} className="cursor-pointer" onClick={() => setQuery({ m: String(m.id) })}>
           <td><div className="font-medium">{m.title}</div><div className="text-[12px] text-ink-3"><span className="ltr inline-block">{m.ref_no}</span>{m.type ? ` · ${bi(m.type, lang)}` : ''}{m.travel ? ` · ${m.travel.city || (m.travel.place ? bi(m.travel.place, lang) : m.travel.governorate || m.travel.country)}` : ''}</div>
@@ -125,6 +128,9 @@ function MissionDrawer({ id, base, onEdit, onClose }: { id: number; base: string
       <Lines lines={m.entitlements.lines} />{m.entitlements.advance > 0 && <div className="mt-2 text-[13px]">{L('يُستقطع مقابل السلفة', 'Deducted against the advance')}: <b className="num">{money(m.entitlements.advance, m.entitlements.advance_currency ?? 'SYP', lang)}</b></div>}
       {m.settlement?.external && <div className="text-[13px] text-info mt-2">{L('فئة العامل لا تدخل الرواتب — مستحقاته وفق عقده.', 'Not on payroll — paid under their contract.')}</div>}</Panel>}
     {m.lines.length > 0 && <Panel title={L('بنود الراتب', 'Pay lines')}><LineTable rows={m.lines} /></Panel>}
+    {(m as MissionExtra).external && <div className="text-[13px] text-info">{L('المسافر خبير خارجي', 'The traveller is an external expert')}: <b>{(m as MissionExtra).external!.name}</b> · {L('مستحقاته وفق عقده', 'paid under the contract')}</div>}
+    <AmendsList m={m as MissionExtra} />
+    <InvitesPanel m={m as MissionExtra} />
     <div className="flex flex-wrap gap-2">
       {m.can.edit && <Btn onClick={() => onEdit(m)}>{L('تعديل', 'Edit')}</Btn>}
       {m.can.edit && m.status !== 'returned' && <ConfirmSend label={m.type?.financial ? L('إرسال للاعتماد', 'Send for approval') : L('إسناد المهمة', 'Assign the mission')} busy={act.isPending} onConfirm={() => run('submit', {}, L('أُرسلت', 'Sent'))} />}
@@ -139,9 +145,10 @@ function MissionDrawer({ id, base, onEdit, onClose }: { id: number; base: string
     </div>
     {m.return_note && <div className="text-[13px] text-danger">{L('ملاحظة', 'Note')}: {m.return_note}</div>}
     <Panel title={L('التعليقات والنشاط', 'Comments & activity')}>
-      <ul className="space-y-2 text-[13px] max-h-[260px] overflow-y-auto">{[...m.comments.map(c => ({ at: c.at, el: <><b>{c.by}</b>: {c.text}</> })), ...m.log.map(g => ({ at: g.at, el: <span className="text-ink-3">{g.by ?? ''} · {g.what}{g.note ? ` — ${g.note}` : ''}</span> }))]
+      <ul className="space-y-2 text-[13px] max-h-[260px] overflow-y-auto">{[...m.comments.map(c => ({ at: c.at, el: <><b>{c.by}</b>: {commentText(c.text)}</> })), ...m.log.map(g => ({ at: g.at, el: <span className="text-ink-3">{g.by ?? ''} · {g.what}{g.note ? ` — ${g.note}` : ''}</span> }))]
         .sort((a, b) => a.at.localeCompare(b.at)).map((x, i) => <li key={i}><span className="text-[11.5px] text-ink-3 num me-2">{fmtDateTime(x.at, lang)}</span>{x.el}</li>)}</ul>
-      <div className="flex gap-2 mt-3"><input className="field flex-1" value={comment} onChange={e => setComment(e.target.value)} placeholder={L('اكتب تعليقاً', 'Write a comment')} />
+      <div className="flex gap-2 mt-3"><input className="field flex-1" value={comment} onChange={e => setComment(e.target.value)} placeholder={L('اكتب تعليقاً (@ للإشارة)', 'Write a comment (@ to mention)')} />
+        <MentionPicker id={id} onPick={t => setComment(c => c + t)} />
         <Btn icon={<Send size={15} />} disabled={!comment.trim() || act.isPending} onClick={() => act.mutate({ id, path: 'comments', v: { text: comment } }, { onSuccess: () => setComment('') })} aria-label={L('إرسال', 'Send')} /></div>
     </Panel>
     {modal === 'close' && <CloseModal id={id} onClose={() => setModal(null)} />}
@@ -257,7 +264,8 @@ function MissionForm({ d, m, onClose }: { d: Data; m: MissionFull | null; onClos
   const save = useSaveMission()
   const [v, setV] = useState({ type_id: m?.type ? d.lookups.types.find(t => t.code === m.type!.code)?.id ?? '' : '', category_id: '', title: m?.title ?? '', description: m?.description ?? '',
     assignee_type: m?.assignee_type ?? 'employee', employee_id: m?.employee?.id ?? '', assignee_ref: '', priority: m?.priority ?? 'normal', starts_on: m?.starts_on ?? '', due_on: m?.due_on ?? '', cost_center_id: '',
-    advance: String(m?.advance?.amount ?? ''), advance_currency: m?.advance?.currency ?? 'SYP' })
+    advance: String(m?.advance?.amount ?? ''), advance_currency: m?.advance?.currency ?? 'SYP', ticket_class: (m as MissionExtra | null)?.ticket_class ?? '', external_id: String((m as MissionExtra | null)?.external?.id ?? '') })
+  const experts = useQuery({ queryKey: ['missions', 'experts'], enabled: d.can.manage, queryFn: () => api<{ data: { id: number; ar: string; kind: string; status: string }[] }>('/hr/externals?tab=experts').then(r => r.data).catch(() => []) })
   const [t, setT] = useState(m?.travel ?? { scope: 'local' as const, country: 'SY', governorate: '', city: '', purpose: '', depart_on: '', return_on: '', transport: 'road' as const, km: 0, legs: [] })
   const type = d.lookups.types.find(x => x.id === Number(v.type_id))
   const travel = !!type?.attrs?.travel
@@ -265,7 +273,7 @@ function MissionForm({ d, m, onClose }: { d: Data; m: MissionFull | null; onClos
   const e = (k: string) => err?.field(k)
   return <Modal open onClose={onClose} width={760} title={m ? L('تعديل المهمة', 'Edit mission') : L('مهمة جديدة', 'New mission')}
     footer={<><Btn onClick={onClose}>{L('إلغاء', 'Cancel')}</Btn><Btn kind="primary" disabled={save.isPending} icon={<Check size={15} />}
-      onClick={() => save.mutate({ id: m?.id, v: { ...v, travel: travel ? t : null, advance: v.advance ? Number(v.advance) : 0 } }, { onSuccess: x => { toast(L('حُفظت مسودة — راجع التقدير ثم أرسل', 'Draft saved — review the estimate, then send')); onClose(); setQuery({ m: String(x.id) }) } })}>{L('حفظ المسودة', 'Save draft')}</Btn></>}>
+      onClick={() => save.mutate({ id: m?.id, v: { ...v, travel: travel ? t : null, advance: v.advance ? Number(v.advance) : 0, ticket_class: v.ticket_class || null, external_id: v.external_id ? Number(v.external_id) : null } }, { onSuccess: x => { toast(L('حُفظت مسودة — راجع التقدير ثم أرسل', 'Draft saved — review the estimate, then send')); onClose(); setQuery({ m: String(x.id) }) } })}>{L('حفظ المسودة', 'Save draft')}</Btn></>}>
     <div className="grid sm:grid-cols-2 gap-3">
       <Field label={L('نوع المهمة', 'Mission type')} req error={e('type_id')}><select className="field" value={v.type_id} onChange={x => setV({ ...v, type_id: x.target.value })}><option value="">—</option>{d.lookups.types.map(x => <option key={x.id} value={x.id}>{x.code} · {bi(x, lang)}</option>)}</select></Field>
       <Field label={L('التصنيف', 'Category')}><select className="field" value={v.category_id} onChange={x => setV({ ...v, category_id: x.target.value })}><option value="">—</option>{d.lookups.categories.filter(c => !c.parent_id || c.parent_id === Number(v.type_id)).map(x => <option key={x.id} value={x.id}>{bi(x, lang)}</option>)}</select></Field>
@@ -288,6 +296,10 @@ function MissionForm({ d, m, onClose }: { d: Data; m: MissionFull | null; onClos
       <Field label={L('الغرض من السفر', 'Purpose')} req error={e('travel.purpose')}><input className="field" value={t.purpose} onChange={x => setT({ ...t, purpose: x.target.value })} /></Field>
       <Field label={L('الانطلاق', 'Departure')} req error={e('travel.depart_on')}><input type="date" className="field" value={t.depart_on} onChange={x => setT({ ...t, depart_on: x.target.value })} /></Field>
       <Field label={L('العودة', 'Return')} req error={e('travel.return_on')}><input type="date" className="field" value={t.return_on} onChange={x => setT({ ...t, return_on: x.target.value })} /></Field>
+      {t.transport === 'air' && <Field label={L('درجة التذكرة المطلوبة', 'Requested ticket class')} hint={L('تُقارن بالمسموح لدرجة الموظف', 'Compared with the grade allowance')}><select className="field" value={v.ticket_class} onChange={x => setV({ ...v, ticket_class: x.target.value })}>
+        <option value="">{L('حسب الدرجة', 'Per grade')}</option>{([['economy', 'عادية', 'Economy'], ['premium', 'مميزة', 'Premium economy'], ['business', 'أعمال', 'Business'], ['first', 'أولى', 'First']] as const).map(o => <option key={o[0]} value={o[0]}>{L(o[1], o[2])}</option>)}</select></Field>}
+      {d.can.manage && <Field label={L('المسافر خبير خارجي (اختياري)', 'Traveller is an external expert (optional)')} hint={L('مستحقاته من عقده لا من جدول البدلات', 'Paid under the contract, not the allowance table')}><select className="field" value={v.external_id} onChange={x => setV({ ...v, external_id: x.target.value })}>
+        <option value="">—</option>{(experts.data ?? []).filter(x => ['approved', 'assigned', 'active'].includes(x.status)).map(x => <option key={x.id} value={x.id}>{x.ar}</option>)}</select></Field>}
       <Field label={L('طريقة السفر', 'Transport')} div><Seg value={t.transport} onChange={x => setT({ ...t, transport: x as 'road' | 'air' | 'car' })} options={[{ v: 'road', label: L('طرقي', 'Road') }, { v: 'air', label: L('جوي', 'Air') }, { v: 'car', label: L('سيارة شخصية', 'Own car') }]} /></Field>
       {t.transport === 'car' && <Field label={L('الكيلومترات التقديرية', 'Estimated km')} hint={d.lookups.km_price ? L(`سعر الكيلومتر ${d.lookups.km_price}`, `km price ${d.lookups.km_price}`) : undefined}><input type="number" min={0} className="field num" value={t.km} onChange={x => setT({ ...t, km: Number(x.target.value) })} /></Field>}
       <Field label={L('خط السير (وجهات إضافية مفصولة بفاصلة)', 'Route (extra stops, comma separated)')} className="sm:col-span-2"><input className="field" value={t.legs.join('، ')} onChange={x => setT({ ...t, legs: x.target.value.split(/[,،]/).map(s => s.trim()).filter(Boolean) })} /></Field>
@@ -365,9 +377,12 @@ function ReportsTab() {
   const tbl = (title: string, rows: { key: string; total: number; done: number; late: number }[]) => <Panel pad={false} title={title}>{rows.length === 0 ? <Empty title={L('لا شيء', 'None')} /> :
     <table className="tbl"><thead><tr><th>{L('البند', 'Item')}</th><th>{L('الكل', 'All')}</th><th>{L('منجزة', 'Done')}</th><th>{L('متأخرة', 'Late')}</th></tr></thead><tbody>{rows.map(r => <tr key={r.key}><td>{r.key}</td><td className="num">{r.total}</td><td className="num">{r.done}</td><td className="num">{r.late}</td></tr>)}</tbody></table>}</Panel>
   return <div className="space-y-4">
-    <div className="flex flex-wrap gap-3 items-end"><Field label={L('من', 'From')}><input type="date" className="field" value={from} onChange={e => setFrom(e.target.value)} /></Field><Field label={L('إلى', 'To')}><input type="date" className="field" value={to} onChange={e => setTo(e.target.value)} /></Field></div>
+    <div className="flex flex-wrap gap-3 items-end"><Field label={L('من', 'From')}><input type="date" className="field" value={from} onChange={e => setFrom(e.target.value)} /></Field><Field label={L('إلى', 'To')}><input type="date" className="field" value={to} onChange={e => setTo(e.target.value)} /></Field>
+      <Btn icon={<Printer size={15} />} onClick={() => window.print()}>{L('طباعة / PDF', 'Print / PDF')}</Btn></div>
     {!data ? <Loader2 className="animate-spin text-brand" /> : <div className="grid gap-4 lg:grid-cols-2 items-start">
       {tbl(L('حسب النوع', 'By type'), data.by_type)}{tbl(L('حسب الفرع', 'By branch'), data.by_branch)}{tbl(L('حسب الموظف', 'By employee'), data.by_employee)}
+      <Panel pad={false} title={L('حسب مركز الكلفة', 'By cost centre')}>{(data.by_cost_center ?? []).length === 0 ? <Empty title={L('لا شيء', 'None')} /> : <table className="tbl"><thead><tr><th>{L('مركز الكلفة', 'Cost centre')}</th><th>{L('الكل', 'All')}</th><th>{L('منجزة', 'Done')}</th><th>{L('الكلفة التقديرية', 'Estimated cost')}</th></tr></thead>
+        <tbody>{data.by_cost_center!.map(r => <tr key={r.key}><td>{r.key}</td><td className="num">{r.total}</td><td className="num">{r.done}</td><td className="num text-[12.5px]">{r.cost ? Object.entries(r.cost).map(([c, x]) => money(x, c, lang)).join(' · ') || '—' : <Masked value={null}><span /></Masked>}</td></tr>)}</tbody></table>}</Panel>
       <Panel pad={false} title={L('السلف غير المسوّاة', 'Unsettled advances')}>{data.unsettled.length === 0 ? <Empty title={L('لا شيء', 'None')} /> : <ul className="divide-y divide-line-2">{data.unsettled.map(u => <li key={u.ref_no} className="px-4 py-2 text-[13px] flex gap-2">
         <span className="ltr">{u.ref_no}</span><span className="flex-1">{u.employee}</span><Masked value={u.amount}>{money(u.amount ?? 0, u.currency, lang)}</Masked>{u.days > 0 && <Badge tone="danger">{L(`متأخرة ${u.days} يوم`, `${u.days} d late`)}</Badge>}</li>)}</ul>}</Panel>
       <Panel pad={false} title={L('مهمات السفر', 'Travel missions')}>{data.travel.length === 0 ? <Empty title={L('لا شيء', 'None')} /> : <ul className="divide-y divide-line-2 max-h-[320px] overflow-y-auto">{data.travel.map(t => <li key={t.ref_no} className="px-4 py-2 text-[13px] flex gap-2 flex-wrap">

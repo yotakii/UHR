@@ -1,3 +1,4 @@
+import { PrintBtn } from '../training/TdMore'
 import { useState } from 'react'
 import { Plus, Pencil, Play, ClipboardCheck, Trash2, UserPlus, Settings2, AlertTriangle, Target, Sprout } from 'lucide-react'
 import { useL, useLang, bi, fmtDate } from '../../lib/store'
@@ -82,7 +83,9 @@ function Plans({ d, onEdit }: { d: DevPage; onEdit: (p: Plan) => void }) {
         <div><div className="flex justify-between text-[12px] mb-1"><span className="text-ink-3">{L('التقدم', 'Progress')}</span><span className="num font-semibold">{p.progress}%</span></div><Progress value={p.progress} /></div>
         {p.mix && p.activities.length > 0 && <div title={L('نموذج 70-20-10: تعلم من العمل، ومن الآخرين، ومن الدورات', '70-20-10: learning on the job, from others, from courses')}><div className="text-[12px] text-ink-3 mb-1">{L('مزيج التعلم 70-20-10', 'Learning mix 70-20-10')}</div>
           <div className="flex h-2 rounded-full overflow-hidden bg-line">{([['70', 'var(--brand)'], ['20', 'var(--info)'], ['10', 'var(--brass)']] as const).map(([k, c]) => <span key={k} style={{ width: `${p.mix![k]}%`, background: c }} />)}</div>
-          <div className="flex gap-3 text-[11.5px] text-ink-3 mt-1"><span>{L('عمل', 'Job')} <b className="num">{p.mix['70']}%</b></span><span>{L('آخرون', 'Others')} <b className="num">{p.mix['20']}%</b></span><span>{L('دورات', 'Courses')} <b className="num">{p.mix['10']}%</b></span></div></div>}
+          <div className="flex gap-3 text-[11.5px] text-ink-3 mt-1"><span>{L('عمل', 'Job')} <b className="num">{p.mix['70']}%</b></span><span>{L('آخرون', 'Others')} <b className="num">{p.mix['20']}%</b></span><span>{L('دورات', 'Courses')} <b className="num">{p.mix['10']}%</b></span></div>
+          {p.mix.formal_heavy && <div className="text-[11.5px] text-[var(--warn)] mt-1">{L('تعتمد الخطة على الدورات أكثر من المنصوح — أضف تعلماً بالممارسة والإرشاد.', 'The plan relies on courses more than advised — add learning by doing and mentoring.')}</div>}
+          {p.employee && <div className="mt-1"><PrintBtn code="TD11" id={p.id} me={location.pathname.startsWith('/me') || location.pathname.startsWith('/hr/my')} label={L('طباعة F-11', 'Print F-11')} /></div>}</div>}
         {p.next_review && <div className="text-[12.5px] text-ink-3">{L('المراجعة القادمة', 'Next review')}: <span className="num">{fmtDate(p.next_review, lang)}</span></div>}
         {p.reviews.length > 0 && <details className="text-[12.5px]"><summary className="cursor-pointer text-brand">{L(`المراجعات (${p.reviews.length})`, `Reviews (${p.reviews.length})`)}</summary>
           <ul className="mt-1 space-y-1">{p.reviews.map((r, i) => <li key={i} className="border-s-2 border-line ps-2"><span className="num">{fmtDate(r.at, lang)}</span> · {lang === 'ar' ? r.by : r.by_en} · <span className="num">{r.rating}/5</span><div className="text-ink-2">{r.note}</div></li>)}</ul></details>}

@@ -8,6 +8,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Credential extends Model
 {
     use Concerns\BelongsToCompany;
-    protected function casts(): array { return ['valid_from' => 'date', 'valid_to' => 'date', 'revoked_at' => 'datetime']; }
+    protected function casts(): array { return ['valid_from' => 'date', 'valid_to' => 'date', 'revoked_at' => 'datetime', 'memory_token' => 'encrypted']; }
     public function employee(): BelongsTo { return $this->belongsTo(Employee::class); }
 }

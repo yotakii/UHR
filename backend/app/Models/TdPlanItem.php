@@ -10,7 +10,7 @@ class TdPlanItem extends Model
 {
     use Concerns\BelongsToCompany;
     protected $table = 'td_plan_items';
-    protected function casts(): array { return ['changes' => 'array', 'estimated_cost' => 'float', 'actual_cost' => 'float']; }
+    protected function casts(): array { return ['changes' => 'array', 'pending_change' => 'array', 'estimated_cost' => 'float', 'actual_cost' => 'float']; }
     public function plan(): BelongsTo { return $this->belongsTo(TdPlan::class, 'plan_id'); }
     public function program(): BelongsTo { return $this->belongsTo(TdProgram::class, 'program_id'); }
 }

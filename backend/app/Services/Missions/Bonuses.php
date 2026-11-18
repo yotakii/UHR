@@ -65,7 +65,7 @@ class Bonuses
         return $made;
     }
 
-    private function create(?User $u, Employee $e, CodeItem $type, array $v, string $reason, string $source, ?int $sourceId): Bonus
+    public function create(?User $u, Employee $e, CodeItem $type, array $v, string $reason, string $source, ?int $sourceId): Bonus
     {
         if (! PayLines::inPayroll($e)) throw ApiException::field('employee_ids', str_replace(':n', $e->name, L::t('فئة العامل :n لا تدخل الرواتب — مستحقاته من عقده.', ':n is not on payroll — paid under their contract.')), 'not_payroll');
         if ($sourceId && Bonus::where('employee_id', $e->id)->where('type_id', $type->id)->where('source_type', $source)->where('source_id', $sourceId)->whereNotIn('status', ['rejected', 'cancelled'])->exists())

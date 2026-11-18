@@ -71,7 +71,7 @@ class Codes
             'id' => $i->id, 'code' => $i->code, 'ar' => $i->name_ar, 'en' => $i->name_en, 'parent_id' => $i->parent_id, 'status' => $i->status,
             'live' => $i->status === 'active' && (! $i->valid_from || $i->valid_from->toDateString() <= $today) && (! $i->valid_to || $i->valid_to->toDateString() >= $today),
             'attrs' => $i->attrs, 'valid_from' => $i->valid_from?->toDateString(), 'valid_to' => $i->valid_to?->toDateString(), 'legacy_code' => $i->legacy_code,
-            'description' => $i->description, 'sort' => (int) $i->sort, 'locked' => $i->used_at !== null, 'shared' => $i->company_id === null, 'bound' => false,
+            'description' => $i->description, 'sort' => (int) $i->sort, 'locked' => $i->used_at !== null, 'shared' => $i->company_id === null, 'bound' => false, 'inherited' => (bool) $i->group_item_id,
             'replaced_by_id' => $i->replaced_by_id])->all();
     }
 
@@ -135,6 +135,7 @@ class Codes
     {
         if ($l->system) throw new ApiException(L::t('القوائم القياسية مقفلة ومشتركة ولا تُعدَّل.', 'Standard lists are locked and shared.'), 'system_list', 409);
         if ($l->source) throw new ApiException(L::t('هذه القائمة تُدار من صفحتها الخاصة.', 'This list is managed from its own page.'), 'bound_list', 409);
+        if ($item?->group_item_id) throw new ApiException(L::t('هذا الرمز موروث من قوائم المجموعة ويُعدَّل في الشركة الأم.', 'This code is inherited from the group lists and is edited in the parent company.'), 'inherited', 409);
         $err = [];
         $code = strtoupper(trim((string) ($v['code'] ?? $item?->code)));
         if ($item && $code !== $item->code && self::isLocked($l, $item->id))
@@ -205,6 +206,7 @@ class Codes
         $data = self::validate($l, $v, $item);
         if ($item) $item->update($data); else $item = CodeItem::create($data + ['code_list_id' => $l->id, 'status' => $status]);
         self::bump();
+        if ($l->inherit && ($c = Tenant::company()) && \App\Models\Company::where('parent_id', $c->id)->exists()) CodeCatalog::syncGroup($c);
         return $item;
     }
 

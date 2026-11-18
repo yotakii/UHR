@@ -1,10 +1,12 @@
+import type { Bi } from '../../../lib/types'
 import { useState } from 'react'
 import { ArrowDown, ArrowUp, Check, Loader2, Pencil, Plus, Trash2, UserPlus, X } from 'lucide-react'
 import { useL, useLang, bi } from '../../../lib/store'
 import { can, useMe } from '../../../lib/session'
 import { ApiError } from '../../../lib/api'
-import { useChains, useSaveChain, type Chain, type ChainLevel } from '../../../lib/admin'
-import { Btn, Modal, PageHead, toast } from '../../../ui/kit'
+import { useChains, useDeleteChain, useSaveChain, useSaveChainRule, type Chain, type ChainLevel, type ChainRule } from '../../../lib/admin'
+import { useLookup } from '../../../lib/codes'
+import { Btn, Field, Modal, PageHead, toast } from '../../../ui/kit'
 
 type Opt = { key: string; ar: string; en: string }
 type Person = { id: number; ar: string; en: string; email: string; roles: string[] }
@@ -30,21 +32,28 @@ export function Chains() {
   const q = useChains(); const d = q.data
   const editable = can(useMe().data, 'settings', 'edit')
   const [edit, setEdit] = useState<Chain | null>(null)
+  const [rule, setRule] = useState<Chain | null>(null)
+  const del = useDeleteChain()
   if (!d) return <div className="grid place-items-center py-24"><Loader2 className="animate-spin text-brand" /></div>
   const groups: [string, string][] = [['staff', L('طلبات الموظفين', 'Employee requests')], ['pay', L('الرواتب', 'Pay')], ['hiring', L('التوظيف والتعيين', 'Hiring')], ['exit', L('الخروج والانضباط', 'Exit & discipline')]]
   return <div className="max-w-[1100px] mx-auto space-y-6">
     <PageHead title={L('سلاسل الاعتماد', 'Approval chains')} sub={L('من يعتمد كل نوع من الطلبات، وبأي ترتيب. يسري التعديل على الطلبات الجديدة فقط.', 'Who approves each kind of request, in what order. Changes apply to new requests only.')} />
     {groups.map(([g, title]) => <section key={g}>
       <h2 className="text-[13px] font-semibold text-ink-3 mb-2">{title}</h2>
-      <div className="grid [grid-template-columns:repeat(auto-fill,minmax(320px,1fr))] gap-3">{d.data.filter(c => (INFO[c.type]?.group ?? 'staff') === g).map(c =>
+      <div className="grid [grid-template-columns:repeat(auto-fill,minmax(320px,1fr))] gap-3">{d.data.filter(c => (INFO[c.base ?? c.type]?.group ?? INFO[c.type]?.group ?? 'staff') === g).map(c =>
         <div key={c.type} className="rounded-2xl border border-line bg-surface p-4 flex flex-col gap-3">
           <div className="flex items-start gap-2"><div className="flex-1 min-w-0"><div className="font-semibold text-[14.5px]">{bi(c, lang)}</div>
             <div className="text-[12.5px] text-ink-3">{INFO[c.type] ? bi(INFO[c.type], lang) : ''}</div></div>
-            {editable && <Btn size="sm" icon={<Pencil size={13} />} onClick={() => setEdit(c)}>{L('تعديل', 'Edit')}</Btn>}</div>
+            {editable && <Btn size="sm" icon={<Pencil size={13} />} onClick={() => setEdit(c)}>{L('تعديل', 'Edit')}</Btn>}
+            {editable && c.variant && <Btn size="sm" kind="ghost" icon={<Trash2 size={13} />} aria-label={L('حذف المسار البديل', 'Remove the variant')} onClick={() => del.mutate(c.type, { onSuccess: () => toast(L('حُذف المسار البديل', 'Variant removed')) })} />}</div>
           <Path levels={c.levels} roles={d.roles} />
+          {!c.variant && d.rules?.[c.type] && <div className="text-[12px] text-brass">{L('اعتماد أعلى حين', 'Higher approval when')}: {[d.rules[c.type].amount > 0 ? `≥ ${d.rules[c.type].amount} ${d.rules[c.type].currency ?? ''}` : null, d.rules[c.type].grades.length ? d.rules[c.type].grades.join('، ') : null, d.rules[c.type].branches.length ? L(`${d.rules[c.type].branches.length} فرع`, `${d.rules[c.type].branches.length} branch(es)`) : null].filter(Boolean).join(' · ')}</div>}
+          {editable && !c.variant && <button className="self-start text-[12.5px] text-brand font-semibold" onClick={() => setRule(c)}>{L('مسارات بديلة وشروط الاعتماد الأعلى', 'Variants & higher-approval conditions')}</button>}
         </div>)}</div>
     </section>)}
     {edit && <ChainEditor chain={edit} roles={d.roles} users={d.users} onClose={() => setEdit(null)} />}
+    {rule && <RuleEditor chain={rule} rule={d.rules?.[rule.type]} subtypes={rule.type === 'mission' ? d.subtypes?.mission ?? [] : []} existing={d.data.map(x => x.type)} onClose={() => setRule(null)}
+      onVariant={t => { setRule(null); setEdit({ ...rule, type: t, variant: true, ar: rule.ar, en: rule.en }) }} />}
   </div>
 }
 
@@ -110,5 +119,34 @@ function ChainEditor({ chain, roles, users, onClose }: { chain: Chain; roles: Op
     <div className="mt-4 rounded-xl bg-sub p-3"><div className="text-[12px] text-ink-3 mb-1.5">{L('المسار', 'Path')}</div>
       <Path levels={lv.map(x => ({ ...x, user: x.user_id ? users.find(u => u.id === x.user_id) ?? null : null, deputy: x.deputy_id ? users.find(u => u.id === x.deputy_id) ?? null : null }))} roles={roles} /></div>
     {firstErr && <div role="alert" className="mt-3 rounded-lg bg-danger-soft text-danger text-[13px] px-3 py-2">{firstErr}</div>}
+  </Modal>
+}
+
+/** مسارات بديلة (حسب نوع المهمة، أو «اعتماد أعلى») وشروط تحويل الطلب للاعتماد الأعلى: المبلغ، الدرجة، الفرع */
+function RuleEditor({ chain, rule, subtypes, existing, onClose, onVariant }: { chain: Chain; rule?: ChainRule; subtypes: (Bi & { id: number; code: string })[]; existing: string[]; onClose: () => void; onVariant: (type: string) => void }) {
+  const L = useL(); const lang = useLang()
+  const save = useSaveChainRule()
+  const grades = useLookup('grades').data ?? []
+  const branches = useLookup('branches').data ?? []
+  const [v, setV] = useState<ChainRule>(rule ?? { amount: 0, currency: 'USD', grades: [], branches: [] })
+  const high = `${chain.type}_high`
+  return <Modal open onClose={onClose} width={600} title={bi(chain, lang)} footer={<><Btn onClick={onClose}>{L('إغلاق', 'Close')}</Btn>
+    <Btn kind="primary" disabled={save.isPending} onClick={() => save.mutate({ type: chain.type, rule: v }, { onSuccess: () => { toast(L('حُفظت الشروط', 'Conditions saved')); onClose() }, onError: e => toast((e as Error).message) })}>{L('حفظ الشروط', 'Save the conditions')}</Btn></>}>
+    <div className="space-y-4">
+      <div><div className="font-semibold text-[13.5px]">{L('مسار الاعتماد الأعلى', 'Higher-approval path')}</div>
+        <p className="text-[12.5px] text-ink-3">{L('يُستعمل بدل المسار العادي حين يتحقق أحد الشروط أدناه.', 'Used instead of the normal path when any condition below is met.')}</p>
+        <Btn size="sm" className="mt-1.5" onClick={() => onVariant(high)}>{existing.includes(high) ? L('تعديل مسار الاعتماد الأعلى', 'Edit the higher path') : L('إنشاء مسار الاعتماد الأعلى', 'Create the higher path')}</Btn></div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label={L('مبلغ يبدأ عنده الاعتماد الأعلى (0 = بلا)', 'Amount that triggers it (0 = none)')}><input type="number" min={0} className="field num" value={v.amount} onChange={e => setV({ ...v, amount: Number(e.target.value) })} /></Field>
+        <Field label={L('عملة المبلغ', 'Currency')}><input className="field ltr" maxLength={3} value={v.currency ?? ''} onChange={e => setV({ ...v, currency: e.target.value.toUpperCase() })} /></Field>
+      </div>
+      <Field label={L('الدرجات الوظيفية', 'Grades')} div><div className="flex flex-wrap gap-1.5">{grades.map(g => { const on = v.grades.includes(g.code)
+        return <button key={g.id} type="button" onClick={() => setV({ ...v, grades: on ? v.grades.filter(x => x !== g.code) : [...v.grades, g.code] })} className={`rounded-lg border px-2 py-0.5 text-[12.5px] ${on ? 'bg-brand text-white border-brand' : 'border-line'}`}>{g.code}</button> })}</div></Field>
+      <Field label={L('الفروع', 'Branches')} div><div className="flex flex-wrap gap-1.5">{branches.map(b => { const on = v.branches.includes(b.id)
+        return <button key={b.id} type="button" onClick={() => setV({ ...v, branches: on ? v.branches.filter(x => x !== b.id) : [...v.branches, b.id] })} className={`rounded-lg border px-2 py-0.5 text-[12.5px] ${on ? 'bg-brand text-white border-brand' : 'border-line'}`}>{bi(b, lang)}</button> })}</div></Field>
+      {subtypes.length > 0 && <div><div className="font-semibold text-[13.5px]">{L('مسار خاص لكل نوع مهمة', 'A path per mission type')}</div>
+        <div className="flex flex-wrap gap-1.5 mt-1.5">{subtypes.map(t => { const k = `${chain.type}:${t.code}`
+          return <Btn key={t.id} size="sm" kind={existing.includes(k) ? 'primary' : undefined} onClick={() => onVariant(k)}>{t.code} · {bi(t, lang)}</Btn> })}</div></div>}
+    </div>
   </Modal>
 }

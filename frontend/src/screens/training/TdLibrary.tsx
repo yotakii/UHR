@@ -8,6 +8,7 @@ import { AUDIENCE, C_STATUS, CERT, DELIVERY, PATH, useCbps, useCertificates, use
 import { Badge, Btn, Empty, Field, KV, Modal, Panel, Progress, Tabs, toast } from '../../ui/kit'
 import { DecisionDialog } from '../../ui/decision'
 import { EmpSelect, LevelBar, PathBadge, Spin, Stat, StatusBadge, TdFilePick, errOf, fail } from './parts'
+import { HistoryPanel, PrintBtn } from './TdMore'
 
 // ———————————————— البرامج ————————————————
 
@@ -198,6 +199,7 @@ export function CertificatesTab({ lk, can }: { lk: Lookups; can: Can }) {
             {c.file_id && <a className="inline-flex items-center justify-center size-8 rounded-lg hover:bg-sub" href={fileUrl(c.file_id)} target="_blank" rel="noreferrer" aria-label={L('الملف', 'File')}><Award size={14} /></a>}
             {c.status === 'pending' && can.manage && <><Btn size="sm" kind="ghost" icon={<Check size={14} />} aria-label={L('تحقق', 'Verify')} onClick={() => act.mutate({ path: `certificates/${c.id}/verify`, v: { ok: true } }, { onError: fail })} />
               <Btn size="sm" kind="ghost" icon={<X size={14} />} aria-label={L('رفض', 'Reject')} onClick={() => act.mutate({ path: `certificates/${c.id}/verify`, v: { ok: false, note: L('لم يُتحقق منها', 'Could not be verified') } }, { onError: fail })} /></>}
+            {c.source !== 'external' && c.employee && <PrintBtn code="TDC" id={c.id} label="" />}
             {c.status === 'valid' && can.director && <Btn size="sm" kind="ghost" onClick={() => setRev(c.id)}>{L('إلغاء', 'Revoke')}</Btn>}</span></td></tr>)}</tbody></table></Panel>}
     <DecisionDialog open={rev !== null} onClose={() => setRev(null)} tone="danger" reasonRequired minLength={5} title={L('إلغاء الشهادة', 'Revoke the certificate')} confirmLabel={L('إلغاء الشهادة', 'Revoke')}
       onConfirm={r => act.mutateAsync({ path: `certificates/${rev}/revoke`, v: { reason: r } })} />
@@ -241,7 +243,7 @@ export function QualificationsTab({ lk, can }: { lk: Lookups; can: Can }) {
     {!data ? <Spin /> : data.length === 0 ? <Panel><Empty title={L('لا برامج تأهيل', 'No qualification programmes')}>{L('أضف قوالب التأهيل من إعدادات التدريب لتُولَّد تلقائياً عند التعيين.', 'Add qualification templates in the training settings to generate them at hire.')}</Empty></Panel>
       : <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(320px,1fr))]">{data.map(q => <div key={q.id} className="bg-surface border border-line rounded-2xl p-4">
         <div className="flex items-start justify-between gap-2"><div><div className="font-semibold">{q.employee ? bi(q.employee, lang) : '—'}</div><div className="text-[12px] text-ink-3">{q.employee?.hire_date ? `${L('التعيين', 'Hired')} ${fmtDate(q.employee.hire_date, lang)}` : ''}</div></div>
-          <Badge tone={q.status === 'done' ? 'brand' : 'brass'}>{q.status === 'done' ? L('مكتمل', 'Done') : L('جارٍ', 'In progress')}</Badge></div>
+          <span className="flex items-center gap-1">{q.kind === 'rotation' && <Badge tone="info">{L('تدوير وظيفي', 'Rotation')}</Badge>}<Badge tone={q.status === 'done' ? 'brand' : 'brass'}>{q.status === 'done' ? L('مكتمل', 'Done') : L('جارٍ', 'In progress')}</Badge><PrintBtn code="TD1" id={q.id} label="" /></span></div>
         <div className="mt-2"><Progress value={q.progress} /></div>
         <ol className="mt-2 space-y-1.5">{q.stations.map((s, i) => <li key={i} className="flex items-start gap-2 text-[12.5px]"><span className={`mt-0.5 size-4 rounded-full grid place-items-center text-[10px] ${s.signed_at ? 'bg-brand text-white' : 'border border-line'}`}>{s.signed_at ? <Check size={10} /> : i + 1}</span>
           <div className="flex-1"><div>{s.department ? bi(s.department, lang) : '—'} · {s.topics}</div><div className="text-ink-3">{s.trainer ? bi(s.trainer, lang) : ''} · {fmtDate(s.from, lang)} — {fmtDate(s.to, lang)}{s.signed_by ? ` · ${L('وقّع', 'signed')} ${s.signed_by}` : ''}</div></div>
@@ -282,7 +284,7 @@ export function ImpactsTab({ me = false }: { me?: boolean }) {
           <td><div className="font-medium">{i.employee ? bi(i.employee, lang) : '—'}</div><div className="text-[12px] text-ink-3">{i.session?.title}</div></td>
           <td className="hidden sm:table-cell text-[13px]">{L(`${i.point} يوماً`, `${i.point} days`)} · {KIND[i.kind] ? L(KIND[i.kind][0], KIND[i.kind][1]) : i.kind}</td>
           <td className={`text-[13px] ${i.overdue ? 'text-danger' : ''}`}>{fmtDate(i.due_on, lang)}</td>
-          <td>{i.status === 'done' ? <Badge tone="brand">{i.avg != null ? `${i.avg}%` : L('منجز', 'Done')}</Badge> : <Btn size="sm">{L('تسجيل', 'Record')}</Btn>}</td></tr>)}</tbody></table></Panel>}
+          <td onClick={e => i.status === 'done' && e.stopPropagation()} className="whitespace-nowrap">{i.status === 'done' ? <span className="inline-flex items-center gap-1"><Badge tone="brand">{i.avg != null ? `${i.avg}%` : L('منجز', 'Done')}</Badge>{i.kind === 'behavior' && <PrintBtn code="TD5" id={i.id} me={me} label="" />}</span> : <Btn size="sm">{L('تسجيل', 'Record')}</Btn>}</td></tr>)}</tbody></table></Panel>}
     {open && <ImpactForm i={open} me={me} onClose={() => setOpen(null)} />}
   </>
 }
@@ -332,6 +334,7 @@ export function CommitmentsTab({ can }: { can: Can }) {
         <KV k={L('المدة', 'Length')} v={L(`${c.months} شهراً`, `${c.months} months`)} /><KV k={L('ينتهي', 'Ends')} v={c.ends_on ? fmtDate(c.ends_on, lang) : '—'} />
         <KV k={L('طريقة الاسترداد', 'Recovery')} v={c.mode === 'full' ? L('كامل المبلغ', 'Full amount') : L('نسبة المدة المتبقية', 'Pro rata')} /><KV k={L('وقّع', 'Signed')} v={c.signed_at ? fmtDate(c.signed_at, lang) : '—'} /></div>
       {c.body && <pre className="whitespace-pre-wrap font-sans text-[13px] bg-sub rounded-xl p-3">{c.body}</pre>}
+      <div className="mt-2 flex justify-end"><PrintBtn code="TD3" id={c.id} label={L('طباعة التعهد F-03', 'Print the commitment F-03')} /></div>
     </Modal> })()}
   </>
 }
@@ -349,14 +352,19 @@ export function CbpTab({ lk }: { lk: Lookups }) {
   return <>
     <div className="flex mb-3"><div className="text-[12.5px] text-ink-3 flex-1">{L('خطة بناء القدرات تربط هدفاً مؤسسياً بالقدرات المطلوبة (كم شخصاً بأي مستوى) وتحسب الفجوة من مصفوفة الكفاءات، ثم تحوّل المبادرات إلى بنود في الخطة السنوية.', 'A capacity plan links a goal to the capacities needed, computes the gap from the competency matrix and pushes initiatives to the annual plan.')}</div>
       <Btn kind="primary" icon={<Plus size={15} />} onClick={() => setEdit('new')}>{L('خطة قدرات', 'Capacity plan')}</Btn></div>
-    {data.data.length === 0 ? <Panel><Empty title={L('لا توجد خطط', 'No plans')} /></Panel> : <div className="space-y-3">{data.data.map(c => <Panel key={c.id} title={c.title} sub={`${c.owner ?? ''}${c.starts_on ? ` · ${fmtDate(c.starts_on, lang)} — ${c.ends_on ? fmtDate(c.ends_on, lang) : ''}` : ''}`} action={<Btn size="sm" onClick={() => setEdit(c)}>{L('تعديل', 'Edit')}</Btn>}>
+    {data.data.length === 0 ? <Panel><Empty title={L('لا توجد خطط', 'No plans')} /></Panel> : <div className="space-y-3">{data.data.map(c => { const all = c.goals.flatMap(g => g.initiatives); const done = all.length ? Math.round(all.reduce((a, i) => a + (i.progress ?? 0), 0) / all.length) : 0
+      const gap = c.goals.reduce((a, g) => a + Object.values((c.gaps[g.id] ?? {}) as Record<string, { gap: number }>).reduce((x, y) => x + (y.gap ?? 0), 0), 0)
+      return <Panel key={c.id} title={c.title} sub={`${c.owner ?? ''}${c.starts_on ? ` · ${fmtDate(c.starts_on, lang)} — ${c.ends_on ? fmtDate(c.ends_on, lang) : ''}` : ''}`} action={<span className="flex gap-1"><PrintBtn code="CBP" id={c.id} label={L('الإطار المنطقي', 'Logframe')} /><Btn size="sm" onClick={() => setEdit(c)}>{L('تعديل', 'Edit')}</Btn></span>}>
+      <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(140px,1fr))] mb-3"><Stat label={L('الأهداف', 'Goals')} value={c.goals.length} /><Stat label={L('المبادرات', 'Initiatives')} value={all.length} sub={L(`${all.filter(i => i.plan_item_id).length} في الخطة`, `${all.filter(i => i.plan_item_id).length} in the plan`)} />
+        <Stat label={L('الإنجاز', 'Progress')} value={`${done}%`} /><Stat label={L('الفجوة المتبقية', 'Remaining gap')} value={gap} tone={gap ? 'var(--danger)' : undefined} /></div>
       <div className="space-y-3">{c.goals.map(g => <div key={g.id} className="rounded-xl border border-line p-3">
         <div className="font-medium">{g.title}</div>{g.kpi && <div className="text-[12px] text-ink-3">{g.kpi}: {g.baseline ?? '—'} → {g.target ?? '—'}{g.achieved ? ` (${L('المحقق', 'achieved')} ${g.achieved})` : ''}</div>}
         {g.capacities.length > 0 && <div className="mt-2 grid gap-1.5 [grid-template-columns:repeat(auto-fill,minmax(220px,1fr))]">{g.capacities.map((cap, k) => { const gp = (c.gaps[g.id] as unknown as Record<string, { required: number; have: number; gap: number }> | undefined)?.[k]; const comp = lk.competencies.find(x => x.id === cap.competency_id)
           return <div key={k} className="text-[12.5px] rounded-lg bg-sub px-2.5 py-1.5"><div>{comp ? bi(comp, lang) : '—'} ≥ {cap.level}</div><div className="text-ink-3">{L('المطلوب', 'Need')} {cap.count} · {L('المتوفر', 'Have')} {gp?.have ?? 0} · <b className={gp?.gap ? 'text-danger' : 'text-brand'}>{L('الفجوة', 'Gap')} {gp?.gap ?? 0}</b></div></div> })}</div>}
-        {g.initiatives.length > 0 && <ul className="mt-2 space-y-1">{g.initiatives.map(i => <li key={i.id} className="flex flex-wrap items-center justify-between gap-2 text-[12.5px]"><span>{i.title}{i.cost ? ` · ${i.cost}` : ''}</span>
-          {i.plan_item_id ? <Badge tone="brand">{L('في الخطة', 'In the plan')}</Badge> : <Btn size="sm" icon={<Send size={13} />} onClick={() => setPush({ c: c.id, g: g.id, i: i.id })}>{L('إلى الخطة السنوية', 'To the annual plan')}</Btn>}</li>)}</ul>}
-      </div>)}</div></Panel>)}</div>}
+        {g.initiatives.length > 0 && <ul className="mt-2 space-y-1">{g.initiatives.map(i => <li key={i.id} className="flex flex-wrap items-center justify-between gap-2 text-[12.5px]"><span>{i.title}{i.cost ? ` · ${i.cost}` : ''}
+          <span className="text-ink-3">{i.owner ? ` · ${i.owner}` : ''}{i.kpi ? ` · ${i.kpi}` : ''}{i.due ? ` · ${fmtDate(i.due, lang)}` : ''}{` · ${i.progress ?? 0}%`}</span></span>
+          {i.plan_item_id ? <Badge tone="brand">{L('في الخطة', 'In the plan')}</Badge> : i.plan_change === 'pending' ? <Badge tone="brass">{L('بانتظار اعتماد تعديل الخطة', 'Awaiting plan-change approval')}</Badge> : <Btn size="sm" icon={<Send size={13} />} onClick={() => setPush({ c: c.id, g: g.id, i: i.id })}>{L('إلى الخطة السنوية', 'To the annual plan')}</Btn>}</li>)}</ul>}
+      </div>)}</div></Panel> })}</div>}
     {edit && <CbpForm lk={lk} c={edit === 'new' ? null : edit} onClose={() => setEdit(null)} />}
     {push && <Modal open onClose={() => setPush(null)} title={L('إضافة المبادرة إلى الخطة', 'Add the initiative to the plan')} footer={<><Btn onClick={() => setPush(null)}>{L('إلغاء', 'Cancel')}</Btn>
       <Btn kind="primary" disabled={!(plan ?? data.plans[0]?.id) || act.isPending} onClick={() => act.mutate({ path: `cbps/${push.c}/push`, v: { goal: push.g, initiative: push.i, plan_id: plan ?? data.plans[0]?.id } }, { onSuccess: () => { setPush(null); toast(L('أُضيفت إلى الخطة', 'Added to the plan')) }, onError: fail })}>{L('إضافة', 'Add')}</Btn></>}>
@@ -385,13 +393,21 @@ function CbpForm({ lk, c, onClose }: { lk: Lookups; c: Cbp | null; onClose: () =
         <input className="field" placeholder={L('المستهدف', 'Target')} value={g.target ?? ''} onChange={e => setG(k, { target: e.target.value })} />
         <Btn size="sm" kind="ghost" icon={<X size={14} />} aria-label={L('حذف', 'Remove')} onClick={() => setV({ ...v, goals: v.goals.filter((_, i) => i !== k) })} /></div>
       <div className="text-[12.5px] font-semibold mt-2">{L('القدرات المطلوبة', 'Capacities needed')}</div>
-      {g.capacities.map((cap, j) => <div key={j} className="grid gap-2 grid-cols-[1fr_80px_80px_auto] mt-1"><select className="field" value={cap.competency_id} aria-label={L('الكفاءة', 'Competency')} onChange={e => setG(k, { capacities: g.capacities.map((x, i) => i === j ? { ...x, competency_id: Number(e.target.value) } : x) })}>{lk.competencies.map(x => <option key={x.id} value={x.id}>{bi(x, lang)}</option>)}</select>
+      {g.capacities.map((cap, j) => <div key={j} className="grid gap-2 grid-cols-[1fr_80px_80px_auto] sm:grid-cols-[1fr_80px_80px_160px_140px_auto] mt-1"><select className="field" value={cap.competency_id} aria-label={L('الكفاءة', 'Competency')} onChange={e => setG(k, { capacities: g.capacities.map((x, i) => i === j ? { ...x, competency_id: Number(e.target.value) } : x) })}>{lk.competencies.map(x => <option key={x.id} value={x.id}>{bi(x, lang)}</option>)}</select>
         <input type="number" min={1} className="field num" aria-label={L('العدد', 'Count')} value={cap.count} onChange={e => setG(k, { capacities: g.capacities.map((x, i) => i === j ? { ...x, count: Number(e.target.value) } : x) })} />
         <select className="field" value={cap.level} aria-label={L('المستوى', 'Level')} onChange={e => setG(k, { capacities: g.capacities.map((x, i) => i === j ? { ...x, level: Number(e.target.value) } : x) })}>{[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}</select>
+        <select className="field col-span-2 sm:col-span-1" value={cap.job_id ?? ''} aria-label={L('الوظيفة', 'Job')} onChange={e => setG(k, { capacities: g.capacities.map((x, i) => i === j ? { ...x, job_id: e.target.value ? Number(e.target.value) : null } : x) })}><option value="">{L('كل الوظائف', 'Any job')}</option>{lk.jobs.map(x => <option key={x.id} value={x.id}>{bi(x, lang)}</option>)}</select>
+        <input type="date" className="field col-span-2 sm:col-span-1" aria-label={L('مطلوبة قبل', 'Needed by')} value={cap.by ?? ''} onChange={e => setG(k, { capacities: g.capacities.map((x, i) => i === j ? { ...x, by: e.target.value } : x) })} />
         <Btn size="sm" kind="ghost" icon={<X size={14} />} aria-label={L('حذف', 'Remove')} onClick={() => setG(k, { capacities: g.capacities.filter((_, i) => i !== j) })} /></div>)}
       {lk.competencies.length > 0 && <Btn size="sm" className="mt-1" icon={<Plus size={13} />} onClick={() => setG(k, { capacities: [...g.capacities, { competency_id: lk.competencies[0].id, count: 1, level: 3 }] })}>{L('قدرة', 'Capacity')}</Btn>}
       <div className="text-[12.5px] font-semibold mt-2">{L('المبادرات', 'Initiatives')}</div>
-      {g.initiatives.map((it, j) => <div key={it.id ?? j} className="grid gap-2 grid-cols-[1fr_110px_auto] mt-1"><input className="field" value={it.title} aria-label={L('المبادرة', 'Initiative')} onChange={e => setG(k, { initiatives: g.initiatives.map((x, i) => i === j ? { ...x, title: e.target.value } : x) })} />
+      {g.initiatives.map((it, j) => <div key={it.id ?? j} className="grid gap-2 grid-cols-[1fr_110px_auto] sm:grid-cols-[1fr_120px_110px_110px_120px_70px_110px_auto] mt-1"><input className="field" value={it.title} aria-label={L('المبادرة', 'Initiative')} onChange={e => setG(k, { initiatives: g.initiatives.map((x, i) => i === j ? { ...x, title: e.target.value } : x) })} />
+        <select className="field hidden sm:block" value={it.kind} aria-label={L('النوع', 'Kind')} onChange={e => setG(k, { initiatives: g.initiatives.map((x, i) => i === j ? { ...x, kind: e.target.value } : x) })}>
+          {[['training', 'تدريب', 'Training'], ['hiring', 'استقطاب', 'Hiring'], ['coaching', 'إرشاد', 'Coaching'], ['system', 'نظام أو أداة', 'System / tool'], ['process', 'إجراء', 'Process']].map(o => <option key={o[0]} value={o[0]}>{L(o[1], o[2])}</option>)}</select>
+        <input className="field hidden sm:block" placeholder={L('المسؤول', 'Owner')} value={it.owner ?? ''} onChange={e => setG(k, { initiatives: g.initiatives.map((x, i) => i === j ? { ...x, owner: e.target.value } : x) })} />
+        <input className="field hidden sm:block" placeholder={L('المؤشر', 'KPI')} value={it.kpi ?? ''} onChange={e => setG(k, { initiatives: g.initiatives.map((x, i) => i === j ? { ...x, kpi: e.target.value } : x) })} />
+        <input type="date" className="field hidden sm:block" aria-label={L('الموعد', 'Due')} value={it.due ?? ''} onChange={e => setG(k, { initiatives: g.initiatives.map((x, i) => i === j ? { ...x, due: e.target.value } : x) })} />
+        <input type="number" min={0} max={100} className="field num hidden sm:block" aria-label={L('الإنجاز %', 'Progress %')} value={it.progress ?? 0} onChange={e => setG(k, { initiatives: g.initiatives.map((x, i) => i === j ? { ...x, progress: Number(e.target.value) } : x) })} />
         <input type="number" className="field num" placeholder={L('التكلفة', 'Cost')} value={it.cost ?? ''} onChange={e => setG(k, { initiatives: g.initiatives.map((x, i) => i === j ? { ...x, cost: Number(e.target.value) } : x) })} />
         <Btn size="sm" kind="ghost" icon={<X size={14} />} aria-label={L('حذف', 'Remove')} disabled={!!it.plan_item_id} onClick={() => setG(k, { initiatives: g.initiatives.filter((_, i) => i !== j) })} /></div>)}
       <Btn size="sm" className="mt-1" icon={<Plus size={13} />} onClick={() => setG(k, { initiatives: [...g.initiatives, { id: '', title: '', kind: 'training', progress: 0 } as never] })}>{L('مبادرة', 'Initiative')}</Btn>
@@ -430,11 +446,12 @@ export function ReportsTab({ year, lk }: { year: number; lk: Lookups }) {
 
 // ———————————————— السجل التدريبي (ملف الموظف) ————————————————
 
-export function TrainingRecord({ id }: { id: number }) {
+export function TrainingRecord({ id, edit = false }: { id: number; edit?: boolean }) {
   const L = useL(); const lang = useLang()
   const { data } = useRecord(id)
   if (!data) return <Spin />
-  return <RecordView r={data} lang={lang} L={L} />
+  return <div className="space-y-4"><div className="flex justify-end"><PrintBtn code="TD6" id={id} label={L('طباعة السجل F-06', 'Print the record F-06')} /></div>
+    <RecordView r={data} lang={lang} L={L} /><HistoryPanel employeeId={id} edit={edit} /></div>
 }
 
 export function RecordView({ r, L, lang }: { r: NonNullable<ReturnType<typeof useRecord>['data']> | import('../../lib/training').Record_; L: (a: string, b: string) => string; lang: 'ar' | 'en' }) {
@@ -450,6 +467,7 @@ export function RecordView({ r, L, lang }: { r: NonNullable<ReturnType<typeof us
         <div className="text-[12px] text-ink-3">{e.from ? fmtDate(e.from, lang) : ''}{e.provider ? ` · ${e.provider}` : ''} · {e.hours} {L('ساعة', 'h')}{e.attendance_pct != null ? ` · ${L('حضور', 'attendance')} ${e.attendance_pct}%` : ''}{e.post_score != null ? ` · ${L('النتيجة', 'score')} ${e.post_score}` : ''}{e.impact != null ? ` · ${L('الأثر', 'impact')} ${e.impact}%` : ''}</div></li>)}</ul>}</Panel>
     {r.certificates.length > 0 && <Panel title={L('الشهادات', 'Certificates')}><ul className="divide-y divide-line">{r.certificates.map(c => <li key={c.id} className="py-2 flex flex-wrap items-center justify-between gap-2 text-[13px]"><span>{c.title}{c.issuer ? ` · ${c.issuer}` : ''}</span>
       <span className="flex items-center gap-2 text-ink-3">{c.valid_to ? `${L('حتى', 'to')} ${fmtDate(c.valid_to, lang)}` : ''}{c.code && <a className="inline-flex items-center gap-1 underline" href={`/td-verify/${c.code}`} target="_blank" rel="noreferrer"><ShieldCheck size={13} />{L('تحقق', 'Verify')}</a>}</span></li>)}</ul></Panel>}
+    {r.history?.length > 0 && !('employee' in r) && <Panel title={L('تدريب سابق لاستخدام النظام', 'Training before the system')}><ul className="divide-y divide-line">{r.history.map(h => <li key={h.id} className="py-2 flex flex-wrap justify-between gap-2 text-[13px]"><span>{h.title}{h.provider ? ` · ${h.provider}` : ''}</span><span className="num text-ink-3">{h.from ? fmtDate(h.from, lang) : ''} · {h.hours} {L('ساعة', 'h')}</span></li>)}</ul></Panel>}
     {r.commitments.length > 0 && <Panel title={L('التعهدات', 'Commitments')}><ul className="divide-y divide-line">{r.commitments.map(c => <li key={c.id} className="py-2 flex flex-wrap items-center justify-between gap-2 text-[13px]"><span>{c.title} · {L(`${c.months} شهراً`, `${c.months} months`)}</span>
       <span className="flex items-center gap-2">{c.days_left != null && <span className="text-ink-3">{L(`بقي ${c.days_left} يوماً`, `${c.days_left} days left`)}</span>}<StatusBadge map={C_STATUS} s={c.status} /></span></li>)}</ul></Panel>}
   </div>

@@ -130,7 +130,7 @@ class ExternalPortalController extends Controller
         $o = VolunteerOpportunity::allCompanies()->where('token', $token)->where('status', 'open')->firstOrFail();
         $c = Company::findOrFail($o->company_id);
         return response()->json(['data' => ['title' => $o->title, 'title_en' => $o->title_en, 'description' => $o->description, 'starts_on' => $o->starts_on?->toDateString(), 'ends_on' => $o->ends_on?->toDateString(),
-            'weekly_hours' => $o->weekly_hours, 'company' => $c->card()]]);
+            'weekly_hours' => $o->weekly_hours, 'company' => $c->card(), 'kind' => $o->kind, 'stage_type' => $o->stage_type, 'fee' => $o->fee !== null ? (float) $o->fee : null, 'fee_currency' => $o->fee_currency]]);
     }
 
     /** FR-VL-012: تسجيل متطوع من رابط فرصة عامة */
@@ -142,7 +142,7 @@ class ExternalPortalController extends Controller
             'areas' => ['nullable', 'array'], 'availability' => ['nullable', 'array'], 'emergency' => ['nullable', 'array'], 'consent' => ['accepted']],
             ['consent.accepted' => L::t('الموافقة على معالجة البيانات مطلوبة.', 'Consent to data processing is required.')]);
         return Tenant::run($o->company_id, function () use ($v, $o) {
-            $cat = Codes::resolve('worker_categories', 'VOL');
+            $cat = Codes::resolve('worker_categories', $o->kind === 'intern' ? 'STG' : 'VOL') ?? Codes::resolve('worker_categories', 'VOL');
             $this->ext->save(collect($v)->except('consent')->all() + ['worker_category_id' => $cat?->id, 'opportunity_id' => $o->id, 'department_id' => $o->department_id, 'location_id' => $o->location_id], null, null, 'public');
             return response()->json(['ok' => true], 201);
         });

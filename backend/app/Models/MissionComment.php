@@ -8,6 +8,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class MissionComment extends Model
 {
     protected bool $audit = false;
-    protected function casts(): array { return ['files' => 'array']; }
+    protected function casts(): array { return ['files' => 'array', 'mentions' => 'array']; }
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
 }

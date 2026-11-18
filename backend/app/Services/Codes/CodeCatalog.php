@@ -42,7 +42,8 @@ class CodeCatalog
             'departments' => ['الإدارات والأقسام', 'Departments', 'org', 'hr_director', '^[A-Za-z][A-Za-z0-9_-]{1,19}$', 'HR10', true, false, null, 'departments', null],
             'branches' => ['الفروع', 'Branches', 'org', 'admin', '^[A-Za-z][A-Za-z0-9_-]{1,19}$', 'DAM01', true, false, null, 'locations', null],
             'grades' => ['الدرجات الوظيفية', 'Job grades', 'people', 'hr_director', '^G[0-9]{2}$', 'G01', true, false, null, null,
-                [['key' => 'rank', 'ar' => 'الترتيب', 'en' => 'Rank', 'type' => 'number']]],
+                [['key' => 'rank', 'ar' => 'الترتيب', 'en' => 'Rank', 'type' => 'number'], ['key' => 'travel_class', 'ar' => 'فئة بدل السفر', 'en' => 'Travel allowance class', 'type' => 'select', 'options' => ['A', 'B', 'C', 'D']],
+                ['key' => 'ticket', 'ar' => 'درجة التذكرة', 'en' => 'Ticket class', 'type' => 'select', 'options' => ['economy', 'premium', 'business', 'first']]]],
             'job_families' => ['العائلات الوظيفية', 'Job families', 'people', 'hr_director', '^[A-Z]{3}$', 'ADM', false, false, null, null, null],
             'jobs' => ['المسميات الوظيفية', 'Job titles', 'people', 'hr_director', '^JB-[A-Z0-9]{2,6}-[0-9]{3}$', 'JB-HR-014', true, false, 'job_families', null,
                 [['key' => 'grade', 'ar' => 'الدرجة المعتادة', 'en' => 'Usual grade', 'type' => 'list', 'list' => 'grades']]],
@@ -62,6 +63,8 @@ class CodeCatalog
             'cost_centers' => ['مراكز الكلفة', 'Cost centres', 'pay', 'finance', '^CC-[0-9]{4}$', 'CC-1020', false, false, null, null, null],
             'mission_types' => ['أنواع المهمات', 'Mission types', 'ops', 'hr_director', '^MT-[0-9]{2}$', 'MT-30', false, false, null, null, [
                 $bool('travel', 'سفر (بدل سفر)', 'Travel (allowance)'), $bool('financial', 'له أثر مالي', 'Has a pay effect'),
+                ['key' => 'stages', 'ar' => 'المراحل (اسم:وزن، مفصولة بفواصل)', 'en' => 'Stages (name:weight, comma separated)', 'type' => 'text'],
+                ['key' => 'proof', 'ar' => 'الإثبات المطلوب', 'en' => 'Required proof', 'type' => 'text'],
             ]],
             'mission_categories' => ['تصنيفات المهمات', 'Mission categories', 'ops', 'hr_director', '^[A-Z]{2,4}-[0-9]{2}$', 'SAL-01', false, false, 'mission_types', null, null],
             'specialties' => ['تخصصات الخبراء', 'Expert specialties', 'people', 'hr_director', '^[A-Z]{3}(-[0-9]{2})?$', 'HRM-01', false, true, 'specialties', null, null],
@@ -227,6 +230,65 @@ class CodeCatalog
         // الرموز المرتبطة بموظفين = مستخدمة ← مقفلة
         foreach (['job_id', 'worker_category_id', 'contract_type_id', 'grade_id', 'cost_center_id'] as $col)
             CodeItem::whereIn('id', Employee::whereNotNull($col)->distinct()->pluck($col))->whereNull('used_at')->update(['used_at' => now()]);
+    }
+
+    /** FR-CS-021: نسخ رموز قوائم المجموعة (inherit) إلى كل شركة تابعة — النسخ للقراءة فقط وتتحدث بأسماء المجموعة */
+    public static function syncGroup(?\App\Models\Company $parent): int
+    {
+        if (! $parent) return 0;
+        $lists = \App\Support\Tenant::run($parent, fn () => CodeList::where('system', false)->where('inherit', true)->where('company_id', $parent->id)->get()
+            ->map(fn ($l) => ['key' => $l->key, 'items' => CodeItem::where('code_list_id', $l->id)->get()->all()])->all());
+        $n = 0;
+        foreach (\App\Models\Company::where('parent_id', $parent->id)->get() as $child) \App\Support\Tenant::run($child, function () use ($lists, &$n) {
+            foreach ($lists as $x) {
+                $l = CodeList::where('key', $x['key'])->where('system', false)->first(); if (! $l) continue;
+                foreach ($x['items'] as $it) {
+                    $mine = CodeItem::where('code_list_id', $l->id)->where(fn ($q) => $q->where('group_item_id', $it->id)->orWhere('code', $it->code))->first();
+                    $data = ['name_ar' => $it->name_ar, 'name_en' => $it->name_en, 'status' => $it->status, 'attrs' => $it->attrs, 'description' => $it->description, 'group_item_id' => $it->id];
+                    if ($mine) { $mine->update($data); continue; }
+                    CodeItem::create($data + ['code_list_id' => $l->id, 'code' => $it->code, 'sort' => $it->sort]); $n++;
+                }
+            }
+            Codes::bump();
+        });
+        return $n;
+    }
+
+    /** FR-CS-008: هيكل القطاع (إدارات) وعناصر راتب خاصة به — تُضاف إن لم تكن موجودة */
+    public const SECTOR_EXTRA = [
+        'trading' => ['depts' => [['ADM', 'الإدارة العامة', 'General management'], ['FIN', 'المالية', 'Finance'], ['HRM', 'الموارد البشرية', 'Human resources'], ['SAL', 'المبيعات', 'Sales'], ['OPS', 'المستودعات والعمليات', 'Warehouse & operations'], ['CSR', 'خدمة العملاء', 'Customer service']],
+            'elements' => [['E-250', 'عمولة مبيعات', 'Sales commission', ['kind' => 'earning', 'taxable' => true, 'insured' => false, 'channel' => 'payroll']]]],
+        'hotel' => ['depts' => [['ADM', 'الإدارة', 'Management'], ['FO', 'المكتب الأمامي', 'Front office'], ['HK', 'التدبير الفندقي', 'Housekeeping'], ['FB', 'الأغذية والمشروبات', 'Food & beverage'], ['FIN', 'المالية', 'Finance']],
+            'elements' => [['E-150', 'حصة الخدمة', 'Service charge share', ['kind' => 'earning', 'taxable' => true, 'insured' => false, 'channel' => 'payroll']], ['E-160', 'بدل وجبات', 'Meal allowance', ['kind' => 'earning', 'taxable' => false, 'insured' => false, 'channel' => 'payroll']]]],
+        'restaurant' => ['depts' => [['ADM', 'الإدارة', 'Management'], ['KIT', 'المطبخ', 'Kitchen'], ['SRV', 'الصالة', 'Service']],
+            'elements' => [['E-150', 'حصة الإكراميات', 'Tips share', ['kind' => 'earning', 'taxable' => true, 'insured' => false, 'channel' => 'cash']], ['E-160', 'بدل وجبات', 'Meal allowance', ['kind' => 'earning', 'taxable' => false, 'insured' => false, 'channel' => 'payroll']]]],
+        'factory' => ['depts' => [['ADM', 'الإدارة', 'Management'], ['PRD', 'الإنتاج', 'Production'], ['QC', 'الجودة', 'Quality'], ['MNT', 'الصيانة', 'Maintenance'], ['WH', 'المستودعات', 'Warehouses'], ['FIN', 'المالية', 'Finance']],
+            'elements' => [['E-170', 'بدل مناوبة', 'Shift allowance', ['kind' => 'earning', 'taxable' => true, 'insured' => true, 'channel' => 'payroll']], ['E-180', 'بدل خطر', 'Hazard allowance', ['kind' => 'earning', 'taxable' => true, 'insured' => true, 'channel' => 'payroll']]]],
+        'ngo' => ['depts' => [['ADM', 'الإدارة', 'Management'], ['PRG', 'البرامج', 'Programmes'], ['FLD', 'العمل الميداني', 'Field operations'], ['FIN', 'المالية والمنح', 'Finance & grants'], ['VOL', 'المتطوعون', 'Volunteers']],
+            'elements' => [['E-190', 'بدل ميداني', 'Field allowance', ['kind' => 'earning', 'taxable' => true, 'insured' => false, 'channel' => 'payroll']]]],
+        'holding' => ['depts' => [['EXE', 'الإدارة التنفيذية', 'Executive office'], ['FIN', 'مالية المجموعة', 'Group finance'], ['HRM', 'موارد المجموعة البشرية', 'Group HR'], ['LEG', 'الشؤون القانونية', 'Legal'], ['IT', 'تقنية المعلومات', 'IT']],
+            'elements' => [['E-195', 'بدل تمثيل', 'Representation allowance', ['kind' => 'earning', 'taxable' => true, 'insured' => false, 'channel' => 'payroll']]]],
+    ];
+
+    /** هيكل القطاع: إدارات بالرموز المعتادة وعناصر راتب إضافية @return array{depts: int, elements: int} */
+    public static function loadSectorStructure(string $sector): array
+    {
+        $x = self::SECTOR_EXTRA[$sector] ?? null; $out = ['depts' => 0, 'elements' => 0];
+        if (! $x) return $out;
+        $sort = (int) \App\Models\Department::max('sort');
+        foreach ($x['depts'] as [$code, $ar, $en]) {
+            if (\App\Models\Department::where('code', $code)->orWhere('name_ar', $ar)->exists()) continue;
+            \App\Models\Department::create(['code' => $code, 'name_ar' => $ar, 'name_en' => $en, 'active' => true, 'sort' => ++$sort, 'color' => 'brand']);
+            $out['depts']++;
+        }
+        $pe = CodeList::where('key', 'pay_elements')->where('system', false)->first();
+        if ($pe) foreach ($x['elements'] as [$code, $ar, $en, $attrs]) {
+            if (CodeItem::where('code_list_id', $pe->id)->where('code', $code)->exists()) continue;
+            CodeItem::create(['code_list_id' => $pe->id, 'code' => $code, 'name_ar' => $ar, 'name_en' => $en, 'attrs' => $attrs + ['eos' => false], 'sort' => 900 + $out['elements']]);
+            $out['elements']++;
+        }
+        Codes::bump();
+        return $out;
     }
 
     /** يضيف مسميات قالب القطاع (وما يلزم من عائلات) — في مرحلة التأسيس فقط */

@@ -183,6 +183,7 @@ class Settings
             'restructure_role' => 'ceo', 'unused_months' => 12, 'company_code' => '', 'templates' => []],
         // العقود والتجديد وتقييم التجربة (الدفعة 19 — الجزء D): كل المهل والعتبات والقوالب قابلة للتعديل
         'contracts' => [
+            'notify_roles' => ['finance'],             // FR-CR-014: من يُبلَّغ بأحداث العقود (التجديد، عدم التجديد، نتيجة التجربة، تعديل الراتب)
             'renewal_open_days' => 30, 'probation_open_days' => 15, 'manager_days' => 7, 'hr_days' => 7, 'radar_days' => [90, 60, 30, 15],
             'default_months' => 12, 'probation_months' => 3, 'open_after_years' => 5, 'min_rating_renew' => 'good',
             'fixed_type' => 'FT-D', 'open_type' => 'FT-U', 'allow_extension' => true, 'extension_max_months' => 3,
@@ -218,6 +219,12 @@ class Settings
             'completion_bonus' => ['MT-10' => 0, 'MT-20' => 0, 'MT-30' => 0, 'MT-40' => 0, 'MT-50' => 0, 'MT-60' => 0, 'MT-70' => 0],
             'trainer_rates' => ['beginner' => 15000, 'intermediate' => 25000, 'advanced' => 40000], 'trainer_currency' => 'SYP',
             'attendance_bonus' => 0, 'attendance_bonus_currency' => 'SYP', 'bonus_over_cap_role' => 'ceo', 'bonus_monthly_cap' => 0,
+            // الدفعة 28: مناطق الوجهات بمعامل على بدل السفر، حدود إقامة حسب المدينة، ضبط درجة التذكرة، وأتعاب المحاضر من التدريب
+            'zones' => [],                          // [{key, ar, en, governorates[], countries[], factor}]
+            'hotel_cities' => [],                   // [{city|country|governorate, grades[], limit, currency}]
+            'ticket_over' => 'warn',                // warn | block
+            'trainer_fee_auto' => true, 'trainer_default_level' => 'intermediate',
+            'rates_by_class' => [],                 // معدلات حسب فئة بدل السفر للدرجة: {A: {...كصف الدرجة}}
         ],
         // التأهيل والتدريب والتطوير (الدفعة 23 — SRS التدريب): قواعد BR-01…18 وكل قيمة مفتوحة في القسم 15 بقيمة افتراضية
         // كود تضمين شواغر الشركة في موقعها (FEATURES 05b): إطار مستقل يُحدَّث تلقائياً، والمواقع المسموح لها بتضمينه
@@ -253,6 +260,34 @@ class Settings
             'qualification_templates' => [],        // [{key, ar, en, job_ids[], department_ids[], stations: [{department_id, days, topics}]}]
             'commitment_ar' => "تعهد الالتزام بالتدريب والعمل\n\nأنا الموقّع أدناه :name، أتعهد بحضور دورة «:course» من :from إلى :to، وبالعمل لدى :company مدة :months شهراً من تاريخ انتهاء الدورة مقابل تكلفتها البالغة :cost.\nأتعهد بتنفيذ المهام بكفاءة خلال فترة التدريب، والامتثال للسياسات والأخلاقيات المهنية وحماية سرية المعلومات.\nفي حال انتهاء خدمتي بطلبي قبل انقضاء مدة الالتزام، أسدد قيمة التدريب :mode.",
             'commitment_en' => "Training & service commitment\n\nI, the undersigned :name, commit to attending «:course» from :from to :to, and to working for :company for :months months after the course ends, in return for its cost of :cost.\nI commit to performing my duties well during the training, complying with the policies and professional ethics and protecting confidential information.\nIf my service ends at my request before the commitment period ends, I will repay the training cost :mode.",
+            // الدفعة 27 — إكمال الموديول: تصنيفات قابلة للتعديل، اعتماد العروض وتعديل الخطة، الحضور بالرمز، الحملات، الروابط والبريد، قوالب الشهادات
+            'deliveries' => [['key' => 'internal', 'ar' => 'داخلي بمدرب داخلي', 'en' => 'Internal trainer'], ['key' => 'internal_ext', 'ar' => 'داخلي بمدرب خارجي', 'en' => 'In-house, external trainer'],
+                ['key' => 'external', 'ar' => 'خارجي لدى جهة تدريب', 'en' => 'External provider'], ['key' => 'ojt', 'ar' => 'تدريب على رأس العمل', 'en' => 'On the job'], ['key' => 'stage', 'ar' => 'تدريب عملي (ستاج)', 'en' => 'Internship'],
+                ['key' => 'elearning', 'ar' => 'تعلّم إلكتروني', 'en' => 'E-learning'], ['key' => 'coaching', 'ar' => 'إرشاد وتوجيه', 'en' => 'Coaching / mentoring'], ['key' => 'event', 'ar' => 'مؤتمر أو فعالية', 'en' => 'Conference / event']],
+            'audiences' => [['key' => 'staff', 'ar' => 'الموظفون', 'en' => 'Staff'], ['key' => 'departments', 'ar' => 'إدارات محددة', 'en' => 'Selected departments'], ['key' => 'managers', 'ar' => 'المدراء', 'en' => 'Managers']],
+            'quote_gate' => true,                   // BR-05: بعد إدخال العروض لا يُؤكَّد التسجيل قبل اعتماد الاختيار
+            'quote_criteria' => [['key' => 'price', 'ar' => 'السعر', 'en' => 'Price', 'weight' => 40], ['key' => 'quality', 'ar' => 'جودة المحتوى', 'en' => 'Content quality', 'weight' => 30],
+                ['key' => 'experience', 'ar' => 'خبرة الجهة والمدرب', 'en' => 'Provider experience', 'weight' => 20], ['key' => 'terms', 'ar' => 'المدة والشروط', 'en' => 'Duration & terms', 'weight' => 10]],
+            'change_approval' => true,              // BR-18: تعديل الخطة المعتمدة يمر بمسار «تعديل خطة تدريب معتمدة»
+            'trainer_weights' => ['content' => 20, 'trainer' => 25, 'punctuality' => 10, 'facilities' => 10, 'results' => 25, 'value' => 10],   // POL-16: بطاقة الأداء الموزونة
+            'checkin_before' => 30, 'checkin_after' => 90,   // نافذة الحضور بالرمز حول وقت الجلسة (دقائق)
+            'late_after' => 15,
+            'campaign_remind_days' => 3,            // تذكير رؤساء الإدارات قبل إغلاق الحملة
+            'campaign_auto_close' => true,          // إغلاق الحملة تلقائياً بعد تاريخها
+            'tna_enforce' => false,                 // BR-11: الحملات خارج نافذة التحديد تحتاج مبرراً
+            'smart_required' => false,              // اعتماد الاحتياج يتطلب هدفاً مكتملاً (السلوك، الشرط، المعيار القابل للقياس)
+            'email' => true,                        // نسخة بالبريد من إشعارات الترشيح والتعهد والمتابعة
+            'link_days' => 7,                       // صلاحية روابط موافقة المدير وتوقيع التعهد
+            'idp_from_appraisal' => true,           // تقييم أداء دون المستوى المتوسط ← مسودة خطة تطوير فردية
+            'cert_templates' => [
+                'completion' => ['ar' => 'شهادة إتمام', 'en' => 'Certificate of completion', 'body_ar' => 'تشهد :company بأن :name قد أتمّ برنامج «:course» بنجاح بتاريخ :date.', 'body_en' => ':company certifies that :name has completed «:course» on :date.'],
+                'competency' => ['ar' => 'شهادة كفاءة', 'en' => 'Certificate of competency', 'body_ar' => 'تشهد :company بأن :name قد اجتاز برنامج «:course» وأثبت الكفاءة المطلوبة بتاريخ :date.', 'body_en' => ':company certifies that :name passed «:course» and demonstrated the required competency on :date.'],
+                'excellence' => ['ar' => 'شهادة تميز', 'en' => 'Certificate of excellence', 'body_ar' => 'تشهد :company بأن :name قد أتمّ برنامج «:course» بتميز بتاريخ :date.', 'body_en' => ':company certifies that :name completed «:course» with distinction on :date.'],
+                'qualification' => ['ar' => 'شهادة إتمام التأهيل', 'en' => 'Qualification certificate', 'body_ar' => 'تشهد :company بأن :name قد أتمّ برنامج التأهيل الوظيفي بتاريخ :date.', 'body_en' => ':company certifies that :name completed the qualification programme on :date.'],
+                'stage' => ['ar' => 'شهادة تدريب عملي', 'en' => 'Internship certificate', 'body_ar' => 'تشهد :company بأن :name قد أتمّ تدريباً عملياً بتاريخ :date.', 'body_en' => ':company certifies that :name completed an internship on :date.'],
+            ],
+            'cert_signer' => 'مدير الموارد البشرية',
+            'linkedin_share' => true,
         ],
         // العاملون من غير الموظفين (الدفعة 22 — الجزء E): حدود التطوع، فحص طبيعة العلاقة، الاعتماد، الشهادة، قائمة الخبراء، سرية الأتعاب
         'externals' => [
@@ -273,11 +308,22 @@ class Settings
             'shortlist_min' => 2,                   // POL-RS-09: أكثر من خبير في القائمة المختصرة
             'doc_alert_days' => 30,                 // FR-RS-003: تنبيه قبل انتهاء صلاحية الشهادات
             'fee_roles' => ['hr_director', 'finance', 'ceo'],     // POL-RS-07: من يرى الأتعاب والتقييمات والملاحظات
+            // FR-VL-004: قوالب حسب نوع العامل {kind: {ar, en}} — الفارغ يستعمل قالب التطوع أدناه
+            'agreements' => [
+                'intern' => ['ar' => "اتفاقية تدريب عملي\n\nبين :company والمتدرب/ة :name، رقم الهوية :national_id.\n\nالجهة: فرع :branch، :department، المشرف :supervisor.\nالمدة من :from إلى :to بمعدل :hours ساعة أسبوعياً.\nالمهام: :tasks\nالمشروع: :project\n\nالتدريب العملي لا ينشئ علاقة عمل، ويُمنح المتدرب شهادة عند إتمام الساعات المطلوبة وتقييم المشرف.",
+                    'en' => "Internship agreement\n\nBetween :company and the intern :name, ID :national_id.\n\nHost: :branch branch, :department, supervisor :supervisor.\nFrom :from to :to, :hours hours a week.\nTasks: :tasks\nProject: :project\n\nThe internship does not create an employment relationship; a certificate is given when the required hours and the supervisor evaluation are complete."],
+                'trial' => ['ar' => "عقد عمل تجريبي\n\nبين :company والسيد/ة :name، رقم الهوية :national_id.\n\nيعمل في :department بفرع :branch تحت إشراف :supervisor من :from إلى :to لتقييم الملاءمة للوظيفة.\nالمهام: :tasks\n\nلا تُعدّ هذه المدة تعييناً، وتنتهي تلقائياً في نهايتها ما لم يصدر قرار تعيين.",
+                    'en' => "Trial work agreement\n\nBetween :company and :name, ID :national_id.\n\nWorks in :department, :branch branch, supervised by :supervisor from :from to :to to assess fit for the role.\nTasks: :tasks\n\nThis period is not an appointment and ends automatically unless an appointment decision is issued."],
+                'temporary' => ['ar' => "عقد عمل مؤقت\n\nبين :company والسيد/ة :name، رقم الهوية :national_id.\n\nلأداء :tasks في :department بفرع :branch من :from إلى :to بإشراف :supervisor، وفق المقابل والشروط المتفق عليها.\nينتهي العقد بانتهاء مدته أو إنجاز العمل.",
+                    'en' => "Temporary work agreement\n\nBetween :company and :name, ID :national_id.\n\nTo perform :tasks in :department, :branch branch, from :from to :to, supervised by :supervisor, on the agreed terms.\nThe agreement ends with its term or the completion of the work."],
+            ],
             'agreement_ar' => "اتفاقية تطوع مؤقتة\n\nبين :company (الجهة المستضيفة) والسيد/ة :name (المتطوع)، رقم الهوية :national_id.\n\nالجهة المستضيفة: فرع :branch، :department، والمشرف :supervisor.\nالمدة: من :from إلى :to، بمعدل :hours ساعة أسبوعياً.\nالعلاقة التشغيلية: :relation.\n\n1. التطوع دون أجر، ولا تنشئ هذه الاتفاقية علاقة عمل.\n2. المهام المحددة والمخرجات المتوقعة: :tasks\n3. يلتزم المتطوع بالحضور المتفق عليه، والسرية، ومدونة السلوك، وإجراءات السلامة والحماية، والمحافظة على الممتلكات.\n4. تلتزم الجهة بالتوجيه والتدريب الأولي، وبيئة آمنة، ومشرف مسؤول، وتعويض المصاريف المتفق عليها، وشهادة تطوع.\n5. التعويضات إن وُجدت: مصاريف فعلية موثقة بحد أعلى :cap لكل طلب.\n6. يجوز لأي طرف إنهاء الاتفاقية، مع إعادة أي عهدة.\n7. حماية البيانات، والملكية الفكرية للمخرجات للجهة المستضيفة.",
             'agreement_en' => "Temporary volunteer agreement\n\nBetween :company (the host) and :name (the volunteer), ID :national_id.\n\nHost: :branch branch, :department, supervisor :supervisor.\nPeriod: :from to :to, :hours hours a week.\nOperational relation: :relation.\n\n1. Volunteering is unpaid and this agreement does not create an employment relationship.\n2. Tasks and expected outputs: :tasks\n3. The volunteer commits to the agreed attendance, confidentiality, the code of conduct, safety and safeguarding procedures and care of property.\n4. The host provides orientation and initial training, a safe environment, a responsible supervisor, the agreed expense reimbursement and a volunteering certificate.\n5. Reimbursement, if any: documented actual expenses up to :cap per claim.\n6. Either party may end the agreement; any custody is returned.\n7. Data protection; intellectual property of outputs belongs to the host.",
         ],
         // NFC وتعدد الفروع (الدفعة 21 — الجزء C): قرار البصم خارج الفرع، نوافذ التكرار، تنبيهات الأمان، الحضور بملصق الفرع
         // وكيل جهاز الموظف UHR-Agent (D-15): الخروج بالبطاقة يقفل جهازه — الافتراضي من ورقة القواعد: قفل وتسجيل خروج Windows بلا إيقاف تشغيل، تحذير 60 ثانية
+        // سلاسل اعتماد مشروطة: النوع ← {amount, currency, grades[], branches[]} — تحققها يحوّل الطلب إلى سلسلة «النوع_high»
+        'chain_rules' => [],
         'pc_agent' => ['enabled' => true, 'action' => 'logoff', 'warn_seconds' => 60, 'postpone_minutes' => 0, 'sources' => ['card'],
             'fresh_minutes' => 10, 'queue_hours' => 12, 'offline_minutes' => 3, 'poll_seconds' => 10, 'notify_employee' => true],
         'nfc' => [
@@ -296,6 +342,10 @@ class Settings
             'sticker' => true,                      // الحضور بالهاتف بمسح ملصق الفرع
             'sticker_geo' => true,                  // يتطلب الموقع الجغرافي ضمن نطاق الفرع
             'card_security' => 'uid',               // uid | memory | secure (للعلم — يحدد نوع القارئ المطلوب)
+            // الدفعة 28
+            'drift_correct' => true,                // تصحيح وقت الحدث بانحراف ساعة الجهاز المقيس في النبضة (FR-NF-016)
+            'sticker_device' => 'off',              // off | bind_first | registered — ربط الحضور بالهاتف بجهاز مسجّل (FR-NF-017)
+            'externals' => true,                    // بطاقات غير الموظفين: النقرتان في اليوم ← ساعات تطوع بانتظار المشرف (FR-VL-007)
         ],
     ];
 

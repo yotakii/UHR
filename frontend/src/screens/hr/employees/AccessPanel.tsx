@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { CreditCard, MapPin, Plus, Trash2, Plane } from 'lucide-react'
 import { useL, useLang, bi, fmtDate } from '../../../lib/store'
 import { ApiError } from '../../../lib/api'
-import { ACCESS_KIND, CRED_STATUS, CRED_TYPE, useAccess, useAddBranchAccess, useAddCredential, useCredentialStatus, useRemoveBranchAccess, type CredentialRow } from '../../../lib/nfc'
+import { ACCESS_KIND, CRED_STATUS, CRED_TYPE, useAccess, useAddBranchAccess, useAddCredential, useCredentialStatus, useRemoveBranchAccess, type CredentialRow, newCardToken } from '../../../lib/nfc'
 import { Badge, Btn, Field, Modal, Panel, Seg, toast } from '../../../ui/kit'
 import { DecisionDialog } from '../../../ui/decision'
 
@@ -16,9 +16,13 @@ export function AccessPanel({ id }: { id: number }) {
   const st = useCredentialStatus(); const rm = useRemoveBranchAccess()
   const [add, setAdd] = useState(false); const [br, setBr] = useState(false)
   const [act, setAct] = useState<{ c: CredentialRow; status: 'lost' | 'suspended' | 'revoked' } | null>(null)
+  const [tok, setTok] = useState<string | null>(null)
   if (!data) return null
   const edit = data.can.edit
   return <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(320px,1fr))]">
+    {tok && <Modal open onClose={() => setTok(null)} width={440} title={L('رمز ذاكرة البطاقة', 'Card memory code')} footer={<Btn kind="primary" onClick={() => setTok(null)}>{L('تم', 'Done')}</Btn>}>
+      <p className="text-[13px] text-ink-2">{L('اكتب هذا الرمز على البطاقة (الصفحات 4–7) بأداة الكتابة، ثم فعّل TOKEN=1 في ملف إعداد الجسر. البطاقة المنسوخة بلا الرمز تُرفض حين يكون أمان البطاقة «متوسطاً» أو «مرتفعاً».', 'Write this code to the card (pages 4–7) with the writer tool, then set TOKEN=1 in the bridge settings file. A cloned card without the code is refused when card security is “medium” or “high”.')}</p>
+      <div className="mt-3 rounded-xl bg-sub p-3 text-center font-mono text-[18px] ltr select-all">{tok}</div></Modal>}
     <Panel title={<span className="flex items-center gap-2"><CreditCard size={15} />{L('اعتمادات الحضور', 'Attendance credentials')}</span>} action={edit && <Btn size="sm" icon={<Plus size={13} />} onClick={() => setAdd(true)}>{L('إصدار', 'Issue')}</Btn>}>
       {data.credentials.length === 0 ? <p className="text-[13px] text-ink-3">{L('لا توجد بطاقات أو أرقام بصمة مسجّلة.', 'No cards or fingerprint numbers registered.')}</p> :
         <div className="space-y-2">{data.credentials.map(c => <div key={c.id} className={`rounded-lg border border-line p-2.5 ${c.status === 'active' ? '' : 'opacity-70'}`}>
@@ -27,7 +31,8 @@ export function AccessPanel({ id }: { id: number }) {
           <div className="text-[12px] text-ink-3 num">{c.created_at ? fmtDate(c.created_at, lang) : ''}{c.valid_to ? ` · ${L('حتى', 'until')} ${fmtDate(c.valid_to, lang)}` : ''}{c.reason ? ` · ${c.reason}` : ''}</div>
           {edit && <div className="flex flex-wrap gap-1 mt-1.5">{c.status === 'active' ? <>
             <Btn size="sm" kind="ghost" onClick={() => setAct({ c, status: 'lost' })}>{L('إبلاغ فقد', 'Report lost')}</Btn>
-            <Btn size="sm" kind="ghost" onClick={() => setAct({ c, status: 'suspended' })}>{L('إيقاف', 'Suspend')}</Btn></>
+            <Btn size="sm" kind="ghost" onClick={() => setAct({ c, status: 'suspended' })}>{L('إيقاف', 'Suspend')}</Btn>
+            {c.type === 'nfc' && <Btn size="sm" kind="ghost" onClick={() => newCardToken(c.id).then(r => setTok(r.token)).catch(x => toast((x as Error).message))}>{c.has_token ? L('رمز ذاكرة جديد', 'New memory code') : L('رمز ذاكرة البطاقة', 'Card memory code')}</Btn>}</>
             : c.status === 'suspended' && <Btn size="sm" kind="ghost" onClick={() => st.mutate({ id: c.id, status: 'active' }, { onSuccess: () => toast(L('أُعيد التفعيل', 'Reactivated')), onError: x => toast((x as Error).message) })}>{L('إعادة تفعيل', 'Reactivate')}</Btn>}</div>}
         </div>)}</div>}
       <p className="mt-3 text-[12px] text-ink-3">{L('البطاقة المفقودة أو الموقوفة تُرفض عند استخدامها وتصل الموارد البشرية بتنبيه. انتهاء الخدمة يعطّل كل الاعتمادات تلقائياً.', 'A lost or suspended card is refused when used and HR is alerted. Ending service disables every credential automatically.')}</p>

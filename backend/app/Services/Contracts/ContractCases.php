@@ -59,7 +59,9 @@ class ContractCases
         $r = PerformanceReview::where('employee_id', $e->id)->whereNotNull('score')->where('status', 'approved')->latest('approved_at')->first();
         return ['years' => Contracts::continuousYears($e, $c), 'hire_date' => $e->hire_date?->toDateString(), 'review' => $r ? ['score' => (float) $r->score, 'performance' => $r->performance] : null,
             'penalties' => DisciplineCase::where('employee_id', $e->id)->where('status', 'decided')->where('decided_at', '>=', now()->subYear())->count(),
-            'contracts' => Contract::where('employee_id', $e->id)->whereIn('status', ['active', 'renewed', 'expired_no_action'])->count()];
+            'contracts' => Contract::where('employee_id', $e->id)->whereIn('status', ['active', 'renewed', 'expired_no_action'])->count(),
+            // توصية نهاية برنامج التأهيل (موديول التدريب) تغذي قرار التثبيت
+            'qualification' => \App\Models\TdQualification::where('employee_id', $e->id)->where('kind', 'qualification')->where('status', 'done')->latest('id')->first()?->evaluation['recommendation'] ?? null];
     }
 
     public static function isHr(User $u): bool { return Perm::can($u, 'contracts', 'edit') && Perm::scope($u, 'contracts') === 'all'; }
@@ -252,14 +254,14 @@ class ContractCases
                 $new = $this->contracts->create($by, $e, ['contract_type_id' => $dec['contract_type_id'], 'months' => $dec['months'], 'starts_on' => $start, 'probation_months' => 0,
                     'exception' => (bool) ($dec['exception'] ?? false), 'exception_reason' => ($dec['exception'] ?? false) ? $dec['reason'] : null], $c, $k, 'renewal');
                 $k->update(['status' => 'preparing', 'outcome' => $dec['decision'] === 'convert' ? 'converted' : 'renewed', 'decision' => $dec, 'new_contract_id' => $new->id]);
-                $letter('renewed');
+                $letter('renewed'); Contracts::publish('contract.renewed', \App\Models\Contract::find($k->contract_id));
                 break;
             case 'not_renew':
                 $last = max($c->ends_on?->toDateString() ?? now()->toDateString(), now()->toDateString());
                 $r = app(ExitFlow::class)->terminate($by, $e, ['cause' => $cfg['exit_cause_not_renewed'], 'last_day' => $last, 'rehire' => true,
                     'notes' => 'عدم تجديد العقد — '.$k->ref_no.($dec['reason'] ? ': '.$dec['reason'] : '')]);
                 $k->update(['status' => 'closed', 'outcome' => 'not_renewed', 'decision' => $dec, 'resignation_id' => $r->id, 'closed_at' => now()]);
-                $letter('not_renewed');
+                $letter('not_renewed'); Contracts::publish('contract.not_renewed', \App\Models\Contract::find($k->contract_id));
                 Audit::record('contract.not_renewed', $c, null, ['case' => $k->ref_no, 'exit' => $r->ref_no]);
                 break;
             case 'confirm':
@@ -267,7 +269,7 @@ class ContractCases
                 if ($ob && ! $ob->confirmed_at) app(OnboardingFlow::class)->confirm($e, $by, 'تقييم فترة التجربة '.$k->ref_no);
                 else { $e->update(['status' => 'active']); $e->log("تثبيت بعد اجتياز فترة التجربة ({$k->ref_no})", "Confirmed after probation ({$k->ref_no})", 'ok'); }
                 $k->update(['status' => 'closed', 'outcome' => 'confirmed', 'decision' => $dec, 'closed_at' => now()]);
-                $letter('confirmed');
+                $letter('confirmed'); Contracts::publish('employee.probation_passed', \App\Models\Contract::find($k->contract_id));
                 Audit::record('employee.probation_passed', $e, null, ['case' => $k->ref_no, 'total' => $k->evaluation['total'] ?? null]);
                 break;
             case 'terminate':
@@ -275,7 +277,7 @@ class ContractCases
                 $r = app(ExitFlow::class)->terminate($by, $e, ['cause' => $cfg['exit_cause_probation'], 'last_day' => $last, 'rehire' => true,
                     'notes' => 'عدم اجتياز فترة التجربة — '.$k->ref_no.($dec['reason'] ? ': '.$dec['reason'] : '')]);
                 $k->update(['status' => 'closed', 'outcome' => 'terminated', 'decision' => $dec + ['last_day' => $last], 'resignation_id' => $r->id, 'closed_at' => now()]);
-                $letter('terminated');
+                $letter('terminated'); Contracts::publish('employee.probation_failed', \App\Models\Contract::find($k->contract_id));
                 Audit::record('employee.probation_failed', $e, null, ['case' => $k->ref_no, 'exit' => $r->ref_no]);
                 break;
             case 'extend':

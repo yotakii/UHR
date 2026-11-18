@@ -29,7 +29,7 @@ class Records
     /** employee.hired ← برنامج تأهيل من قالب الوظيفة أو الإدارة (أو محطة واحدة في إدارته) */
     public static function qualify(Employee $e): ?TdQualification
     {
-        if (TdQualification::where('employee_id', $e->id)->exists()) return null;
+        if (TdQualification::where('employee_id', $e->id)->where('kind', 'qualification')->exists()) return null;
         $tpl = collect(Td::cfg()['qualification_templates'])->first(fn ($t) => in_array($e->getAttributes()['job_id'] ?? 0, $t['job_ids'] ?? [], true))
             ?? collect(Td::cfg()['qualification_templates'])->first(fn ($t) => in_array($e->department_id, $t['department_ids'] ?? [], true));
         $start = Carbon::parse($e->hire_date ?? now()); $stations = [];
@@ -41,6 +41,16 @@ class Records
             $start->addDays($days);
         }
         return TdQualification::create(['employee_id' => $e->id, 'template' => $tpl['key'] ?? null, 'stations' => $stations, 'status' => 'planned', 'progress' => 0]);
+    }
+
+    /** تدوير وظيفي داخلي (ستاج داخلي لموظف) من نشاط في خطة التطوير الفردية: محطة في إدارة أخرى بمدربها */
+    public static function rotation(Employee $e, \App\Models\DevelopmentActivity $a, ?User $by = null, ?int $departmentId = null, int $days = 10): TdQualification
+    {
+        $dept = $departmentId ?? $e->department_id;
+        $head = \App\Models\Department::whereKey($dept)->value('head_id');
+        $from = now()->startOfDay(); $to = $a->due_on && $a->due_on->gt($from) ? $a->due_on->copy() : $from->copy()->addDays($days - 1);
+        return TdQualification::create(['employee_id' => $e->id, 'kind' => 'rotation', 'development_activity_id' => $a->id, 'template' => null, 'status' => 'planned', 'progress' => 0,
+            'stations' => [['department_id' => $dept, 'trainer_id' => $head ?: $e->manager_id, 'topics' => $a->title, 'from' => $from->toDateString(), 'to' => $to->toDateString(), 'note' => null, 'signed_at' => null, 'signed_by' => null]]]);
     }
 
     /** FR-TD-111: مدرب المحطة يسجل ملاحظاته ويوقّع على إتمام محاورها */
@@ -62,10 +72,15 @@ class Records
         if (! Td::manages($u) && ($u->employee_id === null || $u->employee_id !== $e->manager_id)) abort(403);
         if ($q->progress < 100) throw new ApiException(L::t('لم تُوقَّع كل المحطات بعد.', 'Not all stations are signed yet.'), 'stations_pending', 409);
         if (! in_array($v['recommendation'] ?? '', ['confirm', 'extend', 'not_confirm'], true)) throw ApiException::field('recommendation', L::t('اختر التوصية.', 'Choose the recommendation.'), 'required');
-        $cert = app(Sessions::class)->issue(['employee_id' => $e->id, 'type' => 'qualification', 'title' => 'إتمام برنامج التأهيل']);
+        $rot = ($q->kind ?? 'qualification') === 'rotation';
+        $cert = app(Sessions::class)->issue(['employee_id' => $e->id, 'type' => $rot ? 'stage' : 'qualification', 'title' => $rot ? 'إتمام تدوير وظيفي داخلي' : 'إتمام برنامج التأهيل']);
+        if ($rot && $q->development_activity_id) \App\Models\DevelopmentActivity::whereKey($q->development_activity_id)->update(['status' => 'done', 'progress' => 100, 'done_at' => now()]);
         $q->update(['evaluation' => ['skills' => $v['skills'] ?? [], 'recommendation' => $v['recommendation'], 'note' => $v['note'] ?? null, 'by' => $u->displayName('ar'), 'at' => now()->toIso8601String()], 'status' => 'done', 'certificate_id' => $cert->id]);
         foreach ($v['gaps'] ?? [] as $cid) if (Competency::whereKey($cid)->exists()) app(Needs::class)->save(['employee_id' => $e->id, 'competency_id' => (int) $cid, 'title' => Competency::whereKey($cid)->value('name_ar'), 'path' => 'qualification', 'source' => 'event', 'source_ref' => 'qualification:'.$q->id, 'status' => 'suggested'], $u);
-        $e->log('اكتمل برنامج التأهيل — التوصية: '.['confirm' => 'التثبيت', 'extend' => 'تمديد التجربة', 'not_confirm' => 'عدم التثبيت'][$v['recommendation']], 'Qualification programme completed — recommendation: '.$v['recommendation'], 'info');
+        // توصية التأهيل تظهر في ملخص حالة تقييم فترة التجربة المفتوحة (العقود)
+        if (! $rot) foreach (\App\Models\ContractCase::where('employee_id', $e->id)->where('kind', 'probation')->where('status', '!=', 'closed')->get() as $case)
+            $case->update(['summary' => array_merge($case->summary ?? [], ['qualification' => $v['recommendation']])]);
+        $e->log(($rot ? 'اكتمل التدوير الوظيفي' : 'اكتمل برنامج التأهيل').' — التوصية: '.['confirm' => 'التثبيت', 'extend' => 'تمديد التجربة', 'not_confirm' => 'عدم التثبيت'][$v['recommendation']], 'Qualification programme completed — recommendation: '.$v['recommendation'], 'info');
         return $q;
     }
 
@@ -130,9 +145,12 @@ class Records
                 'due' => $c->status === 'active' ? Td::recovery($c) : $c->recovery, 'body' => $c->body, 'signed_at' => $c->signed_at?->toIso8601String()])->values(),
             'needs' => TdNeed::where('employee_id', $e->id)->whereNotIn('status', ['done', 'rejected'])->latest('id')->get(['id', 'ref', 'title', 'status', 'priority', 'path'])->values(),
             'competencies' => $comps->map(fn ($c) => ['id' => $c->id, 'ar' => $c->name_ar, 'en' => $c->name_en, 'required' => $req[$c->id] ?? null, 'current' => $cur[$c->id] ?? null])->values(),
-            'qualification' => ($q = TdQualification::where('employee_id', $e->id)->first()) ? ['id' => $q->id, 'status' => $q->status, 'progress' => $q->progress, 'stations' => $q->stations, 'evaluation' => $q->evaluation] : null,
+            'history' => TdExtras::historyRows($e),
+            'rotations' => TdQualification::where('employee_id', $e->id)->where('kind', 'rotation')->latest('id')->get()->map(fn ($r) => ['id' => $r->id, 'status' => $r->status, 'progress' => $r->progress, 'stations' => $r->stations])->values(),
+            'qualification' => ($q = TdQualification::where('employee_id', $e->id)->where('kind', 'qualification')->first()) ? ['id' => $q->id, 'status' => $q->status, 'progress' => $q->progress, 'stations' => $q->stations, 'evaluation' => $q->evaluation] : null,
             'totals' => ['hours_year' => (float) $done->filter(fn ($x) => $x->session?->starts_on?->year === $year)->sum(fn ($x) => (float) ($x->session?->program?->hours ?? 0)),
-                'hours_all' => (float) $done->sum(fn ($x) => (float) ($x->session?->program?->hours ?? 0)), 'cost_year' => (float) $ens->filter(fn ($x) => $x->session?->starts_on?->year === $year)->sum('cost'), 'cost_all' => (float) $ens->sum('cost'), 'courses' => $done->count()],
+                'hours_all' => (float) $done->sum(fn ($x) => (float) ($x->session?->program?->hours ?? 0)) + (float) \App\Models\TdHistory::where('employee_id', $e->id)->sum('hours'),
+                'hours_before' => (float) \App\Models\TdHistory::where('employee_id', $e->id)->sum('hours'), 'cost_year' => (float) $ens->filter(fn ($x) => $x->session?->starts_on?->year === $year)->sum('cost'), 'cost_all' => (float) $ens->sum('cost'), 'courses' => $done->count()],
         ];
     }
 

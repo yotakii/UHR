@@ -55,8 +55,8 @@ class Codebook
         if (! Codes::config()['gate'] || self::approved()) return;
         $g = self::golive();
         $missing = collect($g['checks'])->where('ok', false)->map(fn ($c) => L::t($c['ar'], $c['en']))->implode('، ');
-        throw new ApiException(L::t('لا يمكن إنشاء ملف موظف قبل اعتماد دليل الترميز (اكتمال '.$g['percent'].'%'.($missing ? ' — ناقص: '.$missing : '').').',
-            'An employee file cannot be created before the codebook is approved ('.$g['percent'].'% complete'.($missing ? ' — missing: '.$missing : '').').'), 'codebook_not_approved', 409, [], ['golive' => $g]);
+        throw new ApiException(L::t('لا يمكن إنشاء ملف موظف أو عقد قبل اعتماد دليل الترميز (اكتمال '.$g['percent'].'%'.($missing ? ' — ناقص: '.$missing : '').').',
+            'An employee file or contract cannot be created before the codebook is approved ('.$g['percent'].'% complete'.($missing ? ' — missing: '.$missing : '').').'), 'codebook_not_approved', 409, [], ['golive' => $g]);
     }
 
     /** هل يحق للمستخدم اعتماد الدليل (الإدارة العليا حسب الإعداد) */

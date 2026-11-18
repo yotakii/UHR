@@ -31,9 +31,9 @@ class TerminalController extends Controller
 
     public function scan(Request $request): JsonResponse
     {
-        $v = $request->validate(['uid' => ['required', 'string', 'max:60'], 'via' => ['nullable', 'in:usb,phone,bridge']]);
+        $v = $request->validate(['uid' => ['required', 'string', 'max:60'], 'via' => ['nullable', 'in:usb,phone,bridge'], 'token' => ['nullable', 'string', 'max:64']]);
         $d = $request->attributes->get('device');
-        $r = $this->att->scan($d, $v['uid'], $v['via'] ?? 'usb');
+        $r = $this->att->scan($d, $v['uid'], $v['via'] ?? 'usb', null, $v['token'] ?? null);
         return response()->json($r + ['feed' => Attendance::feed($d)]);
     }
 }

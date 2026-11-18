@@ -13,7 +13,7 @@ class Engagement extends Model
     protected function casts(): array
     {
         return ['starts_on' => 'date', 'ends_on' => 'date', 'days' => 'array', 'relation_test' => 'array', 'pledges' => 'array', 'onboarding' => 'array', 'evaluation' => 'array',
-            'signed_at' => 'datetime', 'decided_at' => 'datetime', 'ended_at' => 'datetime', 'end_warned_at' => 'datetime', 'amount' => 'float', 'expense_cap' => 'float'];
+            'signed_at' => 'datetime', 'decided_at' => 'datetime', 'ended_at' => 'datetime', 'end_warned_at' => 'datetime', 'amount' => 'float', 'expense_cap' => 'float', 'stage_fee' => 'float', 'stage_fee_paid_at' => 'datetime', 'stations' => 'array', 'stage_eval' => 'array'];
     }
     /** سير العمل يقرأ employee_id — غير الموظف ليس له ملف موظف */
     protected function employeeId(): Attribute { return Attribute::get(fn () => null); }

@@ -61,7 +61,14 @@ class Forms
         'TD4' => ['الخطة السنوية للتدريب والتطوير', 'Annual training & development plan', 'training', false],
         'TD5' => ['قياس أثر التدريب', 'Training impact assessment', 'training', false],
         'TD6' => ['سجل تدريب موظف', 'Employee training record', 'training', false],
+        'TD7' => ['استبيان تقييم دورة تدريبية', 'Course evaluation survey', 'training', false],
         'TD8' => ['حضور دورة تدريبية', 'Course attendance sheet', 'training', false],
+        'TD9' => ['اتفاقية تدريب عملي (ستاج)', 'Internship agreement', 'training', false],
+        'TD10' => ['ساعات التدريب العملي وتقييمه', 'Internship hours & evaluation', 'training', false],
+        'TD11' => ['خطة التطوير الفردية', 'Individual development plan', 'training', false],
+        'TD12' => ['خطة تطبيق التعلّم 30-60-90', 'Learning application plan 30-60-90', 'training', false],
+        'TD13' => ['تقييم مدرب / مركز تدريب', 'Trainer / centre rating', 'training', false],
+        'TD14' => ['مقارنة عروض التدريب الخارجي', 'External training quote comparison', 'training', true],
         'TDC' => ['شهادة تدريب', 'Training certificate', 'training', false],
     ];
 

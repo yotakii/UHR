@@ -28,7 +28,7 @@ class NfController extends Controller
     public function events(Request $request, NfcGate $gate): JsonResponse
     {
         $v = $request->validate(['events' => ['required', 'array', 'min:1', 'max:500'], 'events.*.card' => ['required', 'string', 'max:60'],
-            'events.*.at' => ['nullable', 'date'], 'events.*.seq' => ['nullable', 'integer', 'min:0'], 'events.*.via' => ['nullable', 'in:nfc,zk']]);
+            'events.*.at' => ['nullable', 'date'], 'events.*.seq' => ['nullable', 'integer', 'min:0'], 'events.*.via' => ['nullable', 'in:nfc,zk'], 'events.*.token' => ['nullable', 'string', 'max:64']]);
         /** @var Device $d */
         $d = $request->attributes->get('device');
         $events = collect($v['events'])->map(fn ($e) => $e + ['at' => $e['at'] ?? now()->toIso8601String()])->sortBy(fn ($e) => Carbon::parse($e['at'])->getTimestamp())->values();
@@ -36,7 +36,7 @@ class NfController extends Controller
         foreach ($events as $e) {
             $at = Carbon::parse($e['at']);
             if ($at->isAfter(now()->addMinutes(5))) { $out[] = ['seq' => $e['seq'] ?? null, 'decision' => 'rejected', 'reason' => 'future']; continue; }
-            $out[] = $gate->event($d, $e['card'], $at, isset($e['seq']) ? (int) $e['seq'] : null, $e['via'] ?? 'nfc');
+            $out[] = $gate->event($d, $e['card'], $at, isset($e['seq']) ? (int) $e['seq'] : null, $e['via'] ?? 'nfc', false, $e['token'] ?? null);
         }
         NfcGate::heartbeat($d, $request->only(['lan_ip', 'version', 'buffered', 'clock']));
         return response()->json(['results' => array_map(fn ($r) => array_intersect_key($r, array_flip(['seq', 'decision', 'reason', 'name', 'direction', 'time'])), $out)]);

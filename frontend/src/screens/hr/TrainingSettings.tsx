@@ -7,6 +7,7 @@ import { Btn, Field, PageHead, Panel, Seg, toast } from '../../ui/kit'
 import { Spin } from '../training/parts'
 
 type Tier = { from: number; to: number; months: number }
+type Lbl = { key: string; ar: string; en: string }
 type Station = { department_id: number | null; days: number; topics: string }
 type Tpl = { key: string; ar: string; en: string; job_ids: number[]; department_ids: number[]; stations: Station[] }
 type S = Record<string, unknown> & { capacity: Record<string, [number, number]>; commitment_tiers: Tier[]; weights: Record<string, number>; impact_points: number[]; cert_alerts: number[]
@@ -105,6 +106,48 @@ export function TrainingSettings() {
         <input className="field ltr num !w-24" disabled={!edit} placeholder="MM-DD" value={p.to} onChange={x => set({ peak_seasons: v.peak_seasons.map((y, j) => j === i ? { ...y, to: x.target.value } : y) })} aria-label="to" />
         {edit && <button className="text-ink-3 hover:text-danger" onClick={() => set({ peak_seasons: v.peak_seasons.filter((_, j) => j !== i) })} aria-label={L('حذف', 'Remove')}><X size={15} /></button>}</div>)}
         {edit && <Btn size="sm" icon={<Plus size={14} />} onClick={() => set({ peak_seasons: [...v.peak_seasons, { name: '', from: '', to: '' }] })}>{L('موسم', 'Season')}</Btn>}</div></Field>
+    </Panel>
+    <Panel title={L('التصنيفات والاعتمادات', 'Categories & approvals')}>
+      <div className="grid gap-4 md:grid-cols-2">
+        {(['deliveries', 'audiences'] as const).map(k => <Field key={k} label={k === 'deliveries' ? L('أساليب التنفيذ', 'Delivery methods') : L('الفئات المستهدفة', 'Target audiences')} div error={e?.field(k)}>
+          <div className="space-y-1.5">{((v[k] as Lbl[]) ?? []).map((x, i) => <div key={i} className="grid grid-cols-[90px_1fr_1fr_auto] gap-1.5">
+            <input className="field ltr !text-[12px]" disabled={!edit} value={x.key} aria-label="key" onChange={y => set({ [k]: (v[k] as Lbl[]).map((z, j) => j === i ? { ...z, key: y.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') } : z) })} />
+            <input className="field" disabled={!edit} value={x.ar} aria-label={L('عربي', 'Arabic')} onChange={y => set({ [k]: (v[k] as Lbl[]).map((z, j) => j === i ? { ...z, ar: y.target.value } : z) })} />
+            <input className="field ltr" disabled={!edit} value={x.en} aria-label="English" onChange={y => set({ [k]: (v[k] as Lbl[]).map((z, j) => j === i ? { ...z, en: y.target.value } : z) })} />
+            {edit && <button className="text-ink-3 hover:text-danger" onClick={() => set({ [k]: (v[k] as Lbl[]).filter((_, j) => j !== i) })} aria-label={L('حذف', 'Remove')}><X size={15} /></button>}</div>)}
+            {edit && <Btn size="sm" icon={<Plus size={14} />} onClick={() => set({ [k]: [...((v[k] as Lbl[]) ?? []), { key: '', ar: '', en: '' }] })}>{L('إضافة', 'Add')}</Btn>}</div></Field>)}
+      </div>
+      <div className="mt-4 text-[13px] font-semibold">{L('معايير مقارنة العروض وأوزانها (المجموع 100)', 'Quote comparison criteria and weights (total 100)')}</div>
+      <div className="space-y-1.5 mt-2">{((v.quote_criteria as (Lbl & { weight: number })[]) ?? []).map((x, i) => <div key={i} className="grid grid-cols-[90px_1fr_1fr_70px_auto] gap-1.5">
+        <input className="field ltr !text-[12px]" disabled={!edit || x.key === 'price'} value={x.key} aria-label="key" onChange={y => set({ quote_criteria: (v.quote_criteria as Lbl[]).map((z, j) => j === i ? { ...z, key: y.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') } : z) })} />
+        <input className="field" disabled={!edit} value={x.ar} aria-label={L('عربي', 'Arabic')} onChange={y => set({ quote_criteria: (v.quote_criteria as Lbl[]).map((z, j) => j === i ? { ...z, ar: y.target.value } : z) })} />
+        <input className="field ltr" disabled={!edit} value={x.en} aria-label="English" onChange={y => set({ quote_criteria: (v.quote_criteria as Lbl[]).map((z, j) => j === i ? { ...z, en: y.target.value } : z) })} />
+        <input className="field num ltr" disabled={!edit} value={x.weight} aria-label={L('الوزن', 'Weight')} onChange={y => set({ quote_criteria: (v.quote_criteria as (Lbl & { weight: number })[]).map((z, j) => j === i ? { ...z, weight: Number(y.target.value) || 0 } : z) })} />
+        {edit && x.key !== 'price' && <button className="text-ink-3 hover:text-danger" onClick={() => set({ quote_criteria: (v.quote_criteria as Lbl[]).filter((_, j) => j !== i) })} aria-label={L('حذف', 'Remove')}><X size={15} /></button>}</div>)}
+        {edit && <Btn size="sm" icon={<Plus size={14} />} onClick={() => set({ quote_criteria: [...((v.quote_criteria as Lbl[]) ?? []), { key: '', ar: '', en: '', weight: 0 }] })}>{L('معيار', 'Criterion')}</Btn>}
+        {e?.field('quote_criteria') && <div className="text-[12px] text-danger">{e.field('quote_criteria')}</div>}</div>
+      <div className="mt-4 text-[13px] font-semibold">{L('أوزان بطاقة أداء المدرب (المجموع 100)', 'Trainer scorecard weights (total 100)')}</div>
+      <div className="flex flex-wrap gap-3 mt-2">{([['content', 'المحتوى', 'Content'], ['trainer', 'أداء المدرب', 'Trainer'], ['punctuality', 'الالتزام', 'Punctuality'], ['facilities', 'التجهيزات', 'Facilities'], ['results', 'النتائج', 'Results'], ['value', 'القيمة', 'Value']] as const).map(([k, a, b]) => <label key={k} className="flex items-center gap-1.5 text-[13px]">{L(a, b)}
+        <input className="field num ltr !w-16" disabled={!edit} value={(v.trainer_weights as Record<string, number>)?.[k] ?? 0} onChange={x => set({ trainer_weights: { ...(v.trainer_weights as Record<string, number>), [k]: Number(x.target.value) || 0 } })} /></label>)}</div>
+      {e?.field('trainer_weights') && <div className="text-[12px] text-danger">{e.field('trainer_weights')}</div>}
+      <div className="grid gap-2 mt-4 sm:grid-cols-2 text-[13.5px]">{([['quote_gate', 'لا يُؤكَّد التسجيل قبل اعتماد اختيار العرض الخارجي', 'Places are not confirmed before the external quote choice is approved'],
+        ['change_approval', 'تعديل الخطة المعتمدة يحتاج اعتماداً قبل تطبيقه', 'Changes to the approved plan need approval first'], ['tna_enforce', 'الحملات خارج نافذة تحديد الاحتياجات تحتاج مبرراً', 'Campaigns outside the needs window need a justification'],
+        ['smart_required', 'لا يُعتمد احتياج دون هدف مكتمل (السلوك والشرط والمعيار)', 'No need is approved without a complete objective'], ['campaign_auto_close', 'إغلاق الحملة تلقائياً بعد موعدها', 'Close campaigns automatically after the deadline'],
+        ['email', 'نسخة بالبريد من إشعارات الترشيح والتعهد والمتابعة', 'Email copies of nomination, commitment and follow-up notices'], ['idp_from_appraisal', 'مسودة خطة تطوير فردية لمن يقل تقييمه عن المتوسط', 'Draft an IDP for below-average appraisals'],
+        ['linkedin_share', 'زر إضافة الشهادة إلى LinkedIn', 'LinkedIn “add certificate” button']] as const).map(([k, a, b]) =>
+        <label key={k} className="flex items-start gap-2"><input type="checkbox" className="mt-1" disabled={!edit} checked={!!v[k]} onChange={x => set({ [k]: x.target.checked })} />{L(a, b)}</label>)}</div>
+      <div className="grid gap-4 mt-4 [grid-template-columns:repeat(auto-fill,minmax(210px,1fr))]">
+        {num('checkin_before', L('الحضور بالرمز يُفتح قبل الجلسة', 'QR check-in opens before'), L('دقيقة', 'min'))}{num('checkin_after', L('ويُغلق بعد نهايتها', 'and closes after the end'), L('دقيقة', 'min'))}
+        {num('late_after', L('يُعدّ متأخراً بعد', 'Late after'), L('دقيقة', 'min'))}{num('campaign_remind_days', L('تذكير الحملة قبل الإغلاق', 'Campaign reminder before closing'), L('يوم', 'days'))}
+        {num('link_days', L('صلاحية روابط البريد', 'Email links valid for'), L('يوم', 'days'))}
+        <Field label={L('موقّع الشهادات', 'Certificate signer')}><input className="field" disabled={!edit} value={(v.cert_signer as string) ?? ''} onChange={x => set({ cert_signer: x.target.value })} /></Field>
+      </div>
+      <div className="mt-4 text-[13px] font-semibold">{L('قوالب نصوص الشهادات', 'Certificate text templates')} <span className="text-ink-3 font-normal ltr">:company :name :course :date</span></div>
+      <div className="space-y-2 mt-2">{Object.entries((v.cert_templates as Record<string, { ar: string; en: string; body_ar: string; body_en: string }>) ?? {}).map(([k, t]) => <div key={k} className="rounded-xl border border-line p-2.5 grid gap-1.5 sm:grid-cols-2">
+        <input className="field" disabled={!edit} value={t.ar} aria-label={L('العنوان', 'Title')} onChange={x => set({ cert_templates: { ...(v.cert_templates as object), [k]: { ...t, ar: x.target.value } } })} />
+        <input className="field ltr" disabled={!edit} value={t.en} aria-label="Title (English)" onChange={x => set({ cert_templates: { ...(v.cert_templates as object), [k]: { ...t, en: x.target.value } } })} />
+        <textarea className="field" rows={2} disabled={!edit} value={t.body_ar} aria-label={L('النص', 'Text')} onChange={x => set({ cert_templates: { ...(v.cert_templates as object), [k]: { ...t, body_ar: x.target.value } } })} />
+        <textarea className="field ltr" rows={2} disabled={!edit} value={t.body_en} aria-label="Text (English)" onChange={x => set({ cert_templates: { ...(v.cert_templates as object), [k]: { ...t, body_en: x.target.value } } })} /></div>)}</div>
     </Panel>
     <Panel title={L('قوالب برامج التأهيل', 'Qualification templates')} sub={L('يُولَّد برنامج التأهيل تلقائياً عند التعيين للموظف الجديد في الإدارات المحددة.', 'A programme is generated at hire for new staff in the selected departments.')}>
       <div className="space-y-3">{tpls.map((t, i) => <div key={i} className="rounded-xl border border-line p-3">

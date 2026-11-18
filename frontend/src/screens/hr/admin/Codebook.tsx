@@ -7,12 +7,12 @@ import { navigate, setQuery, useRoute } from '../../../lib/router'
 import { download } from '../../../lib/admin'
 import {
   GROUPS, OPTION_NAMES, ROLE_NAMES, TABLE_NAMES, TYPE_NAMES, importCommit, importPreview, previewCode, simulate, useApproveBook, useCancelRequest, useCodeList, useCodes, useCompare,
-  useDecideRequest, useItemStatus, useLoadSector, useRequests, useReports, useSaveCodesSettings, useSaveItem, useSaveList, useSubmitRequest, useVersions,
+  useDecideRequest, useDocRegister, useInherit, useItemStatus, useLoadSector, suggestCode, useRequests, useReports, useSaveCodesSettings, useSaveItem, useSaveList, useSubmitRequest, useVersions,
   type AttrField, type ChangeRequest, type ChangeType, type CodeListDef, type CodeRow, type CodesOverview, type ListDetail, type Simulation,
 } from '../../../lib/codes'
 import { Badge, Btn, Empty, Field, Modal, PageHead, Panel, Progress, Seg, Tabs, toast } from '../../../ui/kit'
 
-type Tab = 'lists' | 'requests' | 'versions' | 'templates' | 'reports'
+type Tab = 'lists' | 'requests' | 'versions' | 'templates' | 'reports' | 'documents'
 const today = () => new Date().toISOString().slice(0, 10)
 
 /**
@@ -35,12 +35,13 @@ export function Codebook() {
     {!d.golive.approved && <GoLive d={d} />}
     <Tabs value={tab} onChange={v => setQuery({ tab: v === 'lists' ? undefined : v })} tabs={[
       { v: 'lists', label: L('القوائم والرموز', 'Lists & codes') }, { v: 'requests', label: L('طلبات التغيير', 'Change requests'), count: d.pending || undefined },
-      { v: 'versions', label: L('الإصدارات', 'Versions') }, { v: 'templates', label: L('الرموز المركّبة', 'Composite codes') }, { v: 'reports', label: L('التقارير', 'Reports') }]} />
+      { v: 'versions', label: L('الإصدارات', 'Versions') }, { v: 'templates', label: L('الرموز المركّبة', 'Composite codes') }, { v: 'documents', label: L('سجل ترميز الوثائق', 'Document codes') }, { v: 'reports', label: L('التقارير', 'Reports') }]} />
     {tab === 'lists' && <Lists d={d} />}
     {tab === 'requests' && <Requests />}
     {tab === 'versions' && <Versions />}
     {tab === 'templates' && <Templates d={d} />}
     {tab === 'reports' && <Reports />}
+    {tab === 'documents' && <DocRegister />}
     {settings && <SettingsModal d={d} onClose={() => setSettings(false)} />}
   </div>
 }
@@ -53,6 +54,8 @@ function GoLive({ d }: { d: CodesOverview }) {
   const [confirm, setConfirm] = useState(false); const [note, setNote] = useState('')
   return <Panel title={L('تأسيس دليل الترميز', 'Setting up the codebook')} sub={g.enabled ? L('لا يمكن إنشاء ملفات موظفين قبل اعتماد الدليل.', 'Employee files cannot be created before the codebook is approved.') : L('بوابة التأسيس غير مفعّلة — يمكن العمل قبل الاعتماد.', 'The go-live gate is off — work can start before approval.')}
     action={<Badge tone={g.ready ? 'brand' : 'brass'}>{g.percent}%</Badge>}>
+    <ol className="grid gap-2 mb-3 [grid-template-columns:repeat(auto-fill,minmax(180px,1fr))]">{([[L('قالب القطاع (اختياري)', 'Sector template (optional)'), d.lists.some(x => x.live > 0)], [L('القوائم الإلزامية', 'Required lists'), g.ready], [L('مراجعة التنبيهات', 'Review the warnings'), g.ready && g.warnings.length === 0], [L('اعتماد الدليل', 'Approve the codebook'), g.approved]] as const).map(([t, ok], i) =>
+      <li key={i} className={`flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] border ${ok ? 'border-brand/40 bg-brand-soft' : 'border-line'}`}><span className={`size-6 rounded-full grid place-items-center text-[12px] font-bold ${ok ? 'bg-brand text-white' : 'bg-sub'}`}>{ok ? <Check size={13} /> : i + 1}</span>{t}</li>)}</ol>
     <Progress value={g.percent} tone={g.ready ? 'brand' : 'brass'} />
     <div className="mt-4 grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(210px,1fr))]">
       {g.checks.map(c => <div key={c.key} className={`flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] ${c.ok ? 'bg-brand-soft' : 'bg-sub'}`}>
@@ -63,7 +66,7 @@ function GoLive({ d }: { d: CodesOverview }) {
     {d.can.create && d.direct && <div className="mt-4">
       <div className="text-[13px] text-ink-2 mb-2">{L('قوالب جاهزة حسب القطاع (تضيف مسميات وظيفية مقترحة قابلة للتعديل):', 'Ready sector templates (add suggested job titles you can edit):')}</div>
       <div className="flex flex-wrap gap-2">{d.sectors.map(s => <Btn key={s.key} size="sm" disabled={sector.isPending}
-        onClick={() => sector.mutate(s.key, { onSuccess: r => toast(L(`أُضيف ${r.added} مسمى`, `${r.added} title(s) added`)) })}>{bi(s, lang)} <span className="text-ink-3 num">({s.count})</span></Btn>)}</div>
+        onClick={() => sector.mutate(s.key, { onSuccess: r => toast(L(`أُضيف ${r.added} مسمى و${r.depts} إدارة و${r.elements} عنصر راتب`, `${r.added} title(s), ${r.depts} department(s) and ${r.elements} pay element(s) added`)) })}>{bi(s, lang)} <span className="text-ink-3 num">({s.count})</span></Btn>)}</div>
     </div>}
     <div className="mt-4 flex flex-wrap items-center gap-3">
       {d.can.approve ? <Btn kind="primary" icon={<Check size={16} />} disabled={!g.ready} onClick={() => setConfirm(true)}>{L('اعتماد الدليل', 'Approve the codebook')}</Btn>
@@ -114,7 +117,7 @@ function ListView({ listKey, d }: { listKey: string; d: CodesOverview }) {
   const [edit, setEdit] = useState<CodeRow | 'new' | null>(null)
   const [act, setAct] = useState<{ type: ChangeType; row: CodeRow } | null>(null)
   const [def, setDef] = useState(false); const [imp, setImp] = useState(false)
-  const status$ = useItemStatus()
+  const status$ = useItemStatus(); const inherit = useInherit()
   if (!x) return <div className="grid place-items-center py-16"><Loader2 className="animate-spin text-brand" /></div>
   const l = x.list
   const rows = x.rows.filter(r => (status === 'all' || r.live) && (!q || `${r.code} ${r.ar} ${r.en} ${r.legacy_code ?? ''}`.toLowerCase().includes(q.toLowerCase())))
@@ -133,6 +136,7 @@ function ListView({ listKey, d }: { listKey: string; d: CodesOverview }) {
       {editable && d.can.create && <Btn size="sm" icon={<Upload size={15} />} onClick={() => setImp(true)}>{L('استيراد', 'Import')}</Btn>}
       {d.can.export && !l.system && <Btn size="sm" icon={<FileSpreadsheet size={15} />} onClick={() => download(`/cs/lists/${l.key}/export`, `UHR-codes-${l.key}.xlsx`).catch(e => toast(e.message))}>Excel</Btn>}
       {!l.system && d.can.settings && d.can.edit && <Btn size="sm" icon={<Settings2 size={15} />} onClick={() => setDef(true)} aria-label={L('تعريف القائمة', 'List definition')} />}
+      {editable && l.group_role === 'parent' && d.can.settings && <label className="flex items-center gap-1.5 text-[12.5px]"><input type="checkbox" checked={!!l.inherit} onChange={e => inherit.mutate({ key: l.key, inherit: e.target.checked }, { onSuccess: r => toast(r.inherit ? L(`تُورَّث للشركات التابعة (${r.children}) — نُسخ ${r.synced} رمزاً`, `Inherited by ${r.children} subsidiaries — ${r.synced} code(s) copied`) : L('أُوقف التوريث', 'Inheritance stopped')) })} />{L('قائمة مجموعة تُورَّث', 'Group list (inherited)')}</label>}
     </div>}>
     <div className="px-4 py-3 flex flex-wrap gap-2 items-center border-b border-line-2">
       <div className="relative flex-1 min-w-[180px]"><Search size={15} className="absolute top-1/2 -translate-y-1/2 start-3 text-ink-3" />
@@ -150,6 +154,7 @@ function ListView({ listKey, d }: { listKey: string; d: CodesOverview }) {
           {l.attrs_schema.length > 0 && <td className="hidden xl:table-cell text-[12px] text-ink-2"><Attrs schema={l.attrs_schema} v={r.attrs} /></td>}
           <td className="hidden sm:table-cell"><div className="flex flex-wrap gap-1">
             {r.status === 'replaced' ? <Badge>{L('مستبدَل', 'Replaced')}</Badge> : !r.live ? <Badge>{L('معطّل', 'Inactive')}</Badge> : <Badge tone="brand">{L('فعّال', 'Active')}</Badge>}
+            {r.inherited && <Badge tone="brass">{L('من المجموعة', 'Group')}</Badge>}
             {r.locked && <Badge tone="info"><Lock size={11} />{r.usage ? <span className="num">{r.usage}</span> : L('مستخدم', 'Used')}</Badge>}
             {r.shared && <Badge>{L('مشترك', 'Shared')}</Badge>}</div></td>
           <td className="text-end whitespace-nowrap">{!l.system && canChange && !r.shared && r.status !== 'replaced' && <RowMenu>
@@ -189,6 +194,8 @@ function ItemForm({ x, row, direct, onClose }: { x: ListDetail; row: CodeRow | n
   const [v, setV] = useState<Record<string, unknown>>({ code: row?.code ?? x.next ?? '', ar: row?.ar ?? '', en: row?.en ?? '', parent_id: row?.parent_id ?? null, attrs: { ...(row?.attrs ?? {}) },
     valid_from: row?.valid_from ?? '', valid_to: row?.valid_to ?? '', legacy_code: row?.legacy_code ?? '', description: row?.description ?? '' })
   const [reason, setReason] = useState(''); const [on, setOn] = useState(today())
+  const [sug, setSug] = useState<Awaited<ReturnType<typeof suggestCode>> | null>(null)
+  const ask = () => { const n = String(v.ar ?? '').trim(); if (n.length >= 2 && !l.source) suggestCode(l.key, n).then(setSug).catch(() => setSug(null)) }
   const m = direct ? save : req
   const err = m.error instanceof ApiError ? m.error : null
   const attrs = v.attrs as Record<string, unknown>
@@ -205,8 +212,13 @@ function ItemForm({ x, row, direct, onClose }: { x: ListDetail; row: CodeRow | n
       <Field label={L('الرمز', 'Code')} req hint={row?.locked ? L('مستخدم في سجلات — الرمز مقفل، يمكن تعديل الاسم فقط.', 'In use — the code is locked; only the name can change.') : l.example ? `${L('مثال', 'e.g.')} ${l.example}` : undefined} error={err?.field('code')}>
         <input className="field ltr text-start num" disabled={row?.locked} value={String(v.code)} onChange={e => setV({ ...v, code: e.target.value.toUpperCase().replace(/\s/g, '') })} /></Field>
       <Field label={L('الرمز السابق', 'Legacy code')} hint={L('للبحث بالرمز القديم بعد الترحيل', 'Keeps the old code searchable')} error={err?.field('legacy_code')}><input className="field ltr text-start" value={String(v.legacy_code ?? '')} onChange={e => setV({ ...v, legacy_code: e.target.value })} /></Field>
-      <Field label={L('الاسم بالعربية', 'Arabic name')} req error={err?.field('ar')}><input className="field" value={String(v.ar)} onChange={e => setV({ ...v, ar: e.target.value })} /></Field>
+      <Field label={L('الاسم بالعربية', 'Arabic name')} req error={err?.field('ar')}><input className="field" value={String(v.ar)} onChange={e => setV({ ...v, ar: e.target.value })} onBlur={ask} /></Field>
       <Field label={L('الاسم بالإنكليزية', 'English name')} req error={err?.field('en')}><input className="field ltr text-start" value={String(v.en)} onChange={e => setV({ ...v, en: e.target.value })} /></Field>
+      {sug && (sug.en || sug.code || sug.duplicates.length > 0) && <div className="sm:col-span-2 rounded-xl bg-sub p-3 text-[13px] space-y-1.5">
+        {(sug.en && sug.en !== v.en || (!row && sug.code && sug.code !== v.code)) && <div className="flex flex-wrap items-center gap-2">{L('اقتراح', 'Suggestion')}:
+          {!row && sug.code && <button type="button" className="ltr rounded-md border border-line px-2 py-0.5 hover:border-brand" onClick={() => setV({ ...v, code: sug.code })}>{sug.code}</button>}
+          {sug.en && <button type="button" className="ltr rounded-md border border-line px-2 py-0.5 hover:border-brand" onClick={() => setV({ ...v, en: sug.en })}>{sug.en}</button>}</div>}
+        {sug.duplicates.filter(x => x.id !== row?.id).length > 0 && <div className="text-brass">{L('رموز مشابهة قد تكون تكراراً', 'Similar codes that may be duplicates')}: {sug.duplicates.filter(x => x.id !== row?.id).map(x => `${x.code} · ${lang === 'ar' ? x.ar : x.en}`).join('، ')}</div>}</div>}
       {(l.parent_key || l.hierarchical) && <Field label={L('الرمز الأب', 'Parent code')} className="sm:col-span-2" error={err?.field('parent_id')}>
         <select className="field" value={String(v.parent_id ?? '')} onChange={e => setV({ ...v, parent_id: e.target.value ? Number(e.target.value) : null })}><option value="">—</option>
           {x.parents.filter(p => p.live && p.id !== row?.id).map(p => <option key={p.id} value={p.id}>{p.code} · {bi(p, lang)}</option>)}</select></Field>}
@@ -475,4 +487,20 @@ function SettingsModal({ d, onClose }: { d: CodesOverview; onClose: () => void }
     </div>
     {err && !Object.keys(err.errors).length && <div role="alert" className="mt-4 rounded-lg bg-danger-soft text-danger text-[13px] px-3 py-2">{err.message}</div>}
   </Modal>
+}
+
+/** FR-CS-019: سجل ترميز الوثائق — النماذج والسياسات برموزها وإصداراتها وملفاتها والرمز السابق */
+function DocRegister() {
+  const L = useL(); const lang = useLang()
+  const [q, setQ] = useState('')
+  const { data } = useDocRegister(q)
+  return <Panel pad={false} title={L('سجل ترميز الوثائق', 'Document code register')} sub={L('كل نموذج وسياسة برمزها المطبوع وإصدارها وتاريخها ورمزها السابق.', 'Every form and policy with its printed code, issue, date and legacy code.')}
+    action={<input className="field !w-56" placeholder={L('بحث بالرمز أو الاسم…', 'Search by code or name…')} value={q} onChange={e => setQ(e.target.value)} />}>
+    {!data ? <div className="grid place-items-center py-10"><Loader2 className="animate-spin text-brand" /></div> : data.length === 0 ? <div className="p-4 text-[13px] text-ink-3">{L('لا نتائج.', 'No results.')}</div>
+      : <table className="tbl"><thead><tr><th>{L('الرمز', 'Code')}</th><th>{L('الوثيقة', 'Document')}</th><th className="hidden md:table-cell">{L('الإصدار', 'Issue')}</th><th className="hidden md:table-cell">{L('التاريخ', 'Date')}</th><th className="hidden sm:table-cell">{L('الرمز السابق', 'Legacy')}</th><th /></tr></thead>
+        <tbody>{data.map(r => <tr key={`${r.kind}-${r.id}`}><td><div className="ltr inline-block font-semibold num">{r.ref ?? r.code}</div><div className="text-[11.5px] text-ink-3">{r.kind === 'form' ? L('نموذج', 'Form') : L('سياسة', 'Policy')}{r.sensitive ? ` · ${L('حساس', 'Sensitive')}` : ''}</div></td>
+          <td>{lang === 'ar' ? r.ar : r.en}{r.versions ? <span className="text-[11.5px] text-ink-3"> · {L(`${r.versions} إصدار`, `${r.versions} version(s)`)}</span> : null}</td><td className="hidden md:table-cell num">{r.issue ?? '—'}</td>
+          <td className="hidden md:table-cell num">{r.date ?? '—'}</td><td className="hidden sm:table-cell ltr">{r.legacy_code ?? '—'}</td>
+          <td>{r.file_id ? <a className="text-brand text-[12.5px]" href={`/api/files/${r.file_id}`} target="_blank" rel="noreferrer">{L('الملف', 'File')}</a> : null}</td></tr>)}</tbody></table>}
+  </Panel>
 }

@@ -13,9 +13,9 @@ export interface NfEventRow {
 type EventsRes = { data: NfEventRow[]; total: number; page: number; counts: Partial<Record<Decision, number>>; pending: number; branches: (Bi & { id: number })[]; devices: (Bi & { id: number; kind: string })[]; can: { review: boolean; settings: boolean } }
 export interface NfcSettings {
   off_branch: 'reject' | 'flag'; mission_access: boolean; duplicate_seconds: number; direction: 'auto' | 'sequence'; signature: 'optional' | 'required'; activation_hours: number; offline_minutes: number
-  drift_seconds: number; unknown_alert: number; buddy_seconds: number; buddy_repeat: number; auto_disable: boolean; sticker: boolean; sticker_geo: boolean; card_security: 'uid' | 'memory' | 'secure'
+  drift_seconds: number; unknown_alert: number; buddy_seconds: number; buddy_repeat: number; auto_disable: boolean; sticker: boolean; sticker_geo: boolean; card_security: 'uid' | 'memory' | 'secure'; drift_correct?: boolean; sticker_device?: 'off' | 'bind_first' | 'registered'; externals?: boolean
 }
-export interface CredentialRow { id: number; type: 'nfc' | 'fingerprint' | 'face' | 'phone'; identifier: string; label: string | null; status: 'active' | 'lost' | 'suspended' | 'revoked' | 'replaced'; reason: string | null; valid_from: string | null; valid_to: string | null; created_at: string | null; revoked_at: string | null }
+export interface CredentialRow { id: number; type: 'nfc' | 'fingerprint' | 'face' | 'phone'; identifier: string; label: string | null; status: 'active' | 'lost' | 'suspended' | 'revoked' | 'replaced'; reason: string | null; valid_from: string | null; valid_to: string | null; created_at: string | null; revoked_at: string | null; has_token?: boolean }
 export interface AccessData {
   home: (Bi & { id: number }) | null; credentials: CredentialRow[]
   branches: { id: number; kind: 'permanent' | 'temporary' | 'secondment'; branch: (Bi & { id: number }) | null; from: string | null; to: string | null; note: string | null; live: boolean }[]
@@ -47,7 +47,10 @@ export const useActivation = () => useMutation({ mutationFn: (id: number) => api
 export const useSticker = (id: number | null) => useQuery({ queryKey: ['hr', 'nfc', 'sticker', id], enabled: !!id, queryFn: () => api<{ url: string; branch: Bi & { code: string }; geo: boolean; enabled: boolean }>(`/hr/branches/${id}/sticker`) })
 export const useRenewSticker = () => useMutation({ mutationFn: (id: number) => api<{ url: string }>(`/hr/branches/${id}/sticker`, { json: {} }), onSuccess: (_, id) => queryClient.invalidateQueries({ queryKey: ['hr', 'nfc', 'sticker', id] }) })
 export const useStickerInfo = (token: string) => useQuery({ queryKey: ['me', 'sticker', token], retry: false, queryFn: () => api<{ branch: Bi; geo: boolean; employee: boolean }>(`/me/checkin/branch/${token}`) })
-export const stickerCheckin = (token: string, pos: { lat: number; lng: number } | null) => api<{ data: { decision: Decision; reason: string | null; direction: string | null; time?: string; branch: Bi } }>(`/me/checkin/branch/${token}`, { json: pos ?? {} })
+/** رمز هذا الجهاز للحضور بالهاتف (FR-NF-017) — يُنشأ مرة ويبقى في المتصفح/التطبيق */
+export const deviceToken = () => { try { let t = localStorage.getItem('uhr-phone'); if (!t) { t = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, ''); localStorage.setItem('uhr-phone', t) } return t } catch { return null } }
+export const stickerCheckin = (token: string, pos: { lat: number; lng: number } | null) => api<{ data: { decision: Decision; reason: string | null; direction: string | null; time?: string; branch: Bi } }>(`/me/checkin/branch/${token}`, { json: { ...(pos ?? {}), device_token: deviceToken() } })
+export const newCardToken = (id: number) => api<{ token: string }>(`/hr/credentials/${id}/token`, { json: {} })
 
 export const DECISION: Record<Decision, [string, string, 'brand' | 'warn' | 'danger' | 'neutral']> = {
   accepted: ['مقبول', 'Accepted', 'brand'], flagged: ['للمراجعة', 'For review', 'warn'], rejected: ['مرفوض', 'Rejected', 'danger'], duplicate: ['مكرر', 'Duplicate', 'neutral'],

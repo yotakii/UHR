@@ -123,6 +123,8 @@ class Externals
         $fee = $x->kind === 'volunteer' ? (in_array($v['fee_model'] ?? 'none', ['none', 'expenses'], true) ? ($v['fee_model'] ?? 'none') : throw ApiException::field('fee_model', L::t('التطوع دون أجر — يجوز تعويض المصاريف فقط.', 'Volunteering is unpaid — only expenses may be reimbursed.'), 'unpaid')) : ($v['fee_model'] ?? 'none');
         $data = ['title' => $v['title'], 'tasks' => $v['tasks'] ?? null, 'department_id' => $v['department_id'] ?? $x->department_id, 'location_id' => $v['location_id'] ?? $x->location_id,
             'supervisor_id' => $v['supervisor_id'], 'starts_on' => $from->toDateString(), 'ends_on' => $to->toDateString(), 'weekly_hours' => (int) $v['weekly_hours'], 'days' => $v['days'] ?? null,
+            'relation_employee_id' => $v['relation'] === 'alongside' ? ($v['relation_employee_id'] ?? null) : null, 'project' => $v['project'] ?? null,
+            'mission_id' => ! empty($v['mission_id']) && \App\Models\Mission::whereKey((int) $v['mission_id'])->exists() ? (int) $v['mission_id'] : null,
             'relation' => $v['relation'], 'replaces_employee_id' => $v['relation'] === 'replaces' ? ($v['replaces_employee_id'] ?? null) : null, 'replaces_position' => $v['relation'] === 'replaces' ? ($v['replaces_position'] ?? null) : null,
             'relation_test' => $test, 'relation_score' => count(array_filter($test)), 'justification' => $v['justification'] ?? null, 'fee_model' => $fee,
             'amount' => $fee === 'none' || $fee === 'expenses' ? null : ($v['amount'] ?? null), 'currency' => $v['currency'] ?? $c['expense_currency'],
@@ -198,7 +200,10 @@ class Externals
             ':department' => $g->department_id ? (($d = \App\Models\Department::find($g->department_id)) ? ($lang === 'en' ? $d->name_en : $d->name_ar) : '—') : '—',
             ':supervisor' => $sup ? ($lang === 'en' ? $sup->name_en : $sup->name) : '—', ':from' => $g->starts_on->toDateString(), ':to' => $g->ends_on->toDateString(), ':hours' => (string) $g->weekly_hours,
             ':relation' => $lang === 'en' ? $rel[1] : $rel[0], ':tasks' => $g->tasks ?: $g->title, ':cap' => $g->expense_cap ? number_format($g->expense_cap).' '.$g->currency : '—'];
-        return strtr($c['agreement_'.$lang] ?? '', $vars);
+        $vars[':project'] = $g->project ?: '—';
+        // FR-VL-004: قالب حسب نوع العامل (متطوع، متدرب، عقد تجريبي، مؤقت، استشاري) وإلا قالب التطوع
+        $tpl = ($c['agreements'][$x->kind][$lang] ?? null) ?: ($c['agreement_'.$lang] ?? '');
+        return strtr($tpl, $vars);
     }
 
     /** POL-VL-01/05: التوقيع على الاتفاقية والتعهدات الإلزامية ← «فعّال» */
@@ -313,6 +318,7 @@ class Externals
     {
         $x->update(['status' => 'ended']);
         if ($x->user_id) User::whereKey($x->user_id)->update(['active' => false]);
+        \App\Services\Attendance\NfcGate::disableExternal($x->id, 'انتهاء الاتفاقية');   // FR-VL-015: البطاقة مع الحساب
     }
 
     public static function hours(Engagement $g): float { return (float) VolunteerLog::where('engagement_id', $g->id)->where('status', 'approved')->sum('hours'); }

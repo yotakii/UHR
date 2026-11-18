@@ -1,15 +1,16 @@
 import { useState } from 'react'
-import { AlertTriangle, Check, Download, GraduationCap, Plus, Search, Send, Settings2, X } from 'lucide-react'
+import { AlertTriangle, Check, Download, FileUp, GraduationCap, Plus, Search, Send, Settings2, X } from 'lucide-react'
 import { useL, useLang, bi, fmtDate, money } from '../../lib/store'
 import { navigate, setQuery, useRoute } from '../../lib/router'
 import { download } from '../../lib/admin'
 import { AUDIENCE, CAUSE, DELIVERY, EVIDENCE, N_STATUS, P_STATUS, PATH, S_STATUS, useCampaignForm, useCampaigns, useMatrix, useNeeds, usePlan, usePlans, useTd, useTdAct,
-  type Can, type Lookups, type Need, type NeedGroup, type Path, type PlanItem } from '../../lib/training'
+  syncLabels, type Can, type Lookups, type Need, type NeedGroup, type Path, type PlanItem } from '../../lib/training'
 import { Badge, Btn, Empty, Field, Modal, PageHead, Panel, Progress, Tabs, toast } from '../../ui/kit'
 import { DecisionDialog } from '../../ui/decision'
 import { StepsPath } from '../requests/parts'
 import { EmpSelect, LevelBar, PathBadge, Spin, Stat, StatusBadge, errOf, fail } from './parts'
-import { CalendarTab, SessionsTab } from './TdSessions'
+import { SessionsTab } from './TdSessions'
+import { CalendarPro, ChangeRequests, MoreReports, NeedsImport, PrintBtn, RoomsPanel } from './TdMore'
 import { CbpTab, CertificatesTab, CommitmentsTab, CompetenciesTab, ImpactsTab, ProgramsTab, ProvidersTab, QualificationsTab, ReportsTab } from './TdLibrary'
 
 /**
@@ -27,6 +28,7 @@ export function TrainingApp() {
   const td = useTd(year)
   if (!td.data) return <Spin />
   const { lookups: lk, can, pending } = td.data
+  syncLabels(lk.cfg)
   return <div className="max-w-[1240px] mx-auto">
     <PageHead title={L('التأهيل والتدريب والتطوير', 'Qualification, training & development')}
       sub={L('من الاحتياج المثبت بالأدلة إلى الخطة المعتمدة، ثم التنفيذ والقياس على أربعة مستويات وأثر التدريب في العمل.', 'From an evidenced need to an approved plan, then delivery and four-level evaluation of the impact on work.')}
@@ -40,9 +42,9 @@ export function TrainingApp() {
       { v: 'cbp', label: L('بناء القدرات', 'Capacity building') }, { v: 'reports', label: L('التقارير', 'Reports') }]} />
     <div className="mt-4">
       {tab === 'home' ? <Home year={year} /> : tab === 'needs' ? <NeedsTab lk={lk} can={can} /> : tab === 'plan' ? <PlanTab lk={lk} can={can} /> : tab === 'sessions' ? <SessionsTab lk={lk} can={can} />
-        : tab === 'calendar' ? <CalendarTab year={year} /> : tab === 'programs' ? <ProgramsTab lk={lk} can={can} /> : tab === 'providers' ? <ProvidersTab can={can} /> : tab === 'competencies' ? <CompetenciesTab can={can} />
+        : tab === 'calendar' ? <CalendarPro year={year} lk={lk} /> : tab === 'programs' ? <ProgramsTab lk={lk} can={can} /> : tab === 'providers' ? <><ProvidersTab can={can} /><div className="mt-4"><RoomsPanel lk={lk} /></div></> : tab === 'competencies' ? <CompetenciesTab can={can} />
         : tab === 'certificates' ? <CertificatesTab lk={lk} can={can} /> : tab === 'qualifications' ? <QualificationsTab lk={lk} can={can} /> : tab === 'impacts' ? <ImpactsTab /> : tab === 'commitments' ? <CommitmentsTab can={can} />
-        : tab === 'cbp' ? <CbpTab lk={lk} /> : <ReportsTab year={year} lk={lk} />}
+        : tab === 'cbp' ? <CbpTab lk={lk} /> : <><ReportsTab year={year} lk={lk} /><div className="mt-4"><MoreReports year={year} /></div></>}
     </div>
   </div>
 }
@@ -115,6 +117,7 @@ function NeedsList({ lk, can }: { lk: Lookups; can: Can }) {
   const [edit, setEdit] = useState<Need | 'new' | null>(null)
   const [decide, setDecide] = useState<{ n: Need; a: 'approve' | 'reject' } | null>(null)
   const [group, setGroup] = useState<NeedGroup | null>(null)
+  const [imp, setImp] = useState(false)
   const act = useTdAct()
   const SRC: Record<string, [string, string]> = { request: ['طلب', 'Request'], gap: ['فجوة كفاءة', 'Competency gap'], kpi: ['مؤشر أداء', 'KPI'], event: ['حدث', 'Event'], campaign: ['حملة', 'Campaign'], idp: ['خطة تطوير فردية', 'IDP'], appraisal: ['تقييم أداء', 'Appraisal'] }
   return <>
@@ -126,6 +129,7 @@ function NeedsList({ lk, can }: { lk: Lookups; can: Can }) {
       <select className="field !w-[calc(50%-4px)] sm:!w-40" value={q.source ?? ''} onChange={e => setQuery({ source: e.target.value || undefined })} aria-label={L('المصدر', 'Source')}><option value="">{L('كل المصادر', 'All sources')}</option>{Object.entries(SRC).map(([k, v]) => <option key={k} value={k}>{L(v[0], v[1])}</option>)}</select>
       <select className="field !w-[calc(50%-4px)] sm:!w-44" value={q.department ?? ''} onChange={e => setQuery({ department: e.target.value || undefined })} aria-label={L('الإدارة', 'Department')}><option value="">{L('كل الإدارات', 'All departments')}</option>{lk.departments.map(d => <option key={d.id} value={d.id}>{bi(d, lang)}</option>)}</select>
       <div className="flex-1" />
+      {can.manage && <Btn icon={<FileUp size={15} />} onClick={() => setImp(true)}>{L('استيراد Excel', 'Import Excel')}</Btn>}
       <Btn kind="primary" icon={<Plus size={15} />} onClick={() => setEdit('new')}>{L('احتياج جديد', 'New need')}</Btn>
     </div>
     {data && data.groups.length > 0 && <Panel className="mb-3" title={L('احتياجات معتمدة جاهزة للخطة', 'Approved needs ready for the plan')} sub={L('مجمّعة حسب البرنامج أو الكفاءة ومرتبة بالأولوية — أضف كل مجموعة كبند واحد في الخطة.', 'Grouped by programme or competency and ranked by priority — add each group as one plan item.')}>
@@ -145,6 +149,7 @@ function NeedsList({ lk, can }: { lk: Lookups; can: Can }) {
             <Btn size="sm" kind="ghost" icon={<Check size={14} />} aria-label={L('اعتماد', 'Approve')} onClick={() => setDecide({ n, a: 'approve' })} />
             <Btn size="sm" kind="ghost" icon={<X size={14} />} aria-label={L('رفض', 'Reject')} onClick={() => setDecide({ n, a: 'reject' })} /></span>}</td></tr>)}</tbody></table></Panel>}
     {edit && <NeedForm lk={lk} n={edit === 'new' ? null : edit} onClose={() => setEdit(null)} />}
+    {imp && <NeedsImport onClose={() => setImp(false)} />}
     {group && <GroupToPlan g={group} onClose={() => setGroup(null)} />}
     <DecisionDialog open={!!decide} onClose={() => setDecide(null)} tone={decide?.a === 'reject' ? 'danger' : 'primary'} reasonRequired={decide?.a === 'reject'} minLength={5}
       title={decide?.a === 'approve' ? L('اعتماد الاحتياج', 'Approve the need') : L('رفض الاحتياج', 'Reject the need')} subject={decide?.n.title}
@@ -269,13 +274,13 @@ function Campaigns({ lk, can }: { lk: Lookups; can: Can }) {
   const act = useTdAct()
   const [add, setAdd] = useState(false)
   const [form, setForm] = useState<{ c: number; d: number } | null>(null)
-  const [v, setV] = useState({ title: '', year: new Date().getFullYear() + 1, closes_on: '' })
+  const [v, setV] = useState<{ title: string; year: number; closes_on: string; window_reason?: string }>({ title: '', year: new Date().getFullYear() + 1, closes_on: '' })
   return <>
     <div className="flex mb-3"><div className="text-[12.5px] text-ink-3 flex-1">{L('حملة الجمع تطلب من رؤساء الإدارات تعبئة نموذج احتياجات إدارتهم معبأ مسبقاً بالفجوات والشهادات التي تنتهي.', 'A campaign asks department heads to fill in a needs form pre-filled with gaps and expiring certificates.')}</div>
       {can.manage && <Btn kind="primary" icon={<Plus size={15} />} onClick={() => setAdd(true)}>{L('حملة جديدة', 'New campaign')}</Btn>}</div>
     {!data ? <Spin /> : data.data.length === 0 ? <Panel><Empty title={L('لا توجد حملات', 'No campaigns')} /></Panel>
       : <div className="space-y-3">{data.data.map(c => <Panel key={c.id} title={<span>{c.title} <span className="text-ink-3 text-[12px]">· {c.year}</span></span>}
-        sub={`${fmtDate(c.opens_on, lang)} — ${fmtDate(c.closes_on, lang)} · ${L(`${c.needs} احتياج`, `${c.needs} needs`)}`}
+        sub={`${fmtDate(c.opens_on, lang)} — ${fmtDate(c.closes_on, lang)} · ${L(`${c.needs} احتياج`, `${c.needs} needs`)} · ${L(`استجابت ${c.rate.responded} من ${c.rate.departments} (${c.rate.pct}%)`, `${c.rate.responded} of ${c.rate.departments} responded (${c.rate.pct}%)`)}`}
         action={<span className="flex items-center gap-2"><Badge tone={c.status === 'open' ? 'brand' : 'neutral'}>{c.status === 'open' ? L('مفتوحة', 'Open') : L('مغلقة', 'Closed')}</Badge>
           {c.status === 'open' && can.manage && <Btn size="sm" onClick={() => act.mutate({ path: `campaigns/${c.id}/close` }, { onError: fail })}>{L('إغلاق', 'Close')}</Btn>}</span>}>
         <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(220px,1fr))]">{c.departments.map(d => <button key={d.id} onClick={() => setForm({ c: c.id, d: d.id })} className="text-start rounded-xl border border-line p-2.5 hover:border-brand/50">
@@ -285,7 +290,10 @@ function Campaigns({ lk, can }: { lk: Lookups; can: Can }) {
       <Btn kind="primary" disabled={!v.title || !v.closes_on || act.isPending} onClick={() => act.mutate({ path: 'campaigns', v }, { onSuccess: () => { toast(L('أُطلقت الحملة وأُبلغ رؤساء الإدارات', 'Campaign launched; department heads notified')); setAdd(false) }, onError: fail })}>{L('إطلاق', 'Launch')}</Btn></>}>
       <div className="grid gap-3"><Field label={L('العنوان', 'Title')} req><input className="field" value={v.title} onChange={e => setV({ ...v, title: e.target.value })} /></Field>
         <div className="grid grid-cols-2 gap-2"><Field label={L('سنة الخطة', 'Plan year')}><input type="number" className="field num" value={v.year} onChange={e => setV({ ...v, year: Number(e.target.value) })} /></Field>
-          <Field label={L('آخر موعد', 'Deadline')} req><input type="date" className="field" value={v.closes_on} onChange={e => setV({ ...v, closes_on: e.target.value })} /></Field></div></div>
+          <Field label={L('آخر موعد', 'Deadline')} req><input type="date" className="field" value={v.closes_on} onChange={e => setV({ ...v, closes_on: e.target.value })} /></Field></div>
+        {lk.cfg.tna_enforce && (() => { const m = new Date().getMonth() + 1; const a = lk.cfg.tna_from_month, b = lk.cfg.tna_to_month; const inWin = a <= b ? m >= a && m <= b : m >= a || m <= b
+          return !inWin && <Field label={L(`الحملة خارج نافذة تحديد الاحتياجات (الشهر ${a}–${b}) — المبرر`, `Outside the needs window (month ${a}–${b}) — justification`)} req><input className="field" value={v.window_reason ?? ''} onChange={e => setV({ ...v, window_reason: e.target.value })} /></Field> })()}
+        <div className="text-[12px] text-ink-3">{L('يُذكَّر رؤساء الإدارات الذين لم يرسلوا قبل الموعد، وتُغلق الحملة تلقائياً بعده.', 'Department heads who have not responded are reminded before the deadline, and the campaign closes automatically after it.')}</div></div>
     </Modal>}
     {form && <CampaignForm id={form.c} dept={form.d} lk={lk} onClose={() => setForm(null)} />}
   </>
@@ -345,6 +353,8 @@ function PlanTab({ lk, can }: { lk: Lookups; can: Can }) {
         <Stat label={L('الفعلي', 'Actual')} value={money(p.progress.actual_cost, p.currency, lang)} />
         <Stat label={L('البنود المنفذة', 'Items delivered')} value={`${p.progress.done}/${p.progress.items}`} />
       </div>
+      <div className="flex justify-end mb-2"><PrintBtn code="TD4" id={p.id} label={L('طباعة الخطة F-04', 'Print the plan F-04')} /></div>
+      {p.change_requests?.length > 0 && <div className="mb-3"><ChangeRequests rows={p.change_requests} currency={p.currency} /></div>}
       {p.checks.length > 0 && <Panel className="mb-3" title={L('فحوص الخطة', 'Plan checks')}><ul className="space-y-1">{p.checks.map(c => <li key={c.key} className="flex items-start gap-2 text-[13px]"><AlertTriangle size={15} className="text-[var(--warn)] mt-0.5 shrink-0" />{bi(c, lang)}</li>)}</ul></Panel>}
       {p.steps.length > 0 && <Panel className="mb-3" title={L('مسار الاعتماد', 'Approval path')}><StepsPath steps={p.steps} />
         {p.can_act && <div className="flex gap-2 mt-3"><Btn kind="primary" icon={<Check size={15} />} onClick={() => setDecide(true)}>{L('اعتماد', 'Approve')}</Btn><Btn kind="danger" icon={<X size={15} />} onClick={() => setDecide(false)}>{L('إعادة', 'Return')}</Btn></div>}</Panel>}

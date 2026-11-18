@@ -7,6 +7,16 @@ import { ConfirmSend, DecisionDialog } from '../../ui/decision'
 import { PathBadge, Spin, StatusBadge, fail } from './parts'
 import { ImpactsTab, QualEval, RecordView, UploadCert } from './TdLibrary'
 import { AttendanceGrid, Scores } from './TdSessions'
+import { PrintBtn } from './TdMore'
+import { useCalendarLink } from '../../lib/training'
+
+/** رابط اشتراك للقراءة فقط (Outlook / Google) + تنزيل ملف التقويم */
+function CalLink() {
+  const L = useL()
+  const { data } = useCalendarLink()
+  return <span className="inline-flex gap-1"><a className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-line text-[13px]" href="/api/me/training/calendar.ics"><CalendarDays size={15} />{L('أضف إلى تقويمي', 'Add to my calendar')}</a>
+    {data && <Btn kind="ghost" onClick={() => navigator.clipboard?.writeText(data.url).then(() => toast(L('نُسخ رابط الاشتراك — أضفه في Outlook أو Google Calendar ليتحدّث تلقائياً', 'Subscription link copied — add it in Outlook or Google Calendar to stay updated')))}>{L('رابط الاشتراك', 'Subscription link')}</Btn>}</span>
+}
 
 /** «تدريبي» في بوابة الموظف (الدفعة 23): سجلي التدريبي، التعهدات للتوقيع، خطة التطبيق F-12، وللمدير: الترشيحات وقياس الأثر وتقييم التأهيل، وللمدرب الداخلي: الحضور والنتائج */
 export function MyTraining() {
@@ -28,7 +38,7 @@ export function MyTraining() {
   const toApply = r.enrollments.filter(e => e.result === 'passed' && !e.apply_plan)
   return <div className="max-w-[1100px] mx-auto">
     <PageHead title={L('تدريبي', 'My training')} sub={L('دوراتك وشهاداتك وكفاءاتك، والتعهدات التي تحتاج توقيعك.', 'Your courses, certificates and competencies, and the commitments that need your signature.')}
-      actions={<span className="flex flex-wrap gap-2"><a className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-line text-[13px]" href="/api/me/training/calendar.ics"><CalendarDays size={15} />{L('أضف إلى تقويمي', 'Add to my calendar')}</a>
+      actions={<span className="flex flex-wrap gap-2"><CalLink />
         <Btn icon={<Upload size={15} />} onClick={() => setCert(true)}>{L('شهادة خارجية', 'External certificate')}</Btn>
         {(data.mode === 'self_service' || data.is_manager) && <Btn kind="primary" icon={<Plus size={15} />} onClick={() => setNeed(true)}>{L('طلب تدريب', 'Request training')}</Btn>}</span>} />
     {(data.is_manager || data.trainer_sessions.length > 0) && <div className="mb-4"><Tabs value={tab} onChange={setTab} tabs={[{ v: 'mine', label: L('تدريبي', 'Mine') },
@@ -47,7 +57,9 @@ export function MyTraining() {
           {u.session.link && <a className="underline" href={u.session.link} target="_blank" rel="noreferrer">{L('رابط الحضور عن بعد', 'Online link')}</a>}
           {u.status !== 'confirmed' && <Btn size="sm" kind="ghost" onClick={() => setWd(u.id)}>{L('اعتذار', 'Withdraw')}</Btn>}</div></li>)}</ul></Panel>}
       {r.qualification && r.qualification.status !== 'done' && <Panel title={L('برنامج التأهيل', 'Qualification programme')}><div className="text-[13px]">{L(`أنجزت ${r.qualification.progress}% من المحطات.`, `${r.qualification.progress}% of the stations done.`)}</div></Panel>}
+      <div className="flex justify-end"><PrintBtn me code="TD6" id={data.employee_id ?? 0} label={L('طباعة سجلي التدريبي', 'Print my training record')} /></div>
       <RecordView r={r} L={L} lang={lang} />
+      {r.certificates.some(c => c.source !== 'external') && <Panel title={L('طباعة شهاداتي', 'Print my certificates')}><div className="flex flex-wrap gap-2">{r.certificates.filter(c => c.source !== 'external').map(c => <PrintBtn key={c.id} me code="TDC" id={c.id} label={c.title} />)}</div></Panel>}
     </div>}
 
     {tab === 'team' && <div className="space-y-4">

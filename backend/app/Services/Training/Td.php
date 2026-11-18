@@ -68,10 +68,10 @@ class Td
         return (int) (end($cfg['commitment_tiers'])['months'] ?? 12);
     }
 
-    public static function convert(float $amount, ?string $from, string $to): float
+    public static function convert(float $amount, ?string $from, string $to, ?string $on = null): float
     {
         if (! $from || $from === $to) return $amount;
-        $r = \App\Models\ExchangeRate::lookup($from, $to, now()->toDateString());
+        $r = \App\Models\ExchangeRate::lookup($from, $to, $on ?: now()->toDateString());
         return $r ? $amount * $r : $amount;
     }
 

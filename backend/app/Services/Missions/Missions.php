@@ -58,6 +58,9 @@ class Missions
         $on ??= now()->toDateString(); $cfg = self::cfg();
         $grade = $e?->grade_id ? CodeItem::find($e->grade_id)?->code : null;
         $rows = collect($cfg['rates'])->filter(fn ($r) => ($r['valid_from'] ?? '2000-01-01') <= $on)->sortByDesc('valid_from');
+        // FR-CS-018: الدرجة تحمل فئة بدل سفر — صف الفئة إن عُرّف، وإلا صف الدرجة
+        $class = $e?->grade_id ? CodeItem::find($e->grade_id)?->attr('travel_class') : null;
+        if ($class && ! empty($cfg['rates_by_class'][$class])) return $cfg['rates_by_class'][$class] + ['grade' => $grade, 'class' => $class];
         return $rows->firstWhere('grade', $grade ?? $cfg['default_grade']) ?? $rows->firstWhere('grade', $cfg['default_grade']) ?? (array) collect($cfg['rates'])->first();
     }
 
@@ -96,7 +99,7 @@ class Missions
                     $out['warnings'][] = ['key' => 'mission', 'ar' => 'تتعارض مع مهمة سفر أخرى للموظف', 'en' => 'Overlaps another travel mission'];
             }
         }
-        if (! self::isTravel($type) && ! ($t['km'] ?? 0)) return $out;
+        if (! self::isTravel($type) && ! ($t['km'] ?? 0)) return MissionExtras::adjust($m, $out);
         $days = self::isTravel($type) ? self::days($t) : 0; $out['days'] = $days;
         $r = self::rates($e, $t['depart_on'] ?? null);
         $zone = ($t['scope'] ?? 'local') === 'foreign' ? 'foreign' : 'local';
@@ -112,8 +115,9 @@ class Missions
         if (($t['transport'] ?? '') === 'car' && ($km = (float) ($t['km'] ?? 0)) > 0)
             $out['lines'][] = ['code' => 'E-120', 'qty' => $km, 'rate' => self::kmPrice(), 'amount' => round($km * self::kmPrice(), 2), 'currency' => $cfg['fuel_currency']];
         $out['zone'] = $zone; $out['same_gov'] = (bool) $same; $out['grade'] = $r['grade'] ?? null;
+        if ($e?->grade_id && ($tk = CodeItem::find($e->grade_id)?->attr('ticket'))) $out['ticket'] = $tk;
         $out['totals'] = collect($out['lines'])->groupBy('currency')->map(fn ($g) => round($g->sum('amount'), 2))->all();
-        return $out;
+        return MissionExtras::adjust($m, $out);
     }
 
     // ———————————————— الإنشاء والإسناد والاعتماد ————————————————
@@ -153,6 +157,7 @@ class Missions
                 'depart_on' => $t['depart_on'] ?? null, 'return_on' => $t['return_on'] ?? null, 'transport' => in_array($t['transport'] ?? 'road', ['road', 'air', 'car'], true) ? ($t['transport'] ?? 'road') : 'road',
                 'km' => max(0, (float) ($t['km'] ?? 0)), 'legs' => array_slice(array_values(array_filter(array_map(fn ($x) => mb_substr(trim((string) $x), 0, 120), (array) ($t['legs'] ?? [])))), 0, 10)];
         }
+        if (! empty($v['external_id']) && ! \App\Models\External::whereKey((int) $v['external_id'])->whereIn('status', ['approved', 'assigned', 'active'])->exists()) $err['external_id'] = L::t('اختر خبيراً معتمداً.', 'Choose an approved expert.');
         if ($err) throw new ApiException(L::t('راجع الحقول المظللة.', 'Check the highlighted fields.'), 'invalid', 422, array_map(fn ($x) => [$x], $err));
         // AC-TM-01: سفر محلي ضمن محافظة الفرع ← يُصنَّف مهمة ميدانية MT-20
         if ($type->code === 'MT-30' && $emp && $travel && self::homeGov($emp) && self::homeGov($emp) === ($travel['governorate'] === 'RDM' ? 'DAM' : $travel['governorate'])) {
@@ -161,12 +166,14 @@ class Missions
         }
         $cat = Codes::resolve('mission_categories', $v['category_id'] ?? null);
         $cc = Codes::resolve('cost_centers', $v['cost_center_id'] ?? null);
-        $stages = collect(self::cfg()['stages'])->map(fn ($s) => ['name' => $s['name'], 'en' => $s['en'] ?? $s['name'], 'weight' => (int) $s['weight'], 'done_at' => null])->all();
+        $stages = MissionExtras::stagesFor($type) ?? collect(self::cfg()['stages'])->map(fn ($s) => ['name' => $s['name'], 'en' => $s['en'] ?? $s['name'], 'weight' => (int) $s['weight'], 'done_at' => null])->all();
         $data = ['type_id' => $type->id, 'category_id' => $cat?->id, 'title' => $title, 'description' => trim((string) ($v['description'] ?? $m?->description)) ?: null,
             'requester_department_id' => $v['requester_department_id'] ?? $m?->requester_department_id ?? $emp?->department_id, 'owner_id' => $v['owner_id'] ?? $m?->owner_id ?? ($emp?->manager_id ?? $u->employee_id),
             'employee_id' => $emp?->id, 'assignee_type' => $assign, 'assignee_ref' => $ref, 'priority' => in_array($v['priority'] ?? 'normal', ['low', 'normal', 'high', 'urgent'], true) ? ($v['priority'] ?? 'normal') : 'normal',
             'starts_on' => $v['starts_on'] ?? $travel['depart_on'] ?? $m?->starts_on?->toDateString() ?? now()->toDateString(), 'due_on' => $v['due_on'] ?? $travel['return_on'] ?? $m?->due_on?->toDateString(),
-            'cost_center_id' => $cc?->id, 'travel' => $travel, 'stages' => $m?->stages ?? $stages];
+            'cost_center_id' => $cc?->id, 'travel' => $travel, 'stages' => $m && $m->type_id === $type->id ? $m->stages : $stages,
+            'external_id' => self::canManage($u) ? ($v['external_id'] ?? $m?->external_id) : $m?->external_id,
+            'ticket_class' => in_array($v['ticket_class'] ?? null, MissionExtras::TICKETS, true) ? $v['ticket_class'] : $m?->ticket_class];
         $adv = (float) ($v['advance'] ?? ($m?->advance['amount'] ?? 0));
         $data['advance'] = $adv > 0 ? ['amount' => round($adv, 2), 'currency' => strtoupper((string) ($v['advance_currency'] ?? $m?->advance['currency'] ?? 'SYP')), 'status' => 'requested'] : null;
         return DB::transaction(function () use ($u, $m, $data, $type, $emp) {
@@ -198,9 +205,10 @@ class Missions
             && Mission::where('employee_id', $m->employee_id)->whereKeyNot($m->id)->whereNotNull('close_due')->where('close_due', '<', now()->toDateString())->whereIn('status', ['approved', 'assigned', 'in_progress', 'review', 'done'])->exists())
             throw new ApiException(L::t('لدى الموظف مهمة سفر سابقة تجاوزت مهلة إغلاقها — أغلقها أولاً.', 'The employee has an earlier travel mission past its closing deadline — close it first.'), 'unclosed_mission', 409);
         $m->update(['estimate' => $this->estimate($m)]);
+        MissionExtras::enforceTicket($m);
         if (self::financial($m->type) && $m->employee) {
             $m->update(['status' => 'pending_manager']);
-            app(Workflow::class)->start($m, $m->employee, Workflow::chain('mission'), $u);
+            app(Workflow::class)->start($m, $m->employee, Workflow::chainFor('mission', MissionExtras::chainContext($m)), $u);
             self::log($m, $u, 'submitted');
         } else $this->approved($m->refresh(), $u);
         return $m->refresh();
@@ -458,7 +466,8 @@ class Missions
         $m->travel = array_merge($m->travel, ['depart_on' => $depart, 'return_on' => $return]);
         $est = $this->estimate($m->load(['type', 'employee']));
         $more = collect($est['totals'] ?? [])->contains(fn ($v, $c) => $v > ($old[$c] ?? 0));
-        if ($more && ! Perm::can($u, 'missions', 'decide')) throw new ApiException(L::t('التمديد يزيد الكلفة ويحتاج صلاحية الاعتماد.', 'The extension raises the cost and needs approval rights.'), 'forbidden', 403);
+        // FR-TM-024: زيادة الكلفة ← طلب تعديل يُعتمد الفرق فيه قبل التطبيق
+        if ($more) { $m->travel = $m->getOriginal('travel'); $this->markDays($m, true); app(MissionExtras::class)->requestAmend($m, $u, $depart, $return, $reason, $est); return $m->refresh(); }
         $m->update(['travel' => $m->travel, 'estimate' => $est, 'due_on' => $return, 'close_due' => self::closeDue($return)]);
         $this->markDays($m, true);
         self::log($m, $u, 'amended', "{$depart} → {$return}: {$reason}");
@@ -468,7 +477,7 @@ class Missions
     public function comment(Mission $m, User $u, string $text, array $files): MissionComment
     {
         if (mb_strlen(trim($text)) < 1) throw ApiException::field('text', L::t('اكتب التعليق.', 'Write the comment.'), 'invalid');
-        $c = MissionComment::create(['mission_id' => $m->id, 'user_id' => $u->id, 'text' => mb_substr(trim($text), 0, 3000), 'files' => $files ?: null]);
+        $c = MissionComment::create(['mission_id' => $m->id, 'user_id' => $u->id, 'text' => mb_substr(trim($text), 0, 3000), 'files' => $files ?: null, 'mentions' => MissionExtras::mentions($text, $m, $u) ?: null]);
         foreach (array_filter([$m->employee?->user()->value('id'), $m->owner_id ? Employee::find($m->owner_id)?->user()->value('id') : null]) as $uid)
             if ($uid !== $u->id) Notify::user($uid, "تعليق جديد على المهمة {$m->ref_no}", "New comment on mission {$m->ref_no}", 'missions');
         return $c;
@@ -528,6 +537,10 @@ class Missions
         return $base + ['description' => $m->description, 'stages' => $m->stages, 'estimate' => $money($m->estimate), 'settlement' => $show ? $m->settlement : ($m->settlement ? ['status' => $m->settlement['status'] ?? null, 'report' => $m->settlement['report'] ?? null, 'masked' => true] : null),
             'entitlements' => $show ? $ent : null, 'attachments' => $m->attachments ?? [], 'rating' => $m->rating, 'return_note' => $m->return_note, 'log' => $m->log ?? [],
             'comments' => $m->comments()->with('user')->get()->map(fn ($c) => ['id' => $c->id, 'text' => $c->text, 'files' => $c->files ?? [], 'by' => $c->user?->displayName(app()->getLocale()), 'at' => $c->created_at->toIso8601String()]),
+            'invites' => \App\Models\MissionInvite::where('mission_id', $m->id)->latest('id')->get()->map(fn ($i) => ['id' => $i->id, 'guest_name' => $i->guest_name, 'organization' => $i->organization, 'nationality' => $i->nationality,
+                'purpose' => $i->purpose, 'from' => $i->from_on->toDateString(), 'to' => $i->to_on->toDateString(), 'status' => $i->status, 'letter_no' => $i->letter_no, 'steps' => Workflow::steps($i)]),
+            'amends' => \App\Models\MissionAmend::where('mission_id', $m->id)->latest('id')->get()->map(fn ($a) => ['id' => $a->id, 'depart_on' => $a->depart_on->toDateString(), 'return_on' => $a->return_on->toDateString(), 'reason' => $a->reason, 'status' => $a->status, 'steps' => Workflow::steps($a)]),
+            'external' => $m->external_id ? \App\Models\External::whereKey($m->external_id)->first(['id', 'name', 'name_en', 'ref'])?->only(['id', 'name', 'name_en', 'ref']) : null, 'ticket_class' => $m->ticket_class,
             'children' => Mission::with('employee')->where('parent_id', $m->id)->get()->map(fn ($c) => ['id' => $c->id, 'ref_no' => $c->ref_no, 'status' => $c->status, 'progress' => $c->progress, 'employee' => $c->employee ? ['ar' => $c->employee->name, 'en' => $c->employee->name_en] : null]),
             'lines' => PayLine::where('source_type', 'mission')->where('source_id', $m->id)->orderBy('id')->get()->map(fn ($l) => PayLines::row($l, $show)),
             'steps' => Workflow::steps($m), 'step_id' => $cur?->id, 'can' => ['edit' => in_array($m->status, ['draft', 'returned'], true) && ($m->requested_by === $u->id || self::canManage($u)),

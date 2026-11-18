@@ -16,6 +16,7 @@ import { ConfirmSend, DecisionDialog } from '../../ui/decision'
 import { VaultDialog } from '../../ui/vault'
 import { DecideButtons, LeaveStatus, Period, StepsPath } from '../requests/parts'
 import { ForceChangePassword } from '../Account'
+import { MMissions } from './MMissions'
 
 /**
  * تطبيق الجوال للموظف (/m): الأساسيات فقط — الحضور، الإجازة، السلفة والشهادات، طلباتي، كشفي، الموافقات للمدير، الإشعارات.
@@ -94,6 +95,7 @@ function MShell({ user }: { user: SessionUser }) {
         : page === 'pay' ? <MPay />
         : page === 'approvals' ? <MApprovals />
         : page === 'notices' ? <MNotices />
+        : page === 'missions' ? <MMissions id={Number(route.parts[2]) || undefined} />
         : page === 'more' ? <MMore user={user} pending={pending} />
         : <MHome user={user} pending={pending} />}
     </main>
@@ -380,6 +382,7 @@ function MMore({ user, pending }: { user: SessionUser; pending: number }) {
     <section className="rounded-2xl border border-line bg-surface overflow-hidden">
       {approver && row(<Inbox size={20} />, L('الموافقات', 'Approvals'), () => navigate('/m/approvals'), pending > 0 ? <Badge tone="danger">{pending}</Badge> : null)}
       {row(<Wallet size={20} />, L('كشفي الشهري', 'My payslip'), () => navigate('/m/pay'))}
+      {row(<Plane size={20} />, L('مهماتي', 'My missions'), () => navigate('/m/missions'))}
       {row(<Bell size={20} />, L('الإشعارات', 'Notifications'), () => navigate('/m/notices'))}
     </section>
     <section className="rounded-2xl border border-line bg-surface p-4 space-y-3">

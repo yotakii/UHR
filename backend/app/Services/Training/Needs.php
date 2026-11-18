@@ -67,6 +67,8 @@ class Needs
             $min = (int) Td::cfg()['min_evidence'];
             if (count($n->evidence ?? []) < $min && mb_strlen(trim((string) $n->evidence_override)) < self::min())
                 throw ApiException::field('evidence', L::t("الاعتماد يتطلب {$min} مصادر دليل على الأقل، أو مبرراً موثقاً.", "Approval needs at least {$min} evidence sources, or a documented justification."), 'evidence_required');
+            if (Td::cfg()['smart_required'] && ($miss = TdExtras::smart($n->objective)))
+                throw ApiException::field('objective', L::t('أكمل الهدف: السلوك المطلوب، والشرط، والمعيار القابل للقياس.', 'Complete the objective: behaviour, condition and a measurable criterion.'), 'objective_incomplete');
             $n->update(['status' => 'approved', 'note' => $note ?? $n->note]);
         } elseif ($action === 'reject') {
             if (mb_strlen(trim((string) $note)) < self::min()) throw ApiException::field('note', L::t('اكتب سبب الرفض.', 'Write the reason.'), 'reason_required');
@@ -81,6 +83,7 @@ class Needs
     public function campaign(array $v, User $u): TdCampaign
     {
         if (! Td::manages($u)) abort(403);
+        TdExtras::tnaWindow($v['opens_on'] ?? now()->toDateString(), $v['window_reason'] ?? null);
         $c = TdCampaign::create(['title' => $v['title'], 'year' => $v['year'], 'scope' => $v['scope'] ?? 'company', 'scope_ids' => $v['scope_ids'] ?? null,
             'opens_on' => $v['opens_on'] ?? now()->toDateString(), 'closes_on' => $v['closes_on'], 'status' => 'open', 'responses' => [], 'created_by' => $u->id]);
         foreach ($this->campaignDepartments($c) as $d) if ($d->head_id && ($uid = User::where('employee_id', $d->head_id)->value('id')))
@@ -132,6 +135,7 @@ class Needs
     public function fromAppraisal(PerformanceReview $r): int
     {
         $e = Employee::find($r->employee_id); if (! $e) return 0;
+        $this->idpFromAppraisal($r, $e);
         $req = Td::required($e); if (! $req) return 0;
         $scale = max(1, (int) Settings::merged('performance')['scale']);
         $th = (int) Td::cfg()['gap_threshold']; $n = 0;
@@ -150,6 +154,20 @@ class Needs
             $n++;
         }
         return $n;
+    }
+
+    /** تقييم دون المستوى المتوسط ← مسودة خطة تطوير فردية بالفجوات (يكملها المدير ويفعّلها) */
+    public function idpFromAppraisal(PerformanceReview $r, Employee $e): ?\App\Models\DevelopmentPlan
+    {
+        if (! Td::cfg()['idp_from_appraisal'] || $r->score === null || (float) $r->score >= (float) Settings::merged('performance')['mid_from']) return null;
+        if (\App\Models\DevelopmentPlan::where('employee_id', $e->id)->whereIn('status', ['draft', 'active'])->exists()) return null;
+        $weak = collect($r->ratings ?? [])->filter(fn ($x) => isset($x['total']) && (float) $x['total'] < (float) Settings::merged('performance')['mid_from'])->keys()->all();
+        $names = Competency::whereIn('id', $weak)->pluck('name_ar')->all();
+        $p = \App\Models\DevelopmentPlan::create(['employee_id' => $e->id, 'scope' => 'employee', 'title' => 'خطة تطوير بعد التقييم', 'gaps' => $names ? 'كفاءات دون المستوى: '.implode('، ', $names) : 'نتيجة التقييم دون المستوى المتوسط',
+            'goals' => array_map(fn ($x) => ['text' => 'رفع مستوى «'.$x.'»', 'done' => false], $names ?: ['الأداء العام']), 'status' => 'draft', 'source' => 'review']);
+        if ($e->manager_id && ($uid = User::where('employee_id', $e->manager_id)->value('id')))
+            Notify::user($uid, "أُنشئت مسودة خطة تطوير لـ {$e->name} بعد التقييم — أكملها وفعّلها", "A draft development plan was created for {$e->name_en} after the review — complete and activate it", 'development');
+        return $p;
     }
 
     /** FR-TD-027: مصفوفة الفجوات — موظفون × كفاءات */

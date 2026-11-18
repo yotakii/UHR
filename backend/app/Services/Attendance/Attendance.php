@@ -136,12 +136,20 @@ class Attendance
      * الحركة الأولى في اليوم دخول وما بعدها خروج (آخر خروج يُعتمد).
      * @return array{kind: 'ok'|'dup'|'unknown'|'inactive', employee?: array, type?: string, time?: string, late?: int, worked?: int, ot?: int, uid: ?string}
      */
-    public function scan(Device $device, string $raw, string $via = 'usb', ?CarbonInterface $at = null): array
+    public function scan(Device $device, string $raw, string $via = 'usb', ?CarbonInterface $at = null, ?string $token = null): array
     {
         $at = ($at ?? now())->copy()->setTimezone(config('app.timezone'));
         $uid = CardUid::format($raw);
         // الاعتماد داخل شركة الجهاز فقط (الدفعة 21): البطاقة المفقودة أو الموقوفة تُرفض وتنبّه الموارد البشرية
         $cred = NfcGate::credential($raw);
+        // الدفعة 28: بطاقة غير موظف ← ساعات مشاركة (FR-VL-007)، ورمز ذاكرة البطاقة (FR-NF-018)
+        if ($cred && ($cred->external_id && ! $cred->employee_id || ($cred->memory_token && in_array(NfcGate::cfg()['card_security'], ['memory', 'secure'], true)))) {
+            $r = app(NfcGate::class)->event($device, $raw, $at, null, 'nfc', false, $token);
+            if ($cred->external_id && ! $cred->employee_id) return ['kind' => $r['decision'] === 'accepted' ? 'external' : 'blocked', 'reason' => $r['reason'] ?? null, 'uid' => $uid];
+            if ($r['decision'] === 'rejected') return ['kind' => 'blocked', 'reason' => $r['reason'], 'uid' => $uid];
+            $e = Employee::find($cred->employee_id);
+            return ['kind' => 'ok', 'type' => $r['direction'] ?? null, 'employee' => $e ? self::person($e) : null, 'uid' => $uid];
+        }
         $e = $cred ? Employee::with('department')->find($cred->employee_id) : CardUid::match(Employee::query(), $raw)->with('department')->first();
         $device->update(['last_seen_at' => now(), 'last_ip' => request()?->ip()]);
         self::rememberRead($device, $uid ?? CardUid::norm($raw), (bool) $e);

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 /** مدينة/فرع: المدن المشتركة على المنصة (company_id = null) + فروع الشركة الخاصة، ولكل منها منطقة زمنية (ملاحظة الاختبار 80) */
 class Location extends Model
 {
-    protected function casts(): array { return ['active' => 'boolean', 'allowed_ips' => 'array', 'lat' => 'float', 'lng' => 'float']; }
+    protected function casts(): array { return ['active' => 'boolean', 'allowed_ips' => 'array', 'rest_days' => 'array', 'lat' => 'float', 'lng' => 'float']; }
 
     protected static function booted(): void
     {

@@ -1,4 +1,5 @@
 import { MyTraining } from '../training/MyTraining'
+import { TdPrintPage } from '../training/TdMore'
 import type { ReactNode } from 'react'
 import { ListChecks, Home, FileSignature, ChevronLeft, ChevronRight, CalendarCheck, Clock, Stamp, ClipboardList, Wallet, ShieldAlert, DoorOpen, Trophy, Megaphone, ClipboardCheck, Sprout, Users, UserRound, Library, MessagesSquare, CalendarDays, Plane, GraduationCap } from 'lucide-react'
 import { useL, useLang } from '../../lib/store'
@@ -106,7 +107,7 @@ export function EmployeeApp({ user }: { user: SessionUser }) {
       case 'rewards': return <MyRewards />
       case 'reviews': return <MyReviews />
       case 'tasks': return <Work />
-      case 'training': return <MyTraining />
+      case 'training': return route.parts[2] === 'print' && route.parts[3] && /^\d+$/.test(route.parts[4] ?? '') ? <TdPrintPage me code={route.parts[3]} id={Number(route.parts[4])} /> : <MyTraining />
       case 'development': return <Development title={L('خطة تطويري', 'My development')} />
       case 'news': return <MyAnnouncements />
       case 'holidays': return <MyHolidays />

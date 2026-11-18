@@ -142,7 +142,8 @@ class ContractController extends Controller
 
     public function annex(Request $request, int $id): JsonResponse
     {
-        $d = $request->validate(['kind' => ['required', 'string'], 'effective_on' => ['required', 'date'], 'job_id' => ['nullable', 'integer'], 'grade_id' => ['nullable', 'integer'], 'text' => ['required', 'string', 'max:4000']]);
+        $d = $request->validate(['kind' => ['required', 'string'], 'effective_on' => ['required', 'date'], 'job_id' => ['nullable', 'integer'], 'grade_id' => ['nullable', 'integer'], 'text' => ['required', 'string', 'max:4000'],
+            'salary' => ['nullable', 'numeric', 'min:0'], 'pay' => ['nullable', 'array'], 'pay.*' => ['nullable', 'numeric', 'min:0']]);
         $a = $this->contracts->annex($this->contract($request, $id)->load('employee'), $request->user(), $d);
         return response()->json(['id' => $a->id, 'ref_no' => $a->ref_no, 'status' => $a->status], 201);
     }

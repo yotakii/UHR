@@ -347,6 +347,7 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
     Route::middleware('perm:employees,edit')->group(function () {
         Route::post('/employees/{id}/credentials', [\App\Http\Controllers\Api\Hr\NfcController::class, 'addCredential'])->whereNumber('id');
         Route::post('/credentials/{id}/status', [\App\Http\Controllers\Api\Hr\NfcController::class, 'credentialStatus'])->whereNumber('id');
+        Route::post('/credentials/{id}/token', [\App\Http\Controllers\Api\Hr\NfcController::class, 'credentialToken'])->whereNumber('id');
         Route::post('/employees/{id}/branches', [\App\Http\Controllers\Api\Hr\NfcController::class, 'addBranch'])->whereNumber('id');
         Route::delete('/branch-access/{id}', [\App\Http\Controllers\Api\Hr\NfcController::class, 'removeBranch'])->whereNumber('id');
     });
@@ -658,7 +659,9 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr/admin')->group(fun
     Route::post('/departments', [AdminDepartmentController::class, 'store'])->middleware('perm:org,edit');
     Route::put('/departments/{id}', [AdminDepartmentController::class, 'update'])->whereNumber('id')->middleware('perm:org,edit');
     Route::get('/chains', [AdminChainController::class, 'index'])->middleware('perm:settings,view');
-    Route::put('/chains/{type}', [AdminChainController::class, 'update'])->where('type', '[a-z_]+')->middleware('perm:settings,edit');
+    Route::put('/chains/{type}', [AdminChainController::class, 'update'])->where('type', '[a-z_]+(:[A-Z0-9-]+)?(_high)?')->middleware('perm:settings,edit');
+    Route::delete('/chains/{type}', [AdminChainController::class, 'destroy'])->where('type', '[a-z_]+(:[A-Z0-9-]+)?(_high)?')->middleware('perm:settings,edit');
+    Route::put('/chain-rules/{type}', [AdminChainController::class, 'rules'])->where('type', '[a-z_]+')->middleware('perm:settings,edit');
     Route::get('/users', [AdminUserController::class, 'index'])->middleware('perm:users,view');
     Route::post('/users', [AdminUserController::class, 'store'])->middleware('perm:users,create');
     Route::put('/users/settings', [AdminUserController::class, 'saveSettings'])->middleware('perm:settings,edit');
@@ -756,6 +759,9 @@ Route::middleware(['auth', 'fresh', 'portal:hr', 'perm:codes,view'])->prefix('cs
     Route::post('/lists/{key}/import/preview', 'preview')->middleware('perm:codes,create');
     Route::post('/lists/{key}/import', 'import')->middleware('perm:codes,create');
     Route::post('/sector', 'sector')->middleware('perm:codes,create');
+    Route::get('/documents', 'documents');
+    Route::get('/lists/{key}/suggest', 'suggestItem')->where('key', '[a-z_]+');
+    Route::post('/lists/{key}/inherit', 'inherit')->where('key', '[a-z_]+');
     Route::get('/requests', 'requests');
     Route::post('/requests', 'submit')->middleware('perm:codes,create');
     Route::post('/requests/{id}/decide', 'decide')->middleware('perm:codes,decide');
@@ -818,6 +824,9 @@ Route::middleware(['auth', 'fresh'])->prefix('missions')->controller(\App\Http\C
     Route::get('/{id}', 'show')->whereNumber('id');
     Route::put('/{id}', 'update')->whereNumber('id');
     Route::get('/{id}/print', 'print')->whereNumber('id');
+    Route::post('/{id}/invites', 'invite')->whereNumber('id');
+    Route::get('/calendar', 'calendar');
+    Route::get('/{id}/mentionable', 'mentionable')->whereNumber('id');
     foreach (['submit', 'progress', 'request-close' => 'requestClose', 'review', 'pay-advance' => 'payAdvance', 'settlement', 'audit', 'cancel', 'amend', 'comments' => 'comment'] as $path => $action)
         Route::post('/{id}/'.(is_int($path) ? $action : $path), $action)->whereNumber('id');
 });
@@ -838,6 +847,7 @@ Route::middleware(['auth', 'fresh', 'portal:hr', 'perm:externals,view'])->prefix
     Route::get('/engagements/{id}/agreement', 'agreement')->whereNumber('id');
     Route::post('/files', 'upload')->middleware('throttle:60,1');
     Route::get('/{id}', 'show')->whereNumber('id');
+    Route::match(['get', 'post'], '/{id}/card', 'card')->whereNumber('id');
     // المشرف يسجّل ويصادق ساعات من يشرف عليهم وينهي تكليفهم (يُفحص في الخدمة)
     Route::post('/engagements/{id}/logs', 'log')->whereNumber('id');
     Route::post('/engagements/{id}/end', 'end')->whereNumber('id');
@@ -963,6 +973,41 @@ Route::middleware(['auth', 'fresh', 'portal:hr', 'perm:training,view'])->prefix(
     Route::get('/settings', 'settings');
     Route::put('/settings', 'saveSettings')->middleware('perm:settings,edit');
     Route::post('/files', 'upload')->middleware('throttle:60,1');
+});
+// الدفعة 27 — إكمال موديول التدريب
+Route::middleware(['auth', 'fresh', 'portal:hr', 'perm:training,view'])->prefix('td')->controller(\App\Http\Controllers\Api\TrainingExtraController::class)->group(function () {
+    Route::get('/rooms', 'rooms');
+    Route::post('/rooms', 'saveRoom');
+    Route::put('/rooms/{id}', 'saveRoom')->whereNumber('id');
+    Route::post('/sessions/{id}/quote', 'quote')->whereNumber('id');
+    Route::post('/sessions/{id}/postpone', 'postpone')->whereNumber('id');
+    Route::post('/sessions/{id}/reopen', 'reopen')->whereNumber('id');
+    Route::post('/sessions/{id}/summary', 'summarize')->whereNumber('id')->middleware('throttle:6,1');
+    Route::post('/enrollments/{id}/exclude', 'exclude')->whereNumber('id');
+    Route::get('/history', 'history');
+    Route::post('/history', 'saveHistory');
+    Route::put('/history/{id}', 'saveHistory')->whereNumber('id');
+    Route::delete('/history/{id}', 'deleteHistory')->whereNumber('id');
+    Route::get('/needs/import/template', 'needsTemplate');
+    Route::post('/needs/import/preview', 'needsPreview');
+    Route::post('/needs/import', 'needsImport');
+    Route::get('/reports/{kind}', 'reports')->whereIn('kind', ['scorecard', 'costs', 'impact', 'impacts', 'stage', 'group']);
+    Route::get('/export/{kind}', 'export')->whereIn('kind', ['costs', 'scorecard', 'impacts', 'summary']);
+    Route::post('/engagements/{id}/stage-fee', 'stageFee')->whereNumber('id');
+    Route::get('/print/{code}/{id}', 'print')->where('code', '[A-Za-z0-9]{2,5}')->whereNumber('id');
+});
+Route::middleware(['auth', 'fresh'])->controller(\App\Http\Controllers\Api\TrainingExtraController::class)->group(function () {
+    Route::get('/me/training/print/{code}/{id}', 'print')->where('code', '[A-Za-z0-9]{2,5}')->whereNumber('id');
+    Route::get('/me/training/calendar-link', 'calendarLink');
+    Route::post('/me/training/calendar-link', 'calendarLink');
+});
+Route::prefix('public')->controller(\App\Http\Controllers\Api\TrainingExtraController::class)->group(function () {
+    Route::get('/td-calendar/{token}.ics', 'calendarFeed')->where('token', '[A-Za-z0-9]{40}')->middleware('throttle:30,1');
+    Route::get('/td-approve/{token}', 'managerInfo')->middleware('throttle:30,1');
+    Route::post('/td-approve/{token}', 'managerAnswer')->middleware('throttle:10,1');
+    Route::get('/td-commit/{token}', 'commitInfo')->middleware('throttle:30,1');
+    Route::post('/td-commit/{token}/code', 'commitCode')->middleware('throttle:5,1');
+    Route::post('/td-commit/{token}', 'commitSign')->middleware('throttle:10,1');
 });
 // الموظف والمدير والمدرب الداخلي (من أي بوابة)
 Route::middleware(['auth', 'fresh'])->prefix('me/training')->controller(\App\Http\Controllers\Api\TrainingController::class)->group(function () {

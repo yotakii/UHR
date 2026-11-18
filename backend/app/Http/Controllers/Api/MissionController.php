@@ -217,9 +217,41 @@ class MissionController extends Controller
             if ($dest->isNotEmpty()) $anom[] = ['employee' => $e, 'kind' => 'same_destination', 'n' => $dest->max()];
             if (count($amts) !== count(array_unique($amts))) $anom[] = ['employee' => $e, 'kind' => 'duplicate_invoice', 'n' => count($amts) - count(array_unique($amts))];
         }
-        return response()->json(['from' => $from, 'to' => $to, 'by_status' => $ms->groupBy('status')->map->count(), 'by_type' => $grp(fn ($m) => $m->type?->name_ar), 'by_branch' => $grp(fn ($m) => $m->employee?->location?->name_ar),
+        $ccNames = \App\Models\CodeItem::whereIn('id', $ms->pluck('cost_center_id')->filter()->unique())->get()->mapWithKeys(fn ($c) => [$c->id => $c->code.' — '.$c->name_ar]);
+        $byCc = $ms->groupBy(fn ($m) => $ccNames[$m->cost_center_id] ?? '—')->map(fn ($g, $k) => ['key' => $k, 'total' => $g->count(), 'done' => $g->whereIn('status', ['done', 'settling', 'posted', 'closed'])->count(), 'late' => 0,
+            'cost' => $show ? $g->reduce(function ($acc, $m) { foreach (($m->estimate['totals'] ?? []) as $c => $v) $acc[$c] = round(($acc[$c] ?? 0) + $v, 2); return $acc; }, []) : null])->values();
+        return response()->json(['from' => $from, 'to' => $to, 'by_status' => $ms->groupBy('status')->map->count(), 'by_type' => $grp(fn ($m) => $m->type?->name_ar), 'by_branch' => $grp(fn ($m) => $m->employee?->location?->name_ar), 'by_cost_center' => $byCc,
             'by_employee' => $grp(fn ($m) => $m->employee?->name), 'travel' => $travel, 'unsettled' => $unsettled, 'anomalies' => $anom, 'masked' => ! $show,
             'lines' => $show ? PayLine::whereBetween('period', [substr($from, 0, 7), substr($to, 0, 7)])->whereIn('source_type', ['mission', 'bonus'])->selectRaw('element_code, pay_currency, sum(amount_pay) as total, count(*) n')->groupBy('element_code', 'pay_currency')->get() : null]);
+    }
+
+    /** دعوة عمل ضمن المهمة (FR-TM-026) */
+    public function invite(Request $r, int $id): JsonResponse
+    {
+        $m = $this->find($r, $id);
+        $v = $r->validate(['guest_name' => ['required', 'string', 'min:3', 'max:160'], 'organization' => ['nullable', 'string', 'max:160'], 'nationality' => ['nullable', 'string', 'size:2'], 'passport' => ['nullable', 'string', 'max:40'],
+            'purpose' => ['required', 'string', 'min:5', 'max:2000'], 'from_on' => ['required', 'date'], 'to_on' => ['required', 'date', 'after_or_equal:from_on']]);
+        app(\App\Services\Missions\MissionExtras::class)->invite($m, $r->user(), $v);
+        return $this->out($r, $m);
+    }
+
+    /** عرض التقويم (FR-TM-029): المهمات في شهر */
+    public function calendar(Request $r): JsonResponse
+    {
+        $month = preg_match('/^\d{4}-\d{2}$/', (string) $r->query('month')) ? $r->query('month') : now()->format('Y-m');
+        $from = $month.'-01'; $to = Carbon::parse($from)->endOfMonth()->toDateString();
+        $rows = $this->query($r)->where(fn ($q) => $q->where('starts_on', '<=', $to)->where(fn ($w) => $w->where('due_on', '>=', $from)->orWhereNull('due_on')))->whereNotIn('status', ['cancelled', 'rejected'])->limit(500)->get();
+        return response()->json(['month' => $month, 'data' => $rows->map(fn ($m) => Missions::row($m, $r->user()))]);
+    }
+
+    /** من يمكن الإشارة إليه في تعليقات المهمة: المنفّذ والمسؤول ومقدّم الطلب والموارد البشرية */
+    public function mentionable(Request $r, int $id): JsonResponse
+    {
+        $m = $this->find($r, $id);
+        $ids = array_filter([$m->employee_id, $m->owner_id]);
+        $users = \App\Models\User::where('company_id', $r->user()->company_id)->where('active', true)
+            ->where(fn ($q) => $q->whereIn('employee_id', $ids)->orWhere('id', $m->requested_by)->orWhereHas('roles', fn ($x) => $x->whereIn('key', ['hr_director', 'hr_officer', 'finance'])))->limit(40)->get();
+        return response()->json(['data' => $users->map(fn ($u) => ['id' => $u->id, 'name' => $u->displayName(app()->getLocale())])]);
     }
 
     public function export(Request $r): BinaryFileResponse
@@ -256,12 +288,17 @@ class MissionController extends Controller
             'rates' => ['required', 'array', 'min:1'], 'rates.*.grade' => ['required', 'string'], 'rates.*.valid_from' => ['required', 'date'],
             'rates.*.local' => $n(0, 1e9), 'rates.*.foreign' => $n(0, 1e9), 'rates.*.hotel_local' => $n(0, 1e9), 'rates.*.hotel_foreign' => $n(0, 1e9),
             'rates.*.local_currency' => ['required', 'string', 'size:3'], 'rates.*.foreign_currency' => ['required', 'string', 'size:3'], 'rates.*.hotel_local_currency' => ['required', 'string', 'size:3'], 'rates.*.hotel_foreign_currency' => ['required', 'string', 'size:3'],
-            'rates.*.ticket' => ['required', 'in:economy,business'], 'default_grade' => ['required', 'string'], 'fuel_price' => $n(0, 1e9), 'fuel_currency' => ['required', 'string', 'size:3'],
+            'rates.*.ticket' => ['required', 'in:economy,premium,business,first'], 'default_grade' => ['required', 'string'], 'fuel_price' => $n(0, 1e9), 'fuel_currency' => ['required', 'string', 'size:3'],
             'km_per_tank' => $n(1, 10000), 'depreciation_pct' => $n(0, 100), 'close_days' => $n(1, 60), 'cutoff_day' => $n(0, 31), 'installments' => $n(1, 24), 'half_travel_days' => ['required', 'boolean'],
             'block_unclosed' => ['required', 'boolean'], 'expense_cap' => $n(0, 1e9), 'expense_currency' => ['required', 'string', 'size:3'], 'stages' => ['required', 'array', 'min:1', 'max:10'],
             'stages.*.name' => ['required', 'string', 'max:60'], 'stages.*.en' => ['required', 'string', 'max:60'], 'stages.*.weight' => $n(0, 100), 'proof_types' => ['present', 'array'],
             'completion_bonus' => ['required', 'array'], 'completion_bonus.*' => $n(0, 1e9), 'trainer_rates' => ['required', 'array'], 'trainer_rates.*' => $n(0, 1e9), 'trainer_currency' => ['required', 'string', 'size:3'],
             'attendance_bonus' => $n(0, 1e9), 'attendance_bonus_currency' => ['required', 'string', 'size:3'], 'bonus_over_cap_role' => ['required', 'in:'.implode(',', Perm::ROLES)], 'bonus_monthly_cap' => $n(0, 1e9),
+            'zones' => ['sometimes', 'array', 'max:20'], 'zones.*.key' => ['required', 'regex:/^[A-Za-z0-9_-]{1,12}$/', 'distinct'], 'zones.*.ar' => ['required', 'string', 'max:60'], 'zones.*.en' => ['nullable', 'string', 'max:60'],
+            'zones.*.governorates' => ['present', 'array'], 'zones.*.countries' => ['present', 'array'], 'zones.*.factor' => ['required', 'numeric', 'between:0.1,10'],
+            'hotel_cities' => ['sometimes', 'array', 'max:60'], 'hotel_cities.*.city' => ['nullable', 'string', 'max:80'], 'hotel_cities.*.country' => ['nullable', 'string', 'size:2'], 'hotel_cities.*.governorate' => ['nullable', 'string', 'max:6'],
+            'hotel_cities.*.grades' => ['present', 'array'], 'hotel_cities.*.limit' => $n(0, 1e9), 'hotel_cities.*.currency' => ['required', 'string', 'size:3'],
+            'ticket_over' => ['sometimes', 'in:warn,block'], 'trainer_fee_auto' => ['sometimes', 'boolean'], 'trainer_default_level' => ['sometimes', 'string', 'max:20'], 'rates_by_class' => ['sometimes', 'array'],
         ]);
         $grades = collect(Codes::items('grades', false))->pluck('code')->all();
         foreach ($d['rates'] as $row) if (! in_array($row['grade'], $grades, true)) throw ApiException::field('rates', L::t('درجة غير موجودة في الدليل.', 'Grade not in the codebook.'), 'invalid');

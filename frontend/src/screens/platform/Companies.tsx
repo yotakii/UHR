@@ -45,19 +45,20 @@ export function Companies() {
   </div>
 }
 
-type Form = { slug: string; name_ar: string; name_en: string; short_ar: string; short_en: string; brand_latin: string; about_ar: string; about_en: string; website: string; domain: string; brand_color: string; portal_enabled: boolean; portal_review: boolean; admin_email: string }
-const EMPTY: Form = { slug: '', name_ar: '', name_en: '', short_ar: '', short_en: '', brand_latin: '', about_ar: '', about_en: '', website: '', domain: '', brand_color: '', portal_enabled: true, portal_review: true, admin_email: '' }
+type Form = { slug: string; name_ar: string; name_en: string; short_ar: string; short_en: string; brand_latin: string; about_ar: string; about_en: string; website: string; domain: string; brand_color: string; portal_enabled: boolean; portal_review: boolean; admin_email: string; parent_id: string }
+const EMPTY: Form = { slug: '', name_ar: '', name_en: '', short_ar: '', short_en: '', brand_latin: '', about_ar: '', about_en: '', website: '', domain: '', brand_color: '', portal_enabled: true, portal_review: true, admin_email: '', parent_id: '' }
 
 function CompanyForm({ open, c, onClose }: { open: boolean; c: PlatformCompany | null; onClose: () => void }) {
   const L = useL()
   const save = useSaveCompany(c?.id ?? null)
+  const all = useCompanies()
   const [v, setV] = useState<Form>(EMPTY)
   const [logo, setLogo] = useState<File | null>(null)
   const [created, setCreated] = useState<{ email: string; link: string | null } | null>(null)
   useEffect(() => {
     if (!open) return
     save.reset(); setLogo(null); setCreated(null)
-    setV(c ? { slug: c.slug, name_ar: c.name_ar, name_en: c.name_en, short_ar: c.short_ar ?? '', short_en: c.short_en ?? '', brand_latin: c.brand_latin ?? '', about_ar: c.about_ar ?? '', about_en: c.about_en ?? '', website: c.website ?? '', domain: c.domain ?? '', brand_color: c.brand_color ?? '', portal_enabled: c.portal_enabled, portal_review: c.portal_review, admin_email: '' } : EMPTY)
+    setV(c ? { slug: c.slug, name_ar: c.name_ar, name_en: c.name_en, short_ar: c.short_ar ?? '', short_en: c.short_en ?? '', brand_latin: c.brand_latin ?? '', about_ar: c.about_ar ?? '', about_en: c.about_en ?? '', website: c.website ?? '', domain: c.domain ?? '', brand_color: c.brand_color ?? '', portal_enabled: c.portal_enabled, portal_review: c.portal_review, admin_email: '', parent_id: String((c as { parent_id?: number | null }).parent_id ?? '') } : EMPTY)
   }, [open, c])
   const e = save.error instanceof ApiError ? save.error : null
   const set = <K extends keyof Form>(k: K, x: Form[K]) => { setV(s => ({ ...s, [k]: x })); if (save.error) save.reset() }
@@ -90,6 +91,8 @@ function CompanyForm({ open, c, onClose }: { open: boolean; c: PlatformCompany |
       <Field label={L('الشعار', 'Logo')} hint="PNG / JPG / WEBP — 1MB" error={e?.field('logo')}><input type="file" accept=".png,.jpg,.jpeg,.webp" className="field !py-1.5" onChange={x => setLogo(x.target.files?.[0] ?? null)} /></Field>
       <Field label={L('نطاق بوابة الشركة (اختياري)', 'Company portal domain (optional)')} error={e?.field('domain')} hint={L('مثل hr.company.com — يُوجَّه إلى خادم المنصة بسجل DNS', 'e.g. hr.company.com — pointed to the platform server by a DNS record')}>
         <input className="field ltr text-start" value={v.domain} onChange={x => set('domain', x.target.value.toLowerCase().trim())} placeholder="hr.company.com" /></Field>
+      <Field label={L('الشركة الأم (مجموعة قابضة)', 'Parent company (holding group)')} hint={L('ترث الشركة قوائم الترميز التي تحددها الأم، وتدخل خطة التدريب المجمّعة.', 'The company inherits the codebook lists the parent marks, and joins the consolidated training plan.')}>
+        <select className="field" value={v.parent_id} onChange={x => set('parent_id', x.target.value)}><option value="">—</option>{(all.data ?? []).filter(x => x.id !== c?.id).map(x => <option key={x.id} value={x.id}>{x.name_ar}</option>)}</select></Field>
       <Field label={L('لون الهوية', 'Brand colour')} error={e?.field('brand_color')} hint={L('يظهر في صفحة دخول الشركة', 'Shown on the company sign-in page')}>
         <div className="flex items-center gap-2"><input type="color" className="h-10 w-14 rounded border border-line bg-transparent" value={v.brand_color || '#0f766e'} onChange={x => set('brand_color', x.target.value)} />
           <input className="field ltr text-start" value={v.brand_color} onChange={x => set('brand_color', x.target.value)} placeholder="#0f766e" />

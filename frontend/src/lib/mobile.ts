@@ -27,7 +27,8 @@ const KEY = 'uhr-push-token'
 export function mobileLink(link: string | null | undefined): string | null {
   if (!link) return null
   const k = link.split(':')[0]
-  const map: Record<string, string> = { requests: '/m/requests', approvals: '/m/approvals', payslip: '/m/pay', services: '/m/requests', leaves: '/m/requests', justify: '/m/requests' }
+  const map: Record<string, string> = { requests: '/m/requests', approvals: '/m/approvals', payslip: '/m/pay', services: '/m/requests', leaves: '/m/requests', justify: '/m/requests', missions: '/m/missions' }
+  if (k === 'mission') return `/m/missions/${link.split(':')[1]}`
   return map[k] ?? null
 }
 

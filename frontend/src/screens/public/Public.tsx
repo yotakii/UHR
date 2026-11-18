@@ -1,4 +1,4 @@
-import { TdSurvey, TdVerify } from '../training/TdPublic'
+import { TdApprove, TdCommit, TdSurvey, TdVerify } from '../training/TdPublic'
 import { LayoutDashboard, LogIn, FileSearch } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { useRoute } from '../../lib/router'
@@ -18,7 +18,7 @@ import { VolunteerSignup, ExpertSignup, VerifyCertificate } from './ExternalsPub
 import { Track } from './Track'
 
 /** صفحات الزائر: البوابة، فرص العمل، صفحة الشركة، صفحة الشاغر، التقديم، الدخول */
-export const PUBLIC_PAGES = ['', 'jobs', 'c', 'apply', 'applied', 'login', 'forgot', 'reset', 'activate', 'test', 'track', 'volunteer', 'experts', 'verify', 'td-survey', 'td-verify', 'handoff']
+export const PUBLIC_PAGES = ['', 'jobs', 'c', 'apply', 'applied', 'login', 'forgot', 'reset', 'activate', 'test', 'track', 'volunteer', 'experts', 'verify', 'td-survey', 'td-verify', 'td-approve', 'td-commit', 'handoff']
 
 export function Public() {
   const L = useL(); const route = useRoute(); const { page, parts, query } = route
@@ -41,6 +41,8 @@ export function Public() {
         : page === 'td-checkin' && parts[1] ? <Login after={`/td-checkin/${parts[1]}`} />
         : page === 'td-survey' && parts[1] ? <TdSurvey token={parts[1]} />
         : page === 'td-verify' ? <TdVerify code={parts[1]} />
+        : page === 'td-approve' && parts[1] ? <TdApprove token={parts[1]} />
+        : page === 'td-commit' && parts[1] ? <TdCommit token={parts[1]} />
         : page === 'forgot' ? <Forgot />
         : page === 'track' ? <Track />
         : page === 'volunteer' && parts[1] ? <VolunteerSignup token={parts[1]} />

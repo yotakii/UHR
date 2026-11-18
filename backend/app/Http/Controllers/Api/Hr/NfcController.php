@@ -87,8 +87,10 @@ class NfcController extends Controller
             'direction' => ['required', 'in:auto,sequence'], 'signature' => ['required', 'in:optional,required'], 'activation_hours' => ['required', 'integer', 'between:1,720'],
             'offline_minutes' => ['required', 'integer', 'between:2,1440'], 'drift_seconds' => ['required', 'integer', 'between:10,3600'], 'unknown_alert' => ['required', 'integer', 'between:1,100'],
             'buddy_seconds' => ['required', 'integer', 'between:0,60'], 'buddy_repeat' => ['required', 'integer', 'between:1,100'], 'auto_disable' => ['required', 'boolean'],
-            'sticker' => ['required', 'boolean'], 'sticker_geo' => ['required', 'boolean'], 'card_security' => ['required', 'in:uid,memory,secure']]);
+            'sticker' => ['required', 'boolean'], 'sticker_geo' => ['required', 'boolean'], 'card_security' => ['required', 'in:uid,memory,secure'],
+            'drift_correct' => ['sometimes', 'boolean'], 'sticker_device' => ['sometimes', 'in:off,bind_first,registered'], 'externals' => ['sometimes', 'boolean']]);
         $old = NfcGate::cfg();
+        $v = array_merge($old, $v);
         Settings::put('nfc', $v);
         Audit::record('settings.nfc', null, ['before' => $old, 'after' => $v]);
         return $this->settings($request);
@@ -124,6 +126,14 @@ class NfcController extends Controller
         $c = NfcGate::issue($e, $v['type'], $v['identifier'], $request->user(), $v);
         $e->log("إصدار اعتماد حضور ({$c->type}): {$c->identifier}", "Attendance credential issued ({$c->type}): {$c->identifier}", 'ok');
         return response()->json(['data' => self::cred($c)], 201);
+    }
+
+    /** FR-NF-018: رمز ذاكرة جديد يُكتب على البطاقة (يُعرض مرة واحدة) */
+    public function credentialToken(Request $request, int $id): JsonResponse
+    {
+        $c = Credential::where('type', 'nfc')->findOrFail($id);
+        if ($c->employee_id) Directory::scoped($request->user())->findOrFail($c->employee_id);
+        return response()->json(['token' => NfcGate::newToken($c), 'data' => self::cred($c->fresh())]);
     }
 
     public function credentialStatus(Request $request, int $id): JsonResponse
@@ -180,7 +190,7 @@ class NfcController extends Controller
     public static function cred(Credential $c): array
     {
         return ['id' => $c->id, 'type' => $c->type, 'identifier' => $c->identifier, 'label' => $c->label, 'status' => $c->status, 'reason' => $c->reason,
-            'valid_from' => $c->valid_from?->toDateString(), 'valid_to' => $c->valid_to?->toDateString(), 'created_at' => $c->created_at?->toIso8601String(), 'revoked_at' => $c->revoked_at?->toIso8601String()];
+            'valid_from' => $c->valid_from?->toDateString(), 'valid_to' => $c->valid_to?->toDateString(), 'created_at' => $c->created_at?->toIso8601String(), 'revoked_at' => $c->revoked_at?->toIso8601String(), 'has_token' => (bool) $c->getRawOriginal('memory_token')];
     }
 
     /** null = كل الموظفين؛ وإلا معرّفات من في نطاق الحضور */

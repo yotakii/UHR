@@ -76,6 +76,14 @@ class DevelopmentPlans
             if (! \App\Models\TdNeed::where('source', 'idp')->where('source_ref', 'activity:'.$a->id)->exists())
                 \App\Models\TdNeed::create(['ref' => 'TN-'.now()->year.'-'.str_pad((string) \App\Support\Counters::next('td-need-'.now()->year), 4, '0', STR_PAD_LEFT), 'employee_id' => $p->employee_id, 'department_id' => $p->employee?->department_id,
                     'title' => $a->title, 'path' => 'development', 'level' => 'individual', 'source' => 'idp', 'source_ref' => 'activity:'.$a->id, 'status' => 'submitted', 'priority' => 'high', 'score' => 100, 'created_by' => $by->id]);
+        // الدفعة 27: «تدوير وظيفي» ← برنامج تدريب عملي داخلي بمحطة، و«مشروع» ← مهمة في موديول المهام
+        if ($p->employee_id) foreach ($p->activities()->whereIn('kind', ['rotation', 'project'])->get() as $a) {
+            if ($a->kind === 'rotation' && ! \App\Models\TdQualification::where('development_activity_id', $a->id)->exists())
+                \App\Services\Training\Records::rotation($p->employee, $a, $by);
+            if ($a->kind === 'project' && ! \App\Models\WorkTask::where('description', 'like', '%[IDP:'.$a->id.']%')->exists())
+                \App\Models\WorkTask::create(['title' => $a->title, 'description' => "نشاط من خطة التطوير «{$p->title}» [IDP:{$a->id}]", 'employee_id' => $p->employee_id, 'created_by' => $by->id,
+                    'priority' => 'normal', 'status' => 'todo', 'progress' => 0, 'due_on' => $a->due_on?->toDateString()]);
+        }
         [$ar, $en] = self::subject($p);
         foreach ($this->people($p) as $uid) Notify::user($uid, "خطة تطوير «{$p->title}» {$ar} أصبحت جارية", "Development plan «{$p->title}» {$en} is active", 'development');
         return $p;

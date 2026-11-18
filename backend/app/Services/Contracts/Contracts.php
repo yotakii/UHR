@@ -49,6 +49,7 @@ class Contracts
     /** ينشئ عقداً بانتظار التواقيع (يدوياً، أو من قرار التجديد) */
     public function create(User $by, Employee $e, array $v, ?Contract $previous = null, ?ContractCase $case = null, string $source = 'manual'): Contract
     {
+        if ($source !== 'imported') \App\Services\Codes\Codebook::requireLive();   // FR-CS-007: لا عقد قبل اعتماد الدليل حين تكون البوابة مفعّلة
         $type = Codes::resolve('contract_types', $v['contract_type_id'] ?? $v['type'] ?? null);
         if (! $type) throw ApiException::field('contract_type_id', L::t('اختر نوع العقد من دليل الترميز.', 'Choose the contract type from the codebook.'), 'invalid');
         $start = Carbon::parse($v['starts_on'] ?? now()->toDateString())->startOfDay();
@@ -182,7 +183,7 @@ class Contracts
     public function annex(Contract $c, User $u, array $v): ContractAnnex
     {
         if ($c->status !== 'active') throw new ApiException(L::t('الملحق على عقد نافذ فقط.', 'An annex applies to a live contract only.'), 'not_active', 409);
-        $kind = in_array($v['kind'] ?? '', ['position', 'grade', 'other'], true) ? $v['kind'] : throw ApiException::field('kind', L::t('نوع الملحق غير معروف.', 'Unknown annex type.'), 'invalid');
+        $kind = in_array($v['kind'] ?? '', ['position', 'grade', 'salary', 'other'], true) ? $v['kind'] : throw ApiException::field('kind', L::t('نوع الملحق غير معروف.', 'Unknown annex type.'), 'invalid');
         if (mb_strlen(trim((string) ($v['text'] ?? ''))) < 10) throw ApiException::field('text', L::t('اكتب نص الملحق (10 أحرف على الأقل).', 'Write the annex text (at least 10 characters).'), 'invalid');
         $changes = [];
         if ($kind === 'position') {
@@ -192,6 +193,15 @@ class Contracts
         if ($kind === 'grade' || ! empty($v['grade_id'])) {
             $g = Codes::resolve('grades', $v['grade_id'] ?? null) ?? throw ApiException::field('grade_id', L::t('اختر الدرجة من الدليل.', 'Choose the grade from the codebook.'), 'invalid');
             $changes['grade_id'] = $g->id;
+        }
+        // FR-CR-018: ملحق تعديل راتب — يتطلب التحقق وإذن رواتب الآخرين، ويغيّر الراتب وتفصيله من تاريخ السريان
+        if ($kind === 'salary') {
+            \App\Services\Security\SalaryVault::require($u);
+            if (! \App\Services\Security\SalaryVault::sees($u, $c->employee)) throw new ApiException(L::t('تحتاج إذن الاطلاع على رواتب الآخرين.', 'You need access to other people’s salaries.'), 'salary_grant_required', 403);
+            $parts = array_map(fn ($x) => round(max(0, (float) $x), 2), array_intersect_key((array) ($v['pay'] ?? []), array_flip(['basic', 'housing', 'transport', 'fuel'])));
+            $salary = $parts ? array_sum($parts) : round((float) ($v['salary'] ?? 0), 2);
+            if ($salary <= 0) throw ApiException::field('salary', L::t('أدخل الراتب الجديد.', 'Enter the new salary.'), 'invalid');
+            $changes = ['salary' => $salary, 'pay' => $parts ?: null, 'old_salary' => (float) $c->employee->salary];
         }
         $on = Carbon::parse($v['effective_on'] ?? now())->toDateString();
         $a = ContractAnnex::create(['contract_id' => $c->id, 'employee_id' => $c->employee_id, 'ref_no' => self::ref('ANX'), 'kind' => $kind, 'effective_on' => $on, 'changes' => $changes ?: null,
@@ -206,8 +216,28 @@ class Contracts
         $e = $a->employee;
         $ch = array_intersect_key($a->changes ?? [], array_flip(['job_id', 'title_ar', 'title_en', 'grade_id']));
         if ($ch) { $e->update($ch); Codes::markUsed($ch['job_id'] ?? null, $ch['grade_id'] ?? null); }
+        if ($a->kind === 'salary' && isset($a->changes['salary'])) {
+            $e->update(['salary' => $a->changes['salary']] + (! empty($a->changes['pay']) ? ['pay' => $a->changes['pay']] : []));
+            self::publish('contract.salary_changed', $a->contract, ['annex' => $a->ref_no]);
+        }
         $a->update(['status' => 'applied', 'applied_at' => now()]);
         $e->log("ملحق عقد {$a->ref_no}: ".mb_substr($a->text, 0, 120), "Contract annex {$a->ref_no}: ".mb_substr($a->text, 0, 120), 'info');
+    }
+
+    /**
+     * FR-CR-014: نشر أحداث العقود — contract.renewed، contract.not_renewed، employee.probation_passed، employee.probation_failed، contract.salary_changed —
+     * إشعار للأدوار المعنية (المالية للرواتب، والمعنيين بالتأمينات من الإعدادات) وسجل تدقيق؛ وتُبث على القناة الحية للشركة.
+     */
+    public static function publish(string $event, ?Contract $c, array $data = []): void
+    {
+        if (! $c) return;
+        $c->loadMissing('employee');
+        $labels = ['contract.renewed' => ['تجديد عقد', 'Contract renewed'], 'contract.not_renewed' => ['عدم تجديد عقد', 'Contract not renewed'], 'employee.probation_passed' => ['اجتياز فترة التجربة', 'Probation passed'],
+            'employee.probation_failed' => ['عدم اجتياز فترة التجربة', 'Probation failed'], 'contract.salary_changed' => ['تعديل راتب بملحق عقد', 'Salary changed by annex']][$event] ?? [$event, $event];
+        $roles = self::cfg()['notify_roles'] ?? ['finance'];
+        $users = User::where('company_id', $c->company_id)->where('active', true)->whereHas('roles', fn ($q) => $q->whereIn('key', $roles))->pluck('id');
+        foreach ($users as $uid) Notify::user($uid, "{$labels[0]}: {$c->employee?->name} ({$c->ref_no})", "{$labels[1]}: {$c->employee?->name_en} ({$c->ref_no})", 'contracts');
+        Audit::record($event, $c, null, $data + ['employee_id' => $c->employee_id]);
     }
 
     /** رادار الانتهاء: العقود وفترات التجربة التي تنتهي خلال أكبر نافذة (FR-CR-002) */

@@ -48,10 +48,16 @@ class Sessions
         if (! $meetings) throw ApiException::field('meetings', L::t('أضف جلسة واحدة على الأقل.', 'Add at least one meeting.'), 'required');
         usort($meetings, fn ($a, $b) => strcmp($a['date'], $b['date']));
         $data = ['program_id' => $p->id, 'plan_item_id' => $v['plan_item_id'] ?? $s?->plan_item_id, 'title' => $v['title'] ?? $p->title, 'meetings' => $meetings, 'starts_on' => $meetings[0]['date'], 'ends_on' => end($meetings)['date'],
-            'trainer_id' => $v['trainer_id'] ?? null, 'center_id' => $v['center_id'] ?? null, 'location_id' => $v['location_id'] ?? null, 'place' => $v['place'] ?? null, 'link' => $v['link'] ?? null,
+            'trainer_id' => $v['trainer_id'] ?? null, 'center_id' => $v['center_id'] ?? null, 'room_id' => $v['room_id'] ?? null, 'location_id' => $v['location_id'] ?? null, 'place' => $v['place'] ?? null, 'link' => $v['link'] ?? null,
             'capacity' => (int) ($v['capacity'] ?? 20), 'costs' => $v['costs'] ?? [], 'currency' => $v['currency'] ?? 'SYP', 'quotes' => $v['quotes'] ?? $s?->quotes, 'quote_choice' => $v['quote_choice'] ?? $s?->quote_choice, 'quote_reason' => $v['quote_reason'] ?? $s?->quote_reason];
         foreach (['trainer_id' => TdTrainer::class, 'center_id' => TdCenter::class] as $k => $cls) if ($data[$k] && ($x = $cls::find($data[$k])) && $x->status === 'banned')
             throw ApiException::field($k, L::t('هذه الجهة محظورة بقرار من الموارد البشرية.', 'This provider is banned by HR.'), 'banned');
+        // FR-TD-075: لا تُحجز قاعة محجوزة في نفس الوقت (التعارض مع المدرب تحذير)
+        $probe = new TdSession($data); $probe->id = $s?->id; $probe->starts_on = $data['starts_on']; $probe->ends_on = $data['ends_on'];
+        if (collect(TdExtras::clashes($probe))->firstWhere('key', 'room_clash') && empty($v['force']))
+            throw ApiException::field('room_id', collect(TdExtras::clashes($probe))->firstWhere('key', 'room_clash')[app()->getLocale() === 'en' ? 'en' : 'ar'], 'room_clash');
+        if ($s && $s->quote_status && json_encode($data['quotes'] ?? []) !== json_encode($s->quotes ?? [])) $data['quote_status'] = null;   // تغيّرت العروض ← يعاد الاعتماد
+        if ($s?->status === 'postponed') $data['status'] = TdEnrollment::where('session_id', $s->id)->whereNotIn('status', ['withdrawn', 'excluded'])->exists() ? 'enrolling' : 'planned';
         if ($s) $s->update($data);
         else $s = TdSession::create($data + ['ref' => 'TS-'.now()->year.'-'.str_pad((string) Counters::next('td-session-'.now()->year), 4, '0', STR_PAD_LEFT), 'status' => 'planned',
             'logistics' => array_map(fn ($i) => ['item' => $i, 'done' => false], Td::cfg()['logistics']), 'survey_token' => Str::random(32), 'created_by' => $u->id]);
@@ -69,12 +75,14 @@ class Sessions
         if ($n > 0 && $n < $lo) $w[] = ['key' => 'too_few', 'ar' => "عدد المتدربين أقل من الحد الأدنى ({$lo})", 'en' => "Fewer trainees than the minimum ({$lo})"];
         if (in_array($p->delivery, ['external', 'internal_ext'], true) && count($s->quotes ?? []) < (int) $cfg['min_quotes'] && mb_strlen(trim((string) $s->quote_reason)) < 10)
             $w[] = ['key' => 'quotes', 'ar' => "التدريب الخارجي يحتاج {$cfg['min_quotes']} عروض أو مبرراً", 'en' => "External training needs {$cfg['min_quotes']} quotes or a justification"];
-        return $w;
+        if (count($s->quotes ?? []) && $s->quote_status !== 'approved' && $cfg['quote_gate']) $w[] = ['key' => 'quote_approval', 'ar' => 'اختيار العرض بانتظار الاعتماد قبل تأكيد التسجيل', 'en' => 'The quote choice needs approval before confirming places'];
+        return array_merge($w, TdExtras::clashes($s));
     }
 
     public static function totalCost(TdSession $s): float
     {
-        return (float) collect($s->costs ?? [])->sum(fn ($c) => Td::convert((float) ($c['amount'] ?? 0), $c['currency'] ?? $s->currency, $s->currency));
+        // سعر الصرف بتاريخ الإنفاق (بداية التنفيذ) لا بتاريخ اليوم
+        return (float) collect($s->costs ?? [])->sum(fn ($c) => Td::convert((float) ($c['amount'] ?? 0), $c['currency'] ?? $s->currency, $s->currency, $c['date'] ?? $s->starts_on?->toDateString()));
     }
 
     // ———————————————— الترشيح والتعهد ————————————————
@@ -95,7 +103,10 @@ class Sessions
             TdEnrollment::updateOrCreate(['session_id' => $s->id, 'employee_id' => $e->id], ['need_id' => $need, 'status' => $taken >= $s->capacity ? 'waitlist' : 'nominated', 'reason' => $reason, 'exception' => $el['block'] ? $exception : null,
                 'manager_ok' => null, 'attendance' => null, 'result' => null]);
             $taken >= $s->capacity ? $out['waitlist']++ : $out['added']++;
-            if ($e->manager_id && ($mu = User::where('employee_id', $e->manager_id)->value('id'))) Notify::user($mu, "ترشيح {$e->name} لدورة «{$s->title}» — يرجى الموافقة", "{$e->name_en} nominated for “{$s->title}” — please approve", 'training-team');
+            if ($e->manager_id && ($mu = User::where('employee_id', $e->manager_id)->value('id'))) {
+                Notify::user($mu, "ترشيح {$e->name} لدورة «{$s->title}» — يرجى الموافقة", "{$e->name_en} nominated for “{$s->title}” — please approve", 'training-team');
+                TdExtras::managerLink(TdEnrollment::where('session_id', $s->id)->where('employee_id', $e->id)->first());
+            }
         }
         if ($s->status === 'planned') $s->update(['status' => 'enrolling']);
         return $out;
@@ -116,7 +127,8 @@ class Sessions
     {
         if (! Td::manages($u)) abort(403);
         if (! in_array($en->status, ['nominated', 'waitlist'], true)) throw new ApiException(L::t('لا يمكن تأكيد هذا التسجيل.', 'This enrolment cannot be confirmed.'), 'invalid', 409);
-        $s = TdSession::findOrFail($en->session_id); $p = TdProgram::find($s->program_id); $e = Employee::findOrFail($en->employee_id);
+        $s = TdSession::findOrFail($en->session_id);
+        TdExtras::quoteGate($s); $p = TdProgram::find($s->program_id); $e = Employee::findOrFail($en->employee_id);
         $count = max(1, TdEnrollment::where('session_id', $s->id)->whereIn('status', ['nominated', 'pending_commitment', 'confirmed'])->count());
         $cost = round(self::totalCost($s) / $count, 2);
         $requested = TdNeed::whereKey($en->need_id)->where('source', 'request')->exists();
@@ -127,11 +139,15 @@ class Sessions
                 'body' => self::commitmentText($e, $s, $cost, $months, $cfg['recovery'])]);
             $en->update(['status' => 'pending_commitment', 'cost' => $cost]);
             if ($uid = User::where('employee_id', $e->id)->value('id')) Notify::user($uid, "وقّع تعهد الالتزام لدورة «{$s->title}» لتأكيد تسجيلك", "Sign the training commitment for “{$s->title}” to confirm your place", 'training');
+            TdExtras::commitLink($c);
             Audit::record('td_commitment.generated', $c);
         } else {
             $en->update(['status' => 'confirmed', 'cost' => $cost]);
             $this->markDays($en, true);
-            if ($uid = User::where('employee_id', $e->id)->value('id')) Notify::user($uid, "تأكد تسجيلك في «{$s->title}» من {$s->starts_on->toDateString()}", "You are confirmed for “{$s->title}” from {$s->starts_on->toDateString()}", 'training');
+            if ($uid = User::where('employee_id', $e->id)->value('id')) {
+                Notify::user($uid, "تأكد تسجيلك في «{$s->title}» من {$s->starts_on->toDateString()}", "You are confirmed for “{$s->title}” from {$s->starts_on->toDateString()}", 'training');
+                TdExtras::mail($uid, "تأكد تسجيلك في «{$s->title}» من {$s->starts_on->toDateString()}".($s->place ? " — {$s->place}" : '').'.', "You are confirmed for “{$s->title}” from {$s->starts_on->toDateString()}.", '/me/training');
+            }
         }
         return $en->fresh();
     }
@@ -188,7 +204,7 @@ class Sessions
     }
 
     /** FR-TD-084: أيام التدريب «مهمة تدريب» في الحضور لا غياباً */
-    private function markDays(TdEnrollment $en, bool $on): void
+    public function markDays(TdEnrollment $en, bool $on): void
     {
         $s = TdSession::find($en->session_id); if (! $s) return;
         foreach ($s->meetings as $m) {
@@ -237,8 +253,12 @@ class Sessions
         $today = now()->toDateString();
         $idx = collect($s->meetings)->search(fn ($m) => $m['date'] === $today);
         if ($idx === false) throw new ApiException(L::t('لا توجد جلسة اليوم.', 'There is no meeting today.'), 'no_meeting', 422);
-        $m = $s->meetings[$idx];
-        $late = $m['from'] && now()->format('H:i') > Carbon::parse($m['from'])->addMinutes(15)->format('H:i');
+        $m = $s->meetings[$idx]; $cfg = Td::cfg();
+        // نافذة الحضور بالرمز حول وقت الجلسة
+        if ($m['from'] && (now()->format('H:i') < Carbon::parse($m['from'])->subMinutes((int) $cfg['checkin_before'])->format('H:i')
+            || now()->format('H:i') > Carbon::parse($m['to'] ?? $m['from'])->addMinutes((int) $cfg['checkin_after'])->format('H:i')))
+            throw new ApiException(L::t('تسجيل الحضور بالرمز متاح حول وقت الجلسة فقط.', 'QR check-in is open only around the meeting time.'), 'checkin_closed', 409);
+        $late = $m['from'] && now()->format('H:i') > Carbon::parse($m['from'])->addMinutes((int) $cfg['late_after'])->format('H:i');
         $a = $en->attendance ?? []; $a[$idx] = $late ? 'late' : 'present';
         $en->update(['attendance' => $a, 'attendance_pct' => self::pct($a, count($s->meetings))]);
         if (in_array($s->status, ['enrolling', 'planned', 'confirmed'], true)) $s->update(['status' => 'in_progress']);
@@ -257,6 +277,7 @@ class Sessions
     {
         if (! Td::manages($u)) abort(403);
         if (! in_array($s->status, ['in_progress', 'enrolling', 'confirmed'], true)) throw new ApiException(L::t('لا يمكن إكمال هذا التنفيذ.', 'This run cannot be completed.'), 'invalid', 409);
+        TdExtras::quoteGate($s);
         $p = TdProgram::find($s->program_id); $cfg = Td::cfg();
         DB::transaction(function () use ($s, $p, $cfg) {
             foreach (TdEnrollment::where('session_id', $s->id)->where('status', 'confirmed')->get() as $en) {
@@ -274,6 +295,7 @@ class Sessions
             $s->update(['status' => 'completed']);
             if ($s->trainer_id) TdTrainer::whereKey($s->trainer_id)->increment('hours_given', (float) $p->hours);
         });
+        if (\App\Services\Missions\Missions::cfg()['trainer_fee_auto'] ?? false) \App\Services\Missions\MissionExtras::trainerFee($s);   // FR-TM-021
         return $s->fresh();
     }
 

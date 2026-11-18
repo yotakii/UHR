@@ -8,12 +8,12 @@ import type { Bi } from './types'
 export type AttrField = { key: string; ar: string; en: string; type: 'bool' | 'number' | 'select' | 'list' | 'text'; options?: string[]; list?: string }
 export interface CodeListDef {
   key: string; ar: string; en: string; group: 'org' | 'people' | 'pay' | 'ops' | 'docs' | 'system'; owner_role: string | null; pattern: string | null; example: string | null
-  hierarchical: boolean; parent_key: string | null; source: 'departments' | 'locations' | null; system: boolean; required: boolean; active: boolean; attrs_schema: AttrField[]; custom: boolean
+  hierarchical: boolean; parent_key: string | null; source: 'departments' | 'locations' | null; system: boolean; required: boolean; active: boolean; attrs_schema: AttrField[]; custom: boolean; inherit?: boolean; group_role?: 'parent' | 'child' | null
 }
 export interface CodeListSummary extends CodeListDef { total: number; live: number; used: number }
 export interface CodeRow {
   id: number; code: string; ar: string; en: string; parent_id: number | null; status: 'draft' | 'active' | 'inactive' | 'replaced'; live: boolean; attrs: Record<string, unknown> | null
-  valid_from: string | null; valid_to: string | null; legacy_code: string | null; description: string | null; sort: number; locked: boolean; shared: boolean; bound: boolean; usage: number; replaced_by_id?: number | null
+  valid_from: string | null; valid_to: string | null; legacy_code: string | null; description: string | null; sort: number; locked: boolean; shared: boolean; bound: boolean; usage: number; replaced_by_id?: number | null; inherited?: boolean
 }
 export type GoLive = { enabled: boolean; approved: boolean; version: string | null; approved_at: string | null; percent: number; ready: boolean; blocked: boolean
   checks: (Bi & { key: string; count: number; ok: boolean })[]; warnings: (Bi & { key: string })[] }
@@ -66,7 +66,11 @@ export const useReports = () => useQuery({ queryKey: ['codes', 'reports'], query
   duplicates: { list: string; list_ar: string; list_en: string; name: string; items: { id: number; code: string; status: string }[] }[] }>('/cs/reports') })
 export const previewCode = (tpl: string, template?: string, start?: number) => api<{ code: string }>(`/cs/generate/${tpl}?${new URLSearchParams({ ...(template ? { template } : {}), ...(start !== undefined ? { start: String(start) } : {}) })}`)
 export const useSaveCodesSettings = () => useMutation({ mutationFn: (v: Omit<CodesSettings, 'templates'> & { templates: Record<string, { template: string; start: number }> }) => api('/cs/settings', { method: 'PUT', json: v }), onSuccess: changed })
-export const useLoadSector = () => useMutation({ mutationFn: (sector: string) => api<{ added: number }>('/cs/sector', { json: { sector } }), onSuccess: changed })
+export const useLoadSector = () => useMutation({ mutationFn: (sector: string) => api<{ added: number; depts: number; elements: number }>('/cs/sector', { json: { sector } }), onSuccess: changed })
+export const useDocRegister = (q: string) => useQuery({ queryKey: ['codes', 'documents', q], queryFn: () => api<{ data: DocRow[] }>(`/cs/documents${q ? `?q=${encodeURIComponent(q)}` : ''}`).then(r => r.data), placeholderData: p => p })
+export type DocRow = { kind: 'form' | 'policy'; id: number; code: string; ref: string | null; issue: string | null; date: string | null; ar: string; en: string; module: string | null; sensitive: boolean; legacy_code: string | null; file_id: number | null; status: string; versions?: number }
+export const suggestCode = (key: string, name: string) => api<{ code: string | null; en: string; duplicates: { id: number; code: string; ar: string; en: string; score: number }[] }>(`/cs/lists/${key}/suggest?name=${encodeURIComponent(name)}`)
+export const useInherit = () => useMutation({ mutationFn: ({ key, inherit }: { key: string; inherit: boolean }) => api<{ inherit: boolean; synced: number; children: number }>(`/cs/lists/${key}/inherit`, { json: { inherit } }), onSuccess: changed })
 export const importPreview = (key: string, file: File) => { const f = new FormData(); f.append('file', file); return api<{ rows: { row: number; values: Record<string, unknown>; errors: Record<string, string> }[]; ok: number; errors: number }>(`/cs/lists/${key}/import/preview`, { method: 'POST', body: f }) }
 export const importCommit = (key: string, file: File) => { const f = new FormData(); f.append('file', file); return api<{ imported: number }>(`/cs/lists/${key}/import`, { method: 'POST', body: f }) }
 

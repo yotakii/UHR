@@ -27,7 +27,7 @@ class WorkSchedules
     private static array $assign = [];      // [tenant][employee] => [ShiftAssignment…] الأحدث أولاً
     private static array $tz = [];          // [location] => tz
 
-    public static function forget(): void { self::$schedules = []; self::$assign = []; self::$tz = []; }
+    public static function forget(): void { self::$schedules = []; self::$assign = []; self::$tz = []; self::$rest = []; }
 
     /** @return array{shift: array, work_days: int[], schedule: ?WorkSchedule, shift_key: ?string, tz: string, source: string} */
     public static function resolve(Employee $e, string $date): array
@@ -36,6 +36,8 @@ class WorkSchedules
         $dept = $attrs['department_id'] ?? null;
         $base = ['shift' => Settings::schedule('shift', $date, $dept), 'work_days' => Settings::schedule('work_days', $date, $dept), 'schedule' => null, 'shift_key' => null,
             'tz' => self::tzOf($attrs['location_id'] ?? null), 'source' => 'policy'];
+        // FR-CS-018: عطلة الفرع الأسبوعية تحل محل أيام عمل السياسة (ما لم يكن للموظف جدول أو مناوبة)
+        if (($rest = self::restOf($attrs['location_id'] ?? null)) !== null) $base['work_days'] = array_values(array_diff([0, 1, 2, 3, 4, 5, 6], $rest));
         $t = Tenant::id() ?? 0;
         $a = collect(self::$assign[$t][$e->id] ??= ShiftAssignment::where('employee_id', $e->id)->orderByDesc('from')->orderByDesc('id')->get()->all())
             ->first(fn ($x) => $x->from->toDateString() <= $date && (! $x->to || $x->to->toDateString() >= $date));
@@ -45,6 +47,19 @@ class WorkSchedules
         if (! $shift) return $base;
         return ['shift' => array_merge($base['shift'], ['start' => (int) $shift['start'], 'end' => (int) $shift['end']], isset($shift['grace']) ? ['grace' => (int) $shift['grace']] : []),
             'work_days' => $s->work_days ?: $base['work_days'], 'schedule' => $s, 'shift_key' => $shift['key'] ?? null, 'tz' => $base['tz'], 'source' => $a ? 'assignment' : 'employee'];
+    }
+
+    private static array $rest = [];
+
+    public static function restOf(?int $locationId): ?array
+    {
+        if (! $locationId) return null;
+        if (! array_key_exists($locationId, self::$rest)) {
+            $raw = Location::withoutGlobalScopes()->whereKey($locationId)->value('rest_days');
+            $v = is_string($raw) ? json_decode($raw, true) : $raw;
+            self::$rest[$locationId] = is_array($v) && $v ? array_map('intval', $v) : null;
+        }
+        return self::$rest[$locationId];
     }
 
     public static function tz(Employee $e): string { return self::tzOf($e->getAttributes()['location_id'] ?? null); }

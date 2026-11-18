@@ -116,7 +116,7 @@ class ExternalController extends Controller
         $cur = Workflow::current($g);
         $logs = VolunteerLog::where('engagement_id', $g->id)->latest('date')->latest('id')->limit(60)->get();
         return ['id' => $g->id, 'ref' => $g->ref, 'title' => $g->title, 'tasks' => $g->tasks, 'starts_on' => $g->starts_on->toDateString(), 'ends_on' => $g->ends_on->toDateString(), 'weekly_hours' => $g->weekly_hours,
-            'relation' => $g->relation, 'relation_score' => $g->relation_score, 'relation_test' => $g->relation_test, 'justification' => $g->justification, 'replaces_position' => $g->replaces_position, 'replaces_employee_id' => $g->replaces_employee_id,
+            'relation' => $g->relation, 'relation_score' => $g->relation_score, 'relation_test' => $g->relation_test, 'justification' => $g->justification, 'replaces_position' => $g->replaces_position, 'replaces_employee_id' => $g->replaces_employee_id, 'relation_employee_id' => $g->relation_employee_id, 'mission_id' => $g->mission_id, 'project' => $g->project,
             'high' => Externals::high($g), 'fee_model' => $g->fee_model, 'amount' => Externals::canFees($u) ? $g->amount : null, 'currency' => $g->currency, 'expense_cap' => $g->expense_cap, 'tax_treatment' => $g->tax_treatment,
             'status' => $g->status, 'body' => $g->body, 'pledges' => $g->pledges, 'signed_at' => $g->signed_at?->toIso8601String(), 'onboarding' => $g->onboarding ?? [], 'evaluation' => $g->evaluation,
             'certificate_no' => $g->certificate_no, 'verify_code' => $g->verify_code, 'stage_type' => $g->stage_type, 'required_hours' => $g->required_hours, 'stations' => $g->stations, 'stage_eval' => $g->stage_eval, 'supervisor' => $g->supervisor ? ['id' => $g->supervisor->id, 'ar' => $g->supervisor->name, 'en' => $g->supervisor->name_en] : null,
@@ -199,7 +199,7 @@ class ExternalController extends Controller
     {
         return $r->validate(['title' => ['required', 'string', 'max:200'], 'tasks' => ['nullable', 'string', 'max:3000'], 'department_id' => ['nullable', 'integer'], 'location_id' => ['nullable', 'integer'],
             'supervisor_id' => ['required', 'integer'], 'starts_on' => ['required', 'date'], 'ends_on' => ['required', 'date'], 'weekly_hours' => ['required', 'integer', 'between:1,60'], 'days' => ['nullable', 'array'],
-            'relation' => ['required', 'in:replaces,alongside,independent'], 'replaces_employee_id' => ['nullable', 'integer'], 'replaces_position' => ['nullable', 'string', 'max:160'],
+            'relation' => ['required', 'in:replaces,alongside,independent'], 'replaces_employee_id' => ['nullable', 'integer'], 'relation_employee_id' => ['nullable', 'integer'], 'mission_id' => ['nullable', 'integer'], 'project' => ['nullable', 'string', 'max:160'], 'replaces_position' => ['nullable', 'string', 'max:160'],
             'relation_test' => ['nullable', 'array'], 'justification' => ['nullable', 'string', 'max:2000'], 'fee_model' => ['nullable', 'in:none,lump,daily,monthly,expenses'],
             'amount' => ['nullable', 'numeric', 'min:0'], 'currency' => ['nullable', 'string', 'size:3'], 'expense_cap' => ['nullable', 'numeric', 'min:0'], 'tax_treatment' => ['nullable', 'string', 'max:255'],
             'stage_type' => ['nullable', 'in:paid,free,fee'], 'required_hours' => ['nullable', 'integer', 'between:1,3000'], 'stations' => ['nullable', 'array', 'max:12']],
@@ -435,13 +435,16 @@ class ExternalController extends Controller
         $count = External::whereNotNull('opportunity_id')->selectRaw('opportunity_id, count(*) n')->groupBy('opportunity_id')->pluck('n', 'opportunity_id');
         return response()->json(['data' => VolunteerOpportunity::latest('id')->get()->map(fn ($o) => ['id' => $o->id, 'title' => $o->title, 'title_en' => $o->title_en, 'description' => $o->description,
             'department_id' => $o->department_id, 'location_id' => $o->location_id, 'starts_on' => $o->starts_on?->toDateString(), 'ends_on' => $o->ends_on?->toDateString(), 'slots' => $o->slots, 'weekly_hours' => $o->weekly_hours,
-            'status' => $o->status, 'url' => rtrim($origin, '/').'/volunteer/'.$o->token, 'applicants' => (int) ($count[$o->id] ?? 0)])]);
+            'status' => $o->status, 'url' => rtrim($origin, '/').'/volunteer/'.$o->token, 'applicants' => (int) ($count[$o->id] ?? 0),
+            'kind' => $o->kind, 'stage_type' => $o->stage_type, 'fee' => $o->fee !== null ? (float) $o->fee : null, 'fee_currency' => $o->fee_currency])]);
     }
 
     public function saveOpportunity(Request $r, ?int $id = null): JsonResponse
     {
         $v = $r->validate(['title' => ['required', 'string', 'max:200'], 'title_en' => ['nullable', 'string', 'max:200'], 'description' => ['nullable', 'string', 'max:3000'], 'department_id' => ['nullable', 'integer'],
-            'location_id' => ['nullable', 'integer'], 'starts_on' => ['nullable', 'date'], 'ends_on' => ['nullable', 'date'], 'slots' => ['nullable', 'integer', 'min:0'], 'weekly_hours' => ['nullable', 'integer', 'min:0'], 'status' => ['required', 'in:draft,open,closed']]);
+            'location_id' => ['nullable', 'integer'], 'starts_on' => ['nullable', 'date'], 'ends_on' => ['nullable', 'date'], 'slots' => ['nullable', 'integer', 'min:0'], 'weekly_hours' => ['nullable', 'integer', 'min:0'], 'status' => ['required', 'in:draft,open,closed'],
+            'kind' => ['nullable', 'in:volunteer,intern'], 'stage_type' => ['nullable', 'required_if:kind,intern', 'in:paid,free,fee'], 'fee' => ['nullable', 'required_if:stage_type,fee', 'numeric', 'min:0'], 'fee_currency' => ['nullable', 'string', 'size:3']]);
+        if (($v['kind'] ?? 'volunteer') !== 'intern') $v['stage_type'] = $v['fee'] = null;
         $o = $id ? VolunteerOpportunity::findOrFail($id) : new VolunteerOpportunity(['token' => Str::random(32), 'created_by' => $r->user()->id]);
         $o->fill($v)->save();
         return $this->opportunities($r);
@@ -470,7 +473,9 @@ class ExternalController extends Controller
         return response()->json(['data' => [
             'volunteers' => ['total' => (clone $vol)->count(), 'active' => (clone $vol)->where('status', 'active')->count(), 'by_status' => (clone $vol)->selectRaw('status, count(*) n')->groupBy('status')->pluck('n', 'status'),
                 'hours' => $hours, 'value' => $c['hour_value'] ? round($hours * (float) $c['hour_value']) : null, 'value_currency' => $c['hour_currency'],
-                'by_branch' => $by('location_id'), 'by_department' => $by('department_id'), 'by_relation' => $by('relation'), 'retention' => $ended ? round($full * 100 / $ended) : null,
+                'by_branch' => $by('location_id'), 'by_department' => $by('department_id'), 'by_relation' => $by('relation'), 'by_project' => $by('project'),
+                'hours_by_project' => VolunteerLog::join('engagements', 'engagements.id', '=', 'volunteer_logs.engagement_id')->where('volunteer_logs.status', 'approved')->whereBetween('volunteer_logs.date', [$from, $to])
+                    ->selectRaw("coalesce(engagements.project, '—') k, sum(volunteer_logs.hours) h")->groupBy('k')->pluck('h', 'k'), 'retention' => $ended ? round($full * 100 / $ended) : null,
                 'high' => Engagement::where(fn ($q) => $q->where('relation', 'replaces')->orWhere('relation_score', '>=', (int) $c['relation_threshold']))->whereIn('status', ['active', 'approved'])->count()],
             'experts' => ['total' => External::whereIn('kind', ['expert', 'consultant'])->count(), 'approved' => External::whereIn('kind', ['expert', 'consultant'])->whereIn('status', ['approved', 'assigned'])->count(),
                 'by_specialty' => collect(External::whereIn('kind', ['expert', 'consultant'])->whereIn('status', ['approved', 'assigned'])->pluck('specialties'))->flatten()->countBy()->sortDesc()->take(12),
@@ -481,6 +486,15 @@ class ExternalController extends Controller
                 'paid_by_department' => $fees ? Assignment::join('deliverables', 'deliverables.assignment_id', '=', 'assignments.id')->join('payment_requests', fn ($j) => $j->on('payment_requests.source_id', '=', 'deliverables.id')->where('payment_requests.source_type', 'deliverable'))
                     ->where('payment_requests.status', 'paid')->selectRaw('assignments.department_id d, payment_requests.currency c, sum(payment_requests.amount) s')->groupBy('assignments.department_id', 'payment_requests.currency')->get() : null],
         ], 'lookups' => self::lookups()]);
+    }
+
+    /** بطاقة NFC لغير موظف (FR-VL-007): إصدار، وعرض البطاقات الحالية */
+    public function card(Request $r, int $id): JsonResponse
+    {
+        abort_unless(Perm::can($r->user(), 'externals', 'edit'), 403);
+        $x = External::findOrFail($id);
+        if ($r->isMethod('post')) \App\Services\Attendance\NfcGate::issueExternal($x, (string) $r->validate(['identifier' => ['required', 'string', 'max:60']])['identifier'], $r->user());
+        return response()->json(['data' => \App\Models\Credential::where('external_id', $x->id)->latest('id')->get()->map(fn ($c) => ['id' => $c->id, 'identifier' => $c->identifier, 'status' => $c->status, 'valid_from' => $c->valid_from?->toDateString(), 'revoked_at' => $c->revoked_at?->toIso8601String()])]);
     }
 
     public function settings(Request $r): JsonResponse

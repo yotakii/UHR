@@ -208,6 +208,8 @@ export function ReportsTab() {
       <Map2 title={L('المتطوعون حسب الفرع', 'Volunteers by branch')} m={r.volunteers.by_branch} names={br} />
       <Map2 title={L('حسب الإدارة', 'By department')} m={r.volunteers.by_department} names={dept} />
       <Map2 title={L('حسب العلاقة التشغيلية', 'By operational relation')} m={r.volunteers.by_relation} names={new Map(Object.entries({ replaces: { ar: 'يحل محل موظف', en: 'Replaces' }, alongside: { ar: 'إلى جانب موظف', en: 'Alongside' }, independent: { ar: 'مهمة مستقلة', en: 'Independent' } }))} />
+      <Map2 title={L('حسب المشروع', 'By project')} m={(r.volunteers as { by_project?: Record<string, number> }).by_project ?? {}} />
+      <Map2 title={L('الساعات المعتمدة حسب المشروع', 'Approved hours by project')} m={(r.volunteers as { hours_by_project?: Record<string, number> }).hours_by_project ?? {}} />
       <Map2 title={L('الخبراء حسب التخصص', 'Experts by specialty')} m={r.experts.by_specialty} names={sp} />
       <Map2 title={L('الخبراء حسب الدولة', 'Experts by country')} m={r.experts.by_country} />
       <Panel title={L('أعلى الخبراء تقييماً', 'Top-rated experts')}>{r.experts.top.length === 0 ? <p className="text-[13px] text-ink-3">—</p> : <div className="space-y-1">{r.experts.top.map(t => <div key={t.id} className="flex justify-between text-[13.5px]"><span>{bi(t, lang)}</span><span className="num">★ {t.rating} ({t.n})</span></div>)}</div>}</Panel>

@@ -37,13 +37,16 @@ export const useSaveDepartment = () => useMutation({
 })
 
 export interface ChainLevel { role_key: string; role_ar: string; role_en: string; user_id: number | null; deputy_id: number | null; user?: Bi | null; deputy?: Bi | null }
-export interface Chain extends Bi { type: string; manager_allowed: boolean; levels: ChainLevel[] }
-type ChainRes = { data: Chain[]; roles: (Bi & { key: string })[]; users: (Bi & { id: number; email: string; roles: string[] })[] }
+export interface Chain extends Bi { type: string; base?: string; variant?: boolean; manager_allowed: boolean; levels: ChainLevel[] }
+export type ChainRule = { amount: number; currency: string | null; grades: string[]; branches: number[] }
+type ChainRes = { data: Chain[]; roles: (Bi & { key: string })[]; users: (Bi & { id: number; email: string; roles: string[] })[]; rules?: Record<string, ChainRule>; subtypes?: { mission?: (Bi & { id: number; code: string })[] } }
 export const useChains = () => useQuery({ queryKey: ['admin', 'chains'], queryFn: () => api<ChainRes>('/hr/admin/chains') })
 export const useSaveChain = () => useMutation({
   mutationFn: ({ type, levels }: { type: string; levels: ChainLevel[] }) => api<ChainRes>(`/hr/admin/chains/${type}`, { method: 'PUT', json: { levels: levels.map(({ user, deputy, ...l }) => l) } }),
   onSuccess: d => queryClient.setQueryData(['admin', 'chains'], d),
 })
+export const useDeleteChain = () => useMutation({ mutationFn: (type: string) => api<ChainRes>(`/hr/admin/chains/${type}`, { method: 'DELETE' }), onSuccess: d => queryClient.setQueryData(['admin', 'chains'], d) })
+export const useSaveChainRule = () => useMutation({ mutationFn: ({ type, rule }: { type: string; rule: ChainRule }) => api<ChainRes>(`/hr/admin/chain-rules/${type}`, { method: 'PUT', json: rule }), onSuccess: d => queryClient.setQueryData(['admin', 'chains'], d) })
 
 export interface AdminUser {
   id: number; email: string; name: Bi; active: boolean; employee: { id: number; code: string; status: string; dept: Bi | null } | null

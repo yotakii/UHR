@@ -10,6 +10,7 @@ import { EmpBadge } from './Employees'
 import { EditProfile, CardModal } from './EditProfile'
 import { AccessPanel } from './AccessPanel'
 import { PcAgentsPanel } from '../PcAgents'
+import { can, useMe } from '../../../lib/session'
 import { BiometricsPanel } from './EmployeeFiles'
 import { DocumentsTab } from './DocumentsTab'
 import { Masked } from '../../../ui/vault'
@@ -21,6 +22,7 @@ const TABS: Tab[] = ['overview', 'attendance', 'leaves', 'assets', 'training', '
 export function EmployeeFile({ id }: { id: number }) {
   const L = useL(); const lang = useLang(); const route = useRoute()
   const { data: e, isLoading, error } = useEmployee(id)
+  const me = useMe()
   const [edit, setEdit] = useState(false); const [card, setCard] = useState(false)
   const tab = TABS.find(t => t === route.query.tab) ?? 'overview'
   if (isLoading) return <div className="grid place-items-center py-24"><Loader2 className="animate-spin text-brand" /></div>
@@ -85,7 +87,7 @@ export function EmployeeFile({ id }: { id: number }) {
       {tab === 'assets' && <Panel pad={false}>{e.assets.length === 0 ? <Empty title={L('لا توجد عهد', 'No assets')} /> : <table className="tbl"><thead><tr><th>{L('الأصل', 'Asset')}</th><th>{L('الرمز', 'Tag')}</th><th className="hidden sm:table-cell">{L('القيمة', 'Value')}</th><th>{L('الحالة', 'Status')}</th></tr></thead><tbody>
         {e.assets.map(a => <tr key={a.id}><td>{bi(a.name, lang)}<div className="text-[12px] text-ink-3">{bi(a.category, lang)}</div></td><td className="ltr num">{a.tag}</td><td className="num hidden sm:table-cell">${a.value}</td>
           <td>{a.status === 'assigned' ? <Badge tone="brand">{L('موقّع', 'Signed')}</Badge> : <Badge tone="brass">{L('بانتظار التوقيع', 'Awaiting signature')}</Badge>}</td></tr>)}</tbody></table>}</Panel>}
-      {tab === 'training' && <TrainingRecord id={e.id} />}
+      {tab === 'training' && <TrainingRecord id={e.id} edit={can(me.data, 'training', 'edit')} />}
       {tab === 'docs' && <DocumentsTab e={e} />}
       {tab === 'log' && <Panel><Timeline items={e.logs.map(l => ({ ...l, form: l.form ?? undefined }))} /></Panel>}
     </div>

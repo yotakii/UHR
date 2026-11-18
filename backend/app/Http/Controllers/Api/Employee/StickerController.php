@@ -29,9 +29,10 @@ class StickerController extends Controller
     public function checkin(Request $request, string $token, NfcGate $gate): JsonResponse
     {
         $l = $this->branch($token);
-        $v = $request->validate(['lat' => ['nullable', 'numeric', 'between:-90,90'], 'lng' => ['nullable', 'numeric', 'between:-180,180']]);
+        $v = $request->validate(['lat' => ['nullable', 'numeric', 'between:-90,90'], 'lng' => ['nullable', 'numeric', 'between:-180,180'], 'device_token' => ['nullable', 'string', 'max:120']]);
         $e = $request->user()->employee_id ? Employee::find($request->user()->employee_id) : null;
         if (! $e) throw new ApiException(L::t('الحضور للموظفين فقط.', 'Check-in is for employees only.'), 'not_employee', 403);
+        NfcGate::phoneCheck($e, $v['device_token'] ?? null);
         if ($this->needsGeo($l)) {
             if (! isset($v['lat'], $v['lng'])) throw new ApiException(L::t('اسمح بتحديد الموقع لتسجيل الحضور من ملصق الفرع.', 'Allow location access to check in with the branch sticker.'), 'location_required', 422);
             $m = Portal::distance((float) $v['lat'], (float) $v['lng'], (float) $l->lat, (float) $l->lng);

@@ -6,6 +6,7 @@ import { ATT, DELIVERY, E_STATUS, PATH, S_STATUS, useCalendar, useSession, useSe
 import { Badge, Btn, Drawer, Empty, Field, KV, Modal, Panel, Tabs, toast } from '../../ui/kit'
 import { DecisionDialog } from '../../ui/decision'
 import { EmpSelect, PathBadge, Spin, StatusBadge, errOf, fail } from './parts'
+import { PrintBtn, QuotesPanel, SessionMore, SurveySummary } from './TdMore'
 
 export function SessionsTab({ lk, can }: { lk: Lookups; can: Can }) {
   const L = useL(); const lang = useLang()
@@ -17,7 +18,7 @@ export function SessionsTab({ lk, can }: { lk: Lookups; can: Can }) {
     <div className="flex flex-wrap gap-2 mb-3">
       <div className="relative w-full sm:w-56"><Search size={15} className="absolute top-1/2 -translate-y-1/2 start-3 text-ink-3" /><input className="field ps-9" placeholder={L('عنوان أو رقم…', 'Title or ref…')} defaultValue={q.q ?? ''} onKeyDown={e => { if (e.key === 'Enter') setQuery({ q: (e.target as HTMLInputElement).value || undefined }) }} /></div>
       <select className="field !w-full sm:!w-44" value={f.status} onChange={e => setQuery({ status: e.target.value })} aria-label={L('الحالة', 'Status')}><option value="open">{L('الجارية والقادمة', 'Open & upcoming')}</option><option value="">{L('الكل', 'All')}</option>
-        {['planned', 'enrolling', 'confirmed', 'in_progress', 'completed', 'closed', 'cancelled'].map(s => <option key={s} value={s}>{L(S_STATUS[s][0], S_STATUS[s][1])}</option>)}</select>
+        {['planned', 'enrolling', 'confirmed', 'in_progress', 'postponed', 'completed', 'closed', 'evaluated', 'cancelled'].map(s => <option key={s} value={s}>{L(S_STATUS[s][0], S_STATUS[s][1])}</option>)}</select>
       <div className="flex-1" />
       {can.create && <Btn kind="primary" icon={<Plus size={15} />} onClick={() => setAdd(true)}>{L('تنفيذ جديد', 'New run')}</Btn>}
     </div>
@@ -42,7 +43,7 @@ function SessionForm({ lk, s, onClose }: { lk: Lookups; s?: SessionFull; onClose
     program_id: s?.program?.id ?? null as number | null, title: s?.title ?? '', meetings: s?.meetings ?? [{ date: '', from: '09:00', to: '13:00' }] as { date: string; from: string | null; to: string | null }[],
     trainer_id: s?.trainer?.id ?? null as number | null, center_id: s?.center_id ?? null as number | null, place: s?.place ?? '', link: s?.link ?? '', capacity: s?.capacity ?? 15, currency: s?.currency ?? 'USD',
     costs: s?.costs ?? [] as { type: string; amount: number }[], quotes: s?.quotes ?? [] as { center: string; price: number; duration: string; prior: string; terms: string; score: number }[], quote_choice: s?.quote_choice ?? null as number | null, quote_reason: s?.quote_reason ?? '',
-    plan_item_id: s?.plan_item_id ?? null as number | null,
+    plan_item_id: s?.plan_item_id ?? null as number | null, room_id: s?.room_id ?? null as number | null,
   })
   const set = (o: Partial<typeof v>) => setV(x => ({ ...x, ...o }))
   const prog = lk.programs.find(p => p.id === v.program_id)
@@ -61,6 +62,8 @@ function SessionForm({ lk, s, onClose }: { lk: Lookups; s?: SessionFull; onClose
         {lk.trainers.filter(t => t.status !== 'banned').map(t => <option key={t.id} value={t.id}>{bi(t, lang)}{t.status === 'watch' ? ` (${L('تحت المراقبة', 'watch')})` : ''}{t.rating ? ` ★${t.rating}` : ''}</option>)}</select></Field>
       <Field label={L('المركز', 'Centre')}><select className="field" value={v.center_id ?? ''} onChange={x => set({ center_id: x.target.value ? Number(x.target.value) : null })}><option value="">—</option>
         {lk.centers.filter(t => t.status !== 'banned').map(t => <option key={t.id} value={t.id}>{bi(t, lang)}</option>)}</select></Field>
+      <Field label={L('القاعة', 'Room')} error={e?.field('room_id')}><select className="field" value={v.room_id ?? ''} onChange={x => set({ room_id: x.target.value ? Number(x.target.value) : null })}><option value="">—</option>
+        {(lk.rooms ?? []).map(r => <option key={r.id} value={r.id}>{bi(r, lang)} ({r.capacity})</option>)}</select></Field>
       <Field label={L('المكان', 'Place')}><input className="field" value={v.place} onChange={x => set({ place: x.target.value })} /></Field>
       <Field label={L('رابط عن بعد', 'Online link')}><input className="field ltr" value={v.link} onChange={x => set({ link: x.target.value })} /></Field>
       <Field label={L('السعة', 'Capacity')} hint={cap ? L(`المنصوح لهذا الأسلوب ${cap[0]}–${cap[1]}`, `Recommended for this method ${cap[0]}–${cap[1]}`) : undefined}><input type="number" min={1} className="field num" value={v.capacity} onChange={x => set({ capacity: Number(x.target.value) })} /></Field>
@@ -98,7 +101,7 @@ function SessionDrawer({ id, lk, can, onClose }: { id: number; lk: Lookups; can:
   const L = useL(); const lang = useLang()
   const { data: s } = useSession(id)
   const act = useTdAct()
-  const [tab, setTab] = useState<'people' | 'attendance' | 'scores' | 'eval' | 'info'>('people')
+  const [tab, setTab] = useState<'people' | 'attendance' | 'scores' | 'eval' | 'quotes' | 'info'>('people')
   const [nom, setNom] = useState(false)
   const [edit, setEdit] = useState(false)
   const [cancel, setCancel] = useState(false)
@@ -119,12 +122,15 @@ function SessionDrawer({ id, lk, can, onClose }: { id: number; lk: Lookups; can:
         {['in_progress', 'enrolling', 'confirmed'].includes(s.status) && <Btn size="sm" kind="primary" icon={<CheckCheck size={14} />} onClick={() => run(`sessions/${s.id}/complete`, {}, L('اكتمل التنفيذ — صدرت الشهادات للناجحين وجُدولت متابعة الأثر', 'Completed — certificates issued and impact follow-ups scheduled'))}>{L('إكمال التنفيذ', 'Complete')}</Btn>}
         {s.status === 'completed' && <Btn size="sm" kind="primary" icon={<Lock size={14} />} onClick={() => setClose(true)}>{L('إغلاق التنفيذ', 'Close the run')}</Btn>}
         {live && s.status !== 'completed' && <Btn size="sm" kind="danger" icon={<Ban size={14} />} onClick={() => setCancel(true)}>{L('إلغاء', 'Cancel')}</Btn>}
+        <SessionMore s={s} />
         <Btn size="sm" kind="ghost" icon={<Copy size={14} />} onClick={() => navigator.clipboard?.writeText(s.survey_url).then(() => toast(L('نُسخ رابط استبيان الرضا', 'Survey link copied')))}>{L('رابط الاستبيان', 'Survey link')}</Btn>
         <Btn size="sm" kind="ghost" icon={<Copy size={14} />} onClick={() => navigator.clipboard?.writeText(s.checkin_url).then(() => toast(L('نُسخ رابط تسجيل الحضور', 'Check-in link copied')))}>{L('رابط الحضور', 'Check-in link')}</Btn>
       </div>}
       <div className="mt-4"><Tabs value={tab} onChange={setTab} tabs={[{ v: 'people', label: L('المتدربون', 'Trainees'), count: s.enrollments.length }, { v: 'attendance', label: L('الحضور', 'Attendance') },
-        { v: 'scores', label: L('النتائج', 'Results') }, { v: 'eval', label: L('التقييم والأثر', 'Evaluation') }, { v: 'info', label: L('التفاصيل', 'Details') }]} /></div>
-      <div className="mt-3">{tab === 'people' ? <People s={s} can={can} /> : tab === 'attendance' ? <AttendanceGrid s={s} /> : tab === 'scores' ? <Scores s={s} /> : tab === 'eval' ? <Evaluation s={s} /> : <Info s={s} />}</div>
+        { v: 'scores', label: L('النتائج', 'Results') }, { v: 'eval', label: L('التقييم والأثر', 'Evaluation') },
+        ...(s.quotes.length || (s.program && ['external', 'internal_ext'].includes(s.program.delivery)) ? [{ v: 'quotes' as const, label: L('العروض', 'Quotes'), count: s.quotes.length || undefined }] : []), { v: 'info', label: L('التفاصيل', 'Details') }]} /></div>
+      {s.postpone_reason && <div className="mt-2 text-[12.5px] text-ink-3">{L('سبب التأجيل', 'Postponement reason')}: {s.postpone_reason}</div>}
+      <div className="mt-3">{tab === 'people' ? <People s={s} can={can} /> : tab === 'attendance' ? <AttendanceGrid s={s} /> : tab === 'scores' ? <Scores s={s} /> : tab === 'eval' ? <Evaluation s={s} /> : tab === 'quotes' ? <QuotesPanel s={s} /> : <Info s={s} />}</div>
     </div>}
     {s && nom && <Nominate s={s} lk={lk} onClose={() => setNom(false)} />}
     {s && edit && <SessionForm lk={lk} s={s} onClose={() => setEdit(false)} />}
@@ -138,6 +144,7 @@ function People({ s, can }: { s: SessionFull; can: Can }) {
   const L = useL(); const lang = useLang()
   const act = useTdAct()
   const [wd, setWd] = useState<EnrollmentRow | null>(null)
+  const [ex, setEx] = useState<EnrollmentRow | null>(null)
   const [fd, setFd] = useState<EnrollmentRow | null>(null)
   const [dec, setDec] = useState('retrain')
   const [note, setNote] = useState('')
@@ -147,7 +154,7 @@ function People({ s, can }: { s: SessionFull; can: Can }) {
     <div className="space-y-2">{s.enrollments.map(en => <div key={en.id} className="rounded-xl border border-line p-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div><div className="font-medium">{en.employee ? bi(en.employee, lang) : '—'} <span className="text-[11.5px] text-ink-3 ltr">{en.employee?.code}</span></div>
-          <div className="text-[12px] text-ink-3">{en.reason ?? ''}{en.exception ? ` · ${L('استثناء', 'Exception')}: ${en.exception}` : ''}{en.manager_ok === true ? ` · ${L('وافق المدير', 'Manager approved')}` : en.manager_ok === false ? ` · ${L('رفض المدير', 'Manager declined')}` : ''}</div></div>
+          <div className="text-[12px] text-ink-3">{en.exclude_reason ? `${L('سبب الاستبعاد', 'Excluded')}: ${en.exclude_reason} · ` : ''}{en.reason ?? ''}{en.exception ? ` · ${L('استثناء', 'Exception')}: ${en.exception}` : ''}{en.manager_ok === true ? ` · ${L('وافق المدير', 'Manager approved')}` : en.manager_ok === false ? ` · ${L('رفض المدير', 'Manager declined')}` : ''}</div></div>
         <div className="flex flex-wrap items-center gap-1.5"><StatusBadge map={E_STATUS} s={en.status} />
           {en.result && <Badge tone={en.result === 'passed' ? 'brand' : en.result === 'failed' ? 'danger' : 'neutral'}>{en.result === 'passed' ? L('ناجح', 'Passed') : en.result === 'failed' ? L('غير ناجح', 'Failed') : L('منسحب', 'Withdrawn')}</Badge>}</div>
       </div>
@@ -161,11 +168,16 @@ function People({ s, can }: { s: SessionFull; can: Can }) {
         {en.status === 'nominated' && <Btn size="sm" kind="primary" onClick={() => run(`enrollments/${en.id}/confirm`, {}, L('تم التأكيد', 'Confirmed'))}>{L('تأكيد', 'Confirm')}</Btn>}
         {en.status === 'nominated' && en.manager_ok == null && <Btn size="sm" onClick={() => run(`enrollments/${en.id}/manager`, { ok: true })}>{L('موافقة المدير', 'Manager approval')}</Btn>}
         {['nominated', 'pending_commitment', 'confirmed', 'waitlist'].includes(en.status) && <Btn size="sm" kind="ghost" onClick={() => setWd(en)}>{L('سحب', 'Withdraw')}</Btn>}
+        {['nominated', 'pending_commitment', 'confirmed', 'waitlist'].includes(en.status) && <Btn size="sm" kind="ghost" onClick={() => setEx(en)}>{L('استبعاد', 'Exclude')}</Btn>}
+        {en.commitment && <PrintBtn code="TD3" id={en.commitment.id} label={L('التعهد', 'Commitment')} />}
+        {en.apply_plan && <PrintBtn code="TD12" id={en.id} label={L('خطة التطبيق', 'Application plan')} />}
         {en.result === 'failed' && !en.failure?.decision && can.director && <Btn size="sm" kind="danger" onClick={() => { setFd(en); setNote('') }}>{L('قرار عدم النجاح', 'Failure decision')}</Btn>}
       </div>}
     </div>)}</div>
     <DecisionDialog open={!!wd} onClose={() => setWd(null)} tone="danger" reasonRequired minLength={5} title={L('سحب المتدرب', 'Withdraw the trainee')} subject={wd?.employee ? bi(wd.employee, lang) : ''} confirmLabel={L('سحب', 'Withdraw')}
       onConfirm={r => act.mutateAsync({ path: `enrollments/${wd!.id}/withdraw`, v: { reason: r } })} />
+    <DecisionDialog open={!!ex} onClose={() => setEx(null)} tone="danger" reasonRequired minLength={5} title={L('استبعاد المتدرب', 'Exclude the trainee')} subject={ex?.employee ? bi(ex.employee, lang) : ''} confirmLabel={L('استبعاد', 'Exclude')}
+      onConfirm={r => act.mutateAsync({ path: `enrollments/${ex!.id}/exclude`, v: { reason: r } })} />
     {fd && <Modal open onClose={() => setFd(null)} title={L('قرار موثق لعدم النجاح', 'Documented failure decision')} footer={<><Btn onClick={() => setFd(null)}>{L('إلغاء', 'Cancel')}</Btn>
       <Btn kind="primary" disabled={note.trim().length < 10 || act.isPending} onClick={() => act.mutate({ path: `enrollments/${fd.id}/failure`, v: { decision: dec, note } }, { onSuccess: () => setFd(null), onError: fail })}>{L('حفظ القرار', 'Save the decision')}</Btn></>}>
       <div className="grid gap-2">{[['retrain', 'إعادة التدريب (احتياج جديد معتمد)', 'Retrain (a new approved need)'], ['extend', 'تمديد فترة التطبيق', 'Extend the practice period'], ['charge', 'تحميل التكلفة وفق التعهد', 'Charge the cost per the commitment']].map(o =>
@@ -185,6 +197,10 @@ function Nominate({ s, lk, onClose }: { s: SessionFull; lk: Lookups; onClose: ()
   const [out, setOut] = useState<{ added: number; waitlist: number; blocked: { id: number; ar: string; en: string; reasons: { ar: string; en: string }[] }[] } | null>(null)
   return <Modal open onClose={onClose} width={640} title={L('ترشيح متدربين', 'Nominate trainees')} footer={<><Btn onClick={onClose}>{L('إغلاق', 'Close')}</Btn>
     <Btn kind="primary" disabled={!ids.length || act.isPending} onClick={() => act.mutate({ path: `sessions/${s.id}/nominate`, v: { employee_ids: ids, reason: reason || null, exception: exception || null } }, { onSuccess: r => { setOut(r as never); setIds([]) }, onError: fail })}>{L('ترشيح', 'Nominate')}</Btn></>}>
+    {s.candidates.length > 0 && <div className="mb-3 rounded-xl border border-line p-3"><div className="flex items-center gap-2"><div className="font-semibold text-[13px] flex-1">{L('من الاحتياجات المعتمدة المرتبطة', 'From linked approved needs')}</div>
+      <Btn size="sm" kind="ghost" onClick={() => setIds([...new Set([...ids, ...s.candidates.map(c => c.id)])])}>{L('اختيار الكل', 'Select all')}</Btn></div>
+      <div className="mt-1.5 space-y-1">{s.candidates.map(c => <label key={c.id} className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={ids.includes(c.id)} onChange={x => setIds(x.target.checked ? [...ids, c.id] : ids.filter(i => i !== c.id))} />
+        <span className="flex-1">{bi(c, lang)}</span><span className="text-[11.5px] text-ink-3">{c.need.title} · <span className="ltr">{c.need.ref}</span></span></label>)}</div></div>}
     <EmpSelect multiple lk={lk} value={ids} onChange={setIds} />
     <Field label={L('سبب الترشيح', 'Reason')} className="mt-3"><input className="field" value={reason} onChange={e => setReason(e.target.value)} /></Field>
     <Field label={L('مبرر الاستثناء (لمن في فترة التجربة أو لديه تعارض)', 'Exception reason (probation or clash)')} className="mt-2"><input className="field" value={exception} onChange={e => setExc(e.target.value)} /></Field>
@@ -244,6 +260,7 @@ function Evaluation({ s }: { s: SessionFull }) {
   const REC: Record<string, [string, string, 'brand' | 'warn' | 'danger']> = { approve: ['اعتماد الجهة', 'Keep the provider', 'brand'], watch: ['تحت المراقبة', 'Watch', 'warn'], ban: ['توصية بالحظر', 'Ban recommended', 'danger'] }
   const cost = s.total_cost; const benefit = Number(kpi.benefit) || 0
   return <div className="space-y-4">
+    <div className="flex flex-wrap justify-end gap-1"><PrintBtn code="TD7" id={s.id} label={L('نتائج الاستبيان F-07', 'Survey results F-07')} /><PrintBtn code="TD13" id={s.id} label={L('تقييم الجهة F-13', 'Provider rating F-13')} /></div>
     <div className="grid gap-3 sm:grid-cols-2">
       <div className="rounded-xl border border-line p-3"><div className="text-[12px] text-ink-3">{L('المستوى 1 — رضا المتدربين', 'Level 1 — reaction')}</div><div className="text-[20px] font-semibold num">{s.surveys.avg != null ? `${Math.round(s.surveys.avg * 10) / 10}/5` : '—'}</div>
         <div className="text-[12px] text-ink-3">{L(`${s.surveys.n} استجابة من ${s.counts.completed ?? s.counts.confirmed ?? 0}`, `${s.surveys.n} responses of ${s.counts.completed ?? s.counts.confirmed ?? 0}`)}</div></div>
@@ -256,6 +273,7 @@ function Evaluation({ s }: { s: SessionFull }) {
       <Field label={L('ملاحظات', 'Notes')} className="mt-2"><input className="field" value={note} onChange={e => setNote(e.target.value)} /></Field>
       <Btn size="sm" kind="primary" className="mt-2" disabled={act.isPending} onClick={() => act.mutate({ path: `sessions/${s.id}/rate`, v: { scores: sc, note: note || null } }, { onSuccess: () => toast(L('حُفظ التقييم', 'Rating saved')), onError: fail })}>{L('حفظ التقييم', 'Save the rating')}</Btn>
     </Panel>
+    {s.surveys.n > 0 && <SurveySummary s={s} />}
     <Panel title={L('المستوى 4 — النتائج والعائد', 'Level 4 — results & return')}>
       <div className="grid gap-2 sm:grid-cols-3"><Field label={L('المؤشر قبل', 'KPI before')}><input type="number" className="field num" value={kpi.before} onChange={e => setKpi({ ...kpi, before: e.target.value })} /></Field>
         <Field label={L('المؤشر بعد', 'KPI after')}><input type="number" className="field num" value={kpi.after} onChange={e => setKpi({ ...kpi, after: e.target.value })} /></Field>

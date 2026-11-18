@@ -61,6 +61,7 @@ class PlatformController extends Controller
     {
         $c = Company::findOrFail($id);
         $c->update($this->validateCompany($request, $c));
+        if ($c->wasChanged('parent_id') && $c->parent_id) \App\Services\Codes\CodeCatalog::syncGroup(Company::find($c->parent_id));
         if ($request->file('logo')) $prov->setLogo($c, $request->file('logo'));
         return response()->json(['data' => $this->presentCompany($c->refresh())]);
     }
@@ -139,6 +140,8 @@ class PlatformController extends Controller
             // بوابة الشركة (86): نطاق خاص اختياري ولون الهوية
             'domain' => ['nullable', 'string', 'max:190', 'regex:/^(?=.{4,190}$)([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/', Rule::unique('companies', 'domain')->ignore($c?->id)],
             'brand_color' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            // FR-CS-021: الشركة الأم في مجموعة قابضة (قوائم الترميز الموروثة والخطة المجمّعة)
+            'parent_id' => ['nullable', 'integer', Rule::exists('companies', 'id'), function ($a, $v, $fail) use ($c) { if ($v && $c && ((int) $v === $c->id || Company::where('id', $v)->value('parent_id') === $c->id)) $fail(L::t('لا يمكن أن تكون الشركة أمّاً لنفسها.', 'A company cannot be its own parent.')); }],
             'logo' => ['nullable', 'file', 'mimes:png,jpg,jpeg,webp', 'max:1024'],
         ], [
             'required' => L::t('هذا الحقل مطلوب', 'This field is required'),
@@ -162,7 +165,7 @@ class PlatformController extends Controller
             'id' => $c->id, 'status' => $c->status, 'portal_enabled' => $c->portal_enabled, 'portal_review' => $c->portal_review, 'is_platform' => $c->is_platform,
             'about' => ['ar' => $c->about_ar, 'en' => $c->about_en], 'website' => $c->website, 'name_ar' => $c->name_ar, 'name_en' => $c->name_en,
             'short_ar' => $c->short_ar, 'short_en' => $c->short_en, 'about_ar' => $c->about_ar, 'about_en' => $c->about_en,
-            'domain' => $c->domain, 'portal_urls' => \App\Support\HostCompany::urls($c),
+            'domain' => $c->domain, 'portal_urls' => \App\Support\HostCompany::urls($c), 'parent_id' => $c->parent_id,
             'counts' => [
                 'jobs_open' => JobOpening::allCompanies()->where('company_id', $c->id)->where('status', 'open')->count(),
                 'jobs_portal' => JobOpening::allCompanies()->where('company_id', $c->id)->onPortal()->count(),

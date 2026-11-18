@@ -76,6 +76,9 @@ $ctx = [IntPtr]::Zero
 while ([PCSC]::SCardEstablishContext(2, [IntPtr]::Zero, [IntPtr]::Zero, [ref]$ctx) -ne 0) { Log "Smart Card service not available — retrying"; Start-Sleep -Seconds 10 }
 
 $apdu = [byte[]](0xFF, 0xCA, 0x00, 0x00, 0x00)   # GET DATA: card UID
+# TOKEN=1 في uhr-bridge.ini: قراءة رمز الشركة من ذاكرة البطاقة (NTAG الصفحات 4–7) وإرساله مع القراءة (FR-NF-018)
+$readToken = ($cfg.TOKEN -eq '1')
+$apduToken = [byte[]](0xFF, 0xB0, 0x00, 0x04, 0x10)
 $reader = $null; $last = $null; $fails = 0; $beat = [DateTime]::MinValue
 while ($true) {
   if ((Get-Date) - $beat -gt [TimeSpan]::FromSeconds(60)) { Heartbeat; Flush; $beat = Get-Date }
@@ -92,6 +95,13 @@ while ($true) {
     $fails = 0
     $recv = New-Object byte[] 64; [int]$rlen = 64
     $rc2 = [PCSC]::SCardTransmit($card, [PCSC]::Pci($proto), $apdu, $apdu.Length, [IntPtr]::Zero, $recv, [ref]$rlen)
+    $token = $null
+    if ($readToken -and $rc2 -eq 0) {
+      $tr = New-Object byte[] 32; [int]$tlen = 32
+      if ([PCSC]::SCardTransmit($card, [PCSC]::Pci($proto), $apduToken, $apduToken.Length, [IntPtr]::Zero, $tr, [ref]$tlen) -eq 0 -and $tlen -ge 2 -and $tr[$tlen - 2] -eq 0x90) {
+        $token = ([System.Text.Encoding]::ASCII.GetString($tr, 0, $tlen - 2)).Trim([char]0, ' ')
+      }
+    }
     $null = [PCSC]::SCardDisconnect($card, 0)
     if ($rc2 -eq 0 -and $rlen -ge 2 -and $recv[$rlen - 2] -eq 0x90) {
       $uid = $recv[0..($rlen - 3)]
@@ -100,7 +110,7 @@ while ($true) {
         $last = $hex
         if ($api) {
           try {
-            $body = @{ uid = $hex; via = 'bridge' } | ConvertTo-Json
+            $body = @{ uid = $hex; via = 'bridge'; token = $token } | ConvertTo-Json
             $r = Invoke-RestMethod -Method Post -Uri ($base + '/api/device/scan') -Body $body -ContentType 'application/json; charset=utf-8' -Headers $headers -TimeoutSec 8
             $who = if ($r.employee) { $r.employee.code } else { '' }
             Log ("UID {0} -> {1} {2} {3}" -f $hex, $r.kind, $r.type, $who)

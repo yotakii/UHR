@@ -53,7 +53,11 @@ export function NfcSettings() {
     </Panel>
     <Panel title={L('الحضور بملصق الفرع', 'Branch-sticker check-in')}>
       <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
+        {onOff('drift_correct', L('تصحيح وقت الحدث بانحراف ساعة الجهاز', 'Correct event times by the device clock drift'), L('حين يتجاوز الانحراف المقبول أعلاه.', 'When the drift exceeds the accepted value above.'))}
+        {onOff('externals', L('بطاقات غير الموظفين تسجّل ساعات المشاركة', 'Non-employee cards record participation hours'), L('النقرتان في اليوم ← ساعات بانتظار المشرف.', 'Two taps a day → hours awaiting the supervisor.'))}
         {onOff('sticker', L('السماح بالحضور بمسح ملصق الفرع', 'Allow check-in by scanning the branch sticker'), L('بديل عن القارئ للفروع الصغيرة: ملصق QR أو NFC يمسحه الموظف بهاتفه.', 'An alternative to readers for small branches: a QR or NFC sticker scanned with the phone.'))}
+        <Field label={L('ربط الحضور بالهاتف بجهاز مسجّل', 'Bind phone check-in to a registered device')} hint={L('«أول جهاز» يُسجَّل تلقائياً عند أول حضور؛ «مسجّل فقط» يتطلب تسجيلاً مسبقاً. تُلغي الموارد البشرية الربط من ملف الموظف.', '“First device” registers on the first check-in; “registered only” requires prior registration. HR unlinks from the employee file.')} div>
+          <Seg value={String(v.sticker_device ?? 'off')} onChange={x => edit && setV({ ...v, sticker_device: x as 'off' })} options={[{ v: 'off', label: L('بلا ربط', 'Off') }, { v: 'bind_first', label: L('أول جهاز', 'First device') }, { v: 'registered', label: L('مسجّل فقط', 'Registered only') }]} /></Field>
         {onOff('sticker_geo', L('اشتراط الموقع الجغرافي ضمن نطاق الفرع', 'Require the location within the branch area'), L('النطاق يُحدد لكل فرع في صفحة الفروع.', 'The radius is set per branch on the branches page.'))}
       </div>
     </Panel>

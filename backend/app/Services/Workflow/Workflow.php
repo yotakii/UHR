@@ -38,6 +38,34 @@ class Workflow
         return $levels ?: (in_array($type, ['penalty', 'offer_budget', 'salary_access', 'contract_exception'], true) ? [self::level('ceo')] : (in_array($type, ['overtime', 'service', 'advance'], true) ? [self::level('hr_director')] : [self::level('manager'), self::level('hr_director')]));
     }
 
+    /**
+     * سلسلة حسب السياق (FR-TM-008 / FR-TD BR-10): سلسلة خاصة بالنوع الفرعي «type:sub» إن وُجدت (مثل mission:MT-30)،
+     * ثم السلسلة الأعلى «…_high» عند تحقق قاعدة النوع من إعداد chain_rules (مبلغ ≥ حد بعملته، أو درجة أو فرع من القائمة).
+     * @param array{sub?: ?string, amount?: float|int|null, currency?: ?string, grade?: ?string, branch?: int|null} $ctx
+     */
+    public static function chainFor(string $type, array $ctx = []): array
+    {
+        return self::chain(self::chainKey($type, $ctx));
+    }
+
+    public static function chainKey(string $type, array $ctx = []): string
+    {
+        $base = ! empty($ctx['sub']) && ApprovalChain::where('type', "{$type}:{$ctx['sub']}")->exists() ? "{$type}:{$ctx['sub']}" : $type;
+        $r = (\App\Support\Settings::get('chain_rules') ?? [])[$type] ?? null;
+        if (! $r) return $base;
+        $hit = false;
+        if ((float) ($r['amount'] ?? 0) > 0 && isset($ctx['amount'])) {
+            $amt = (float) $ctx['amount']; $cur = $ctx['currency'] ?? ($r['currency'] ?? null);
+            if ($cur && ! empty($r['currency']) && $cur !== $r['currency']) { $rate = \App\Models\ExchangeRate::lookup($cur, $r['currency'], now()->toDateString()); $amt = $rate ? $amt * $rate : $amt; }
+            $hit = $amt >= (float) $r['amount'];
+        }
+        if (! $hit && ! empty($ctx['grade']) && in_array($ctx['grade'], $r['grades'] ?? [], true)) $hit = true;
+        if (! $hit && ! empty($ctx['branch']) && in_array((int) $ctx['branch'], array_map('intval', $r['branches'] ?? []), true)) $hit = true;
+        if (! $hit) return $base;
+        foreach (["{$base}_high", "{$type}_high"] as $k) if (ApprovalChain::where('type', $k)->exists()) return $k;
+        return $base;
+    }
+
     public static function level(string $role, ?int $userId = null): array
     {
         [$ar, $en] = self::LEVEL[$role] ?? [$role, $role];

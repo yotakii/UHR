@@ -87,7 +87,8 @@ class TrainingController extends Controller
             'branches' => Location::where('active', true)->orderBy('id')->get(['id', 'name_ar', 'name_en'])->map(fn ($l) => ['id' => $l->id, 'ar' => $l->name_ar, 'en' => $l->name_en]),
             'employees' => Td::scoped($u)->whereNotIn('status', ['terminated'])->orderBy('name')->get(['id', 'code', 'name', 'name_en', 'department_id', 'status'])->map(fn ($e) => ['id' => $e->id, 'code' => $e->code, 'ar' => $e->name, 'en' => $e->name_en, 'department_id' => $e->department_id, 'status' => $e->status]),
             'jobs' => Codes::items('jobs'), 'currencies' => Codes::items('currencies'),
-            'cfg' => array_intersect_key($c, array_flip(['mode', 'pass_mark', 'attendance_min', 'min_evidence', 'survey_items', 'impact_items', 'cost_types', 'impact_points', 'capacity', 'min_quotes']))];
+            'rooms' => \App\Models\TdRoom::where('active', true)->orderBy('name')->get(['id', 'name', 'name_en', 'capacity', 'location_id'])->map(fn ($x) => ['id' => $x->id, 'ar' => $x->name, 'en' => $x->name_en ?: $x->name, 'capacity' => $x->capacity, 'location_id' => $x->location_id]),
+            'cfg' => array_intersect_key($c, array_flip(['mode', 'pass_mark', 'attendance_min', 'min_evidence', 'survey_items', 'impact_items', 'cost_types', 'impact_points', 'capacity', 'min_quotes', 'deliveries', 'audiences', 'quote_criteria', 'smart_required', 'tna_enforce', 'tna_from_month', 'tna_to_month']))];
     }
 
     // ———————————————— الكفاءات والجهات والبرامج ————————————————
@@ -178,7 +179,7 @@ class TrainingController extends Controller
     {
         $this->hr($r);
         $v = $r->validate(['code' => ['required', 'string', 'max:30', 'regex:/^[A-Za-z0-9-]+$/'], 'title' => ['required', 'string', 'max:200'], 'title_en' => ['nullable', 'string', 'max:200'], 'path' => ['required', 'in:'.implode(',', Td::PATHS)],
-            'delivery' => ['required', 'in:'.implode(',', Td::DELIVERY)], 'audience' => ['required', 'in:staff,departments,managers'], 'method' => ['required', 'in:general,workshop,lecture,group'], 'objectives' => ['nullable', 'string', 'max:3000'],
+            'delivery' => ['required', 'in:'.implode(',', \App\Services\Training\TdExtras::deliveryKeys())], 'audience' => ['required', 'in:'.implode(',', \App\Services\Training\TdExtras::audienceKeys())], 'method' => ['required', 'in:general,workshop,lecture,group'], 'objectives' => ['nullable', 'string', 'max:3000'],
             'outcomes' => ['nullable', 'string', 'max:3000'], 'modules' => ['nullable', 'array', 'max:30'], 'hours' => ['required', 'numeric', 'min:0', 'max:2000'], 'prerequisites' => ['nullable', 'array'], 'competencies' => ['nullable', 'array'],
             'competencies.*.id' => ['required', 'integer'], 'competencies.*.level' => ['required', 'integer', 'between:1,5'], 'mandatory' => ['boolean'], 'materials' => ['nullable', 'array'], 'reviewed_on' => ['nullable', 'date'],
             'pass_mark' => ['nullable', 'integer', 'between:1,100'], 'attendance_min' => ['nullable', 'integer', 'between:1,100'], 'has_test' => ['boolean'], 'kpi_id' => ['nullable', 'integer'], 'impact_items' => ['nullable', 'array', 'max:15'], 'active' => ['boolean']]);
@@ -238,13 +239,13 @@ class TrainingController extends Controller
     {
         return response()->json(['data' => TdCampaign::latest('id')->get()->map(fn ($c) => ['id' => $c->id, 'title' => $c->title, 'year' => $c->year, 'scope' => $c->scope, 'opens_on' => $c->opens_on->toDateString(), 'closes_on' => $c->closes_on->toDateString(),
             'status' => $c->status, 'departments' => $this->needs->campaignDepartments($c)->map(fn ($d) => ['id' => $d->id, 'ar' => $d->name_ar, 'en' => $d->name_en, 'submitted' => $c->responses[$d->id] ?? null])->values(),
-            'needs' => TdNeed::where('campaign_id', $c->id)->count()])]);
+            'needs' => TdNeed::where('campaign_id', $c->id)->count(), 'rate' => \App\Services\Training\TdExtras::campaignRate($c)])]);
     }
 
     public function storeCampaign(Request $r): JsonResponse
     {
         $v = $r->validate(['title' => ['required', 'string', 'max:200'], 'year' => ['required', 'integer', 'between:2020,2100'], 'scope' => ['nullable', 'in:company,branch,department'], 'scope_ids' => ['nullable', 'array'],
-            'opens_on' => ['nullable', 'date'], 'closes_on' => ['required', 'date', 'after_or_equal:today']]);
+            'opens_on' => ['nullable', 'date'], 'closes_on' => ['required', 'date', 'after_or_equal:today'], 'window_reason' => ['nullable', 'string', 'max:1000']]);
         $this->needs->campaign($v, $r->user());
         return $this->campaigns($r);
     }
@@ -282,6 +283,8 @@ class TrainingController extends Controller
         return response()->json(['data' => ['id' => $p->id, 'year' => $p->year, 'title' => $p->title, 'scope' => $p->scope, 'location_id' => $p->location_id, 'status' => $p->status, 'budget' => $p->budget, 'currency' => $p->currency,
             'budget_split' => $p->budget_split, 'baseline' => $p->baseline, 'finance_note' => $p->finance_note, 'progress' => Plans::progress($p), 'checks' => Plans::checks($p),
             'items' => $items->map(fn ($i) => $i->toArray() + ['needs' => TdNeed::where('plan_item_id', $i->id)->count(), 'sessions' => TdSession::where('plan_item_id', $i->id)->get(['id', 'ref', 'status', 'starts_on'])]),
+            'change_requests' => \App\Models\TdApproval::where('plan_id', $p->id)->where('kind', 'plan_change')->latest('id')->limit(30)->get()->map(fn ($a) => ['id' => $a->id, 'item_id' => $a->item_id, 'title' => $a->data['title'] ?? null,
+                'reason' => $a->reason, 'cost_delta' => $a->cost_delta, 'status' => $a->status, 'at' => $a->created_at?->toIso8601String(), 'steps' => Workflow::steps($a)]),
             'steps' => Workflow::steps($p), 'step_id' => $cur?->id, 'can_act' => $cur ? Workflow::canAct($r->user(), $cur, $p) : false]]);
     }
 
@@ -302,8 +305,8 @@ class TrainingController extends Controller
 
     private function itemInput(Request $r): array
     {
-        return $r->validate(['program_id' => ['nullable', 'integer'], 'title' => ['required', 'string', 'max:200'], 'path' => ['required', 'in:'.implode(',', Td::PATHS)], 'delivery' => ['required', 'in:'.implode(',', Td::DELIVERY)],
-            'audience' => ['nullable', 'in:staff,departments,managers'], 'location_id' => ['nullable', 'integer'], 'department_id' => ['nullable', 'integer'], 'month' => ['nullable', 'integer', 'between:1,12'],
+        return $r->validate(['program_id' => ['nullable', 'integer'], 'title' => ['required', 'string', 'max:200'], 'path' => ['required', 'in:'.implode(',', Td::PATHS)], 'delivery' => ['required', 'in:'.implode(',', \App\Services\Training\TdExtras::deliveryKeys())],
+            'audience' => ['nullable', 'in:'.implode(',', \App\Services\Training\TdExtras::audienceKeys())], 'location_id' => ['nullable', 'integer'], 'department_id' => ['nullable', 'integer'], 'month' => ['nullable', 'integer', 'between:1,12'],
             'trainees' => ['nullable', 'integer', 'min:0'], 'estimated_cost' => ['required', 'numeric', 'min:0'], 'priority' => ['nullable', 'in:low,normal,high,urgent'], 'objective' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', 'in:planned,confirmed,in_progress,done,postponed,cancelled'], 'need_ids' => ['nullable', 'array'], 'change_reason' => ['nullable', 'string', 'max:500']]);
     }
@@ -340,7 +343,8 @@ class TrainingController extends Controller
         $counts = TdEnrollment::where('session_id', $s->id)->selectRaw('status, count(*) n')->groupBy('status')->pluck('n', 'status');
         return ['id' => $s->id, 'ref' => $s->ref, 'title' => $s->title, 'program' => $s->program ? ['id' => $s->program->id, 'code' => $s->program->code, 'path' => $s->program->path, 'delivery' => $s->program->delivery, 'hours' => $s->program->hours, 'method' => $s->program->method, 'has_test' => $s->program->has_test] : null,
             'starts_on' => $s->starts_on->toDateString(), 'ends_on' => $s->ends_on->toDateString(), 'meetings' => $s->meetings, 'trainer' => $s->trainer ? ['id' => $s->trainer->id, 'ar' => $s->trainer->name, 'en' => $s->trainer->name_en ?: $s->trainer->name] : null,
-            'center' => $s->center?->name, 'center_id' => $s->center_id, 'location_id' => $s->location_id, 'place' => $s->place, 'link' => $s->link, 'capacity' => $s->capacity, 'status' => $s->status, 'counts' => $counts, 'plan_item_id' => $s->plan_item_id, 'currency' => $s->currency, 'total_cost' => Sessions::totalCost($s)];
+            'center' => $s->center?->name, 'center_id' => $s->center_id, 'location_id' => $s->location_id, 'place' => $s->place, 'link' => $s->link, 'capacity' => $s->capacity, 'status' => $s->status, 'counts' => $counts, 'plan_item_id' => $s->plan_item_id, 'currency' => $s->currency, 'total_cost' => Sessions::totalCost($s),
+            'room_id' => $s->room_id, 'room' => $s->room_id ? \App\Models\TdRoom::whereKey($s->room_id)->value('name') : null];
     }
 
     public function sessionsList(Request $r): JsonResponse
@@ -361,12 +365,14 @@ class TrainingController extends Controller
         $comm = TdCommitment::whereIn('enrollment_id', $ens->pluck('id'))->get()->keyBy('enrollment_id');
         $origin = $r->headers->get('origin') ?: rtrim((string) config('app.frontend_url'), '/');
         return response()->json(['data' => self::sessionRow($s) + ['costs' => $s->costs ?? [], 'quotes' => $s->quotes ?? [], 'quote_choice' => $s->quote_choice, 'quote_reason' => $s->quote_reason, 'logistics' => $s->logistics ?? [],
+            'quote_status' => $s->quote_status, 'quote_rank' => \App\Services\Training\TdExtras::quoteRank($s), 'quote_criteria' => Td::cfg()['quote_criteria'], 'postpone_reason' => $s->postpone_reason, 'ai_summary' => $s->ai_summary,
+            'candidates' => Td::manages($u) ? \App\Services\Training\TdExtras::candidates($s) : [], 'evaluated_at' => $s->evaluated_at?->toIso8601String(),
             'warnings' => Sessions::warnings($s, $p), 'survey_url' => rtrim($origin, '/').'/td-survey/'.$s->survey_token, 'checkin_url' => rtrim($origin, '/').'/td-checkin/'.$s->survey_token,
             'surveys' => ['n' => TdSurvey::where('session_id', $s->id)->count(), 'avg' => TdSurvey::where('session_id', $s->id)->avg('avg')],
             'rating' => ($rt = TdRating::where('session_id', $s->id)->first()) ? $rt->only(['scores', 'avg', 'recommendation', 'note']) : null, 'kpi' => $s->kpi, 'roi' => $s->roi,
             'program_full' => $p?->only(['id', 'code', 'title', 'pass_mark', 'attendance_min', 'has_test', 'competencies', 'hours', 'delivery']),
             'enrollments' => $ens->map(fn ($en) => ['id' => $en->id, 'employee' => $en->employee ? ['id' => $en->employee->id, 'code' => $en->employee->code, 'ar' => $en->employee->name, 'en' => $en->employee->name_en, 'status' => $en->employee->status] : null,
-                'status' => $en->status, 'reason' => $en->reason, 'exception' => $en->exception, 'manager_ok' => $en->manager_ok, 'attendance' => $en->attendance ?? [], 'attendance_pct' => $en->attendance_pct,
+                'status' => $en->status, 'reason' => $en->reason, 'exception' => $en->exception, 'exclude_reason' => $en->exclude_reason, 'manager_ok' => $en->manager_ok, 'attendance' => $en->attendance ?? [], 'attendance_pct' => $en->attendance_pct,
                 'pre_score' => $en->pre_score, 'post_score' => $en->post_score, 'result' => $en->result, 'result_reason' => $en->result_reason, 'failure' => $en->failure, 'cost' => $en->cost, 'apply_plan' => (bool) $en->apply_plan,
                 'commitment' => isset($comm[$en->id]) ? ['id' => $comm[$en->id]->id, 'status' => $comm[$en->id]->status, 'months' => $comm[$en->id]->months, 'cost' => $comm[$en->id]->cost] : null])]]);
     }
@@ -377,7 +383,7 @@ class TrainingController extends Controller
             'meetings.*.date' => ['required', 'date'], 'meetings.*.from' => ['nullable', 'date_format:H:i'], 'meetings.*.to' => ['nullable', 'date_format:H:i'], 'trainer_id' => ['nullable', 'integer'], 'center_id' => ['nullable', 'integer'],
             'location_id' => ['nullable', 'integer'], 'place' => ['nullable', 'string', 'max:200'], 'link' => ['nullable', 'string', 'max:255'], 'capacity' => ['required', 'integer', 'between:1,500'], 'costs' => ['nullable', 'array'],
             'costs.*.type' => ['required', 'string', 'max:30'], 'costs.*.amount' => ['required', 'numeric', 'min:0'], 'costs.*.currency' => ['nullable', 'string', 'size:3'], 'currency' => ['nullable', 'string', 'size:3'],
-            'quotes' => ['nullable', 'array', 'max:10'], 'quote_choice' => ['nullable', 'integer', 'min:0'], 'quote_reason' => ['nullable', 'string', 'max:2000']]);
+            'quotes' => ['nullable', 'array', 'max:10'], 'quote_choice' => ['nullable', 'integer', 'min:0'], 'quote_reason' => ['nullable', 'string', 'max:2000'], 'room_id' => ['nullable', 'integer'], 'force' => ['nullable', 'boolean']]);
     }
 
     public function storeSession(Request $r): JsonResponse
@@ -463,10 +469,11 @@ class TrainingController extends Controller
     {
         $year = (int) $r->query('year', now()->year);
         $s = TdSession::with('program:id,path,delivery,audience')->whereYear('starts_on', $year)->whereNotIn('status', ['cancelled'])->get();
-        $items = TdPlanItem::whereHas('plan', fn ($q) => $q->where('year', $year))->whereDoesntHave('program', fn ($q) => $q->whereIn('id', $s->pluck('program_id')))->whereNotNull('month')->whereNotIn('status', ['cancelled'])->get();
+        $items = TdPlanItem::whereHas('plan', fn ($q) => $q->where('year', $year))->whereDoesntHave('program', fn ($q) => $q->whereIn('id', $s->pluck('program_id')))->whereNotIn('status', ['cancelled', 'done'])->with('plan:id,status')->get();
         return response()->json(['year' => $year, 'sessions' => $s->map(fn ($x) => ['id' => $x->id, 'title' => $x->title, 'from' => $x->starts_on->toDateString(), 'to' => $x->ends_on->toDateString(), 'path' => $x->program?->path, 'delivery' => $x->program?->delivery,
             'audience' => $x->program?->audience, 'status' => $x->status, 'location_id' => $x->location_id]),
-            'items' => $items->map(fn ($i) => ['id' => $i->id, 'title' => $i->title, 'month' => $i->month, 'path' => $i->path, 'delivery' => $i->delivery, 'audience' => $i->audience, 'status' => $i->status, 'location_id' => $i->location_id]),
+            'items' => $items->map(fn ($i) => ['id' => $i->id, 'title' => $i->title, 'month' => $i->month, 'path' => $i->path, 'delivery' => $i->delivery, 'audience' => $i->audience, 'status' => $i->status, 'location_id' => $i->location_id,
+                'estimated_cost' => (float) $i->estimated_cost, 'trainees' => $i->trainees, 'priority' => $i->priority, 'objective' => $i->objective, 'program_id' => $i->program_id, 'department_id' => $i->department_id, 'plan_status' => $i->plan?->status, 'pending' => (bool) $i->pending_change]),
             'holidays' => \App\Models\Holiday::whereYear('date', $year)->get(['date', 'name_ar', 'name_en'])->map(fn ($h) => ['date' => $h->date->toDateString(), 'ar' => $h->name_ar, 'en' => $h->name_en])]);
     }
 
@@ -525,7 +532,7 @@ class TrainingController extends Controller
         return response()->json(['data' => TdQualification::with('employee:id,code,name,name_en,hire_date,status,manager_id')->when($scope, fn ($q) => $q->whereIn('employee_id', $scope))->latest('id')->limit(200)->get()
             ->map(fn ($q) => ['id' => $q->id, 'employee' => $q->employee ? ['id' => $q->employee->id, 'code' => $q->employee->code, 'ar' => $q->employee->name, 'en' => $q->employee->name_en, 'hire_date' => $q->employee->hire_date?->toDateString(), 'status' => $q->employee->status] : null,
                 'stations' => array_map(fn ($s) => $s + ['trainer' => ($t = Employee::find($s['trainer_id'] ?? 0)) ? ['ar' => $t->name, 'en' => $t->name_en] : null, 'department' => ($d = Department::find($s['department_id'] ?? 0)) ? ['ar' => $d->name_ar, 'en' => $d->name_en] : null], $q->stations),
-                'status' => $q->status, 'progress' => $q->progress, 'evaluation' => $q->evaluation, 'certificate_id' => $q->certificate_id])]);
+                'status' => $q->status, 'progress' => $q->progress, 'evaluation' => $q->evaluation, 'certificate_id' => $q->certificate_id, 'kind' => $q->kind])]);
     }
 
     public function qualificationAction(Request $r, int $id, string $action): JsonResponse
@@ -614,8 +621,24 @@ class TrainingController extends Controller
             'escalate_days' => ['required', 'integer', 'between:1,90'], 'survey_min' => ['required', 'integer', 'between:0,100'], 'gap_threshold' => ['required', 'integer', 'between:1,4'], 'weights' => ['required', 'array'],
             'cert_alerts' => ['required', 'array'], 'stage_hours_pct' => ['required', 'integer', 'between:1,100'], 'stage_min_rating' => ['required', 'integer', 'between:1,5'], 'stage_free_max_months' => ['required', 'integer', 'between:1,24'],
             'peak_seasons' => ['present', 'array'], 'cost_types' => ['required', 'array', 'min:1'], 'logistics' => ['present', 'array'], 'survey_items' => ['required', 'array', 'min:3', 'max:15'], 'impact_items' => ['required', 'array', 'min:3', 'max:15'],
-            'qualification_templates' => ['present', 'array'], 'commitment_ar' => ['required', 'string', 'max:10000'], 'commitment_en' => ['required', 'string', 'max:10000']]);
+            'qualification_templates' => ['present', 'array'], 'commitment_ar' => ['required', 'string', 'max:10000'], 'commitment_en' => ['required', 'string', 'max:10000'],
+            // الدفعة 27
+            'deliveries' => ['sometimes', 'array', 'min:1', 'max:20'], 'deliveries.*.key' => ['required', 'regex:/^[a-z][a-z0-9_]{1,19}$/', 'distinct'], 'deliveries.*.ar' => ['required', 'string', 'max:60'], 'deliveries.*.en' => ['required', 'string', 'max:60'],
+            'audiences' => ['sometimes', 'array', 'min:1', 'max:12'], 'audiences.*.key' => ['required', 'regex:/^[a-z][a-z0-9_]{1,11}$/', 'distinct'], 'audiences.*.ar' => ['required', 'string', 'max:60'], 'audiences.*.en' => ['required', 'string', 'max:60'],
+            'quote_gate' => ['sometimes', 'boolean'], 'quote_criteria' => ['sometimes', 'array', 'min:1', 'max:8'], 'quote_criteria.*.key' => ['required', 'regex:/^[a-z][a-z0-9_]{1,19}$/', 'distinct'], 'quote_criteria.*.ar' => ['required', 'string', 'max:60'],
+            'quote_criteria.*.en' => ['required', 'string', 'max:60'], 'quote_criteria.*.weight' => ['required', 'integer', 'between:0,100'], 'change_approval' => ['sometimes', 'boolean'], 'trainer_weights' => ['sometimes', 'array'], 'trainer_weights.*' => ['integer', 'between:0,100'],
+            'checkin_before' => ['sometimes', 'integer', 'between:0,240'], 'checkin_after' => ['sometimes', 'integer', 'between:0,480'], 'late_after' => ['sometimes', 'integer', 'between:0,120'], 'campaign_remind_days' => ['sometimes', 'integer', 'between:1,30'],
+            'campaign_auto_close' => ['sometimes', 'boolean'], 'tna_enforce' => ['sometimes', 'boolean'], 'smart_required' => ['sometimes', 'boolean'], 'email' => ['sometimes', 'boolean'], 'link_days' => ['sometimes', 'integer', 'between:1,60'],
+            'idp_from_appraisal' => ['sometimes', 'boolean'], 'cert_templates' => ['sometimes', 'array'], 'cert_templates.*.ar' => ['required', 'string', 'max:80'], 'cert_templates.*.en' => ['required', 'string', 'max:80'],
+            'cert_templates.*.body_ar' => ['required', 'string', 'max:2000'], 'cert_templates.*.body_en' => ['required', 'string', 'max:2000'], 'cert_signer' => ['sometimes', 'string', 'max:80'], 'linkedin_share' => ['sometimes', 'boolean']]);
+        if (isset($v['quote_criteria']) && array_sum(array_column($v['quote_criteria'], 'weight')) !== 100) throw ApiException::field('quote_criteria', L::t('مجموع أوزان معايير العروض يجب أن يساوي 100.', 'Quote criteria weights must add up to 100.'), 'weights_sum');
+        if (isset($v['trainer_weights']) && array_sum($v['trainer_weights']) !== 100) throw ApiException::field('trainer_weights', L::t('مجموع أوزان بطاقة المدرب يجب أن يساوي 100.', 'Trainer scorecard weights must add up to 100.'), 'weights_sum');
+        foreach (['deliveries' => 'delivery', 'audiences' => 'audience'] as $k => $col) if (isset($v[$k])) {
+            $used = TdProgram::distinct()->pluck($col)->merge(TdPlanItem::distinct()->pluck($col))->filter()->unique()->diff(array_column($v[$k], 'key'));
+            if ($used->isNotEmpty()) throw ApiException::field($k, L::t('لا يمكن حذف تصنيف مستعمل: '.$used->implode('، '), 'A category in use cannot be removed: '.$used->implode(', ')), 'in_use');
+        }
         $old = Td::cfg();
+        $v = array_merge(array_diff_key($old, ['commitment_ar' => 1]), $v);
         Settings::put('training', $v);
         Audit::record('settings.training', null, ['before' => array_diff_key($old, ['commitment_ar' => 1, 'commitment_en' => 1]), 'after' => array_diff_key($v, ['commitment_ar' => 1, 'commitment_en' => 1])]);
         return $this->settings($r);
@@ -638,7 +661,7 @@ class TrainingController extends Controller
         if (! $e) return response()->json(['record' => null]);
         $team = Employee::current()->where('manager_id', $e->id)->pluck('id');
         $trainer = TdTrainer::where('employee_id', $e->id)->value('id');
-        return response()->json(['record' => Records::record($e), 'mode' => Td::cfg()['mode'],
+        return response()->json(['record' => Records::record($e), 'employee_id' => $e->id, 'mode' => Td::cfg()['mode'],
             'to_sign' => TdCommitment::where('employee_id', $e->id)->where('status', 'generated')->get()->map(fn ($c) => ['id' => $c->id, 'title' => $c->title, 'cost' => $c->cost, 'currency' => $c->currency, 'months' => $c->months, 'body' => $c->body]),
             'upcoming' => TdEnrollment::with('session')->where('employee_id', $e->id)->whereIn('status', ['nominated', 'pending_commitment', 'confirmed'])->get()->map(fn ($en) => ['id' => $en->id, 'status' => $en->status, 'session' => self::sessionRow($en->session)]),
             'team_nominations' => TdEnrollment::with(['employee:id,code,name,name_en', 'session:id,title,starts_on'])->whereIn('employee_id', $team)->where('status', 'nominated')->whereNull('manager_ok')->get()

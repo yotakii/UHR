@@ -64,6 +64,12 @@ class CompanyDefaults
         ApprovalChain::firstOrCreate(['type' => 'mission'], ['levels' => \App\Services\Missions\Missions::DEFAULT_CHAIN]);
         \App\Services\Externals\Externals::seedChains();
         ApprovalChain::firstOrCreate(['type' => 'td_plan'], ['levels' => \App\Services\Training\Plans::DEFAULT_CHAIN]);
+        // تعديل خطة تدريب معتمدة (BR-18) واختيار عرض تدريب خارجي (BR-05) ← المدير العام
+        ApprovalChain::firstOrCreate(['type' => 'td_plan_change'], ['levels' => [$gm]]);
+        ApprovalChain::firstOrCreate(['type' => 'quote_choice'], ['levels' => [$gm]]);
+        // الدفعة 28: دعوة عمل ضمن مهمة ← HR، وتعديل مهمة معتمدة بزيادة كلفة ← المدير ثم المالية
+        ApprovalChain::firstOrCreate(['type' => 'work_invite'], ['levels' => [$hr]]);
+        ApprovalChain::firstOrCreate(['type' => 'mission_amend'], ['levels' => [['role_ar' => 'المدير المباشر', 'role_en' => 'Line manager', 'role_key' => 'manager'], ['role_ar' => 'المالية', 'role_en' => 'Finance', 'role_key' => 'finance']]]);
         ApprovalChain::firstOrCreate(['type' => 'bonus'], ['levels' => [$hr]]);
         // قرار عقد مخالف للسياسة (الجزء D، POL-CR-06/07) ← الرئيس التنفيذي
         ApprovalChain::firstOrCreate(['type' => 'contract_exception'], ['levels' => [['role_ar' => 'الرئيس التنفيذي', 'role_en' => 'CEO', 'role_key' => 'ceo']]]);

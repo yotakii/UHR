@@ -138,12 +138,19 @@ class NfcGate
      * حدث من جهاز (C.4 الخطوات 3–8). $dry = محاكاة دون حفظ.
      * @return array{decision: string, reason: ?string, seq: ?int, name?: ?array, direction?: ?string, time?: string, event_id?: int}
      */
-    public function event(Device $d, string $identifier, CarbonInterface $at, ?int $seq = null, string $via = 'nfc', bool $dry = false): array
+    public function event(Device $d, string $identifier, CarbonInterface $at, ?int $seq = null, string $via = 'nfc', bool $dry = false, ?string $token = null): array
     {
         $at = Carbon::instance($at)->utc();
+        // FR-NF-016: ساعة الجهاز منحرفة أكثر من المقبول ← يُصحَّح وقت الحدث بالانحراف المقيس
+        if (self::cfg()['drift_correct'] && $d->clock_drift && abs((int) $d->clock_drift) > (int) self::cfg()['drift_seconds']) $at = $at->copy()->subSeconds((int) $d->clock_drift);
         if ($seq !== null && ! $dry && ($old = NfEvent::where('device_id', $d->id)->where('seq', $seq)->first())) return self::out($old, $seq);   // إعادة إرسال بعد انقطاع
         $type = $via === 'zk' ? 'fingerprint' : 'nfc';
         $cred = self::credential($identifier, $type);
+        // FR-NF-018: رمز ذاكرة البطاقة حين يكون أمان البطاقة «ذاكرة»
+        if ($cred && $cred->memory_token && in_array(self::cfg()['card_security'], ['memory', 'secure'], true) && ! hash_equals((string) $cred->memory_token, (string) $token))
+            return $dry ? ['decision' => 'rejected', 'reason' => 'token_mismatch'] : self::out($this->record($d, $cred->employee, $identifier, $at, 'rejected', 'token_mismatch', ['seq' => $seq, 'via' => $via]), $seq);
+        // FR-VL-007: بطاقة متطوع/متدرب ← ساعات مشاركة لا حضور موظف
+        if ($cred && $cred->external_id && ! $cred->employee_id) return $this->externalTap($d, $cred, $identifier, $at, $seq, $via, $dry);
         $e = $cred?->employee;
         if (! $cred && $type === 'nfc') $e = CardUid::match(Employee::query(), $identifier)->first();   // بطاقة قديمة لم تدخل السجل بعد
         return $this->decide($d, $e, $cred, $identifier, $at, $seq, $via, $dry);
@@ -153,6 +160,67 @@ class NfcGate
     public function person(Device $d, Employee $e, CarbonInterface $at, string $via = 'sticker'): array
     {
         return $this->decide($d, $e, null, 'user:'.$e->id, Carbon::instance($at)->utc(), null, $via, false);
+    }
+
+    /** نقرة بطاقة غير موظف: الأولى في اليوم بداية، والتالية نهاية ← سجل ساعات بانتظار مصادقة المشرف */
+    private function externalTap(Device $d, Credential $c, string $identifier, Carbon $at, ?int $seq, string $via, bool $dry): array
+    {
+        if (! self::cfg()['externals']) return ['seq' => $seq, 'decision' => 'rejected', 'reason' => 'unknown'];
+        if ($c->status !== 'active') return $dry ? ['decision' => 'rejected', 'reason' => 'suspended'] : self::out($this->record($d, null, $identifier, $at, 'rejected', 'suspended', ['seq' => $seq, 'via' => $via]), $seq);
+        $g = \App\Models\Engagement::where('external_id', $c->external_id)->where('status', 'active')->latest('id')->first();
+        if (! $g) return $dry ? ['decision' => 'rejected', 'reason' => 'inactive'] : self::out($this->record($d, null, $identifier, $at, 'rejected', 'inactive', ['seq' => $seq, 'via' => $via]), $seq);
+        if ($dry) return ['decision' => 'accepted', 'reason' => 'external'];
+        $tz = ($d->location_id ? Location::find($d->location_id)?->timezone : null) ?: config('app.timezone');
+        $local = $at->copy()->setTimezone($tz); $key = 'nf-ext:'.$c->id.':'.$local->toDateString();
+        $ev = $this->record($d, null, $identifier, $at, 'accepted', 'external', ['seq' => $seq, 'via' => $via]);
+        if ($start = Cache::pull($key)) {
+            $hours = round(max(0, $local->getTimestamp() - $start) / 3600, 2);
+            if ($hours >= 0.25) \App\Models\VolunteerLog::create(['engagement_id' => $g->id, 'date' => $local->toDateString(), 'hours' => min(24, $hours), 'activity' => 'تسجيل بالبطاقة — '.($d->name_ar ?? ''), 'via' => 'nfc', 'status' => 'pending']);
+        } else Cache::put($key, $local->getTimestamp(), now()->addHours(20));
+        return self::out($ev, $seq);
+    }
+
+    /** إصدار بطاقة لغير موظف (متطوع، متدرب، خبير) — تُعطَّل آلياً عند انتهاء الاتفاقية (FR-VL-015) */
+    public static function issueExternal(\App\Models\External $x, string $raw, ?User $by): Credential
+    {
+        $identifier = CardUid::format($raw);
+        if (! $identifier) throw ApiException::field('identifier', L::t('المعرّف غير صالح.', 'Invalid identifier.'), 'card_invalid');
+        if (Credential::where('type', 'nfc')->whereIn('norm', CardUid::keys($identifier))->where('status', 'active')->where(fn ($q) => $q->whereNull('external_id')->orWhere('external_id', '!=', $x->id))->exists())
+            throw ApiException::field('identifier', L::t('هذا المعرّف مسجّل لشخص آخر في الشركة.', 'This identifier belongs to someone else in the company.'), 'card_taken');
+        Credential::where('external_id', $x->id)->where('type', 'nfc')->where('status', 'active')->update(['status' => 'replaced', 'revoked_at' => now()]);
+        $c = Credential::create(['external_id' => $x->id, 'employee_id' => null, 'type' => 'nfc', 'identifier' => $identifier, 'norm' => self::norm('nfc', $identifier), 'status' => 'active', 'valid_from' => now()->toDateString(), 'issued_by' => $by?->id]);
+        Audit::record('credential.issued_external', $c);
+        return $c;
+    }
+
+    public static function disableExternal(int $externalId, string $reason): int
+    {
+        return Credential::where('external_id', $externalId)->where('status', 'active')->update(['status' => 'revoked', 'reason' => mb_substr($reason, 0, 255), 'revoked_at' => now()]);
+    }
+
+    /** FR-NF-018: رمز ذاكرة جديد للبطاقة (يُكتب على البطاقة، ويقرؤه الجسر ويرسله مع الحدث) */
+    public static function newToken(Credential $c): string
+    {
+        $t = strtoupper(substr((string) (Tenant::company()?->slug ?? 'UHR'), 0, 4)).'-'.strtoupper(Str::random(10));   // 15 حرفاً تتسع في 16 بايت (NTAG الصفحات 4–7)
+        $c->update(['memory_token' => $t]);
+        Audit::record('credential.token', $c);
+        return $t;
+    }
+
+    /** FR-NF-017: الحضور بالهاتف من جهاز مسجّل — bind_first يربط أول جهاز تلقائياً، registered يتطلب تسجيلاً مسبقاً */
+    public static function phoneCheck(Employee $e, ?string $deviceToken): void
+    {
+        $mode = self::cfg()['sticker_device'];
+        if ($mode === 'off') return;
+        if (! $deviceToken || strlen($deviceToken) < 16) throw new ApiException(L::t('هذا الجهاز غير مسجّل للحضور.', 'This device is not registered for check-in.'), 'device_not_registered', 403);
+        $norm = hash('sha256', $deviceToken);
+        $mine = Credential::where('employee_id', $e->id)->where('type', 'phone')->where('status', 'active')->get();
+        if ($mine->contains('norm', substr($norm, 0, 60))) return;
+        if ($mine->isEmpty() && $mode === 'bind_first') {
+            Credential::create(['employee_id' => $e->id, 'type' => 'phone', 'identifier' => 'phone:'.substr($norm, 0, 8), 'norm' => substr($norm, 0, 60), 'label' => mb_substr((string) request()?->userAgent(), 0, 120), 'status' => 'active', 'valid_from' => now()->toDateString()]);
+            return;
+        }
+        throw new ApiException(L::t('هذا الجهاز غير مسجّل للحضور — اطلب من الموارد البشرية إلغاء ربط جهازك السابق.', 'This device is not registered for check-in — ask HR to unlink your previous device.'), 'device_not_registered', 403);
     }
 
     /**

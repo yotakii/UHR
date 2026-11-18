@@ -59,7 +59,7 @@ class CodesController extends Controller
     {
         return ['key' => $l->key, 'ar' => $l->name_ar, 'en' => $l->name_en, 'group' => $l->group, 'owner_role' => $l->owner_role, 'pattern' => $l->pattern, 'example' => $l->example,
             'hierarchical' => $l->hierarchical, 'parent_key' => $l->parent_key, 'source' => $l->source, 'system' => $l->system, 'required' => $l->required, 'active' => $l->active,
-            'attrs_schema' => $l->attrs_schema ?? [], 'custom' => ! $l->system && ! array_key_exists($l->key, CodeCatalog::lists())];
+            'attrs_schema' => $l->attrs_schema ?? [], 'custom' => ! $l->system && ! array_key_exists($l->key, CodeCatalog::lists()), 'inherit' => (bool) $l->inherit, 'group_role' => \App\Models\Company::where('parent_id', \App\Support\Tenant::id())->exists() ? 'parent' : (\App\Support\Tenant::company()?->parent_id ? 'child' : null)];
     }
 
     public function show(string $key): JsonResponse
@@ -163,9 +163,55 @@ class CodesController extends Controller
         $d = $request->validate(['sector' => ['required', Rule::in(array_keys(CodeCatalog::SECTORS))]]);
         Codebook::requireDirect();
         $n = CodeCatalog::loadSector($d['sector']);
+        $st = $request->boolean('structure', true) ? CodeCatalog::loadSectorStructure($d['sector']) : ['depts' => 0, 'elements' => 0];
         Codes::bump();
-        Audit::record('codes.sector_loaded', null, null, ['sector' => $d['sector'], 'added' => $n]);
-        return response()->json(['added' => $n]);
+        Audit::record('codes.sector_loaded', null, null, ['sector' => $d['sector'], 'added' => $n] + $st);
+        return response()->json(['added' => $n] + $st);
+    }
+
+    /** FR-CS-019: سجل ترميز الوثائق — النماذج والسياسات برموزها وإصداراتها وملفاتها والرمز السابق */
+    public function documents(Request $request): JsonResponse
+    {
+        $forms = \App\Models\FormTemplate::orderBy('code')->get()->map(fn ($f) => ['kind' => 'form', 'id' => $f->id, 'code' => $f->code, 'ref' => $f->ref, 'issue' => $f->issue, 'date' => $f->issued_on?->toDateString(),
+            'ar' => $f->title_ar, 'en' => $f->title_en, 'module' => $f->module, 'sensitive' => (bool) $f->sensitive, 'legacy_code' => $f->legacy_code, 'file_id' => null, 'status' => 'active']);
+        $pols = \App\Models\PolicyDocument::orderBy('code')->get()->map(function ($p) {
+            $v = $p->current_version_id ? \App\Models\PolicyVersion::find($p->current_version_id) : null;
+            return ['kind' => 'policy', 'id' => $p->id, 'code' => $p->code, 'ref' => $p->code, 'issue' => $v?->issue ?? ($v ? (string) $v->number : null), 'date' => $v?->effective_from?->toDateString(),
+                'ar' => $p->title_ar, 'en' => $p->title_en, 'module' => $p->category, 'sensitive' => false, 'legacy_code' => $p->legacy_code, 'file_id' => $v?->file_id, 'status' => $p->status,
+                'versions' => \App\Models\PolicyVersion::where('document_id', $p->id)->count()];
+        });
+        $q = mb_strtolower(trim((string) $request->query('q')));
+        $all = $forms->concat($pols)->filter(fn ($r) => ! $q || str_contains(mb_strtolower($r['code'].' '.$r['ref'].' '.$r['ar'].' '.$r['en'].' '.($r['legacy_code'] ?? '')), $q))->values();
+        return response()->json(['data' => $all]);
+    }
+
+    /** FR-CS-022: اقتراح رمز واسم إنجليزي من الاسم العربي + كشف التكرار المحتمل */
+    public function suggestItem(Request $request, string $key): JsonResponse
+    {
+        $l = Codes::list($key);
+        $ar = trim((string) $request->query('name'));
+        $en = \App\Support\Translit::en($ar);
+        $seed = strtoupper(preg_replace('/[^A-Za-z]/', '', implode('', array_map(fn ($w) => substr($w, 0, 1), preg_split('/\s+/', $en))))) ?: 'X';
+        $norm = fn ($s) => \App\Services\Assistant\Text::norm((string) $s);
+        $n = $norm($ar); $dupes = [];
+        if (mb_strlen($n) >= 2) foreach (Codes::rows($l) as $r) {
+            $m = $norm($r['ar']);
+            similar_text($n, $m, $pct);
+            if ($m === $n || $pct >= 80 || (mb_strlen($n) >= 4 && (str_contains($m, $n) || str_contains($n, $m)))) $dupes[] = ['id' => $r['id'], 'code' => $r['code'], 'ar' => $r['ar'], 'en' => $r['en'], 'score' => (int) round($pct)];
+        }
+        usort($dupes, fn ($a, $b) => $b['score'] <=> $a['score']);
+        return response()->json(['code' => $l->source ? null : Codes::suggest($l, $seed), 'en' => $en, 'duplicates' => array_slice($dupes, 0, 5)]);
+    }
+
+    /** FR-CS-021: قوائم المجموعة — تعليم قائمة لتُورَّث، ومزامنة رموزها إلى الشركات التابعة */
+    public function inherit(Request $request, string $key): JsonResponse
+    {
+        abort_unless(\App\Support\Perm::can($request->user(), 'settings', 'edit'), 403);
+        $l = \App\Models\CodeList::where('key', $key)->where('system', false)->firstOrFail();
+        $l->update(['inherit' => $request->boolean('inherit')]);
+        $n = $l->inherit ? CodeCatalog::syncGroup(\App\Support\Tenant::company()) : 0;
+        Audit::record('codes.inherit', $l, null, ['inherit' => $l->inherit, 'synced' => $n]);
+        return response()->json(['inherit' => $l->inherit, 'synced' => $n, 'children' => \App\Models\Company::where('parent_id', \App\Support\Tenant::id())->count()]);
     }
 
     // ——— طلبات التغيير ———

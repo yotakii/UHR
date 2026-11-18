@@ -6,6 +6,8 @@ import { useMissionSettings, useSaveMissionSettings } from '../../lib/missions'
 import { Btn, Field, PageHead, Panel, Seg, toast } from '../../ui/kit'
 
 type Rate = { grade: string; local: number; local_currency: string; foreign: number; foreign_currency: string; hotel_local: number; hotel_local_currency: string; hotel_foreign: number; hotel_foreign_currency: string; ticket: 'economy' | 'business'; valid_from: string }
+type Zone = { key: string; ar: string; en: string; governorates: string[]; countries: string[]; factor: number }
+type City = { city?: string; country?: string | null; governorate?: string | null; grades: string[]; limit: number; currency: string }
 type S = Record<string, unknown> & { rates: Rate[]; stages: { name: string; en: string; weight: number }[]; completion_bonus: Record<string, number>; trainer_rates: Record<string, number>; proof_types: string[] }
 
 /** إعدادات المهمات والسفر والمكافآت (الدفعة 20): جدول المعدلات بالدرجة والعملة وتاريخ السريان، وكل القواعد */
@@ -34,7 +36,7 @@ export function MissionSettings() {
         <Field label={L('بدل خارجي يومي', 'Foreign daily')}><div className="flex gap-1"><input type="number" className="field num" value={r.foreign} onChange={e => editRate(i, 'foreign', Number(e.target.value))} />{curSel(i, 'foreign_currency')}</div></Field>
         <Field label={L('حد الفندق محلياً', 'Hotel limit local')}><div className="flex gap-1"><input type="number" className="field num" value={r.hotel_local} onChange={e => editRate(i, 'hotel_local', Number(e.target.value))} />{curSel(i, 'hotel_local_currency')}</div></Field>
         <Field label={L('حد الفندق خارجياً', 'Hotel limit abroad')}><div className="flex gap-1"><input type="number" className="field num" value={r.hotel_foreign} onChange={e => editRate(i, 'hotel_foreign', Number(e.target.value))} />{curSel(i, 'hotel_foreign_currency')}</div></Field>
-        <Field label={L('التذكرة', 'Ticket')}><select className="field" value={r.ticket} onChange={e => editRate(i, 'ticket', e.target.value)}><option value="economy">{L('عادية', 'Economy')}</option><option value="business">{L('أعمال', 'Business')}</option></select></Field>
+        <Field label={L('التذكرة', 'Ticket')}><select className="field" value={r.ticket} onChange={e => editRate(i, 'ticket', e.target.value)}><option value="economy">{L('عادية', 'Economy')}</option><option value="premium">{L('مميزة', 'Premium')}</option><option value="first">{L('أولى', 'First')}</option><option value="business">{L('أعمال', 'Business')}</option></select></Field>
         <Field label={L('يسري من', 'Valid from')}><input type="date" className="field" value={r.valid_from} onChange={e => editRate(i, 'valid_from', e.target.value)} /></Field>
         <button className="p-2 text-ink-3 hover:text-danger justify-self-start" onClick={() => set('rates', v.rates.filter((_, j) => j !== i))} aria-label={L('حذف', 'Remove')}><Trash2 size={16} /></button></div>)}
         {err?.field('rates') && <div className="text-[12px] text-danger">{err.field('rates')}</div>}</div></Panel>
@@ -61,6 +63,29 @@ export function MissionSettings() {
       {num('bonus_monthly_cap', 'السقف الشهري لكل نوع للموظف (0 = بلا)', 'Monthly cap per type per employee (0 = none)')}
       <Field label={L('من يعتمد ما فوق السقف', 'Who approves above the cap')}><select className="field" value={String(v.bonus_over_cap_role)} onChange={e => set('bonus_over_cap_role', e.target.value)}>{['ceo', 'executive', 'finance', 'hr_director'].map(r => <option key={r} value={r}>{({ ceo: L('الرئيس التنفيذي', 'CEO'), executive: L('المدير التنفيذي', 'Executive'), finance: L('المالية', 'Finance'), hr_director: L('مدير الموارد البشرية', 'HR director') } as Record<string, string>)[r]}</option>)}</select></Field>
     </div></Panel>
+    <Panel title={L('مناطق الوجهات وحدود المدن والتذكرة', 'Destination zones, city limits & tickets')}>
+      <div className="text-[12.5px] text-ink-3 mb-2">{L('المنطقة تضرب بدل السفر اليومي بمعامل (مثل وجهات نائية أو مكلفة). حد المدينة يحل محل حد الفندق للدرجات المحددة.', 'A zone multiplies the daily allowance by a factor (remote or costly destinations). A city limit replaces the hotel limit for the listed grades.')}</div>
+      <div className="space-y-2">{((v.zones as Zone[]) ?? []).map((z, i) => <div key={i} className="grid gap-2 grid-cols-2 sm:grid-cols-[90px_1fr_1fr_1fr_80px_36px]">
+        <input className="field ltr" placeholder="key" value={z.key} onChange={e => set('zones', (v.zones as Zone[]).map((x, j) => j === i ? { ...x, key: e.target.value } : x))} />
+        <input className="field" placeholder={L('الاسم', 'Name')} value={z.ar} onChange={e => set('zones', (v.zones as Zone[]).map((x, j) => j === i ? { ...x, ar: e.target.value, en: x.en || e.target.value } : x))} />
+        <input className="field ltr" placeholder={L('محافظات (DAM, ALP…)', 'Governorates (DAM, ALP…)')} value={z.governorates.join(', ')} onChange={e => set('zones', (v.zones as Zone[]).map((x, j) => j === i ? { ...x, governorates: e.target.value.toUpperCase().split(/[,\s]+/).filter(Boolean) } : x))} />
+        <input className="field ltr" placeholder={L('دول (LB, TR…)', 'Countries (LB, TR…)')} value={z.countries.join(', ')} onChange={e => set('zones', (v.zones as Zone[]).map((x, j) => j === i ? { ...x, countries: e.target.value.toUpperCase().split(/[,\s]+/).filter(Boolean) } : x))} />
+        <input type="number" step="0.05" className="field num" aria-label={L('المعامل', 'Factor')} value={z.factor} onChange={e => set('zones', (v.zones as Zone[]).map((x, j) => j === i ? { ...x, factor: Number(e.target.value) } : x))} />
+        <button className="p-2 text-ink-3 hover:text-danger" onClick={() => set('zones', (v.zones as Zone[]).filter((_, j) => j !== i))} aria-label={L('حذف', 'Remove')}><Trash2 size={16} /></button></div>)}
+        <Btn size="sm" icon={<Plus size={14} />} onClick={() => set('zones', [...((v.zones as Zone[]) ?? []), { key: `Z${((v.zones as Zone[]) ?? []).length + 1}`, ar: '', en: '', governorates: [], countries: [], factor: 1.25 }])}>{L('منطقة', 'Zone')}</Btn></div>
+      <div className="space-y-2 mt-4">{((v.hotel_cities as City[]) ?? []).map((h, i) => <div key={i} className="grid gap-2 grid-cols-2 sm:grid-cols-[1fr_80px_1fr_110px_90px_36px]">
+        <input className="field" placeholder={L('المدينة', 'City')} value={h.city ?? ''} onChange={e => set('hotel_cities', (v.hotel_cities as City[]).map((x, j) => j === i ? { ...x, city: e.target.value } : x))} />
+        <input className="field ltr" maxLength={2} placeholder={L('الدولة', 'Country')} value={h.country ?? ''} onChange={e => set('hotel_cities', (v.hotel_cities as City[]).map((x, j) => j === i ? { ...x, country: e.target.value.toUpperCase() || null } : x))} />
+        <input className="field ltr" placeholder={L('الدرجات (G07, G08) — فارغ = الكل', 'Grades (G07, G08) — empty = all')} value={h.grades.join(', ')} onChange={e => set('hotel_cities', (v.hotel_cities as City[]).map((x, j) => j === i ? { ...x, grades: e.target.value.toUpperCase().split(/[,\s]+/).filter(Boolean) } : x))} />
+        <input type="number" className="field num" aria-label={L('حد الليلة', 'Nightly limit')} value={h.limit} onChange={e => set('hotel_cities', (v.hotel_cities as City[]).map((x, j) => j === i ? { ...x, limit: Number(e.target.value) } : x))} />
+        <select className="field ltr" value={h.currency} onChange={e => set('hotel_cities', (v.hotel_cities as City[]).map((x, j) => j === i ? { ...x, currency: e.target.value } : x))} aria-label="currency">{data.currencies.map(c => <option key={c.code}>{c.code}</option>)}</select>
+        <button className="p-2 text-ink-3 hover:text-danger" onClick={() => set('hotel_cities', (v.hotel_cities as City[]).filter((_, j) => j !== i))} aria-label={L('حذف', 'Remove')}><Trash2 size={16} /></button></div>)}
+        <Btn size="sm" icon={<Plus size={14} />} onClick={() => set('hotel_cities', [...((v.hotel_cities as City[]) ?? []), { city: '', country: null, grades: [], limit: 0, currency: 'USD' }])}>{L('حد مدينة', 'City limit')}</Btn></div>
+      <div className="grid gap-3 sm:grid-cols-2 mt-4">
+        <Field label={L('درجة تذكرة أعلى من المسموح', 'Ticket class above the allowance')}><Seg value={String(v.ticket_over ?? 'warn')} onChange={x => set('ticket_over', x)} options={[{ v: 'warn', label: L('تحذير', 'Warn') }, { v: 'block', label: L('منع', 'Block') }]} /></Field>
+        <label className="flex items-center gap-2 text-[13.5px]"><input type="checkbox" checked={!!v.trainer_fee_auto} onChange={e => set('trainer_fee_auto', e.target.checked)} />{L('أتعاب المحاضر الداخلي تلقائياً عند إكمال الدورة', 'Internal trainer fee automatically when a course is completed')}</label>
+      </div>
+    </Panel>
     {err && !Object.keys(err.errors).length && <div role="alert" className="rounded-lg bg-danger-soft text-danger text-[13px] px-3 py-2">{err.message}</div>}
   </div>
 }

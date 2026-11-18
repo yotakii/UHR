@@ -1,3 +1,5 @@
+import { api } from '../../lib/api'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Copy, Loader2, Plus, Search, Settings2, Star, UserPlus, Link2 } from 'lucide-react'
 import { useL, useLang, bi, fmtDate } from '../../lib/store'
@@ -179,6 +181,7 @@ function PersonDrawer({ id, lk, onClose }: { id: number; lk: Lookups; onClose: (
         <div className="space-y-2">{x.assignments.map(a => <button key={a.id} onClick={() => navigate(`/hr/externals?tab=assignments&a=${a.id}`)} className="w-full text-start rounded-lg border border-line p-2.5 hover:bg-sub">
           <div className="flex justify-between gap-2"><span className="font-medium">{a.title}</span><span className="ltr text-[12px] text-ink-3">{a.ref}</span></div>
           <div className="text-[12.5px] text-ink-3">{a.rating ? `★ ${a.rating.score}` : ''}{a.rating?.notes ? ` · ${a.rating.notes}` : ''}</div></button>)}</div>}</Panel>}
+      {!expert && <ExtCard id={x.id} />}
       {x.payments.length > 0 && <Panel title={L('طلبات الدفع', 'Payment requests')}><div className="space-y-1">{x.payments.map(p => <div key={p.id} className="flex justify-between text-[13px]"><span>{p.description}</span><span className="num">{p.amount} {p.currency}</span></div>)}</div></Panel>}
     </div>
     {edit && <PersonForm lk={lk} experts={expert} x={x} onClose={() => setEdit(false)} />}
@@ -207,7 +210,7 @@ function Opportunities({ lk }: { lk?: Lookups }) {
   return <>
     <div className="flex justify-end mb-3"><Btn kind="primary" icon={<Plus size={15} />} onClick={() => setEdit({ title: '', status: 'open', slots: 0 })}>{L('فرصة جديدة', 'New opportunity')}</Btn></div>
     {!data ? <Loader2 className="animate-spin text-brand mx-auto" /> : data.data.length === 0 ? <Panel><Empty title={L('لا توجد فرص', 'No opportunities')}>{L('انشر فرصة تطوع برابط عام يسجّل فيه المتقدمون بياناتهم.', 'Publish a volunteering opportunity with a public sign-up link.')}</Empty></Panel> :
-      <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">{data.data.map(o => <Panel key={o.id} title={o.title} action={<Badge tone={o.status === 'open' ? 'brand' : 'neutral'}>{o.status === 'open' ? L('مفتوحة', 'Open') : o.status === 'closed' ? L('مغلقة', 'Closed') : L('مسودة', 'Draft')}</Badge>}>
+      <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">{data.data.map(o => <Panel key={o.id} title={<span>{o.title}{o.kind === 'intern' && <span className="text-[11.5px] text-ink-3"> · {L('ستاج', 'Internship')}{o.stage_type === 'fee' && o.fee ? ` · ${o.fee} ${o.fee_currency ?? ''}` : ''}</span>}</span>} action={<Badge tone={o.status === 'open' ? 'brand' : 'neutral'}>{o.status === 'open' ? L('مفتوحة', 'Open') : o.status === 'closed' ? L('مغلقة', 'Closed') : L('مسودة', 'Draft')}</Badge>}>
         {o.description && <p className="text-[13px] text-ink-2 line-clamp-3">{o.description}</p>}
         <div className="text-[12.5px] text-ink-3 mt-1 num">{o.starts_on ? fmtDate(o.starts_on, lang) : ''}{o.ends_on ? ` — ${fmtDate(o.ends_on, lang)}` : ''}{o.weekly_hours ? ` · ${o.weekly_hours} ${L('س/أسبوع', 'h/wk')}` : ''} · {L(`${o.applicants} متقدم`, `${o.applicants} applicants`)}</div>
         <div className="flex gap-1 mt-2"><Btn size="sm" kind="ghost" icon={<Copy size={13} />} onClick={() => navigator.clipboard?.writeText(o.url).then(() => toast(L('نُسخ الرابط العام', 'Public link copied')))}>{L('نسخ الرابط', 'Copy link')}</Btn>
@@ -221,6 +224,12 @@ function Opportunities({ lk }: { lk?: Lookups }) {
         <Field label={L('إلى', 'To')}><input type="date" className="field" value={String(edit.ends_on ?? '')} onChange={e => setEdit({ ...edit, ends_on: e.target.value || null })} /></Field>
         <Field label={L('الإدارة', 'Department')}><select className="field" value={String(edit.department_id ?? '')} onChange={e => setEdit({ ...edit, department_id: e.target.value ? Number(e.target.value) : null })}><option value="">—</option>{lk?.departments.map(d => <option key={d.id} value={d.id}>{bi(d, lang)}</option>)}</select></Field>
         <Field label={L('الساعات الأسبوعية', 'Weekly hours')}><input className="field num" value={String(edit.weekly_hours ?? '')} onChange={e => setEdit({ ...edit, weekly_hours: Number(e.target.value) || null })} /></Field>
+        <Field label={L('نوع الفرصة', 'Opportunity type')}><select className="field" value={String(edit.kind ?? 'volunteer')} onChange={e => setEdit({ ...edit, kind: e.target.value, stage_type: e.target.value === 'intern' ? (edit.stage_type ?? 'free') : null })}>
+          <option value="volunteer">{L('تطوع', 'Volunteering')}</option><option value="intern">{L('تدريب عملي (ستاج)', 'Internship')}</option></select></Field>
+        {edit.kind === 'intern' && <Field label={L('نوع الستاج', 'Internship type')}><select className="field" value={String(edit.stage_type ?? 'free')} onChange={e => setEdit({ ...edit, stage_type: e.target.value })}>
+          <option value="free">{L('غير مأجور', 'Unpaid')}</option><option value="paid">{L('مأجور', 'Paid')}</option><option value="fee">{L('برسوم على المتدرب', 'Trainee pays a fee')}</option></select></Field>}
+        {edit.kind === 'intern' && edit.stage_type === 'fee' && <Field label={L('الرسوم', 'Fee')}><div className="flex gap-2"><input className="field num" inputMode="decimal" value={String(edit.fee ?? '')} onChange={e => setEdit({ ...edit, fee: Number(e.target.value) || null })} />
+          <input className="field ltr !w-20" maxLength={3} value={String(edit.fee_currency ?? 'USD')} aria-label={L('العملة', 'Currency')} onChange={e => setEdit({ ...edit, fee_currency: e.target.value.toUpperCase() })} /></div></Field>}
         <Field label={L('الحالة', 'Status')}><select className="field" value={String(edit.status)} onChange={e => setEdit({ ...edit, status: e.target.value })}><option value="open">{L('مفتوحة', 'Open')}</option><option value="draft">{L('مسودة', 'Draft')}</option><option value="closed">{L('مغلقة', 'Closed')}</option></select></Field>
       </div>
     </Modal>}
@@ -228,3 +237,16 @@ function Opportunities({ lk }: { lk?: Lookups }) {
 }
 
 export type { ExtRow }
+
+/** FR-VL-007/015: بطاقة NFC لغير الموظف — النقرتان في اليوم تسجّلان ساعات بانتظار المشرف، وتُعطَّل آلياً بانتهاء الاتفاقية */
+function ExtCard({ id }: { id: number }) {
+  const L = useL()
+  const q = useQuery({ queryKey: ['externals', 'card', id], queryFn: () => api<{ data: { id: number; identifier: string; status: string; valid_from: string | null }[] }>(`/hr/externals/${id}/card`).then(r => r.data) })
+  const [uid, setUid] = useState('')
+  const add = useMutation({ mutationFn: () => api<{ data: unknown }>(`/hr/externals/${id}/card`, { json: { identifier: uid } }), onSuccess: () => { setUid(''); q.refetch(); toast(L('رُبطت البطاقة', 'Card linked')) }, onError: e => toast((e as Error).message) })
+  const live = (q.data ?? []).find(c => c.status === 'active')
+  return <Panel title={L('بطاقة الحضور', 'Attendance card')} sub={L('النقرة الأولى في اليوم بداية والتالية نهاية — تُسجَّل ساعات بانتظار مصادقة المشرف.', 'First tap of the day starts, the next ends — hours await the supervisor.')}>
+    {live ? <div className="text-[13px]"><span className="ltr font-mono">{live.identifier}</span> · <Badge tone="brand">{L('فعّالة', 'Active')}</Badge></div> : <div className="text-[13px] text-ink-3">{L('لا بطاقة مربوطة.', 'No card linked.')}</div>}
+    <div className="flex gap-2 mt-2"><input className="field ltr" placeholder="04:A1:B2:C3" value={uid} onChange={e => setUid(e.target.value)} /><Btn disabled={uid.trim().length < 4 || add.isPending} onClick={() => add.mutate()}>{live ? L('استبدال', 'Replace') : L('ربط', 'Link')}</Btn></div>
+  </Panel>
+}

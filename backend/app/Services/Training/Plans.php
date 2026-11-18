@@ -49,7 +49,7 @@ class Plans
     }
 
     /** بند خطة — بعد الاعتماد كل تغيير يُسجَّل طلب تعديل بأثره على الموازنة (FR-TD-044 / BR-18) */
-    public function item(TdPlan $p, array $v, User $u, ?TdPlanItem $i = null): TdPlanItem
+    public function item(TdPlan $p, array $v, User $u, ?TdPlanItem $i = null): ?TdPlanItem
     {
         if (! Td::manages($u)) abort(403);
         if (in_array($p->status, ['pending_hr', 'pending_exec'], true)) throw new ApiException(L::t('الخطة قيد الاعتماد.', 'The plan is under approval.'), 'locked', 409);
@@ -58,7 +58,15 @@ class Plans
             if (mb_strlen(trim((string) ($v['change_reason'] ?? ''))) < self::min()) throw ApiException::field('change_reason', L::t('الخطة معتمدة — اكتب سبب التعديل.', 'The plan is approved — write the reason for the change.'), 'reason_required');
             $delta = (float) ($data['estimated_cost'] ?? $i?->estimated_cost ?? 0) - (float) ($i?->estimated_cost ?? 0);
             $ch = $i?->changes ?? [];
-            $ch[] = ['at' => now()->toIso8601String(), 'by' => $u->displayName('ar'), 'what' => $i ? ($data['status'] ?? 'edit') : 'add', 'reason' => $v['change_reason'], 'cost_delta' => $delta];
+            $entry = ['at' => now()->toIso8601String(), 'by' => $u->displayName('ar'), 'what' => $i ? ($data['status'] ?? 'edit') : 'add', 'reason' => $v['change_reason'], 'cost_delta' => $delta];
+            // BR-18: التعديل لا يُطبَّق قبل اعتماد طلب التغيير (حسب الإعداد)
+            if (Td::cfg()['change_approval']) {
+                $a = app(TdExtras::class)->requestChange($p, $i, $data, $v['change_reason'], $delta, $u);
+                if ($i && $a->status !== 'approved') { $i->update(['changes' => array_merge($ch, [$entry + ['status' => 'pending', 'approval_id' => $a->id]])]); return $i->fresh(); }
+                if (! $i) return ($id = $a->fresh()->item_id) ? TdPlanItem::find($id) : null;
+                return $i->fresh();
+            }
+            $ch[] = $entry;
             $data['changes'] = $ch;
         }
         if ($i) { $i->update($data); } else { $i = TdPlanItem::create($data + ['plan_id' => $p->id, 'status' => 'planned']); }
@@ -78,8 +86,11 @@ class Plans
         $peak = collect(Td::cfg()['peak_seasons'])->flatMap(fn ($s) => range((int) substr($s['from'] ?? '01-01', 0, 2), (int) substr($s['to'] ?? '01-01', 0, 2)))->unique();
         $inPeak = $items->filter(fn ($i) => $i->month && $peak->contains($i->month))->count();
         if ($inPeak) $out[] = ['key' => 'peak', 'ar' => "{$inPeak} بند في موسم ذروة", 'en' => "{$inPeak} item(s) in a peak season", 'value' => $inPeak];
+        // الموازنة الموزعة: أرباع Q1..Q4، أو إدارات dept:{id}، أو مسارات path:{key}
         foreach ((array) ($p->budget_split ?? []) as $k => $cap) {
-            $q = $items->filter(fn ($i) => $i->month && 'Q'.(int) ceil($i->month / 3) === $k)->sum('estimated_cost');
+            $q = str_starts_with($k, 'dept:') ? $items->where('department_id', (int) substr($k, 5))->sum('estimated_cost')
+                : (str_starts_with($k, 'path:') ? $items->where('path', substr($k, 5))->sum('estimated_cost')
+                : $items->filter(fn ($i) => $i->month && 'Q'.(int) ceil($i->month / 3) === $k)->sum('estimated_cost'));
             if ((float) $cap > 0 && $q > (float) $cap) $out[] = ['key' => 'over_'.$k, 'ar' => "الربع {$k} يتجاوز موازنته", 'en' => "{$k} exceeds its budget", 'value' => $q];
         }
         return $out;
@@ -91,7 +102,7 @@ class Plans
         if (! in_array($p->status, ['draft', 'rejected'], true)) throw new ApiException(L::t('رُفعت الخطة من قبل.', 'Already submitted.'), 'locked', 409);
         if (! $p->items()->exists()) throw new ApiException(L::t('أضف بنوداً للخطة أولاً.', 'Add items first.'), 'empty', 422);
         \App\Models\RequestStep::where('subject_type', $p->getMorphClass())->where('subject_id', $p->id)->delete();
-        $this->wf->start($p, null, Workflow::chain('td_plan'), $u);
+        $this->wf->start($p, null, Workflow::chainFor('td_plan', ['amount' => $p->budget, 'currency' => $p->currency, 'branch' => $p->location_id]), $u);
         $p->refresh();
         if ($p->status === 'approved') $this->approved($p);
         return $p;
@@ -158,13 +169,14 @@ class Plans
     }
 
     /** FR-TD-054: مبادرة تدريبية ← بند في خطة السنة مع الحفاظ على الرابط */
-    public function pushInitiative(TdCbp $c, string $goalId, string $initId, TdPlan $p, User $u): TdPlanItem
+    public function pushInitiative(TdCbp $c, string $goalId, string $initId, TdPlan $p, User $u): ?TdPlanItem
     {
         $goals = $c->goals;
         foreach ($goals as &$g) if ($g['id'] === $goalId) foreach ($g['initiatives'] as &$i) if ($i['id'] === $initId) {
             if (! empty($i['plan_item_id'])) throw new ApiException(L::t('المبادرة مدرجة في الخطة.', 'Already in the plan.'), 'duplicate', 409);
             $item = $this->item($p, ['title' => $i['title'], 'path' => 'development', 'delivery' => 'internal', 'estimated_cost' => (float) ($i['cost'] ?? 0), 'objective' => $g['title'], 'priority' => 'high',
                 'change_reason' => $p->status === 'approved' ? 'مبادرة من خطة بناء القدرات: '.$c->title : null], $u);
+            if (! $item) { $i['plan_item_id'] = null; $i['plan_change'] = 'pending'; $c->update(['goals' => $goals]); return null; }   // بانتظار اعتماد تعديل الخطة
             $item->update(['cbp_initiative' => $c->id]);
             $i['plan_item_id'] = $item->id;
             $c->update(['goals' => $goals]);
