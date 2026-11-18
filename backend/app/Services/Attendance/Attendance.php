@@ -171,7 +171,9 @@ class Attendance
         });
         $gate->record($device, $e, $uid ?? $raw, $at, $chk['flag'] ? 'flagged' : 'accepted', $chk['reason'], ['via' => $via, 'scan_id' => $res['scan_id'], 'direction' => $res['type'], 'mission_id' => $chk['mission_id'], 'date' => $chk['date']]);
         unset($res['scan_id']);
-        return $res + ($chk['flag'] ? ['flag' => 'off_branch'] : []);
+        // D-15: الخروج بالبطاقة يقفل جهاز الموظف (والدخول يلغي أمراً بقي في الطابور)
+        $agents = PcAgents::afterTap($e, $res['type'], 'card', $at);
+        return $res + ($chk['flag'] ? ['flag' => 'off_branch'] : []) + ($agents ? ['agents' => $agents] : []);
     }
 
     /**
@@ -188,7 +190,7 @@ class Attendance
         // الأوقات تُخزَّن بتوقيت فرع الموظف (كما في scan) فتُقارن به
         if (Scan::where('employee_id', $e->id)->whereBetween('ts', [$at->copy()->subSeconds($cool)->format('Y-m-d H:i:s'), $at->copy()->addSeconds($cool)->format('Y-m-d H:i:s')])->exists()) return ['kind' => 'dup'];
 
-        return DB::transaction(function () use ($e, $device, $at, $via, $tz) {
+        $res = DB::transaction(function () use ($e, $device, $at, $via, $tz) {
             $date = $at->toDateString();
             $scan = Scan::create(['employee_id' => $e->id, 'ts' => $at, 'device_id' => $device->id, 'device_ar' => $device->name_ar, 'device_en' => $device->name_en, 'type' => 'in', 'raw_uid' => null, 'via' => $via]);
             $day = Scan::where('employee_id', $e->id)->where('ts', '>=', $date.' 00:00:00')->where('ts', '<=', $date.' 23:59:59')->orderBy('ts')->get();
@@ -208,6 +210,8 @@ class Attendance
             $this->firstScan($e);
             return ['kind' => 'ok', 'scan_id' => $scan->id, 'type' => $scan->id === $first->id ? 'in' : 'out'];
         });
+        if ($res['kind'] === 'ok') PcAgents::afterTap($e, $res['type'], $via === 'zk' ? 'fingerprint' : ($via === 'phone' ? 'phone' : 'card'), $at);
+        return $res;
     }
 
     /** F-19 البند 15 «تعريف الموظف على النظام وجهاز الحضور» يُنجز عند أول تمرير (كما في الديمو) */

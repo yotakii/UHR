@@ -330,6 +330,16 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
     });
     Route::post('/nfc/events/{id}/review', [\App\Http\Controllers\Api\Hr\NfcController::class, 'review'])->whereNumber('id')->middleware('perm:attendance,edit');
     Route::put('/nfc/settings', [\App\Http\Controllers\Api\Hr\NfcController::class, 'saveSettings'])->middleware('perm:settings,edit');
+    // وكلاء أجهزة الموظفين UHR-Agent (D-15)
+    Route::get('/pc-agents', [\App\Http\Controllers\Api\Hr\PcAgentController::class, 'index'])->middleware('perm:attendance,view');
+    Route::get('/pc-agents/{id}/commands', [\App\Http\Controllers\Api\Hr\PcAgentController::class, 'commands'])->whereNumber('id')->middleware('perm:attendance,view');
+    Route::put('/pc-agents/settings', [\App\Http\Controllers\Api\Hr\PcAgentController::class, 'saveSettings'])->middleware('perm:settings,edit');
+    Route::middleware('perm:attendance,edit')->group(function () {
+        Route::post('/pc-agents', [\App\Http\Controllers\Api\Hr\PcAgentController::class, 'store']);
+        Route::put('/pc-agents/{id}', [\App\Http\Controllers\Api\Hr\PcAgentController::class, 'update'])->whereNumber('id');
+        Route::post('/pc-agents/{id}/test', [\App\Http\Controllers\Api\Hr\PcAgentController::class, 'test'])->whereNumber('id')->middleware('throttle:20,1');
+        Route::post('/pc-agents/{id}/package', [\App\Http\Controllers\Api\Hr\PcAgentController::class, 'package'])->whereNumber('id');
+    });
     Route::post('/devices/{id}/activation', [\App\Http\Controllers\Api\Hr\NfcController::class, 'activation'])->whereNumber('id')->middleware('perm:attendance,edit');
     Route::get('/branches/{id}/sticker', [\App\Http\Controllers\Api\Hr\NfcController::class, 'sticker'])->whereNumber('id')->middleware('perm:settings,edit');
     Route::post('/branches/{id}/sticker', [\App\Http\Controllers\Api\Hr\NfcController::class, 'sticker'])->whereNumber('id')->middleware('perm:settings,edit');
@@ -586,6 +596,11 @@ Route::post('/nf/activate', [\App\Http\Controllers\Api\Device\NfController::clas
 Route::middleware(['nfdevice', 'throttle:240,1'])->prefix('nf')->group(function () {
     Route::post('/events', [\App\Http\Controllers\Api\Device\NfController::class, 'events']);
     Route::post('/heartbeat', [\App\Http\Controllers\Api\Device\NfController::class, 'heartbeat']);
+});
+// وكيل جهاز الموظف UHR-Agent (D-15): يسأل عن الأوامر ويبلّغ نتيجتها بمفتاحه
+Route::middleware(['agent', 'throttle:120,1'])->prefix('agent')->group(function () {
+    Route::match(['get', 'post'], '/poll', [\App\Http\Controllers\Api\Hr\PcAgentController::class, 'poll']);
+    Route::post('/commands/{id}', [\App\Http\Controllers\Api\Hr\PcAgentController::class, 'report'])->whereNumber('id');
 });
 // ملصق الفرع: الموظف يمسحه بهاتفه من حسابه
 Route::middleware(['auth', 'fresh'])->group(function () {

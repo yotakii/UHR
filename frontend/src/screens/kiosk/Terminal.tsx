@@ -19,7 +19,7 @@ const getKey = () => { try { return localStorage.getItem(KEY) ?? '' } catch { re
 type Person = { id: number; code: string; name: Bi; title: Bi; dept: Bi | null }
 type Feed = { id: number; name: Bi; type: 'in' | 'out'; time: string; via: string }[]
 type Me = { device: { id: number; name: Bi; kind: string }; company: { slug: string; name: Bi }; feed: Feed; cooldown: number }
-type Result = { kind: 'ok' | 'dup' | 'unknown' | 'inactive' | 'blocked'; reason?: string; flag?: string; employee?: Person; type?: 'in' | 'out'; time?: string; late?: number; worked?: number; ot?: number; uid?: string | null; feed?: Feed }
+type Result = { kind: 'ok' | 'dup' | 'unknown' | 'inactive' | 'blocked'; reason?: string; flag?: string; employee?: Person; type?: 'in' | 'out'; time?: string; late?: number; worked?: number; ot?: number; uid?: string | null; feed?: Feed; agents?: number }
 
 const call = <T,>(key: string, path: string, json?: unknown) => api<T>(`/device${path}`, { method: json ? 'POST' : 'GET', json, headers: { 'X-Device-Key': key } })
 
@@ -140,6 +140,7 @@ function Kiosk({ deviceKey, onUnpair }: { deviceKey: string; onUnpair: () => voi
               [res.type === 'in' ? L('الرقم الوظيفي', 'Employee ID') : L('عمل إضافي', 'Overtime'), res.type === 'in' ? <span className="ltr">{res.employee.code}</span> : (res.ot ? <span className="text-brand">{minsLabel(res.ot, lang)}</span> : '—')]].map(([k, v], i) =>
               <div key={i} className="rounded-2xl border border-show-fg/10 bg-show-fg/[.04] p-3 sm:p-4 fadeup min-w-0" style={{ animationDelay: `${.25 + i * .12}s` }}><div className="text-[12px] text-show-fg/50">{k}</div><div className="mt-1 text-[17px] sm:text-[22px] font-bold font-display">{v}</div></div>)}
           </div>}
+          {res.type === 'out' && !!res.agents && <div className="mt-4 text-[15px] text-show-fg/75">{L('سيُقفل جهازك خلال دقيقة — احفظ عملك.', 'Your computer will lock in a minute — please save your work.')}</div>}
           {res.type === 'in' && !!res.late && <div className="mt-4 text-[14px] text-show-fg/65">{L('يمكنك تقديم تبرير التأخير من حسابك في النظام.', 'You can submit a late justification from your account.')}</div>}
         </div>}
 

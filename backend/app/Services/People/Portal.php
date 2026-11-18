@@ -84,7 +84,7 @@ class Portal
         $last = Scan::where('employee_id', $e->id)->latest('ts')->first();
         if ($last && $last->ts->diffInSeconds(now(), true) < $cool) throw new ApiException(L::t('سُجّلت حركتك للتو.', 'Your tap was just recorded.'), 'dup', 409);
         $at = now()->setTimezone(\App\Services\Attendance\WorkSchedules::tz($e));
-        return DB::transaction(function () use ($e, $at, $today, $lat, $lng) {
+        $res = DB::transaction(function () use ($e, $at, $today, $lat, $lng) {
             $d = AttendanceDay::where('employee_id', $e->id)->where('date', $today)->lockForUpdate()->first() ?? new AttendanceDay(['employee_id' => $e->id, 'date' => $today]);
             $type = $d->in_at ? 'out' : 'in';
             if ($type === 'in') { $d->in_at = $at; $d->source = 'portal'; } else $d->out_at = $at;
@@ -95,6 +95,8 @@ class Portal
                 'raw_uid' => $lat !== null ? round($lat, 5).','.round($lng, 5) : 'portal', 'via' => 'phone']);
             return ['type' => $type, 'time' => $at->format('H:i'), 'late' => $c['late']];
         });
+        $res['agents'] = \App\Services\Attendance\PcAgents::afterTap($e, $res['type'], 'phone', $at);
+        return $res;
     }
 
     public static function distance(float $lat1, float $lng1, float $lat2, float $lng2): float

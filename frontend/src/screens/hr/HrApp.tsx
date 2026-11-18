@@ -1,8 +1,9 @@
+import { PcAgentsPage } from './PcAgents'
 import { TrainingApp } from '../training/Training'
 import { MyTraining } from '../training/MyTraining'
 import { TrainingSettings } from './TrainingSettings'
 import { useEffect, type ReactNode } from 'react'
-import { GraduationCap, Sparkles, ListChecks, LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed, Megaphone, Gift, ClipboardCheck, SlidersHorizontal, Sprout, KeyRound, Building, UserCog, GitBranch, BellRing, Library, History, DatabaseBackup, ScanText, MessagesSquare, ArrowRight, ArrowLeft, X, CalendarDays, CalendarClock, MapPin, UserRound, Binary, Plane, HandHeart } from 'lucide-react'
+import { GraduationCap, Laptop, Sparkles, ListChecks, LayoutGrid, Briefcase, Users, UserPlus, Clock, CalendarCheck, Package, Kanban, DoorOpen, Settings2, Network, Target, BarChart3, Trophy, ShieldCheck, FileText, Hammer, Stamp, FileSignature, FileSearch, Scale, FolderCog, Nfc, CalendarPlus, Fingerprint, Wallet, ClipboardList, Receipt, ShieldAlert, Gavel, BookOpen, LogOut, DoorClosed, Megaphone, Gift, ClipboardCheck, SlidersHorizontal, Sprout, KeyRound, Building, UserCog, GitBranch, BellRing, Library, History, DatabaseBackup, ScanText, MessagesSquare, ArrowRight, ArrowLeft, X, CalendarDays, CalendarClock, MapPin, UserRound, Binary, Plane, HandHeart } from 'lucide-react'
 import { useL, useLang, bi } from '../../lib/store'
 import { navigate, useRoute } from '../../lib/router'
 import { can, type SessionUser } from '../../lib/session'
@@ -171,6 +172,7 @@ export function HrApp({ user }: { user: SessionUser }) {
     { item: { to: '/hr/settings/devices', icon: <Nfc size={18} />, label: L('أجهزة الحضور', 'Attendance devices'), group: g4, hidden: true }, section: 'system', module: u => can(u, 'attendance', 'edit'), view: () => <Devices /> },
     { item: { to: '/hr/settings/training', icon: <GraduationCap size={18} />, label: L('إعدادات التدريب والتطوير', 'Training settings'), group: g4, hidden: true }, section: 'rules', module: u => can(u, 'training'), view: () => <TrainingSettings /> },
     { item: { to: '/hr/settings/externals', icon: <HandHeart size={18} />, label: L('إعدادات غير الموظفين والخبراء', 'Non-employee & expert settings'), group: g4, hidden: true }, section: 'rules', module: u => can(u, 'externals'), view: () => <ExternalSettings /> },
+    { item: { to: '/hr/settings/pc-agents', icon: <Laptop size={18} />, label: L('وكلاء أجهزة الموظفين', 'Employee computer agents'), group: g4, hidden: true }, section: 'system', module: u => can(u, 'attendance'), view: () => <PcAgentsPage /> },
     { item: { to: '/hr/settings/nfc', icon: <Nfc size={18} />, label: L('إعدادات بوابة الحضور', 'Attendance gate settings'), group: g4, hidden: true }, section: 'system', module: u => can(u, 'attendance'), view: () => <NfcSettings /> },
     { item: { to: '/hr/settings/assistant', icon: <Sparkles size={18} />, label: L('إعدادات المساعد', 'Assistant settings'), group: g4, hidden: true }, section: 'system', module: u => can(u, 'settings'), view: () => <AssistantSettings /> },
     { item: { to: '/hr/settings/space', icon: <MessagesSquare size={18} />, label: L('إعدادات الساحة', 'Space settings'), group: g4, hidden: true }, section: 'system', module: u => can(u, 'settings', 'edit'), view: () => <SpaceSettings /> },

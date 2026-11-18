@@ -277,6 +277,9 @@ class Settings
             'agreement_en' => "Temporary volunteer agreement\n\nBetween :company (the host) and :name (the volunteer), ID :national_id.\n\nHost: :branch branch, :department, supervisor :supervisor.\nPeriod: :from to :to, :hours hours a week.\nOperational relation: :relation.\n\n1. Volunteering is unpaid and this agreement does not create an employment relationship.\n2. Tasks and expected outputs: :tasks\n3. The volunteer commits to the agreed attendance, confidentiality, the code of conduct, safety and safeguarding procedures and care of property.\n4. The host provides orientation and initial training, a safe environment, a responsible supervisor, the agreed expense reimbursement and a volunteering certificate.\n5. Reimbursement, if any: documented actual expenses up to :cap per claim.\n6. Either party may end the agreement; any custody is returned.\n7. Data protection; intellectual property of outputs belongs to the host.",
         ],
         // NFC وتعدد الفروع (الدفعة 21 — الجزء C): قرار البصم خارج الفرع، نوافذ التكرار، تنبيهات الأمان، الحضور بملصق الفرع
+        // وكيل جهاز الموظف UHR-Agent (D-15): الخروج بالبطاقة يقفل جهازه — الافتراضي من ورقة القواعد: قفل وتسجيل خروج Windows بلا إيقاف تشغيل، تحذير 60 ثانية
+        'pc_agent' => ['enabled' => true, 'action' => 'logoff', 'warn_seconds' => 60, 'postpone_minutes' => 0, 'sources' => ['card'],
+            'fresh_minutes' => 10, 'queue_hours' => 12, 'offline_minutes' => 3, 'poll_seconds' => 10, 'notify_employee' => true],
         'nfc' => [
             'off_branch' => 'flag',                 // reject | flag (قبول مع تعليم للمراجعة)
             'mission_access' => true,               // المهمة المعتمدة إلى فرع آخر تمنح صلاحية مؤقتة آلياً

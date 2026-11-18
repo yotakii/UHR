@@ -186,3 +186,11 @@ Artisan::command('training:sweep', function () {
     $this->info("handled {$n}");
 })->purpose('Training follow-ups, certificate expiry and commitment ends');
 Schedule::command('training:sweep')->dailyAt('07:35');
+
+// D-15: أوامر الوكلاء — انتهاء صلاحية الطابور، وتنبيه عن جهاز مطفأ أمره بالانتظار
+Artisan::command('agents:sweep', function () {
+    $n = 0;
+    foreach (\App\Models\Company::where('status', 'active')->pluck('id') as $id) \App\Support\Tenant::run($id, function () use (&$n) { $n += \App\Services\Attendance\PcAgents::sweep(); });
+    $this->info("agents {$n}");
+})->purpose('Expire queued PC agent commands and alert HR about offline computers');
+Schedule::command('agents:sweep')->everyFiveMinutes();
