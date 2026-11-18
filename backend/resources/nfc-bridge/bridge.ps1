@@ -51,13 +51,34 @@ function Heartbeat {
   try { $null = Invoke-RestMethod -Method Get -Uri ($base + '/api/device/me') -Headers $headers -TimeoutSec 8 } catch { Log ('server not reachable: ' + $_.Exception.Message) }
 }
 
+# عند انقطاع الإنترنت: تُحفظ القراءات بوقتها الأصلي في queue.jsonl وتُرسل دفعة واحدة عند عودة الاتصال (/api/nf/events)
+$queue = Join-Path $dir 'queue.jsonl'
+function Enqueue($hex) {
+  $seq = [long]([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())
+  $line = @{ card = $hex; at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'); seq = $seq } | ConvertTo-Json -Compress
+  try { Add-Content -Path $queue -Value $line -Encoding UTF8 } catch {}
+}
+function Flush {
+  if (-not $api -or -not (Test-Path $queue)) { return }
+  $lines = @(Get-Content $queue -Encoding UTF8 | Where-Object { $_.Trim() -ne '' })
+  if ($lines.Count -eq 0) { Remove-Item $queue -Force; return }
+  $events = @($lines | Select-Object -First 500 | ForEach-Object { $_ | ConvertFrom-Json })
+  try {
+    $body = @{ events = $events; buffered = $lines.Count } | ConvertTo-Json -Depth 4
+    $null = Invoke-RestMethod -Method Post -Uri ($base + '/api/nf/events') -Body $body -ContentType 'application/json; charset=utf-8' -Headers $headers -TimeoutSec 20
+    $rest = @($lines | Select-Object -Skip 500)
+    if ($rest.Count -gt 0) { Set-Content -Path $queue -Value $rest -Encoding UTF8 } else { Remove-Item $queue -Force }
+    Log ("sent {0} buffered taps" -f $events.Count)
+  } catch { }
+}
+
 $ctx = [IntPtr]::Zero
 while ([PCSC]::SCardEstablishContext(2, [IntPtr]::Zero, [IntPtr]::Zero, [ref]$ctx) -ne 0) { Log "Smart Card service not available — retrying"; Start-Sleep -Seconds 10 }
 
 $apdu = [byte[]](0xFF, 0xCA, 0x00, 0x00, 0x00)   # GET DATA: card UID
 $reader = $null; $last = $null; $fails = 0; $beat = [DateTime]::MinValue
 while ($true) {
-  if ((Get-Date) - $beat -gt [TimeSpan]::FromSeconds(60)) { Heartbeat; $beat = Get-Date }
+  if ((Get-Date) - $beat -gt [TimeSpan]::FromSeconds(60)) { Heartbeat; Flush; $beat = Get-Date }
   if (-not $reader) {
     $list = @(Get-Readers $ctx)
     if ($list.Count -eq 0) { Start-Sleep -Seconds 3; continue }
@@ -84,7 +105,11 @@ while ($true) {
             $who = if ($r.employee) { $r.employee.code } else { '' }
             Log ("UID {0} -> {1} {2} {3}" -f $hex, $r.kind, $r.type, $who)
             if ($r.kind -ne 'ok') { [console]::beep(440, 250) }
-          } catch { Log ("UID {0} -> ERROR {1}" -f $hex, $_.Exception.Message); [console]::beep(330, 500) }
+          } catch {
+            $status = $null; try { $status = [int]$_.Exception.Response.StatusCode } catch {}
+            if (-not $status -or $status -ge 500) { Enqueue $hex; Log ("UID {0} -> saved offline ({1})" -f $hex, $_.Exception.Message); [console]::beep(660, 150) }
+            else { Log ("UID {0} -> ERROR {1}" -f $hex, $_.Exception.Message); [console]::beep(330, 500) }
+          }
         } else {
           [decimal]$dec = 0; foreach ($b in $uid) { $dec = $dec * 256 + $b }
           Log ("UID {0} -> keys {1}" -f $hex, $dec.ToString('0'))

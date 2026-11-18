@@ -19,7 +19,7 @@ const getKey = () => { try { return localStorage.getItem(KEY) ?? '' } catch { re
 type Person = { id: number; code: string; name: Bi; title: Bi; dept: Bi | null }
 type Feed = { id: number; name: Bi; type: 'in' | 'out'; time: string; via: string }[]
 type Me = { device: { id: number; name: Bi; kind: string }; company: { slug: string; name: Bi }; feed: Feed; cooldown: number }
-type Result = { kind: 'ok' | 'dup' | 'unknown' | 'inactive'; employee?: Person; type?: 'in' | 'out'; time?: string; late?: number; worked?: number; ot?: number; uid?: string | null; feed?: Feed }
+type Result = { kind: 'ok' | 'dup' | 'unknown' | 'inactive' | 'blocked'; reason?: string; flag?: string; employee?: Person; type?: 'in' | 'out'; time?: string; late?: number; worked?: number; ot?: number; uid?: string | null; feed?: Feed }
 
 const call = <T,>(key: string, path: string, json?: unknown) => api<T>(`/device${path}`, { method: json ? 'POST' : 'GET', json, headers: { 'X-Device-Key': key } })
 
@@ -31,17 +31,25 @@ export function Terminal() {
 function Pair({ onPaired }: { onPaired: (k: string) => void }) {
   const L = useL(); const lang = useLang()
   const [k, setK] = useState(''); const [busy, setBusy] = useState(false); const [err, setErr] = useState('')
-  const go = async () => { setBusy(true); setErr(''); try { await call<Me>(k.trim(), '/me'); onPaired(k.trim()) } catch (x) { setErr((x as ApiError).message) } finally { setBusy(false) } }
+  // مفتاح الجهاز (48 حرفاً) أو رمز تفعيل لمرة واحدة (8 أحرف) يُستبدل بمفتاح دائم
+  const go = async () => {
+    setBusy(true); setErr('')
+    try {
+      let key = k.trim()
+      if (key.replace(/[-\s]/g, '').length <= 12) key = (await api<{ key: string }>('/nf/activate', { json: { code: key } })).key
+      await call<Me>(key, '/me'); onPaired(key)
+    } catch (x) { setErr((x as ApiError).message) } finally { setBusy(false) }
+  }
   return <div dir={lang === 'ar' ? 'rtl' : 'ltr'} className="show-root fixed inset-0 grid place-items-center p-6">
     <div className="show-bg" aria-hidden><i /><i /><i /></div>
     <form onSubmit={e => { e.preventDefault(); go() }} className="relative z-10 w-full max-w-[460px] rounded-3xl border border-show-fg/15 bg-show-fg/[.04] p-7 text-center">
       <Logo pill h={26} />
       <h1 className="mt-5 text-[22px] font-bold">{L('تسجيل جهاز الحضور', 'Register this attendance device')}</h1>
-      <p className="mt-2 text-show-fg/60 text-[14px]">{L('من حساب الموارد البشرية: الإعدادات ← أجهزة الحضور ← «إضافة جهاز»، ثم الصق المفتاح هنا مرة واحدة.', 'From the HR account: Settings → Attendance devices → “Add device”, then paste the key here once.')}</p>
+      <p className="mt-2 text-show-fg/60 text-[14px]">{L('من حساب الموارد البشرية: الإعدادات ← أجهزة الحضور ← «إضافة جهاز»، ثم الصق المفتاح أو رمز التفعيل هنا مرة واحدة.', 'From the HR account: Settings → Attendance devices → “Add device”, then paste the key or activation code here once.')}</p>
       <div className="relative mt-5"><KeyRound size={16} className="absolute top-1/2 -translate-y-1/2 start-3 text-show-fg/40" />
-        <input autoFocus value={k} onChange={e => setK(e.target.value)} placeholder={L('مفتاح الجهاز', 'Device key')} className="w-full h-11 rounded-xl bg-show-fg/5 border border-show-fg/15 ps-9 pe-3 outline-none focus:border-brand ltr font-mono text-[13px]" /></div>
+        <input autoFocus value={k} onChange={e => setK(e.target.value)} placeholder={L('مفتاح الجهاز أو رمز التفعيل', 'Device key or activation code')} className="w-full h-11 rounded-xl bg-show-fg/5 border border-show-fg/15 ps-9 pe-3 outline-none focus:border-brand ltr font-mono text-[13px]" /></div>
       {err && <div role="alert" className="mt-3 text-[13px] text-danger">{err}</div>}
-      <button disabled={k.trim().length < 32 || busy} className="mt-5 h-11 w-full rounded-xl bg-brand text-on-brand font-bold disabled:opacity-50 inline-flex items-center justify-center gap-2">{busy && <Loader2 size={16} className="animate-spin" />}{L('تفعيل الجهاز', 'Activate device')}</button>
+      <button disabled={(k.trim().length < 32 && k.replace(/[-\s]/g, '').length !== 8) || busy} className="mt-5 h-11 w-full rounded-xl bg-brand text-on-brand font-bold disabled:opacity-50 inline-flex items-center justify-center gap-2">{busy && <Loader2 size={16} className="animate-spin" />}{L('تفعيل الجهاز', 'Activate device')}</button>
       <div className="mt-4"><LangToggle onDark /></div>
     </form>
   </div>
@@ -137,6 +145,10 @@ function Kiosk({ deviceKey, onUnpair }: { deviceKey: string; onUnpair: () => voi
 
         {res?.kind === 'dup' && res.employee && <div key={stamp} className="show-in px-6"><AlertTriangle size={64} className="mx-auto text-brass" /><h2 className="mt-4 text-[34px] font-black">{bi(res.employee.name, lang)}</h2>
           <p className="mt-2 text-show-fg/65 text-[18px]">{L(`سُجّلت حركتك قبل ثوانٍ — انتظر ${me.data?.cooldown ?? 10} ثوانٍ قبل التمرير مجدداً.`, `You were just recorded — wait ${me.data?.cooldown ?? 10} seconds before tapping again.`)}</p></div>}
+        {res?.kind === 'blocked' && <div key={stamp} className="show-in px-6 w-full max-w-[560px]">
+          <XCircle size={64} className="mx-auto text-danger" /><h2 className="mt-4 text-[32px] font-black">{res.employee ? bi(res.employee.name, lang) : ''}</h2>
+          <p className="mt-2 text-[20px] font-semibold">{res.reason === 'off_branch' ? L('ليس لديك صلاحية البصم في هذا الفرع', 'You are not authorised at this branch') : res.reason === 'lost_card' ? L('هذه البطاقة مُبلغ عن فقدها أو استُبدلت', 'This card was reported lost or replaced') : res.reason === 'expired' ? L('انتهت صلاحية بطاقتك', 'Your card has expired') : L('البطاقة موقوفة', 'This card is suspended')}</p>
+          <p className="mt-2 text-show-fg/65">{L('راجع الموارد البشرية.', 'Please contact HR.')}</p></div>}
         {(res?.kind === 'unknown' || res?.kind === 'inactive') && <div key={stamp} className="show-in px-6 w-full max-w-[560px]">
           <XCircle size={64} className="mx-auto text-danger" /><h2 className="mt-4 text-[32px] font-black">{res.kind === 'inactive' ? L('البطاقة لموظف انتهت خدمته', 'Card belongs to a former employee') : L('بطاقة غير مسجّلة', 'Unregistered card')}</h2>
           <p className="mt-2 text-show-fg/65">{L('راجع الموارد البشرية لربط البطاقة بملفك.', 'Ask HR to link the card to your file.')}</p>

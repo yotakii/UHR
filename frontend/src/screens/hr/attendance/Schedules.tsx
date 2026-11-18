@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
-import { CalendarRange, Clock, Plus, Trash2, UserPlus, Users, Pencil, MapPin } from 'lucide-react'
+import { CalendarRange, Clock, Plus, Trash2, UserPlus, Users, Pencil, MapPin, QrCode, Printer, RefreshCw, Crosshair } from 'lucide-react'
+import { QR } from '../../../ui/vault'
+import { useRenewSticker, useSticker } from '../../../lib/nfc'
 import { useLookup } from '../../../lib/codes'
 import { useL, useLang, bi } from '../../../lib/store'
 import { ApiError } from '../../../lib/api'
@@ -144,7 +146,8 @@ export function Branches() {
   const L = useL(); const lang = useLang()
   const { data: d } = useBranches()
   const save = useSaveBranch()
-  const [edit, setEdit] = useState<(Partial<Branch> & { name_ar: string; name_en: string; timezone: string }) | null>(null)
+  const [edit, setEdit] = useState<(Partial<Branch> & { name_ar: string; name_en: string; timezone: string; ips?: string }) | null>(null)
+  const [sticker, setSticker] = useState<number | null>(null)
   const govs = useLookup('governorates').data
   const err = save.error instanceof ApiError ? save.error : null
   if (!d) return <div className="max-w-[1000px] mx-auto"><PageHead title={L('الفروع والمناطق الزمنية', 'Branches & time zones')} /><Panel><Empty title={L('جارٍ التحميل…', 'Loading…')} /></Panel></div>
@@ -155,9 +158,12 @@ export function Branches() {
       <tbody>{d.data.map(b => <tr key={b.id} className={b.active ? '' : 'opacity-60'}>
         <td><div className="font-medium flex items-center gap-1.5"><MapPin size={14} className="text-ink-3" />{lang === 'en' ? b.en : b.ar}</div><div className="text-[12px] text-ink-3">{b.own ? L('فرع الشركة', 'Company branch') : L('مدينة مشتركة', 'Shared city')}</div></td>
         <td className="ltr text-start num">{b.timezone}</td><td className="hidden sm:table-cell num">{b.employees}</td>
-        <td>{b.own && d.can.edit && <button className="p-1.5 rounded hover:bg-sub text-ink-3" onClick={() => { save.reset(); setEdit({ ...b, name_ar: b.ar, name_en: b.en }) }} aria-label={L('تعديل', 'Edit')}><Pencil size={15} /></button>}</td></tr>)}</tbody></table></Panel>
+        <td><div className="flex justify-end gap-1">{b.own && d.can.edit && <button className="p-1.5 rounded hover:bg-sub text-ink-3" onClick={() => setSticker(b.id)} aria-label={L('ملصق الفرع', 'Branch sticker')} title={L('ملصق الفرع', 'Branch sticker')}><QrCode size={15} /></button>}
+          {b.own && d.can.edit && <button className="p-1.5 rounded hover:bg-sub text-ink-3" onClick={() => { save.reset(); setEdit({ ...b, name_ar: b.ar, name_en: b.en, ips: (b.allowed_ips ?? []).join('\n') }) }} aria-label={L('تعديل', 'Edit')}><Pencil size={15} /></button>}</div></td></tr>)}</tbody></table></Panel>
+    {sticker && <StickerModal id={sticker} onClose={() => setSticker(null)} />}
     {edit && <Modal open onClose={() => setEdit(null)} title={edit.id ? L('تعديل فرع', 'Edit branch') : L('فرع جديد', 'New branch')}
-      footer={<><Btn onClick={() => setEdit(null)}>{L('إلغاء', 'Cancel')}</Btn><Btn kind="primary" disabled={save.isPending} onClick={() => save.mutate({ id: edit.id, code: edit.id ? undefined : edit.code, name_ar: edit.name_ar, name_en: edit.name_en, timezone: edit.timezone, active: edit.active ?? true }, { onSuccess: () => { toast(L('حُفظ الفرع', 'Saved')); setEdit(null) } })}>{L('حفظ', 'Save')}</Btn></>}>
+      footer={<><Btn onClick={() => setEdit(null)}>{L('إلغاء', 'Cancel')}</Btn><Btn kind="primary" disabled={save.isPending} onClick={() => save.mutate({ id: edit.id, code: edit.id ? undefined : edit.code, name_ar: edit.name_ar, name_en: edit.name_en, timezone: edit.timezone, active: edit.active ?? true, governorate: edit.governorate ?? null,
+        lat: edit.lat ?? null, lng: edit.lng ?? null, radius: edit.radius ?? 0, allowed_ips: (edit.ips ?? '').split(/[\s,]+/).filter(Boolean) }, { onSuccess: () => { toast(L('حُفظ الفرع', 'Saved')); setEdit(null) } })}>{L('حفظ', 'Save')}</Btn></>}>
       <div className="grid sm:grid-cols-2 gap-3">
         <Field label={L('الاسم', 'Name')} req error={err?.field('name_ar')}><input className="field" value={edit.name_ar} onChange={e => setEdit({ ...edit, name_ar: e.target.value })} /></Field>
         <Field label={L('الاسم بالإنكليزية', 'English name')} req error={err?.field('name_en')}><input className="field ltr" value={edit.name_en} onChange={e => setEdit({ ...edit, name_en: e.target.value })} /></Field>
@@ -165,9 +171,46 @@ export function Branches() {
         <Field label={L('المحافظة (لقاعدة بدل السفر)', 'Governorate (for the travel allowance rule)')}><select className="field" value={edit.governorate ?? ''} onChange={e => setEdit({ ...edit, governorate: e.target.value || null })}>
           <option value="">—</option>{(govs ?? []).map(g => <option key={g.code} value={g.code}>{g.code} · {lang === 'ar' ? g.ar : g.en}</option>)}</select></Field>
         <Field label={L('المنطقة الزمنية', 'Time zone')} req><select className="field ltr" value={edit.timezone} onChange={e => setEdit({ ...edit, timezone: e.target.value })}>{d.timezones.map(z => <option key={z}>{z}</option>)}</select></Field>
+        <div className="sm:col-span-2 grid grid-cols-3 gap-2 items-end">
+          <Field label={L('خط العرض', 'Latitude')} error={err?.field('lat')}><input className="field ltr num" inputMode="decimal" value={edit.lat ?? ''} onChange={e => setEdit({ ...edit, lat: e.target.value === '' ? null : Number(e.target.value) })} /></Field>
+          <Field label={L('خط الطول', 'Longitude')} error={err?.field('lng')}><input className="field ltr num" inputMode="decimal" value={edit.lng ?? ''} onChange={e => setEdit({ ...edit, lng: e.target.value === '' ? null : Number(e.target.value) })} /></Field>
+          <Field label={L('النطاق (م)', 'Radius (m)')} error={err?.field('radius')}><input className="field ltr num" inputMode="numeric" value={edit.radius ?? 0} onChange={e => setEdit({ ...edit, radius: Number(e.target.value.replace(/\D/g, '')) || 0 })} /></Field>
+        </div>
+        <div className="sm:col-span-2 -mt-1 flex flex-wrap items-center gap-2 text-[12px] text-ink-3"><Btn size="sm" kind="ghost" icon={<Crosshair size={13} />} onClick={() => navigator.geolocation?.getCurrentPosition(p => setEdit(x => x && ({ ...x, lat: +p.coords.latitude.toFixed(6), lng: +p.coords.longitude.toFixed(6) })))}>{L('موقعي الحالي', 'My current location')}</Btn>
+          {L('يُستخدم للحضور بملصق الفرع: الهاتف يجب أن يكون ضمن النطاق. 0 = دون تحقق.', 'Used for branch-sticker check-in: the phone must be within the radius. 0 = no check.')}</div>
+        <Field label={L('عناوين الشبكة المسموحة (اختياري)', 'Allowed network addresses (optional)')} className="sm:col-span-2" error={Object.entries(err?.errors ?? {}).find(([k]) => k.startsWith('allowed_ips'))?.[1]?.[0]}
+          hint={L('عنوان أو نطاق في كل سطر (مثل 82.137.200.10 أو 10.0.0.0/8). طبقة تحقق إضافية: رسائل أجهزة هذا الفرع من عنوان آخر تُرفض.', 'One address or range per line (e.g. 82.137.200.10 or 10.0.0.0/8). An extra layer: messages from this branch’s devices from another address are refused.')}>
+          <textarea className="field ltr font-mono text-[13px]" rows={2} value={edit.ips ?? ''} onChange={e => setEdit({ ...edit, ips: e.target.value })} /></Field>
       </div>
       {edit.id && <label className="flex items-center gap-2 mt-3 text-[13.5px]"><input type="checkbox" className="accent-[var(--primary)] size-4" checked={edit.active ?? true} onChange={e => setEdit({ ...edit, active: e.target.checked })} />{L('فعّال', 'Active')}</label>}
       {err && !Object.keys(err.errors).length && <p role="alert" className="mt-3 text-[13px] text-danger">{err.message}</p>}
     </Modal>}
   </div>
+}
+
+/** ملصق الفرع (FR-NF-017): رمز QR يُطبع ويُلصق عند المدخل، أو يُكتب رابطه على ملصق NFC — الموظف يمسحه بهاتفه من حسابه */
+function StickerModal({ id, onClose }: { id: number; onClose: () => void }) {
+  const L = useL(); const lang = useLang()
+  const { data } = useSticker(id)
+  const renew = useRenewSticker()
+  const print = () => {
+    const w = window.open('', '_blank', 'width=600,height=800'); if (!w || !data) return
+    const svg = document.getElementById('sticker-qr')?.outerHTML ?? ''
+    w.document.write(`<html dir="${lang === 'ar' ? 'rtl' : 'ltr'}"><head><title>${data.branch.code}</title></head><body style="font-family:sans-serif;text-align:center;padding:40px"><h1 style="margin:0">${bi(data.branch, lang)}</h1><p>${L('امسح الرمز بهاتفك لتسجيل الحضور', 'Scan with your phone to check in')}</p>${svg.replace(/width="\d+"/, 'width="420"').replace(/height="\d+"/, 'height="420"')}<p style="font-size:12px;color:#666">${data.branch.code}</p></body></html>`)
+    w.document.close(); w.focus(); setTimeout(() => w.print(), 300)
+  }
+  return <Modal open onClose={onClose} width={480} title={<span className="flex items-center gap-2"><QrCode size={17} className="text-brand" />{L('ملصق الفرع', 'Branch sticker')}{data ? ` — ${bi(data.branch, lang)}` : ''}</span>}
+    footer={<><Btn kind="ghost" icon={<RefreshCw size={14} />} disabled={renew.isPending} onClick={() => renew.mutate(id, { onSuccess: () => toast(L('جُدّد الرمز — الملصقات القديمة لم تعد تعمل', 'Renewed — old stickers no longer work')) })}>{L('تجديد الرمز', 'Renew code')}</Btn>
+      <Btn icon={<Printer size={14} />} disabled={!data} onClick={print}>{L('طباعة', 'Print')}</Btn><Btn kind="primary" onClick={onClose}>{L('إغلاق', 'Close')}</Btn></>}>
+    {!data ? <Empty title={L('جارٍ التحميل…', 'Loading…')} /> : <div className="text-center space-y-3">
+      {!data.enabled && <p className="text-[13px] text-warn">{L('الحضور بملصق الفرع موقوف من إعدادات بوابة الحضور.', 'Branch-sticker check-in is switched off in the gate settings.')}</p>}
+      <div className="inline-block" id="sticker-wrap"><span id="sticker-qr-holder"><QRWithId text={data.url} /></span></div>
+      <p className="text-[13px] text-ink-2">{L('اطبعه والصقه عند مدخل الفرع، أو اكتب الرابط على ملصق NFC. يفتحه الموظف بهاتفه وهو داخل حسابه فيُسجَّل حضوره بعد التحقق من صلاحيته', 'Print it and stick it at the branch entrance, or write the link on an NFC tag. The employee opens it on their phone while signed in; attendance is recorded after checking their access')}{data.geo ? L(' وموقعه ضمن نطاق الفرع.', ' and that they are within the branch area.') : '.'}</p>
+      <div className="rounded-lg bg-sub p-2 ltr font-mono text-[12px] break-all select-all">{data.url}</div>
+    </div>}
+  </Modal>
+}
+
+function QRWithId({ text }: { text: string }) {
+  return <span ref={el => { const s = el?.querySelector('svg'); if (s) s.id = 'sticker-qr' }}><QR text={text} size={220} /></span>
 }

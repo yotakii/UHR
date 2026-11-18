@@ -219,6 +219,24 @@ class Settings
             'trainer_rates' => ['beginner' => 15000, 'intermediate' => 25000, 'advanced' => 40000], 'trainer_currency' => 'SYP',
             'attendance_bonus' => 0, 'attendance_bonus_currency' => 'SYP', 'bonus_over_cap_role' => 'ceo', 'bonus_monthly_cap' => 0,
         ],
+        // NFC وتعدد الفروع (الدفعة 21 — الجزء C): قرار البصم خارج الفرع، نوافذ التكرار، تنبيهات الأمان، الحضور بملصق الفرع
+        'nfc' => [
+            'off_branch' => 'flag',                 // reject | flag (قبول مع تعليم للمراجعة)
+            'mission_access' => true,               // المهمة المعتمدة إلى فرع آخر تمنح صلاحية مؤقتة آلياً
+            'duplicate_seconds' => 60,              // القراءة نفسها خلال هذه النافذة تُتجاهل
+            'direction' => 'auto',                  // auto (نوع الجهاز ثم تسلسل البصمات) | sequence
+            'signature' => 'optional',              // optional | required (توقيع HMAC لكل رسالة)
+            'activation_hours' => 72,               // صلاحية رمز التفعيل
+            'offline_minutes' => 10,                // انقطاع النبضة ← تنبيه «جهاز منقطع»
+            'drift_seconds' => 120,                 // فرق توقيت ساعة الجهاز المقبول
+            'unknown_alert' => 3,                   // بطاقة غير معروفة تتكرر N مرات في اليوم ← تنبيه
+            'buddy_seconds' => 3,                   // بطاقتان على الجهاز نفسه خلال ثوانٍ…
+            'buddy_repeat' => 3,                    // …تكرر ذلك N مرات خلال 30 يوماً ← تنبيه
+            'auto_disable' => true,                 // تعطيل البطاقات تلقائياً عند انتهاء الخدمة
+            'sticker' => true,                      // الحضور بالهاتف بمسح ملصق الفرع
+            'sticker_geo' => true,                  // يتطلب الموقع الجغرافي ضمن نطاق الفرع
+            'card_security' => 'uid',               // uid | memory | secure (للعلم — يحدد نوع القارئ المطلوب)
+        ],
     ];
 
     /** إعدادات المنصة (بلا شركة): نصوص بوابة فرص العمل العامة — SRS §10.15 */

@@ -34,6 +34,7 @@ export function Public() {
         : page === 'applied' ? <Applied />
         : page === 'login' ? <Login />
         : page === 'approve' && parts[1] ? <Login after={`/approve/${parts[1]}`} />
+        : page === 'checkin' && parts[1] ? <Login after={`/checkin/${parts[1]}`} />
         : page === 'forgot' ? <Forgot />
         : page === 'track' ? <Track />
         : page === 'test' && parts[1] ? <TakeTest token={parts[1]} />

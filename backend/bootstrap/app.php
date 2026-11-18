@@ -33,9 +33,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\RequireRole::class,
             'perm' => \App\Http\Middleware\RequirePermission::class,
             'device' => \App\Http\Middleware\RequireDevice::class,
+            'nfdevice' => \App\Http\Middleware\RequireNfDevice::class,
         ]);
         // أجهزة الحضور وجسر القارئ تُصادَق بمفتاح الجهاز في الهيدر — بلا جلسة ولا CSRF
-        $middleware->validateCsrfTokens(except: ['api/device/*']);
+        $middleware->validateCsrfTokens(except: ['api/device/*', 'api/nf/*']);
         $middleware->redirectGuestsTo(fn () => null);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

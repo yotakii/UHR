@@ -37,9 +37,9 @@ export const useAssignSchedule = () => useMutation({ mutationFn: (v: { employee_
 export const useUnassign = () => useMutation({ mutationFn: (id: number) => api(`/hr/schedules/assignments/${id}`, { method: 'DELETE' }), onSuccess: refreshSchedules })
 export interface RosterDay { date: string; off: 'holiday' | 'weekend' | null; start: number; end: number; source: 'assignment' | 'employee' | 'policy'; schedule: { id: number; ar: string; color: string } | null; shift: string | null; tz: string }
 export const useRoster = (from: string, dept: string, enabled = true) => useQuery({ queryKey: ['hr', 'roster', from, dept], enabled, placeholderData: p => p, queryFn: () => api<{ days: string[]; data: { id: number; code: string; ar: string; en: string; days: RosterDay[] }[] }>(`/hr/schedules/roster?${qs({ from, dept, days: 7 })}`) })
-export interface Branch { id: number; code: string; ar: string; en: string; timezone: string; governorate?: string | null; active: boolean; own: boolean; employees: number }
+export interface Branch { id: number; code: string; ar: string; en: string; timezone: string; governorate?: string | null; active: boolean; own: boolean; employees: number; lat?: number | null; lng?: number | null; radius?: number; allowed_ips?: string[]; sticker?: boolean }
 export const useBranches = () => useQuery({ queryKey: ['hr', 'branches'], queryFn: () => api<{ data: Branch[]; timezones: string[]; can: { edit: boolean } }>('/hr/branches') })
-export const useSaveBranch = () => useMutation({ mutationFn: (v: { id?: number; code?: string; name_ar: string; name_en: string; timezone: string; governorate?: string | null; active?: boolean }) => api<{ data: Branch[] }>(v.id ? `/hr/branches/${v.id}` : '/hr/branches', { method: v.id ? 'PUT' : 'POST', json: v }), onSuccess: d => queryClient.setQueryData(['hr', 'branches'], (o: object | undefined) => ({ ...(o ?? {}), ...d })) })
+export const useSaveBranch = () => useMutation({ mutationFn: (v: { id?: number; code?: string; name_ar: string; name_en: string; timezone: string; governorate?: string | null; active?: boolean; lat?: number | null; lng?: number | null; radius?: number; allowed_ips?: string[] }) => api<{ data: Branch[] }>(v.id ? `/hr/branches/${v.id}` : '/hr/branches', { method: v.id ? 'PUT' : 'POST', json: v }), onSuccess: d => queryClient.setQueryData(['hr', 'branches'], (o: object | undefined) => ({ ...(o ?? {}), ...d })) })
 /** «HH:MM» ↔ دقائق */
 export const hm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 export const useCorrect = () => useMutation({
@@ -92,11 +92,12 @@ export const useFixedHolidays = () => useMutation({ mutationFn: (year: number) =
 export const useDeleteHoliday = () => useMutation({ mutationFn: (id: number) => api<{ year: number; data: Holiday[] }>(`/hr/holidays/${id}`, { method: 'DELETE' }), onSuccess: setHol })
 
 /* ---------- الأجهزة ---------- */
-export type DeviceKind = 'reader' | 'sunmi' | 'mobile' | 'bridge' | 'zk'
+export type DeviceKind = 'reader' | 'sunmi' | 'mobile' | 'bridge' | 'zk' | 'gateway' | 'sticker'
 export interface ZkCfg { ip: string; port: number; comm_key: string; machine_no: number; card_order: 'normal' | 'reversed' }
 export interface ZkSyncState { ok?: boolean; error?: string | null; at?: string; received?: number; new?: number; applied?: number; dup?: number; unmatched?: number; info?: { serial?: string; firmware?: string; ip?: string } | null }
-export interface DeviceRow { id: number; name: Bi; name_ar: string; name_en: string; kind: DeviceKind; location_id: number | null; location: Bi | null; active: boolean; online: boolean; key_hint: string | null; last_seen_at: string | null; last_ip: string | null; zk?: ZkCfg | null; last_sync?: ZkSyncState | null; last_sync_at?: string | null }
-export interface DeviceInput { name_ar: string; name_en: string; kind: DeviceKind; location_id: number | null; active?: boolean; zk?: ZkCfg }
+export interface DeviceRow { id: number; name: Bi; name_ar: string; name_en: string; kind: DeviceKind; location_id: number | null; location: Bi | null; active: boolean; online: boolean; key_hint: string | null; last_seen_at: string | null; last_ip: string | null; zk?: ZkCfg | null; last_sync?: ZkSyncState | null; last_sync_at?: string | null
+  code?: string | null; direction?: 'in' | 'out' | 'both'; site?: string | null; serial?: string | null; status?: 'pending' | 'active' | 'disabled'; require_signature?: boolean; lan_ip?: string | null; clock_drift?: number | null; gateway?: { version?: string | null; buffered?: number } | null; has_secret?: boolean; activation_until?: string | null }
+export interface DeviceInput { name_ar: string; name_en: string; kind: DeviceKind; location_id: number | null; active?: boolean; zk?: ZkCfg; direction?: 'in' | 'out' | 'both'; site?: string | null; serial?: string | null; require_signature?: boolean }
 // حالة «متصل» تتغير مع الوقت (آخر ظهور خلال 3 دقائق) ← تحديث كل 30 ثانية حتى دون أحداث
 export const useDevices = () => useQuery({ queryKey: ['hr', 'devices'], queryFn: () => api<{ data: DeviceRow[]; locations: (Bi & { id: number })[] }>('/hr/devices'), refetchInterval: 30_000 })
 const devs = () => queryClient.invalidateQueries({ queryKey: ['hr', 'devices'] })

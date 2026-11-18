@@ -315,6 +315,25 @@ Route::middleware(['auth', 'fresh', 'portal:hr'])->prefix('hr')->group(function 
         Route::get('/attendance/period', [AttendanceController::class, 'period']);
     });
     Route::get('/attendance/export', [AttendanceController::class, 'export'])->middleware('perm:attendance,export');
+    // الدفعة 21 — بوابة الحضور متعددة الفروع: الأحداث الخام، المراجعة، المحاكاة، التقارير، الاعتمادات وصلاحيات الفروع
+    Route::middleware('perm:attendance,view')->prefix('nfc')->group(function () {
+        Route::get('/events', [\App\Http\Controllers\Api\Hr\NfcController::class, 'events']);
+        Route::post('/simulate', [\App\Http\Controllers\Api\Hr\NfcController::class, 'simulate'])->middleware('throttle:60,1');
+        Route::get('/report', [\App\Http\Controllers\Api\Hr\NfcController::class, 'report']);
+        Route::get('/settings', [\App\Http\Controllers\Api\Hr\NfcController::class, 'settings']);
+    });
+    Route::post('/nfc/events/{id}/review', [\App\Http\Controllers\Api\Hr\NfcController::class, 'review'])->whereNumber('id')->middleware('perm:attendance,edit');
+    Route::put('/nfc/settings', [\App\Http\Controllers\Api\Hr\NfcController::class, 'saveSettings'])->middleware('perm:settings,edit');
+    Route::post('/devices/{id}/activation', [\App\Http\Controllers\Api\Hr\NfcController::class, 'activation'])->whereNumber('id')->middleware('perm:attendance,edit');
+    Route::get('/branches/{id}/sticker', [\App\Http\Controllers\Api\Hr\NfcController::class, 'sticker'])->whereNumber('id')->middleware('perm:settings,edit');
+    Route::post('/branches/{id}/sticker', [\App\Http\Controllers\Api\Hr\NfcController::class, 'sticker'])->whereNumber('id')->middleware('perm:settings,edit');
+    Route::get('/employees/{id}/access', [\App\Http\Controllers\Api\Hr\NfcController::class, 'access'])->whereNumber('id')->middleware('perm:employees,view');
+    Route::middleware('perm:employees,edit')->group(function () {
+        Route::post('/employees/{id}/credentials', [\App\Http\Controllers\Api\Hr\NfcController::class, 'addCredential'])->whereNumber('id');
+        Route::post('/credentials/{id}/status', [\App\Http\Controllers\Api\Hr\NfcController::class, 'credentialStatus'])->whereNumber('id');
+        Route::post('/employees/{id}/branches', [\App\Http\Controllers\Api\Hr\NfcController::class, 'addBranch'])->whereNumber('id');
+        Route::delete('/branch-access/{id}', [\App\Http\Controllers\Api\Hr\NfcController::class, 'removeBranch'])->whereNumber('id');
+    });
     Route::middleware('perm:attendance,edit')->group(function () {
         Route::put('/attendance/{id}', [AttendanceController::class, 'correct'])->whereNumber('id');
         Route::get('/devices', [DeviceController::class, 'index']);
@@ -554,6 +573,18 @@ Route::middleware(['auth', 'fresh', 'portal:platform'])->prefix('platform')->gro
     Route::put('/mail', [\App\Http\Controllers\Api\MailLogController::class, 'saveSettings']);
     Route::post('/mail/test', [\App\Http\Controllers\Api\MailLogController::class, 'test'])->middleware('throttle:6,1,mail-test');
     Route::get('/mail/log', [\App\Http\Controllers\Api\MailLogController::class, 'platform']);
+});
+
+// الدفعة 21 — واجهة أحداث الأجهزة وبوابات الفروع: X-Device-Id + توقيع HMAC (أو X-Device-Key)، والتفعيل برمز لمرة واحدة
+Route::post('/nf/activate', [\App\Http\Controllers\Api\Device\NfController::class, 'activate'])->middleware('throttle:10,1');
+Route::middleware(['nfdevice', 'throttle:240,1'])->prefix('nf')->group(function () {
+    Route::post('/events', [\App\Http\Controllers\Api\Device\NfController::class, 'events']);
+    Route::post('/heartbeat', [\App\Http\Controllers\Api\Device\NfController::class, 'heartbeat']);
+});
+// ملصق الفرع: الموظف يمسحه بهاتفه من حسابه
+Route::middleware(['auth', 'fresh'])->group(function () {
+    Route::get('/me/checkin/branch/{token}', [\App\Http\Controllers\Api\Employee\StickerController::class, 'info']);
+    Route::post('/me/checkin/branch/{token}', [\App\Http\Controllers\Api\Employee\StickerController::class, 'checkin'])->middleware('throttle:10,1');
 });
 
 // جهاز الحضور وجسر القارئ: مفتاح الجهاز في X-Device-Key (بلا جلسة)

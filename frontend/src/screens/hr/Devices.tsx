@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { Copy, KeyRound, Loader2, Monitor, Plus, RefreshCw, Download, Usb, CheckCircle2, Fingerprint } from 'lucide-react'
+import { Copy, KeyRound, Loader2, Monitor, Plus, RefreshCw, Download, Usb, CheckCircle2, Fingerprint, Settings2, Activity } from 'lucide-react'
+import { navigate } from '../../lib/router'
 import { ZkFields, ZkPanel, ZkSetup, ZK_DEFAULT } from './ZkDevices'
 import { useL, useLang, bi, fmtDateTime } from '../../lib/store'
 import { ApiError } from '../../lib/api'
+import { useActivation } from '../../lib/nfc'
 import { downloadBridge, useAddDevice, useDevices, useRotateDevice, useUpdateDevice, type DeviceInput, type DeviceKind, type DeviceRow } from '../../lib/attendance'
 import { Badge, Btn, Empty, Field, Modal, PageHead, Panel, Seg, toast } from '../../ui/kit'
 
@@ -19,21 +21,27 @@ export function Devices() {
   const [reader, setReader] = useState(false)
   const [zkNew, setZkNew] = useState(false); const [zkOpen, setZkOpen] = useState<number | null>(null)
   const bridge = (id: number) => downloadBridge(id).then(() => toast(L('نُزّل الجسر — شغّل install.bat على الحاسوب الموصول به القارئ', 'Bridge downloaded — run install.bat on the PC with the reader'))).catch(x => toast((x as Error).message))
-  const kind: Record<DeviceKind, string> = { reader: L('حاسوب + قارئ USB', 'PC + USB reader'), sunmi: L('جهاز Sunmi', 'Sunmi device'), mobile: L('جوال NFC', 'NFC phone'), bridge: L('جسر القارئ UHR-NFC-Bridge', 'UHR-NFC-Bridge'), zk: L('بصّامة ZKTeco عبر حاسوب', 'ZKTeco terminal via a PC') }
+  const kind: Record<DeviceKind, string> = { reader: L('حاسوب + قارئ USB', 'PC + USB reader'), sunmi: L('جهاز Sunmi', 'Sunmi device'), mobile: L('جوال NFC', 'NFC phone'), bridge: L('جسر القارئ UHR-NFC-Bridge', 'UHR-NFC-Bridge'), zk: L('بصّامة ZKTeco عبر حاسوب', 'ZKTeco terminal via a PC'), gateway: L('بوابة فرع / قارئ شبكي', 'Branch gateway / network reader'), sticker: L('ملصق الفرع (الهاتف)', 'Branch sticker (phone)') }
+  const act = useActivation(); const [code, setCode] = useState<{ name: string; code: string; until: string; id: string | null } | null>(null)
+  const dir = (x?: string) => x === 'in' ? L('دخول', 'In') : x === 'out' ? L('خروج', 'Out') : L('دخول وخروج', 'In & out')
   return <div className="max-w-[1100px] mx-auto space-y-5">
     <PageHead title={L('أجهزة الحضور', 'Attendance devices')} sub={L('شاشة الجهاز تعمل فقط على جهاز مسجّل بمفتاحه. افتح /kiosk على الجهاز والصق المفتاح مرة واحدة.', 'The terminal screen only runs on a registered device. Open /kiosk on it and paste the key once.')}
-      actions={<><Btn icon={<Fingerprint size={15} />} onClick={() => setZkNew(true)}>{L('بصّامة ZKTeco', 'ZKTeco terminal')}</Btn><Btn icon={<Usb size={15} />} onClick={() => setReader(true)}>{L('قارئ ACS على حاسوب', 'ACS reader on a PC')}</Btn>
+      actions={<><Btn kind="ghost" icon={<Settings2 size={15} />} onClick={() => navigate('/hr/settings/nfc')}>{L('إعدادات البوابة', 'Gate settings')}</Btn>
+        <Btn kind="ghost" icon={<Activity size={15} />} onClick={() => navigate('/hr/attendance?view=gate')}>{L('سجل الأحداث', 'Event log')}</Btn>
+        <Btn icon={<Fingerprint size={15} />} onClick={() => setZkNew(true)}>{L('بصّامة ZKTeco', 'ZKTeco terminal')}</Btn><Btn icon={<Usb size={15} />} onClick={() => setReader(true)}>{L('قارئ ACS على حاسوب', 'ACS reader on a PC')}</Btn>
         <Btn kind="primary" icon={<Plus size={15} />} onClick={() => setEdit('new')}>{L('إضافة جهاز', 'Add device')}</Btn></>} />
     <Panel pad={false}>{!data ? <div className="grid place-items-center py-12"><Loader2 className="animate-spin text-brand" /></div> : data.data.length === 0 ? <Empty title={L('لا توجد أجهزة', 'No devices')}>{L('أضف جهاز البوابة أو جهاز Sunmi لتبدأ تسجيل الحضور بالبطاقات.', 'Add the gate PC or a Sunmi device to start card attendance.')}</Empty> :
       <table className="tbl"><thead><tr><th>{L('الجهاز', 'Device')}</th><th className="hidden md:table-cell">{L('النوع', 'Kind')}</th><th className="hidden lg:table-cell">{L('آخر اتصال', 'Last seen')}</th><th>{L('الحالة', 'Status')}</th><th /></tr></thead>
         <tbody>{data.data.map(d => <tr key={d.id} className={d.active ? '' : 'opacity-60'}>
-          <td><div className="font-medium flex items-center gap-2"><Monitor size={15} className="text-ink-3" />{bi(d.name, lang)}</div><div className="text-[12px] text-ink-3">{d.location ? bi(d.location, lang) : ''}{d.key_hint && <> · <span className="ltr">…{d.key_hint}</span></>}<span className="md:hidden"> · {kind[d.kind]}</span></div></td>
+          <td><div className="font-medium flex items-center gap-2"><Monitor size={15} className="text-ink-3" />{bi(d.name, lang)}{d.code && <span className="ltr text-[12px] text-ink-3 font-mono">{d.code}</span>}</div><div className="text-[12px] text-ink-3">{d.location ? bi(d.location, lang) : L('دون فرع', 'No branch')}{d.site ? ` · ${d.site}` : ''} · {dir(d.direction)}{d.key_hint && <> · <span className="ltr">…{d.key_hint}</span></>}<span className="md:hidden"> · {kind[d.kind]}</span></div></td>
           <td className="hidden md:table-cell text-[13px]">{kind[d.kind]}</td>
-          <td className="hidden lg:table-cell num text-[13px]">{d.last_seen_at ? fmtDateTime(d.last_seen_at, lang) : '—'}{d.last_ip && <div className="text-ink-3 ltr">{d.last_ip}</div>}</td>
-          <td>{!d.active ? <Badge>{L('موقوف', 'Disabled')}</Badge> : d.online ? <Badge tone="brand" dot>{L('متصل', 'Online')}</Badge> : <Badge tone="warn">{L('غير متصل', 'Offline')}</Badge>}</td>
+          <td className="hidden lg:table-cell num text-[13px]">{d.last_seen_at ? fmtDateTime(d.last_seen_at, lang) : '—'}{d.last_ip && <div className="text-ink-3 ltr">{d.last_ip}{d.lan_ip ? ` · ${d.lan_ip}` : ''}</div>}
+            {d.clock_drift != null && Math.abs(d.clock_drift) > 60 && <div className="text-warn">{L('فرق الساعة', 'Clock drift')} {d.clock_drift}s</div>}{d.gateway?.buffered ? <div className="text-info">{L('أحداث مخزّنة', 'Buffered')}: {d.gateway.buffered}</div> : null}</td>
+          <td>{!d.active ? <Badge>{L('موقوف', 'Disabled')}</Badge> : d.status === 'pending' ? <Badge tone="info">{L('بانتظار التفعيل', 'Awaiting activation')}</Badge> : d.online ? <Badge tone="brand" dot>{L('متصل', 'Online')}</Badge> : <Badge tone="warn">{L('غير متصل', 'Offline')}</Badge>}</td>
           <td><div className="flex justify-end gap-1">
             {d.kind === 'zk' && <Btn size="sm" kind="ghost" icon={<Fingerprint size={13} />} onClick={() => setZkOpen(d.id)}>{L('الحركات والربط', 'Punches & links')}</Btn>}
             {d.kind === 'bridge' && <Btn size="sm" kind="ghost" icon={<Download size={13} />} onClick={() => bridge(d.id)}>{L('تنزيل الجسر', 'Download bridge')}</Btn>}
+            {d.kind !== 'sticker' && d.kind !== 'zk' && <Btn size="sm" kind="ghost" icon={<KeyRound size={13} />} disabled={act.isPending} onClick={() => act.mutate(d.id, { onSuccess: r => setCode({ name: bi(d.name, lang), code: r.code, until: r.expires_at, id: r.device_id }) })}>{L('رمز تفعيل', 'Activation code')}</Btn>}
             <Btn size="sm" kind="ghost" onClick={() => setEdit(d)}>{L('تعديل', 'Edit')}</Btn>
             <Btn size="sm" kind="ghost" icon={<RefreshCw size={13} />} disabled={rotate.isPending} onClick={() => rotate.mutate(d.id, { onSuccess: r => setKey({ name: bi(r.data.name, lang), key: r.key }) })}>{L('مفتاح جديد', 'New key')}</Btn>
           </div></td></tr>)}</tbody></table>}</Panel>
@@ -41,6 +49,13 @@ export function Devices() {
     {zkNew && data && <ZkSetup locations={data.locations} onClose={() => setZkNew(false)} />}
     {zkOpen && <ZkPanel id={zkOpen} onClose={() => setZkOpen(null)} />}
     {reader && data && <ReaderSetup locations={data.locations} onClose={() => setReader(false)} />}
+    {code && <Modal open onClose={() => setCode(null)} title={<span className="flex items-center gap-2"><KeyRound size={17} className="text-brand" />{L('رمز التفعيل', 'Activation code')} — {code.name}</span>} width={520}
+      footer={<Btn kind="primary" onClick={() => setCode(null)}>{L('تم', 'Done')}</Btn>}>
+      <p className="text-[13.5px] text-ink-2">{L('أدخل هذا الرمز في الجهاز أو بوابة الفرع مرة واحدة. يتسلم الجهاز عندها مفتاحاً دائماً خاصاً به، ويصبح الرمز غير صالح.', 'Enter this code in the device or branch gateway once. The device then receives its own permanent key and the code stops working.')}</p>
+      <div className="mt-3 rounded-lg bg-sub p-4 text-center ltr font-mono text-[28px] font-black tracking-widest select-all">{code.code}</div>
+      <div className="mt-2 text-[13px] text-ink-3 num">{L('صالح حتى', 'Valid until')} {fmtDateTime(code.until, lang)}{code.id && <> · {L('معرّف الجهاز', 'Device ID')} <span className="ltr font-mono">{code.id}</span></>}</div>
+      <p className="mt-3 text-[12.5px] text-ink-3">{L('على شاشة /kiosk: الصق الرمز في خانة المفتاح. بوابة الفرع: ضع الرمز في ملف الإعداد.', 'On the /kiosk screen: paste the code in the key box. Branch gateway: put the code in its config file.')}</p>
+    </Modal>}
     {key && <Modal open onClose={() => setKey(null)} title={<span className="flex items-center gap-2"><KeyRound size={17} className="text-brand" />{L('مفتاح الجهاز', 'Device key')} — {key.name}</span>} width={560}
       footer={<Btn kind="primary" onClick={() => setKey(null)}>{L('حفظته', 'I saved it')}</Btn>}>
       <p className="text-[13.5px] text-ink-2">{L('يظهر المفتاح هذه المرة فقط. افتح الرابط على الجهاز، أو الصق المفتاح في شاشة /kiosk أو في ملف إعداد UHR-NFC-Bridge.', 'The key is shown only this time. Open the link on the device, or paste the key in the /kiosk screen or the UHR-NFC-Bridge config file.')}</p>
@@ -53,7 +68,8 @@ export function Devices() {
 function DeviceForm({ d, locations, kinds, onClose, onKey }: { d: DeviceRow | null; locations: { id: number; ar: string; en: string }[]; kinds: Record<DeviceKind, string>; onClose: () => void; onKey: (name: string, key: string) => void }) {
   const L = useL(); const lang = useLang()
   const add = useAddDevice(); const upd = useUpdateDevice()
-  const [v, setV] = useState<DeviceInput & { active: boolean }>({ name_ar: d?.name_ar ?? '', name_en: d?.name_en ?? '', kind: d?.kind ?? 'reader', location_id: d?.location_id ?? null, active: d?.active ?? true, zk: d?.zk ?? ZK_DEFAULT })
+  const [v, setV] = useState<DeviceInput & { active: boolean }>({ name_ar: d?.name_ar ?? '', name_en: d?.name_en ?? '', kind: d?.kind ?? 'reader', location_id: d?.location_id ?? null, active: d?.active ?? true, zk: d?.zk ?? ZK_DEFAULT,
+    direction: d?.direction ?? 'both', site: d?.site ?? '', serial: d?.serial ?? '', require_signature: d?.require_signature ?? false })
   const m = d ? upd : add
   const err = m.error instanceof ApiError ? m.error : null
   const submit = () => d ? upd.mutate({ ...v, id: d.id }, { onSuccess: () => { toast(L('حُفظ الجهاز', 'Device saved')); onClose() } })
@@ -64,8 +80,13 @@ function DeviceForm({ d, locations, kinds, onClose, onKey }: { d: DeviceRow | nu
       <Field label={L('الاسم', 'Name')} req error={err?.field('name_ar')}><input className="field" value={v.name_ar} onChange={e => setV({ ...v, name_ar: e.target.value })} placeholder={L('بوابة المقر — دمشق', 'HQ gate — Damascus')} /></Field>
       <Field label={L('الاسم بالإنكليزية', 'Name (EN)')} req error={err?.field('name_en')}><input className="field ltr text-start" value={v.name_en} onChange={e => setV({ ...v, name_en: e.target.value })} /></Field>
       <Field label={L('النوع', 'Kind')} className="sm:col-span-2"><select className="field" value={v.kind} onChange={e => setV({ ...v, kind: e.target.value as DeviceKind })}>{(Object.keys(kinds) as DeviceKind[]).map(k => <option key={k} value={k}>{kinds[k]}</option>)}</select></Field>
-      <Field label={L('المقر', 'Location')} className="sm:col-span-2"><select className="field" value={v.location_id ?? ''} onChange={e => setV({ ...v, location_id: e.target.value ? Number(e.target.value) : null })}>
+      <Field label={L('الفرع', 'Branch')} hint={L('الفرع يحدد صلاحية البصم: من ليس فرعه ولا مصرّحاً له يُرفض أو يُعلَّم للمراجعة.', 'The branch decides who may punch here: others are refused or flagged for review.')}><select className="field" value={v.location_id ?? ''} onChange={e => setV({ ...v, location_id: e.target.value ? Number(e.target.value) : null })}>
         <option value="">—</option>{locations.map(l => <option key={l.id} value={l.id}>{bi(l, lang)}</option>)}</select></Field>
+      <Field label={L('موقع العمل داخل الفرع', 'Site within the branch')}><input className="field" value={v.site ?? ''} onChange={e => setV({ ...v, site: e.target.value })} placeholder={L('البوابة الرئيسية', 'Main gate')} /></Field>
+      <Field label={L('الاتجاه', 'Direction')} div><Seg value={v.direction ?? 'both'} onChange={x => setV({ ...v, direction: x })} options={[{ v: 'both', label: L('دخول وخروج', 'Both') }, { v: 'in', label: L('دخول', 'In') }, { v: 'out', label: L('خروج', 'Out') }]} /></Field>
+      <Field label={L('الرقم التسلسلي', 'Serial number')}><input className="field ltr text-start" value={v.serial ?? ''} onChange={e => setV({ ...v, serial: e.target.value })} /></Field>
+      {v.kind !== 'zk' && <label className="sm:col-span-2 flex items-start gap-2 text-[13.5px]"><input type="checkbox" className="mt-1" checked={!!v.require_signature} onChange={e => setV({ ...v, require_signature: e.target.checked })} />
+        <span>{L('اشتراط توقيع كل رسالة بسرّ الجهاز', 'Require every message to be signed with the device secret')}<span className="block text-[12px] text-ink-3">{L('للبوابات والقرّاء الشبكية التي تدعم التوقيع. يتسلم الجهاز السر عند التفعيل برمز.', 'For gateways and network readers that support signing. The device receives the secret when activated with a code.')}</span></span></label>}
       {v.kind === 'zk' && <div className="sm:col-span-2"><ZkFields v={v.zk ?? ZK_DEFAULT} onChange={zk => setV({ ...v, zk })} err={err} /></div>}
       {d && <Field label={L('الحالة', 'Status')} div className="sm:col-span-2"><Seg value={v.active ? 'on' : 'off'} onChange={x => setV({ ...v, active: x === 'on' })} options={[{ v: 'on', label: L('فعّال', 'Active') }, { v: 'off', label: L('موقوف', 'Disabled') }]} /></Field>}
     </div>

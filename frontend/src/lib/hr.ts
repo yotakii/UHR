@@ -64,6 +64,7 @@ export function hrLink(link: string): string {
   if (k === 'reviews') return '/hr/my-reviews'
   if (k === 'codes') return '/hr/settings/codes?tab=requests'
   if (k === 'missions') return '/hr/missions'
+  if (k === 'nfc') return id === 'devices' ? '/hr/settings/devices' : id === 'off_branch' ? '/hr/attendance?view=gate&decision=pending' : '/hr/attendance?view=gate'
   if (k === 'mission') return id ? `/hr/missions?view=all&m=${id}` : '/hr/missions'
   if (k === 'contract-case') return id ? `/hr/contracts?case=${id}` : '/hr/contracts'
   if (k === 'contracts' || k === 'contract-eval') return '/hr/my-contracts'

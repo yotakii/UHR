@@ -67,6 +67,7 @@ import { ContractSettings } from './ContractSettings'
 import { MissionsApp } from '../missions/Missions'
 import { MissionPrint } from '../missions/MissionPrint'
 import { MissionSettings } from './MissionSettings'
+import { NfcSettings } from './NfcSettings'
 import { CodebookPrint } from './admin/CodebookPrint'
 import { Departments } from './admin/Departments'
 import { Chains } from './admin/Chains'
@@ -158,6 +159,7 @@ export function HrApp({ user }: { user: SessionUser }) {
     { item: { to: '/hr/settings/schedules', icon: <CalendarClock size={18} />, label: L('جداول الدوام والورديات', 'Work schedules & shifts'), group: g4, hidden: true }, section: 'rules', module: 'attendance', view: () => <Schedules /> },
     { item: { to: '/hr/settings/branches', icon: <MapPin size={18} />, label: L('الفروع والمناطق الزمنية', 'Branches & time zones'), group: g4, hidden: true }, section: 'org', module: 'attendance', view: () => <Branches /> },
     { item: { to: '/hr/settings/devices', icon: <Nfc size={18} />, label: L('أجهزة الحضور', 'Attendance devices'), group: g4, hidden: true }, section: 'system', module: u => can(u, 'attendance', 'edit'), view: () => <Devices /> },
+    { item: { to: '/hr/settings/nfc', icon: <Nfc size={18} />, label: L('إعدادات بوابة الحضور', 'Attendance gate settings'), group: g4, hidden: true }, section: 'system', module: u => can(u, 'attendance'), view: () => <NfcSettings /> },
     { item: { to: '/hr/settings/assistant', icon: <Sparkles size={18} />, label: L('إعدادات المساعد', 'Assistant settings'), group: g4, hidden: true }, section: 'system', module: u => can(u, 'settings'), view: () => <AssistantSettings /> },
     { item: { to: '/hr/settings/space', icon: <MessagesSquare size={18} />, label: L('إعدادات الساحة', 'Space settings'), group: g4, hidden: true }, section: 'system', module: u => can(u, 'settings', 'edit'), view: () => <SpaceSettings /> },
     { item: { to: '/hr/settings/recruitment', icon: <Scale size={18} />, label: L('قواعد التوظيف والمطابقة', 'Recruitment & matching rules'), group: g4, hidden: true }, section: 'rules', module: u => can(u, 'settings') || can(u, 'candidates'), view: () => <RecruitmentSettings /> },

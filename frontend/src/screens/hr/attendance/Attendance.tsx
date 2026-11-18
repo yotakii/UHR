@@ -6,6 +6,7 @@ import { minsLabel } from '../../../lib/employees'
 import { hm, periodExportUrl, useCorrect, useDaily, usePeriod, useRoster, useTrend, type AttRow, type AttStatus, type Person } from '../../../lib/attendance'
 import { ApiError } from '../../../lib/api'
 import { Badge, Btn, Empty, Field, Modal, PageHead, Panel, Tabs, toast } from '../../../ui/kit'
+import { GateView } from './Gate'
 
 const today = () => new Date().toLocaleDateString('en-CA')
 const minus = (d: string, n: number) => { const x = new Date(d + 'T12:00:00'); x.setDate(x.getDate() - n); return x.toLocaleDateString('en-CA') }
@@ -23,7 +24,7 @@ export function AttBadge({ s }: { s: AttStatus }) {
 /** M08 — الحضور والدوام (Attendance في الديمو): السجل اليومي وملخص الفترة، حسب سياسة الدوام النافذة لكل يوم */
 export function Attendance() {
   const L = useL(); const lang = useLang(); const route = useRoute()
-  const view = (['period', 'trend', 'roster'] as const).find(v => v === route.query.view) ?? 'day'
+  const view = (['period', 'trend', 'roster', 'gate'] as const).find(v => v === route.query.view) ?? 'day'
   const date = route.query.date ?? today(); const dept = route.query.dept ?? ''; const branch = route.query.branch ?? ''
   const to = route.query.to ?? today(); const from = route.query.from ?? minus(to, 13)
   const day = useDaily(date, dept, view === 'day' && date === today(), branch)
@@ -39,8 +40,8 @@ export function Attendance() {
         <Btn icon={<CalendarClock size={15} />} onClick={() => navigate('/hr/settings/schedules')}>{L('جداول الدوام', 'Work schedules')}</Btn>
         {meta?.can.devices && <Btn icon={<Nfc size={15} />} onClick={() => navigate('/hr/settings/devices')}>{L('أجهزة الحضور', 'Attendance devices')}</Btn>}
       </>} />
-    <Tabs value={view} onChange={v => set({ view: v === 'day' ? undefined : v })} tabs={[{ v: 'day', label: L('السجل اليومي', 'Daily log') }, { v: 'period', label: L('ملخص الفترة', 'Period summary') }, { v: 'trend', label: L('الاتجاه الأسبوعي', 'Weekly trend') }, { v: 'roster', label: L('المناوبات', 'Rota') }]} />
-    <div className="flex flex-wrap gap-2 my-4">
+    <Tabs value={view} onChange={v => set({ view: v === 'day' ? undefined : v })} tabs={[{ v: 'day', label: L('السجل اليومي', 'Daily log') }, { v: 'period', label: L('ملخص الفترة', 'Period summary') }, { v: 'trend', label: L('الاتجاه الأسبوعي', 'Weekly trend') }, { v: 'roster', label: L('المناوبات', 'Rota') }, { v: 'gate', label: L('بوابة الحضور', 'Attendance gate') }]} />
+    {view === 'gate' ? <div className="mt-4"><GateView /></div> : <><div className="flex flex-wrap gap-2 my-4">
       <select className="field !w-full sm:!w-48" value={dept} onChange={e => set({ dept: e.target.value || undefined })} aria-label={L('الإدارة', 'Department')}>
         <option value="">{L('كل الإدارات', 'All departments')}</option>{meta?.depts.map(d => <option key={d.id} value={d.id}>{bi(d, lang)}</option>)}</select>
       {view !== 'roster' && (meta?.branches?.length ?? 0) > 1 && <select className="field !w-full sm:!w-44" value={branch} onChange={e => set({ branch: e.target.value || undefined })} aria-label={L('الفرع', 'Branch')}>
@@ -98,7 +99,7 @@ export function Attendance() {
         <td><div className="font-medium">{bi(x.employee.name, lang)}</div><div className="text-[12px] text-ink-3 sm:hidden">{x.absent ? L(`غياب ${x.absent}`, `${x.absent} absent`) : ''}</div></td>
         <td className="num">{x.present}</td><td className="num hidden sm:table-cell">{x.absent || '—'}</td><td className="num hidden md:table-cell">{x.incomplete ? <span className="text-danger">{x.incomplete}</span> : '—'}</td>
         <td className="num">{x.late ? <span className={x.late > 90 ? 'text-danger font-medium' : 'text-warn'}>{minsLabel(x.late, lang)}</span> : '—'}</td>
-        <td className="num hidden lg:table-cell">{x.deduct ? minsLabel(Math.round(x.deduct), lang) : '—'}</td><td className="num hidden md:table-cell">{x.ot ? minsLabel(x.ot, lang) : '—'}</td></tr>)}</tbody></table>}</Panel></>)}
+        <td className="num hidden lg:table-cell">{x.deduct ? minsLabel(Math.round(x.deduct), lang) : '—'}</td><td className="num hidden md:table-cell">{x.ot ? minsLabel(x.ot, lang) : '—'}</td></tr>)}</tbody></table>}</Panel></>)}</>}
     {fix && <CorrectModal p={fix.p} r={fix.r} onClose={() => setFix(null)} />}
   </div>
 }

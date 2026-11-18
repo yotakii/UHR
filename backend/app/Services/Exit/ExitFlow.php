@@ -426,6 +426,7 @@ class ExitFlow
                 'followups' => ['labor' => ['done' => false], 'insurance' => ['done' => false, 'due' => Carbon::parse($r->last_day->toDateString())->addDays((int) $p['insurance_days'])->toDateString()],
                     'informed' => ['done' => true, 'at' => now()->toIso8601String()]]]);
             $e->update(['status' => 'terminated', 'end_date' => $r->last_day]);
+            \App\Services\Attendance\NfcGate::disableAll($e, 'انتهاء الخدمة');
             // إلغاء طلباته المعلّقة
             foreach ([LeaveRequest::class, ServiceRequest::class, OvertimeRequest::class] as $cls) {
                 $cls::where('employee_id', $e->id)->whereIn('status', LeaveRequest::PENDING)->get()->each(function ($x) {

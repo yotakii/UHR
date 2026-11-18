@@ -162,3 +162,11 @@ Artisan::command('bonuses:attendance {month?}', function (?string $month = null)
     $this->info("proposed {$n}");
 })->purpose('Propose the monthly attendance bonus (BN-70) for review');
 Schedule::command('bonuses:attendance')->monthlyOn(1, '07:05');
+
+// الدفعة 21: مراقبة أجهزة الحضور — جهاز انقطعت نبضته ← تنبيه واحد حتى يعود (FR-NF-013)
+Artisan::command('nfc:monitor', function () {
+    $n = 0;
+    foreach (\App\Models\Company::where('status', 'active')->pluck('id') as $id) \App\Support\Tenant::run($id, function () use (&$n) { $n += \App\Services\Attendance\NfcGate::monitor(); });
+    $this->info("offline {$n}");
+})->purpose('Alert HR about attendance devices that stopped sending heartbeats');
+Schedule::command('nfc:monitor')->everyFiveMinutes();

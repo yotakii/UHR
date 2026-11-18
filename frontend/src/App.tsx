@@ -15,6 +15,7 @@ import { DevKit } from './screens/DevKit'
 import { CandidateHome } from './screens/candidate/CandidateHome'
 import { EmployeeApp } from './screens/employee/EmployeeApp'
 import { Terminal } from './screens/kiosk/Terminal'
+import { BranchCheckin } from './screens/public/BranchCheckin'
 import { ApproveLink } from './screens/public/ApproveLink'
 import { startRealtime, stopRealtime } from './lib/realtime'
 import { MobileApp } from './screens/mobile/MobileApp'
@@ -43,6 +44,8 @@ function Root() {
   if (user.must_change_password) return <ForceChangePassword user={user} />
   // موافقة الموبايل على فتح الرواتب في حاسوب (10b)
   if (route.page === 'approve' && route.parts[1]) return <ApproveLink token={route.parts[1]} user={user} />
+  // الحضور بمسح ملصق الفرع (الدفعة 21)
+  if (route.page === 'checkin' && route.parts[1]) return <BranchCheckin token={route.parts[1]} user={user} />
   // صفحات البوابة العامة متاحة للجميع؛ الصفحة الرئيسية لكل حساب = واجهته
   if (route.page && PUBLIC_PAGES.includes(route.page) && route.page !== 'login') return <Public />
   if (user.portal === 'platform') return <PlatformApp user={user} />

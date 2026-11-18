@@ -139,17 +139,24 @@ class Attendance
     {
         $at = ($at ?? now())->copy()->setTimezone(config('app.timezone'));
         $uid = CardUid::format($raw);
-        $e = CardUid::match(Employee::query(), $raw)->with('department')->first();
+        // الاعتماد داخل شركة الجهاز فقط (الدفعة 21): البطاقة المفقودة أو الموقوفة تُرفض وتنبّه الموارد البشرية
+        $cred = NfcGate::credential($raw);
+        $e = $cred ? Employee::with('department')->find($cred->employee_id) : CardUid::match(Employee::query(), $raw)->with('department')->first();
         $device->update(['last_seen_at' => now(), 'last_ip' => request()?->ip()]);
         self::rememberRead($device, $uid ?? CardUid::norm($raw), (bool) $e);
-        if (! $e) return ['kind' => 'unknown', 'uid' => $uid ?? CardUid::norm($raw)];
-        if (in_array($e->status, ['terminated'], true)) return ['kind' => 'inactive', 'employee' => self::person($e), 'uid' => $uid];
+        $gate = app(NfcGate::class);
+        if (! $e) { $gate->record($device, null, $uid ?? CardUid::norm($raw), $at, 'rejected', 'unknown_card', ['via' => $via]); return ['kind' => 'unknown', 'uid' => $uid ?? CardUid::norm($raw)]; }
+        $chk = NfcGate::check($device, $e, $cred, $at);
+        if (! $chk['ok']) {
+            $gate->record($device, $e, $uid ?? $raw, $at, 'rejected', $chk['reason'], ['via' => $via]);
+            return ['kind' => $chk['reason'] === 'inactive' ? 'inactive' : 'blocked', 'reason' => $chk['reason'], 'employee' => self::person($e), 'uid' => $uid];
+        }
         $at = $at->copy()->setTimezone(WorkSchedules::tz($e));   // تاريخ اليوم ووقته بتوقيت فرع الموظف (ملاحظة 80)
         $cool = (int) Settings::policy('terminal')['cooldown'];
         $last = Scan::where('employee_id', $e->id)->latest('ts')->first();
         if ($last && $last->ts->diffInSeconds($at, true) < $cool) return ['kind' => 'dup', 'employee' => self::person($e), 'uid' => $uid];
 
-        return DB::transaction(function () use ($e, $device, $at, $via, $raw, $uid) {
+        $res = DB::transaction(function () use ($e, $device, $at, $via, $raw, $uid) {
             $date = $at->toDateString();
             $d = AttendanceDay::where('employee_id', $e->id)->where('date', $date)->lockForUpdate()->first() ?? new AttendanceDay(['employee_id' => $e->id, 'date' => $date]);
             $type = $d->in_at ? 'out' : 'in';
@@ -157,10 +164,13 @@ class Attendance
             $c = DayCalc::day($date, $d->in_at, $d->out_at, $e);
             $d->status = $c['late'] ? 'late' : ($c['rest'] ? 'weekend' : 'present');
             $d->save();
-            Scan::create(['employee_id' => $e->id, 'ts' => $at, 'device_id' => $device->id, 'device_ar' => $device->name_ar, 'device_en' => $device->name_en, 'type' => $type, 'raw_uid' => mb_substr($raw, 0, 40), 'via' => $via]);
+            $scan = Scan::create(['employee_id' => $e->id, 'ts' => $at, 'device_id' => $device->id, 'device_ar' => $device->name_ar, 'device_en' => $device->name_en, 'type' => $type, 'raw_uid' => mb_substr($raw, 0, 40), 'via' => $via]);
             $this->firstScan($e);
-            return ['kind' => 'ok', 'employee' => self::person($e), 'type' => $type, 'time' => $at->format('H:i'), 'late' => $c['late'], 'worked' => $c['worked'], 'ot' => $c['ot'], 'in' => self::hm($d->in_at), 'uid' => $uid];
+            return ['kind' => 'ok', 'employee' => self::person($e), 'type' => $type, 'time' => $at->format('H:i'), 'late' => $c['late'], 'worked' => $c['worked'], 'ot' => $c['ot'], 'in' => self::hm($d->in_at), 'uid' => $uid, 'scan_id' => $scan->id];
         });
+        $gate->record($device, $e, $uid ?? $raw, $at, $chk['flag'] ? 'flagged' : 'accepted', $chk['reason'], ['via' => $via, 'scan_id' => $res['scan_id'], 'direction' => $res['type'], 'mission_id' => $chk['mission_id'], 'date' => $chk['date']]);
+        unset($res['scan_id']);
+        return $res + ($chk['flag'] ? ['flag' => 'off_branch'] : []);
     }
 
     /**

@@ -7,6 +7,7 @@ import { Avatar, Badge, Btn, Empty, KV, Panel, Tabs } from '../../../ui/kit'
 import { Lifecycle, Timeline } from '../../../ui/docs'
 import { EmpBadge } from './Employees'
 import { EditProfile, CardModal } from './EditProfile'
+import { AccessPanel } from './AccessPanel'
 import { BiometricsPanel } from './EmployeeFiles'
 import { DocumentsTab } from './DocumentsTab'
 import { Masked } from '../../../ui/vault'
@@ -77,7 +78,7 @@ export function EmployeeFile({ id }: { id: number }) {
         </Panel>
         <div className="lg:col-span-3"><BiometricsPanel emp={e.id} b={e.biometrics} canEdit={e.can.edit} /></div>
       </div>}
-      {tab === 'attendance' && <Panel pad={false}><AttendanceTable rows={e.attendance} /></Panel>}
+      {tab === 'attendance' && <div className="space-y-4"><Panel pad={false}><AttendanceTable rows={e.attendance} /></Panel><AccessPanel id={e.id} /></div>}
       {tab === 'leaves' && <Requests e={e} />}
       {tab === 'assets' && <Panel pad={false}>{e.assets.length === 0 ? <Empty title={L('لا توجد عهد', 'No assets')} /> : <table className="tbl"><thead><tr><th>{L('الأصل', 'Asset')}</th><th>{L('الرمز', 'Tag')}</th><th className="hidden sm:table-cell">{L('القيمة', 'Value')}</th><th>{L('الحالة', 'Status')}</th></tr></thead><tbody>
         {e.assets.map(a => <tr key={a.id}><td>{bi(a.name, lang)}<div className="text-[12px] text-ink-3">{bi(a.category, lang)}</div></td><td className="ltr num">{a.tag}</td><td className="num hidden sm:table-cell">${a.value}</td>

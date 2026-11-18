@@ -82,9 +82,12 @@ class EmployeeProfile
     {
         $raw = $uid; $uid = $raw !== null && trim($raw) !== '' ? CardUid::format($raw) : null;
         if ($raw !== null && trim($raw) !== '' && ! $uid) throw ApiException::field('uid', L::t('رقم البطاقة غير صالح (مثال 04:A1:B2:C3:D4).', 'Invalid card UID (e.g. 04:A1:B2:C3:D4).'), 'card_invalid');
-        if ($uid && CardUid::match(Employee::allCompanies(), $uid)->whereKeyNot($e->id)->exists()) throw ApiException::field('uid', L::t('البطاقة مربوطة بموظف آخر.', 'This card belongs to another employee.'), 'card_taken');
+        // التفرّد داخل الشركة فقط: البطاقة نفسها قد تُسجَّل لدى شركتين (قابضة) — الجزء C.5
+        if ($uid && CardUid::match(Employee::query(), $uid)->whereKeyNot($e->id)->exists()) throw ApiException::field('uid', L::t('البطاقة مربوطة بموظف آخر.', 'This card belongs to another employee.'), 'card_taken');
         $old = $e->nfc_uid;
         if ($old === $uid) return $e;
+        if ($uid) \App\Services\Attendance\NfcGate::issue($e, 'nfc', $uid, $by);
+        else \App\Models\Credential::where('employee_id', $e->id)->where('type', 'nfc')->where('status', 'active')->update(['status' => 'revoked', 'revoked_at' => now(), 'reason' => 'unlinked']);
         $e->update(['nfc_uid' => $uid]);
         $e->log($uid ? ($old ? "تغيير بطاقة الحضور: {$uid} (بدل {$old})" : "ربط بطاقة الحضور: {$uid}") : "إلغاء ربط بطاقة الحضور {$old}",
             $uid ? ($old ? "Attendance card changed: {$uid} (was {$old})" : "Attendance card linked: {$uid}") : "Attendance card {$old} unlinked", $uid ? 'ok' : 'warn');

@@ -15,7 +15,7 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 /** M16 — أجهزة الحضور المسجّلة: الإضافة تعطي مفتاحاً يظهر مرة واحدة، والإيقاف/تجديد المفتاح يقطع الجهاز فوراً */
 class DeviceController extends Controller
 {
-    public const KINDS = ['reader', 'sunmi', 'mobile', 'bridge', 'zk'];
+    public const KINDS = ['reader', 'sunmi', 'mobile', 'bridge', 'zk', 'gateway', 'sticker'];
 
     public function index(): JsonResponse
     {
@@ -30,14 +30,18 @@ class DeviceController extends Controller
         $d = $this->valid($request);
         $key = Str::random(48);
         $d += $this->zkFields($request, null);
-        $dev = Device::create($d + ['key_hash' => hash('sha256', $key), 'key_hint' => substr($key, -4), 'active' => true, 'created_by' => $request->user()->id]);
+        $br = ! empty($d['location_id']) ? Location::whereKey($d['location_id'])->value('code') : null;
+        $code = \App\Services\Codes\CodeGen::next('device', ['br' => $br ?: 'HQ']);
+        $dev = Device::create($d + ['code' => $code, 'key_hash' => hash('sha256', $key), 'key_hint' => substr($key, -4), 'active' => true, 'status' => 'active', 'created_by' => $request->user()->id]);
         return response()->json(['data' => self::row($dev->load('location')), 'key' => $key], 201);
     }
 
     public function update(Request $request, int $id): JsonResponse
     {
         $dev = Device::findOrFail($id);
-        $dev->update($this->valid($request) + $request->validate(['active' => ['required', 'boolean']]) + $this->zkFields($request, $dev));
+        $v = $this->valid($request) + $request->validate(['active' => ['required', 'boolean']]) + $this->zkFields($request, $dev);
+        if (! $v['active']) $v['status'] = 'disabled'; elseif ($dev->status === 'disabled') $v['status'] = 'active';
+        $dev->update($v);
         return response()->json(['data' => self::row($dev->load('location'))]);
     }
 
@@ -129,7 +133,8 @@ class DeviceController extends Controller
     private function valid(Request $request): array
     {
         return $request->validate(['name_ar' => ['required', 'string', 'max:120'], 'name_en' => ['required', 'string', 'max:120'],
-            'location_id' => ['nullable', 'integer', 'exists:locations,id'], 'kind' => ['required', 'in:'.implode(',', self::KINDS)]]);
+            'location_id' => ['nullable', 'integer', 'exists:locations,id'], 'kind' => ['required', 'in:'.implode(',', self::KINDS)],
+            'direction' => ['sometimes', 'in:in,out,both'], 'site' => ['nullable', 'string', 'max:120'], 'serial' => ['nullable', 'string', 'max:60'], 'require_signature' => ['sometimes', 'boolean']]);
     }
 
     public static function row(Device $d): array
@@ -137,6 +142,9 @@ class DeviceController extends Controller
         return ['id' => $d->id, 'name' => ['ar' => $d->name_ar, 'en' => $d->name_en], 'name_ar' => $d->name_ar, 'name_en' => $d->name_en, 'kind' => $d->kind,
             'location_id' => $d->location_id, 'location' => $d->location ? ['ar' => $d->location->name_ar, 'en' => $d->location->name_en] : null,
             'zk' => $d->kind === 'zk' ? array_diff_key(\App\Services\Attendance\ZkSync::cfg($d), ['force' => 1]) : null, 'last_sync' => $d->last_sync, 'last_sync_at' => $d->last_sync_at?->toIso8601String(),
-            'active' => $d->active, 'online' => $d->last_seen_at && $d->last_seen_at->gt(now()->subMinutes(3)), 'key_hint' => $d->key_hint, 'last_seen_at' => $d->last_seen_at?->toIso8601String(), 'last_ip' => $d->last_ip];
+            'active' => $d->active, 'online' => $d->last_seen_at && $d->last_seen_at->gt(now()->subMinutes(3)), 'key_hint' => $d->key_hint, 'last_seen_at' => $d->last_seen_at?->toIso8601String(), 'last_ip' => $d->last_ip,
+            'code' => $d->code, 'direction' => $d->direction, 'site' => $d->site, 'serial' => $d->serial, 'status' => $d->status, 'require_signature' => (bool) $d->require_signature,
+            'lan_ip' => $d->lan_ip, 'clock_drift' => $d->clock_drift, 'gateway' => $d->gateway, 'has_secret' => (bool) $d->getRawOriginal('secret'),
+            'activation_until' => $d->activation_expires_at?->isFuture() ? $d->activation_expires_at->toIso8601String() : null];
     }
 }
