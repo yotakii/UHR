@@ -99,7 +99,9 @@ class TrainingTest extends TestCase
         // 10.1: اعتماد تقييم أداء ← احتياجات مقترحة من فجوات الكفاءة
         $hala = Employee::where('id', '!=', $this->samer->id)->whereNotNull('manager_id')->first();
         $hala->update(['job_id' => $job]);
-        $rev = \App\Models\PerformanceReview::allCompanies()->create(['company_id' => $hala->company_id, 'performance_cycle_id' => \App\Models\PerformanceCycle::allCompanies()->value('id'), 'employee_id' => $hala->id,
+        // دورة خاصة بالاختبار حتى لا يتعارض مع تقييم مزروع لنفس الموظف
+        $cycle = \App\Models\PerformanceCycle::allCompanies()->create(['company_id' => $hala->company_id, 'name_ar' => 'دورة اختبار', 'name_en' => 'Test cycle', 'starts_on' => '2026-01-01', 'ends_on' => '2026-06-30', 'status' => 'closed', 'weights' => ['manager' => 50, 'peers' => 30, 'self' => 20]]);
+        $rev = \App\Models\PerformanceReview::allCompanies()->create(['company_id' => $hala->company_id, 'performance_cycle_id' => $cycle->id, 'employee_id' => $hala->id,
             'ratings' => [$comp->id => ['total' => 2.0]], 'score' => 2.0, 'status' => 'approved']);
         Tenant::run($hala->company_id, fn () => $this->assertSame(1, app(\App\Services\Training\Needs::class)->fromAppraisal($rev)));
         $this->assertSame('suggested', TdNeed::allCompanies()->where('employee_id', $hala->id)->value('status'));
