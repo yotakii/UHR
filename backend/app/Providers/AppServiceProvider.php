@@ -21,6 +21,9 @@ class AppServiceProvider extends ServiceProvider
     {
         // تطوير صارم: كشف lazy loading والحقول غير المعرّفة مبكراً
         Model::shouldBeStrict(! $this->app->isProduction());
+        // الترحيلات القديمة تستدعي كود الخدمات الحالي على مخطط لم تُضف إليه بعدُ أعمدة الترحيلات اللاحقة
+        // (يظهر عند ترقية قاعدة قائمة بعدة دفعات معاً) ← عمود غير موجود يُقرأ null أثناء migrate فقط
+        if ($this->app->runningInConsole() && str_starts_with((string) ($_SERVER['argv'][1] ?? ''), 'migrate')) Model::preventAccessingMissingAttributes(false);
         // البث اللحظي من الطابور: بعد كل مهمة
         \Illuminate\Support\Facades\Queue::after(fn () => \App\Support\Realtime::flush());
         // البريد الصادر (11e): إعداد SMTP من لوحة المنصة، اسم المرسل لكل شركة، وسجل الرسائل
