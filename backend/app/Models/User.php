@@ -67,6 +67,8 @@ class User extends Authenticatable
 
     public function displayName(string $lang = 'ar'): string
     {
+        // تحميل صريح عند الحاجة: القراءة الكسولة ممنوعة داخل القوائم (أكثر من سجل) وتُسقط الطلب كاملاً
+        if (! $this->relationLoaded('employee') && ($this->getAttributes()['employee_id'] ?? null)) $this->load('employee');
         if ($this->employee) return $lang === 'en' ? $this->employee->name_en : $this->employee->name;
         return ($lang === 'en' ? $this->name_en : null) ?: $this->name ?: $this->email;
     }

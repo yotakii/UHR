@@ -25,7 +25,7 @@ use Illuminate\Http\Request;
  */
 class WorkController extends Controller
 {
-    private const TASK_WITH = ['employee', 'creator', 'kpi'];
+    private const TASK_WITH = ['employee', 'creator.employee', 'kpi'];
 
     public function __construct(private Tasks $tasks, private Kpis $kpis) {}
 
@@ -63,7 +63,7 @@ class WorkController extends Controller
     public function task(Request $request, int $id): JsonResponse
     {
         $t = $this->visibleTask($request, $id);
-        return response()->json(['data' => Tasks::row($t->load([...self::TASK_WITH, 'comments.user']), $request->user(), true)]);
+        return response()->json(['data' => Tasks::row($t->load([...self::TASK_WITH, 'comments.user.employee']), $request->user(), true)]);
     }
 
     public function storeTask(Request $request): JsonResponse

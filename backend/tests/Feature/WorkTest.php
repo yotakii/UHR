@@ -65,6 +65,8 @@ class WorkTest extends TestCase
         $this->assertSame(10 + 3, $this->points($samer, 'task'));   // 5 × 0.5 = 2.5 ← 3
         $this->getJson('/api/me/rewards')->assertOk()->assertJsonPath('points', (int) $samer->points + 13);   // الرصيد في متجر المكافآت
         $this->postJson("/api/work/tasks/{$self}/comments", ['body' => 'ملاحظة'])->assertOk();
+        // قائمة بأكثر من مهمة من منشئين مختلفين (كانت تسقط بقراءة كسولة لموظف المنشئ)
+        $this->getJson('/api/work/tasks?status=all')->assertOk()->assertJsonCount(2, 'data');
         $this->login('dana.shami@uniqueness.sy');
         $this->getJson("/api/work/tasks/{$id}")->assertNotFound();   // ليست له
     }
