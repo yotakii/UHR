@@ -44,7 +44,8 @@ export function Work() {
           <input className="field !ps-9" value={q} onChange={e => setQ(e.target.value)} placeholder={L('بحث في المهام…', 'Search tasks…')} /></label>
         {tab === 'mine' && d && d.counts.overdue > 0 && <Badge tone="danger">{L(`${d.counts.overdue} متأخرة`, `${d.counts.overdue} overdue`)}</Badge>}
       </div>
-      {!d ? <div className="grid place-items-center py-16"><Loader2 className="animate-spin text-brand" /></div> : d.data.length === 0 ? <Panel><Empty title={L('لا مهام هنا', 'No tasks here')} /></Panel> :
+      {!d && tq.isError ? <Panel><Empty title={L('تعذّر تحميل المهام', 'Could not load the tasks')} action={<Btn size="sm" onClick={() => tq.refetch()}>{L('إعادة المحاولة', 'Try again')}</Btn>}>{(tq.error as Error)?.message}</Empty></Panel>
+        : !d ? <div className="grid place-items-center py-16"><Loader2 className="animate-spin text-brand" /></div> : d.data.length === 0 ? <Panel><Empty title={L('لا مهام هنا', 'No tasks here')} /></Panel> :
         <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(280px,1fr))]">{d.data.map(t => <TaskCard key={t.id} t={t} team={tab !== 'mine'} onOpen={() => setOpen(t.id)} />)}</div>}
     </>}
     {form && d && <TaskForm page={d} t={form.t} onClose={() => setForm(null)} />}
