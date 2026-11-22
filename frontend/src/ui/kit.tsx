@@ -80,7 +80,7 @@ export function Drawer({ open, onClose, children, width = 620 }: { open: boolean
   useEffect(() => { if (!open) return; const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose(); window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k) }, [open, onClose])
   if (!open) return null
   return <div className="fixed inset-0 z-40 bg-black/45" onMouseDown={onClose} data-noprint>
-    <aside className="drawer absolute inset-y-0 end-0 bg-surface border-s border-line flex flex-col w-full" style={{ maxWidth: width }} onMouseDown={e => e.stopPropagation()}>{children}</aside>
+    <aside className="drawer absolute inset-y-0 end-0 bg-surface border-s border-line flex flex-col w-full overflow-y-auto overscroll-contain" style={{ maxWidth: width }} onMouseDown={e => e.stopPropagation()}>{children}</aside>
   </div>
 }
 
